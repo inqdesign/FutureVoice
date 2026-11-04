@@ -201,6 +201,8 @@
     <string name="after_each_thing_your_future_self_says_you_see_a_way_to_answ_35f388">"유창해진 내가 말할 때마다 이렇게 답해 보라는 문장이 떠요. 공부 중인 단어가 들어가기도 하고, 가장 자주 하는 실수는 통화의 초점이 돼요."</string>
     <string name="after_work_drinks">"퇴근 후 한잔"</string>
     <string name="again">"다시"</string>
+    <string name="again_at_the_end_of_this_round">"이번 판 끝에 다시 해요"</string>
+    <string name="again_in_the_next_round">"다음 판에 다시 해요"</string>
     <string name="age_confirmed">"나이 확인함"</string>
     <string name="agreeing_and_disagreeing">"동의하고 반대하기"</string>
     <string name="ahead_of_2_by_lld">"2위보다 %d점 앞서 있어요"</string>
@@ -348,6 +350,7 @@
     <string name="back_in_3_days">"3일 뒤에 다시 나와요"</string>
     <string name="back_to_colours">"색 다시 고르기"</string>
     <string name="back_to_the_book">"교재로 돌아가기"</string>
+    <string name="back_to_the_sentence">"문장으로 돌아가기"</string>
     <string name="back_to_the_voice_your_recording_makes_on_its_own">"녹음 그대로의 목소리로 돌아가요."</string>
     <string name="back_to_the_welcome_screen">"처음 화면으로 돌아갈까요?"</string>
     <string name="back_tomorrow">"내일 다시 나와요"</string>
@@ -543,6 +546,7 @@
     <string name="congratulations">"축하해요!"</string>
     <string name="connecting">"연결 중…"</string>
     <string name="consent">"동의"</string>
+    <string name="consonants">"자음"</string>
     <string name="contact_us">"문의하기"</string>
     <string name="contents">"목차"</string>
     <string name="continue_">"계속"</string>
@@ -780,6 +784,7 @@
     <string name="each_talk_fills_these_bars_a1_to_c2">"대화할 때마다 A1부터 C2까지 막대가 채워져요."</string>
     <!-- 'Each time your fluent self speaks, a short answer you could give appears above the button, at your level, with its meaning in your language. A blank (___) is where only you know the answer.' -->
     <string name="each_time_your_fluent_self_speaks_a_short_answer_you_could_g_5bd1c9">"유창해진 내가 말할 때마다 내 레벨에 맞는 짧은 답 예시가 버튼 위에 떠요. 뜻도 함께 나와요. 빈칸(___)은 나만 아는 내용을 넣는 자리예요."</string>
+    <string name="earlier_calls">"구분 전 통화"</string>
     <string name="earphone_mic">"이어폰 마이크"</string>
     <string name="easy">"쉬웠어요"</string>
     <string name="easy_to_understand">"이해하기 쉬운"</string>
@@ -805,6 +810,7 @@
     <string name="end_this_call_first">"통화를 먼저 끝내 주세요"</string>
     <string name="ended">"통화 끝"</string>
     <string name="ended_challenges_keep_their_final_standings">"끝난 챌린지도 마지막 순위를 볼 수 있어요."</string>
+    <string name="endings_and_flow">"끝소리와 이어 말하기"</string>
     <string name="engrave_your_cube">"큐브에 새기기"</string>
     <string name="enough_new_conversation">"새 대화 충분"</string>
     <string name="enough_to_keep_the_habit_going">"짧게라도 꾸준히 이어가요"</string>
@@ -972,6 +978,7 @@
     <string name="first_test_done">"첫 테스트를 마쳤어요"</string>
     <string name="first_time">"처음"</string>
     <string name="fix_the_sentence">"문장 고치기"</string>
+    <string name="flow">"흐름"</string>
     <string name="fluency">"유창성"</string>
     <string name="fluency_pace">"유창성과 속도"</string>
     <string name="fluent">"유창한 속도"</string>
@@ -1556,6 +1563,7 @@
     <string name="lld_of_lld_min_today">"오늘 %1$d / %2$d분"</string>
     <string name="lld_of_lld_scenes_left">"남은 상황연습 %1$d개 (총 %2$d개)"</string>
     <string name="lld_of_lld_seats_taken">"%2$d자리 중 %1$d자리가 찼어요."</string>
+    <string name="lld_of_lld_sentences_passed">"%2$d문장 중 %1$d문장 통과"</string>
     <string name="lld_of_lld_topics_passed">"%2$d개 주제 중 %1$d개 통과"</string>
     <string name="lld_of_your_turns_lld_min">"내 발화 %1$d번 · %2$d분"</string>
     <string name="lld_out_of_5">"5점 만점에 %d점"</string>
@@ -1836,6 +1844,7 @@
     <string name="next_lld">"다음 %d개"</string>
     <string name="next_one">"다음은 %s"</string>
     <string name="next_report_in_lldd_lld_more_minutes_of_practice">"다음 리포트까지 %1$d일 · 연습 %2$d분 더."</string>
+    <string name="next_sentence">"다음 문장"</string>
     <string name="next_shadowing">"다음: 섀도잉"</string>
     <string name="next_up">"다음에 할 일"</string>
     <string name="next_week_s_arrives">"다음 돌아보기는 %s에 도착해요"</string>
@@ -2201,6 +2210,7 @@
     <string name="preparing_study_notes">"공부할 내용을 준비하고 있어요…"</string>
     <string name="preparing_the_file">"파일을 준비하는 중…"</string>
     <string name="preparing_your_lesson">"수업 준비하는 중…"</string>
+    <string name="preparing_your_sentences">"문장을 준비하고 있어요…"</string>
     <string name="preparing_your_video">"영상을 준비하고 있어요…"</string>
     <string name="present_a_real_product_or_invention">"실제 제품이나 발명품 소개"</string>
     <string name="presentation">"발표"</string>
@@ -2281,6 +2291,8 @@
     <string name="read_it">"읽기"</string>
     <string name="read_it_aloud_five_times">"소리 내어 다섯 번 읽기"</string>
     <string name="read_it_hear_it_in_your_voice_then_say_it">"읽고, 내 목소리로 듣고, 말해 봐요"</string>
+    <string name="read_it_hear_it_right">"소리 내어 읽기"</string>
+    <string name="read_it_in_one_go_without_stopping">"멈추지 말고 한 번에 이어서 읽어 보세요"</string>
     <string name="read_it_naturally_mistakes_are_fine_just_keep_going">"자연스럽게 읽으세요. 틀려도 괜찮으니 그냥 이어가면 돼요."</string>
     <string name="read_it_out_loud">"소리 내어 읽기"</string>
     <!-- 'Read once. The files stay where they are on your phone — only what was read is kept.' -->
@@ -2442,6 +2454,7 @@
     <string name="role_you_re_applying_for_e_g_backend_developer">"지원하는 직무 — 예: 백엔드 개발자"</string>
     <!-- "Rough transcript — the final recognition pass didn't finish (network). The score may be off this time." -->
     <string name="rough_transcript_the_final_recognition_pass_didn_t_finish_ne_ac415f">"받아쓰기가 거칠어요. 네트워크 때문에 최종 인식이 끝나지 못했거든요. 이번 점수는 정확하지 않을 수 있어요."</string>
+    <string name="round_done">"다 읽었어요"</string>
     <string name="routine_lld_done_lld_to_go_about_lld_minutes">"루틴 %1$d개 했고 %2$d개 남았어요. %3$d분쯤이면 돼요."</string>
     <string name="run_again">"처음부터 다시"</string>
     <!-- "Run your review cards — they're built from your own slips and target exactly these." -->
@@ -2524,6 +2537,8 @@
     <string name="say_it_the_right_way">"바르게 다시 말하기"</string>
     <string name="say_it_then_check">"먼저 말해 보고 확인하기"</string>
     <string name="say_it_yourself">"직접 말해 보기"</string>
+    <string name="say_just_this_part">"이 부분만 말해 보세요"</string>
+    <string name="say_just_this_word">"이 단어만 말해 보세요"</string>
     <!-- 'Say more in one sentence — a reason, a condition, what happened before. Longer sentences are what move this band.' -->
     <string name="say_more_in_one_sentence_a_reason_a_condition_what_happened_9100fc">"한 문장에 더 담아 보세요. 이유, 조건, 그 전에 있었던 일까지요. 이 밴드를 올리는 건 더 긴 문장이에요."</string>
     <string name="say_s_line">"%s 대사예요"</string>
@@ -2700,7 +2715,9 @@
     <string name="soon">"곧"</string>
     <string name="sorting_it_out">"정리하는 중…"</string>
     <string name="sound_mic">"소리와 마이크"</string>
+    <string name="sounded_like">"이렇게 들렸어요: %1$s → %2$s"</string>
     <string name="sounds">"효과음"</string>
+    <string name="sounds_to_practice">"연습할 소리"</string>
     <string name="source">"출처"</string>
     <string name="sources">"출처"</string>
     <string name="speak_every_day_and_keep_everything_it_teaches_you">"매일 말하고, 거기서 배운 건 전부 남겨두세요."</string>
@@ -3236,6 +3253,7 @@
     <string name="tip">"팁"</string>
     <string name="title_optional">"제목 (선택)"</string>
     <string name="to_reach">"%s까지 가려면"</string>
+    <string name="to_redo">"다시 할 단어: %s"</string>
     <string name="to_study">"학습할 것"</string>
     <string name="today">"오늘"</string>
     <string name="today_fills_as_you_go">"오늘은 할수록 차올라요"</string>
@@ -3408,6 +3426,8 @@
     <string name="voicepreset_male">"남성"</string>
     <string name="voicepreset_mark">"자연스러운 대화체"</string>
     <string name="voicepreset_paige">"생기 있고 자연스러운"</string>
+    <string name="vowel">"+ 모음이 들어감"</string>
+    <string name="vowels">"모음"</string>
     <string name="vs_last_week">"지난주 대비"</string>
     <string name="vs_previous_30_days">"지난 30일 대비"</string>
     <string name="waiting_for_the_first_sync">"첫 동기화를 기다리는 중"</string>

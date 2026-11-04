@@ -78,6 +78,27 @@ import kotlin.math.roundToInt
 class RealtimeTalkClient(private val context: Context) {
 
     companion object {
+        /** [text] without the discarded words in front of it: "" when it is
+         *  only (a part of) them. Compared word by word on letters alone,
+         *  since a re-read final rarely matches the interim's punctuation or
+         *  case (iOS `cutting`, ffaf0c58). */
+        fun cutting(discarded: String, text: String): String {
+            if (discarded.isEmpty() || text.isEmpty()) return text
+            fun key(w: String) = w.lowercase().filter { it.isLetterOrDigit() }
+            val old = discarded.split(Regex("\\s+")).map(::key).filter { it.isNotEmpty() }
+            val words = text.split(Regex("\\s+")).filter { it.isNotEmpty() }
+            var i = 0; var matched = 0
+            while (i < words.size && matched < old.size) {
+                val k = key(words[i])
+                if (k.isEmpty()) { i++; continue }
+                if (k != old[matched]) break
+                matched++; i++
+            }
+            // Nothing of the old line at its head: a new utterance.
+            if (matched == 0 || !(matched >= minOf(old.size, 2) || matched == old.size)) return text
+            return words.drop(i).joinToString(" ")
+        }
+
         /** How long a wall waits for the speaker to finish what it holds. */
         private const val HELD_WALL_MS = 15_000L
 
@@ -458,6 +479,13 @@ class RealtimeTalkClient(private val context: Context) {
         manualTurns: Boolean = false,
         /** Tutor mode: counted from the start (iOS `meterFromStart`). */
         meterFromStart: Boolean = false,
+        /** The pronunciation call (iOS ffaf0c58): the learner repeats the
+         *  fluent self's own words, which the gateway's echo checks would
+         *  otherwise drop (`StartMessage.repeatAfterMe`). */
+        repeatAfterMe: Boolean = false,
+        /** What kind of call this is — "free" · "tutor" · "pron" — for the
+         *  usage page's split (`StartMessage.mode`). */
+        mode: String = "free",
     ) {
         if (state != State.IDLE && state != State.FAILED) return
         synchronized(nudgeLock) { startSent = false; heldNudges.clear() }
@@ -492,6 +520,9 @@ class RealtimeTalkClient(private val context: Context) {
             // Tutor mode is counted from the start. An older gateway counts
             // from the first turn, as before.
             if (meterFromStart) put("meterFromStart", true)
+            // An older gateway ignores both.
+            if (repeatAfterMe) put("repeatAfterMe", true)
+            put("mode", mode)
             opener?.takeIf { it.isNotBlank() }?.let { put("opener", it) }
             if (history.isNotEmpty()) {
                 put("history", buildJsonArray {
@@ -630,14 +661,40 @@ class RealtimeTalkClient(private val context: Context) {
         runCatching { socket?.send("""{"type":"send"}""") }
     }
 
-    /** Send-to-answer: throw this turn away and start it again. */
-    fun discardTurn() {
+    /** Send-to-answer: throw this turn away and start it again.
+     *  [filterStale]: drop a late copy of the discarded words for a moment —
+     *  right for the reset button, wrong when the app discards by itself
+     *  (the pronunciation call's murmur reset): a learner who says the same
+     *  one word again at once had it erased twice (iOS ffaf0c58). */
+    fun discardTurn(filterStale: Boolean = true) {
         if (tornDown) return
         runCatching { socket?.send("""{"type":"discard"}""") }
+        if (filterStale && lastPartial.isNotEmpty()) {
+            discardedText = lastPartial; discardedAt = System.currentTimeMillis()
+        } else {
+            discardedText = ""
+        }
+        lastPartial = ""
         userPCM.reset()
         onPartial?.invoke("")
         if (state == State.HEARING) state = State.LISTENING
     }
+
+    /** The call's kind changed mid-call (tutor mode switched on or off). */
+    fun setCallMode(mode: String) {
+        if (tornDown) return
+        runCatching { socket?.send("""{"type":"set","mode":"$mode"}""") }
+    }
+
+    /** The last partial shown — what a reset throws away. */
+    @Volatile private var lastPartial = ""
+    /** The words thrown away by the last [discardTurn], until the next turn.
+     *  A final the gateway was already re-reading when the reset landed, or
+     *  an interim of the same still-open utterance, comes back AFTER the
+     *  reset carrying them (iOS ffaf0c58: "the reset button doesn't reset in
+     *  one tap"). */
+    @Volatile private var discardedText = ""
+    @Volatile private var discardedAt = 0L
 
     /** Send-to-answer switched mid-call; off with words held, the gateway
      *  commits them by the usual pause rule. */
@@ -734,12 +791,18 @@ class RealtimeTalkClient(private val context: Context) {
                 state = State.LISTENING
             }
             "user_partial" -> {
-                val text = msg["text"]?.jsonPrimitive?.content.orEmpty()
+                // Only a STALE arrival is dropped: one that is nothing but the
+                // discarded words, within a moment of the reset.
+                val incoming = msg["text"]?.jsonPrimitive?.content.orEmpty()
+                val text = if (System.currentTimeMillis() - discardedAt < 1000 &&
+                    cutting(discardedText, incoming).isEmpty()) "" else incoming
+                lastPartial = text
                 onPartial?.invoke(text)
                 if (state != State.SPEAKING) state = if (text.isEmpty()) State.LISTENING else State.HEARING
             }
             "user_turn" -> {
                 val said = msg["text"]?.jsonPrimitive?.content.orEmpty()
+                discardedText = ""; lastPartial = ""
                 val flags = UserTurnFlags(
                     native = msg["native"]?.jsonPrimitive?.booleanOrNull ?: false,
                     continues = msg["continues"]?.jsonPrimitive?.booleanOrNull ?: false)

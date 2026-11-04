@@ -50,6 +50,9 @@ data class AccountStatus(
     val sceneTalkSeconds: Int? = null,
     /** When this billing period ends, `yyyy-MM-dd` from `talk_allowance`. */
     val periodEnd: String? = null,
+    /** When it began (`talk_allowance.period_start`) — the usage page's
+     *  split by kind of call counts from here. */
+    val periodStart: String? = null,
     /** The plan is set to STOP at [periodEnd] rather than renew. A date on a
      *  billing surface says what will happen to the pool, and this decides
      *  which — "Refills on…" to someone who cancelled is the same date with
@@ -272,6 +275,7 @@ data class AccountStatus(
             val used: Int = 0,
             val cap: Int? = null,
             val period_end: String? = null,
+            val period_start: String? = null,
             val free_used: Int? = null,
             val free_cap: Int? = null,
             val bonus: Int? = null,
@@ -312,7 +316,8 @@ data class AccountStatus(
                 // A null cap on an entitled plan is "uncapped", not "no plan";
                 // `used` is real either way.
                 out = out.copy(secondsUsedPeriod = it.used, monthlyCapSeconds = it.cap,
-                    periodEnd = it.period_end, bonusSeconds = it.bonus ?: out.secondsBalance)
+                    periodEnd = it.period_end, periodStart = it.period_start,
+                    bonusSeconds = it.bonus ?: out.secondsBalance)
             }
             rpc(auth, "scene_allowance")?.let {
                 out = out.copy(freeScenesUsed = it.free_used ?: 0, freeScenesCap = it.free_cap)

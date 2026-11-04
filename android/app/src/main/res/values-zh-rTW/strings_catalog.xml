@@ -201,6 +201,8 @@
     <string name="after_each_thing_your_future_self_says_you_see_a_way_to_answ_35f388">"流利的自己每說一句，就會出現一個回答的例句。有時會用到你正在學的單字，你最常犯的錯誤也會成為這次通話的重點。"</string>
     <string name="after_work_drinks">"下班小酌"</string>
     <string name="again">"再一次"</string>
+    <string name="again_at_the_end_of_this_round">"這一輪最後再練一次"</string>
+    <string name="again_in_the_next_round">"下一輪再練"</string>
     <string name="age_confirmed">"已確認年齡"</string>
     <string name="agreeing_and_disagreeing">"表達同意與反對"</string>
     <string name="ahead_of_2_by_lld">"領先第 2 名 %d 分"</string>
@@ -348,6 +350,7 @@
     <string name="back_in_3_days">"3天後再出現"</string>
     <string name="back_to_colours">"重新選顏色"</string>
     <string name="back_to_the_book">"回到教材"</string>
+    <string name="back_to_the_sentence">"回到句子"</string>
     <string name="back_to_the_voice_your_recording_makes_on_its_own">"回到錄音原本的聲音。"</string>
     <string name="back_to_the_welcome_screen">"要回到最初的畫面嗎？"</string>
     <string name="back_tomorrow">"明天再出現"</string>
@@ -543,6 +546,7 @@
     <string name="congratulations">"恭喜！"</string>
     <string name="connecting">"連線中…"</string>
     <string name="consent">"同意"</string>
+    <string name="consonants">"子音"</string>
     <string name="contact_us">"聯絡我們"</string>
     <string name="contents">"目錄"</string>
     <string name="continue_">"繼續"</string>
@@ -780,6 +784,7 @@
     <string name="each_talk_fills_these_bars_a1_to_c2">"每次通話都會把A1到C2的長條填滿一點。"</string>
     <!-- 'Each time your fluent self speaks, a short answer you could give appears above the button, at your level, with its meaning in your language. A blank (___) is where only you know the answer.' -->
     <string name="each_time_your_fluent_self_speaks_a_short_answer_you_could_g_5bd1c9">"每次流利的自己說完話，按鈕上方會出現一句符合你程度的簡短回答範例，也會附上意思。空格（___）是只有你知道答案的地方。"</string>
+    <string name="earlier_calls">"之前的通話"</string>
     <string name="earphone_mic">"耳機麥克風"</string>
     <string name="easy">"很簡單"</string>
     <string name="easy_to_understand">"容易理解"</string>
@@ -805,6 +810,7 @@
     <string name="end_this_call_first">"請先結束這次通話"</string>
     <string name="ended">"通話結束"</string>
     <string name="ended_challenges_keep_their_final_standings">"已結束的挑戰也能看到最終排名。"</string>
+    <string name="endings_and_flow">"字尾與連音"</string>
     <string name="engrave_your_cube">"刻在方塊上"</string>
     <string name="enough_new_conversation">"新對話已足夠"</string>
     <string name="enough_to_keep_the_habit_going">"短短幾分鐘也能持續下去"</string>
@@ -972,6 +978,7 @@
     <string name="first_test_done">"完成第一次測驗"</string>
     <string name="first_time">"第一次"</string>
     <string name="fix_the_sentence">"改正句子"</string>
+    <string name="flow">"流暢度"</string>
     <string name="fluency">"流利度"</string>
     <string name="fluency_pace">"流暢度與節奏"</string>
     <string name="fluent">"流利的速度"</string>
@@ -1556,6 +1563,7 @@
     <string name="lld_of_lld_min_today">"今天%1$d / %2$d分鐘"</string>
     <string name="lld_of_lld_scenes_left">"情境練習剩餘 %1$d 次(共 %2$d 次)"</string>
     <string name="lld_of_lld_seats_taken">"%2$d席中已坐了%1$d席。"</string>
+    <string name="lld_of_lld_sentences_passed">"%2$d 句中通過 %1$d 句"</string>
     <string name="lld_of_lld_topics_passed">"%2$d 個主題中通過了 %1$d 個"</string>
     <string name="lld_of_your_turns_lld_min">"我的發言%1$d輪 · %2$d分鐘"</string>
     <string name="lld_out_of_5">"5 分中 %d 分"</string>
@@ -1836,6 +1844,7 @@
     <string name="next_lld">"接下來%d個"</string>
     <string name="next_one">"下次 %s"</string>
     <string name="next_report_in_lldd_lld_more_minutes_of_practice">"距離下次報告還有%1$d天 · 再練習%2$d分鐘。"</string>
+    <string name="next_sentence">"下一句"</string>
     <string name="next_shadowing">"下一步：跟讀"</string>
     <string name="next_up">"接下來要做的事"</string>
     <string name="next_week_s_arrives">"下一份 %s 送達"</string>
@@ -2201,6 +2210,7 @@
     <string name="preparing_study_notes">"正在準備學習筆記…"</string>
     <string name="preparing_the_file">"正在準備檔案…"</string>
     <string name="preparing_your_lesson">"正在準備課程…"</string>
+    <string name="preparing_your_sentences">"正在準備句子…"</string>
     <string name="preparing_your_video">"正在準備影片…"</string>
     <string name="present_a_real_product_or_invention">"介紹真實的產品或發明"</string>
     <string name="presentation">"簡報"</string>
@@ -2281,6 +2291,8 @@
     <string name="read_it">"讀取"</string>
     <string name="read_it_aloud_five_times">"大聲念五遍"</string>
     <string name="read_it_hear_it_in_your_voice_then_say_it">"讀一讀，用自己的聲音聽一遍，再說出來"</string>
+    <string name="read_it_hear_it_right">"大聲唸出來"</string>
+    <string name="read_it_in_one_go_without_stopping">"一口氣唸完，中間別停"</string>
     <string name="read_it_naturally_mistakes_are_fine_just_keep_going">"自然地唸就好。唸錯也沒關係，繼續就對了。"</string>
     <string name="read_it_out_loud">"大聲念出來"</string>
     <!-- 'Read once. The files stay where they are on your phone — only what was read is kept.' -->
@@ -2442,6 +2454,7 @@
     <string name="role_you_re_applying_for_e_g_backend_developer">"應徵職位（例：後端工程師）"</string>
     <!-- "Rough transcript — the final recognition pass didn't finish (network). The score may be off this time." -->
     <string name="rough_transcript_the_final_recognition_pass_didn_t_finish_ne_ac415f">"逐字稿比較粗糙。因為網路的關係，最後一次辨識沒有完成。這次的分數可能不太準。"</string>
+    <string name="round_done">"這一輪完成了"</string>
     <string name="routine_lld_done_lld_to_go_about_lld_minutes">"作息已完成 %1$d 項，還剩 %2$d 項，大約再 %3$d 分鐘。"</string>
     <string name="run_again">"從頭再來"</string>
     <!-- "Run your review cards — they're built from your own slips and target exactly these." -->
@@ -2524,6 +2537,8 @@
     <string name="say_it_the_right_way">"正確地再說一次"</string>
     <string name="say_it_then_check">"先說，再確認"</string>
     <string name="say_it_yourself">"自己說說看"</string>
+    <string name="say_just_this_part">"只說這一部分"</string>
+    <string name="say_just_this_word">"只說這個字"</string>
     <!-- 'Say more in one sentence — a reason, a condition, what happened before. Longer sentences are what move this band.' -->
     <string name="say_more_in_one_sentence_a_reason_a_condition_what_happened_9100fc">"試著在一句話裡多說一點：原因、條件、之前發生的事。能讓這個等級往上的是更長的句子。"</string>
     <string name="say_s_line">"%s的台詞"</string>
@@ -2700,7 +2715,9 @@
     <string name="soon">"快了"</string>
     <string name="sorting_it_out">"整理中…"</string>
     <string name="sound_mic">"聲音與麥克風"</string>
+    <string name="sounded_like">"聽起來像「%2$s」，不是「%1$s」"</string>
     <string name="sounds">"音效"</string>
+    <string name="sounds_to_practice">"要練的音"</string>
     <string name="source">"來源"</string>
     <string name="sources">"資料來源"</string>
     <string name="speak_every_day_and_keep_everything_it_teaches_you">"每天開口說，把學到的全部留下來。"</string>
@@ -3236,6 +3253,7 @@
     <string name="tip">"小提醒"</string>
     <string name="title_optional">"標題（選填）"</string>
     <string name="to_reach">"想達到%s"</string>
+    <string name="to_redo">"再練：%s"</string>
     <string name="to_study">"待學習"</string>
     <string name="today">"今天"</string>
     <string name="today_fills_as_you_go">"今天越做越滿"</string>
@@ -3408,6 +3426,8 @@
     <string name="voicepreset_male">"男聲"</string>
     <string name="voicepreset_mark">"自然、像聊天"</string>
     <string name="voicepreset_paige">"親切、自然"</string>
+    <string name="vowel">"+ 多了母音"</string>
+    <string name="vowels">"母音"</string>
     <string name="vs_last_week">"與上週相比"</string>
     <string name="vs_previous_30_days">"與前 30 天相比"</string>
     <string name="waiting_for_the_first_sync">"等待第一次同步"</string>

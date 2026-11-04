@@ -201,6 +201,8 @@
     <string name="after_each_thing_your_future_self_says_you_see_a_way_to_answ_35f388">"Nach jedem Satz deines fließenden Ichs siehst du, wie du antworten kannst. Manchmal steckt ein Wort darin, das du gerade lernst, und dein häufigster Fehler wird zum Fokus des Anrufs."</string>
     <string name="after_work_drinks">"Feierabend-Drinks"</string>
     <string name="again">"Nochmal"</string>
+    <string name="again_at_the_end_of_this_round">"Am Ende dieser Runde nochmal"</string>
+    <string name="again_in_the_next_round">"In der nächsten Runde nochmal"</string>
     <string name="age_confirmed">"Alter bestätigt"</string>
     <string name="agreeing_and_disagreeing">"Zustimmen und widersprechen"</string>
     <string name="ahead_of_2_by_lld">"%d vor Platz 2"</string>
@@ -348,6 +350,7 @@
     <string name="back_in_3_days">"Kommt in 3 Tagen wieder"</string>
     <string name="back_to_colours">"Zurück zu den Farben"</string>
     <string name="back_to_the_book">"Zurück zum Buch"</string>
+    <string name="back_to_the_sentence">"Zurück zum Satz"</string>
     <string name="back_to_the_voice_your_recording_makes_on_its_own">"Zurück zu der Stimme, die deine Aufnahme von sich aus ergibt."</string>
     <string name="back_to_the_welcome_screen">"Zurück zum Startbildschirm?"</string>
     <string name="back_tomorrow">"Kommt morgen wieder"</string>
@@ -540,6 +543,7 @@
     <string name="congratulations">"Glückwunsch!"</string>
     <string name="connecting">"Verbinde…"</string>
     <string name="consent">"Einwilligung"</string>
+    <string name="consonants">"Konsonanten"</string>
     <string name="contact_us">"Kontakt"</string>
     <string name="contents">"Inhalt"</string>
     <string name="continue_">"Weiter"</string>
@@ -777,6 +781,7 @@
     <string name="each_talk_fills_these_bars_a1_to_c2">"Jedes Gespräch füllt diese Balken, von A1 bis C2."</string>
     <!-- 'Each time your fluent self speaks, a short answer you could give appears above the button, at your level, with its meaning in your language. A blank (___) is where only you know the answer.' -->
     <string name="each_time_your_fluent_self_speaks_a_short_answer_you_could_g_5bd1c9">"Jedes Mal, wenn dein fließendes Ich spricht, erscheint über dem Button eine kurze Antwort, die du geben könntest – auf deinem Niveau und mit Bedeutung in deiner Sprache. Eine Lücke (___) steht für etwas, das nur du weißt."</string>
+    <string name="earlier_calls">"Frühere Anrufe"</string>
     <string name="earphone_mic">"Kopfhörer-Mikrofon"</string>
     <string name="easy">"Leicht"</string>
     <string name="easy_to_understand">"leicht verständlich"</string>
@@ -802,6 +807,7 @@
     <string name="end_this_call_first">"Beende zuerst dieses Gespräch"</string>
     <string name="ended">"Beendet"</string>
     <string name="ended_challenges_keep_their_final_standings">"Beendete Challenges behalten ihren Endstand."</string>
+    <string name="endings_and_flow">"Endungen und Bindung"</string>
     <string name="engrave_your_cube">"Graviere deinen Würfel"</string>
     <string name="enough_new_conversation">"Genug neue Gespräche"</string>
     <string name="enough_to_keep_the_habit_going">"Genug, um dranzubleiben"</string>
@@ -969,6 +975,7 @@
     <string name="first_test_done">"Erster Test geschafft"</string>
     <string name="first_time">"Zum ersten Mal"</string>
     <string name="fix_the_sentence">"Satz korrigieren"</string>
+    <string name="flow">"Fluss"</string>
     <string name="fluency">"Flüssigkeit"</string>
     <string name="fluency_pace">"Flüssigkeit &amp; Tempo"</string>
     <string name="fluent">"Fließend"</string>
@@ -1553,6 +1560,7 @@
     <string name="lld_of_lld_min_today">"Heute %1$d von %2$d Min."</string>
     <string name="lld_of_lld_scenes_left">"Noch %1$d von %2$d Szenen"</string>
     <string name="lld_of_lld_seats_taken">"%1$d von %2$d Plätzen belegt."</string>
+    <string name="lld_of_lld_sentences_passed">"%1$d von %2$d Sätzen geschafft"</string>
     <string name="lld_of_lld_topics_passed">"%1$d von %2$d Themen geschafft"</string>
     <string name="lld_of_your_turns_lld_min">"%1$d deiner Beiträge · %2$d Min."</string>
     <string name="lld_out_of_5">"%d von 5"</string>
@@ -1832,6 +1840,7 @@
     <string name="next_lld">"Nächste %d"</string>
     <string name="next_one">"Als Nächstes %s"</string>
     <string name="next_report_in_lldd_lld_more_minutes_of_practice">"Nächster Bericht in %1$d T. · noch %2$d Minuten Übung."</string>
+    <string name="next_sentence">"Nächster Satz"</string>
     <string name="next_shadowing">"Weiter: Nachsprechen"</string>
     <string name="next_up">"Als Nächstes"</string>
     <string name="next_week_s_arrives">"Die nächste kommt am %s"</string>
@@ -2197,6 +2206,7 @@
     <string name="preparing_study_notes">"Lernhinweise werden vorbereitet…"</string>
     <string name="preparing_the_file">"Datei wird vorbereitet …"</string>
     <string name="preparing_your_lesson">"Deine Lektion wird vorbereitet …"</string>
+    <string name="preparing_your_sentences">"Deine Sätze werden vorbereitet …"</string>
     <string name="preparing_your_video">"Dein Video wird vorbereitet…"</string>
     <string name="present_a_real_product_or_invention">"Stell ein echtes Produkt oder eine Erfindung vor"</string>
     <string name="presentation">"Präsentation"</string>
@@ -2277,6 +2287,8 @@
     <string name="read_it">"Lesen"</string>
     <string name="read_it_aloud_five_times">"Fünfmal laut lesen"</string>
     <string name="read_it_hear_it_in_your_voice_then_say_it">"Lies es, hör es mit deiner Stimme und sag es dann selbst"</string>
+    <string name="read_it_hear_it_right">"Laut lesen"</string>
+    <string name="read_it_in_one_go_without_stopping">"Lies es in einem Zug, ohne anzuhalten"</string>
     <string name="read_it_naturally_mistakes_are_fine_just_keep_going">"Lies es natürlich. Fehler sind okay — einfach weiterlesen."</string>
     <string name="read_it_out_loud">"Laut lesen"</string>
     <!-- 'Read once. The files stay where they are on your phone — only what was read is kept.' -->
@@ -2438,6 +2450,7 @@
     <string name="role_you_re_applying_for_e_g_backend_developer">"Stelle, auf die du dich bewirbst – z. B. Backend-Entwickler"</string>
     <!-- "Rough transcript — the final recognition pass didn't finish (network). The score may be off this time." -->
     <string name="rough_transcript_the_final_recognition_pass_didn_t_finish_ne_ac415f">"Grobes Transkript — die abschließende Erkennung lief nicht durch (Netzwerk). Die Bewertung kann diesmal danebenliegen."</string>
+    <string name="round_done">"Runde geschafft"</string>
     <string name="routine_lld_done_lld_to_go_about_lld_minutes">"Heute in deiner Routine: %1$d geschafft, %2$d übrig, noch rund %3$d Minuten."</string>
     <string name="run_again">"Von vorn"</string>
     <!-- "Run your review cards — they're built from your own slips and target exactly these." -->
@@ -2520,6 +2533,8 @@
     <string name="say_it_the_right_way">"Richtig sagen"</string>
     <string name="say_it_then_check">"Erst sagen, dann prüfen"</string>
     <string name="say_it_yourself">"Sag es selbst"</string>
+    <string name="say_just_this_part">"Sag nur diesen Teil"</string>
+    <string name="say_just_this_word">"Sag nur dieses Wort"</string>
     <!-- 'Say more in one sentence — a reason, a condition, what happened before. Longer sentences are what move this band.' -->
     <string name="say_more_in_one_sentence_a_reason_a_condition_what_happened_9100fc">"Sag mehr in einem Satz – einen Grund, eine Bedingung, was vorher passiert ist. Längere Sätze sind es, die dieses Niveau bewegen."</string>
     <string name="say_s_line">"Sag den Satz von %s"</string>
@@ -2696,7 +2711,9 @@
     <string name="soon">"Bald"</string>
     <string name="sorting_it_out">"Wird einsortiert…"</string>
     <string name="sound_mic">"Ton &amp; Mikrofon"</string>
+    <string name="sounded_like">"Klang wie „%2$s“ statt „%1$s“"</string>
     <string name="sounds">"Töne"</string>
+    <string name="sounds_to_practice">"Laute zum Üben"</string>
     <string name="source">"Quelle"</string>
     <string name="sources">"Quellen"</string>
     <string name="speak_every_day_and_keep_everything_it_teaches_you">"Sprich jeden Tag und behalte alles, was du dabei lernst."</string>
@@ -3232,6 +3249,7 @@
     <string name="tip">"Tipp"</string>
     <string name="title_optional">"Titel (optional)"</string>
     <string name="to_reach">"Bis %s"</string>
+    <string name="to_redo">"Nochmal: %s"</string>
     <string name="to_study">"Zu lernen"</string>
     <string name="today">"Heute"</string>
     <string name="today_fills_as_you_go">"Heute füllt sich nach und nach"</string>
@@ -3404,6 +3422,8 @@
     <string name="voicepreset_male">"männlich"</string>
     <string name="voicepreset_mark">"natürlich, im Gesprächston"</string>
     <string name="voicepreset_paige">"lebendig, natürlich"</string>
+    <string name="vowel">"+ Vokal dazwischen"</string>
+    <string name="vowels">"Vokale"</string>
     <string name="vs_last_week">"im Vergleich zur Vorwoche"</string>
     <string name="vs_previous_30_days">"im Vergleich zu den 30 Tagen davor"</string>
     <string name="waiting_for_the_first_sync">"Warte auf die erste Synchronisierung"</string>

@@ -2671,7 +2671,12 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
             var first = true
             androidx.compose.runtime.snapshotFlow { pager.currentPage }.collect { page ->
                 if (first) { first = false; return@collect }
-                when (TalkRingMode.entries[page]) {
+                // The pronunciation page is its own key and leaves tutor mode
+                // as it was: it is a different call, not a setting of the
+                // talk (iOS ffaf0c58).
+                val m = TalkRingMode.entries[page]
+                com.roro.futurevoice.talk.PronunciationCall.set(context, m == TalkRingMode.PRONUNCIATION)
+                when (m) {
                     TalkRingMode.FREE_TALK -> com.roro.futurevoice.talk.TutorMode.set(context, false)
                     TalkRingMode.TUTOR -> com.roro.futurevoice.talk.TutorMode.set(context, true)
                     TalkRingMode.PRONUNCIATION -> {}
@@ -2706,10 +2711,18 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
         ) {
             val sub = if (seconds > 0) com.roro.futurevoice.data.TalkTime.clock(seconds)
                 else stringResource(R.string.today_s_goal_lld_min, goalMinutes)
+            // The pronunciation page's line: the sound the next call opens on.
+            val pronFallback = stringResource(R.string.read_it_hear_it_right)
+            val pronHeadline = remember(state.targetLanguage, state.level, pager.currentPage, revision) {
+                com.roro.futurevoice.talk.PronunciationCall.startingTopic(context, state.targetLanguage, state.level)
+                    ?.let { "${it.symbol} · ${it.examples}" } ?: pronFallback
+            }
+            fun subFor(m: TalkRingMode) = if (m == TalkRingMode.PRONUNCIATION) pronHeadline else sub
             // The morph's proxy wears the CURRENT page's two lines, so the
             // hand-off never swaps "Tutor" for "Let's talk" mid-flight.
             val currentLabel = stringResource(TalkRingMode.entries[pager.currentPage].title)
-            androidx.compose.runtime.SideEffect { TalkMorph.ringLabel = currentLabel; TalkMorph.ringSub = sub }
+            val currentSub = subFor(TalkRingMode.entries[pager.currentPage])
+            androidx.compose.runtime.SideEffect { TalkMorph.ringLabel = currentLabel; TalkMorph.ringSub = currentSub }
             androidx.compose.foundation.pager.HorizontalPager(
                 state = pager,
                 modifier = Modifier.fillMaxSize(),
@@ -2733,7 +2746,7 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
                         color = if (m.isAvailable) MaterialTheme.colorScheme.onSurface
                             else MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
-                        if (m.isAvailable) sub else stringResource(R.string.coming_soon),
+                        if (m.isAvailable) subFor(m) else stringResource(R.string.coming_soon),
                         // iOS `.footnote.weight(.medium).monospacedDigit()`.
                         style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -2767,17 +2780,20 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
 /**
  * The three things the home ring can start (iOS `TalkRingMode`, d3a28206).
  * Free talk and the tutor are the same call with [com.roro.futurevoice.talk.TutorMode]
- * off or on; pronunciation is a placeholder until its lesson exists.
+ * off or on; pronunciation is its own call ([com.roro.futurevoice.talk.PronunciationCall]).
  */
 enum class TalkRingMode(@androidx.annotation.StringRes val title: Int) {
     FREE_TALK(R.string.let_s_talk), TUTOR(R.string.tutor), PRONUNCIATION(R.string.pronunciation);
 
-    val isAvailable: Boolean get() = this != PRONUNCIATION
+    val isAvailable: Boolean get() = true
 
     companion object {
         /** What the ring shows on launch — the last mode the learner swiped to. */
-        fun current(context: android.content.Context): TalkRingMode =
-            if (com.roro.futurevoice.talk.TutorMode.isOn(context)) TUTOR else FREE_TALK
+        fun current(context: android.content.Context): TalkRingMode = when {
+            com.roro.futurevoice.talk.PronunciationCall.isOn(context) -> PRONUNCIATION
+            com.roro.futurevoice.talk.TutorMode.isOn(context) -> TUTOR
+            else -> FREE_TALK
+        }
     }
 }
 

@@ -20,6 +20,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Forum
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.RecordVoiceOver
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CardGiftcard
@@ -95,6 +99,8 @@ fun PlanPageScreen(
     var account by remember { mutableStateOf<AccountStatus?>(null) }
     var inviteOffer by remember { mutableStateOf<InviteOffer?>(null) }
     var receipt by remember { mutableStateOf<SubscriptionReceipt?>(null) }
+    /** This period's talk time by kind of call (iOS `usage.talkModes`). */
+    var talkModes by remember { mutableStateOf<List<com.roro.futurevoice.data.TalkModeSplit.Part>>(emptyList()) }
     /** Bumped when a pack lands, so the balance is read again. */
     var reload by remember { mutableStateOf(0) }
     LaunchedEffect(reload) {
@@ -114,6 +120,9 @@ fun PlanPageScreen(
         val cap = loaded.monthlyCapSeconds
         val poolIsSpent = cap != null && loaded.secondsUsedPeriod >= cap && loaded.secondsBalance < 60
         if (poolIsSpent) inviteOffer = InviteOffer.load(loaded)
+        // Every account reads the ledger for the split (iOS ffaf0c58): the
+        // figure above stays the pool's own, these are its parts.
+        talkModes = com.roro.futurevoice.data.TalkModeSplit.load(auth, loaded.periodStart).orEmpty()
     }
     val locale = LocalConfiguration.current.locales[0]
     val context = LocalContext.current
@@ -176,6 +185,8 @@ fun PlanPageScreen(
                     subtitle = trialPlanMinutes?.let {
                         stringResource(R.string.lld_min_a_month_once_your_plan_starts, it)
                     })
+                // Where the minutes went, by kind of call (founder, 2026-11-04).
+                talkModes.forEach { part -> TalkModeRow(part) }
                 // Extra minutes — invite minutes and packs bought, one balance
                 // (iOS relabel, 2026-09-26) — are time ON TOP of the pool, so
                 // they are their own row and never folded into the figure above —
@@ -460,6 +471,29 @@ private fun storeManageUrl(source: String?): String? = when (source) {
 private fun storeManageTitle(source: String?): Int = when (source) {
     "apple" -> R.string.manage_in_the_app_store
     else -> R.string.manage_in_google_play
+}
+
+@Composable
+private fun TalkModeRow(part: com.roro.futurevoice.data.TalkModeSplit.Part) {
+    val (title, icon) = when (part.key) {
+        "free" -> R.string.free_talk to Icons.Filled.Forum
+        "tutor" -> R.string.tutor to Icons.Filled.School
+        "pron" -> R.string.pronunciation to Icons.Filled.RecordVoiceOver
+        else -> R.string.earlier_calls to Icons.Filled.History
+    }
+    val value = if (part.seconds >= 60) stringResource(R.string.lld_min_b61908, part.seconds / 60)
+        else stringResource(R.string.lld_sec, part.seconds)
+    Row(
+        Modifier.fillMaxWidth().padding(start = 38.dp, end = 14.dp, top = 6.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(title), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }
 
 @Composable

@@ -181,6 +181,18 @@ data class TalkUiState(
     val tutorLesson: TutorLesson? = null,
     /** A curriculum is being written (iOS `tutorPlanning`). */
     val tutorPlanning: Boolean = false,
+    /** The pronunciation call (iOS `pronThisCall`, ffaf0c58): opened from the
+     *  Talk ring's third page, fixed for the whole call. */
+    val pronOn: Boolean = false,
+    /** The round on screen: five sentences for one sound. */
+    val pronRound: PronunciationRound? = null,
+    /** The sound being practiced (set before its round is written). */
+    val pronTopic: PronunciationCourse.Topic? = null,
+    /** A round is being written. */
+    val pronPlanning: Boolean = false,
+    /** The call asks the screen to open the course (the learner wants a
+     *  different sound); the screen clears it when it opens. */
+    val pronTopicsRequested: Boolean = false,
 )
 
 /**
@@ -302,6 +314,21 @@ class TalkViewModel(context: Context) : ViewModel() {
     /** The topic sheet is open: choosing is someone being here (iOS
      *  `showingTutorTopics` in the idle watch, 74d3ccf3). */
     private var tutorTopicsShowing = false
+
+    // The pronunciation call (iOS `PronunciationCall`, ffaf0c58).
+    private var pronThisCall = false
+    /** Takes in a row that came back with nothing usable on this sentence. */
+    private var pronUnheard = 0
+    /** The course sheet is open — choosing is someone being here. */
+    private var pronTopicsShowing = false
+    /** The learner's turn to read: opened the moment the fluent self stops
+     *  speaking, closed when the take is sent ([pronHeard]). */
+    private var pronWindowOpen = false
+    private var pronSendJob: Job? = null
+    /** When the words now held started — to tell reading along (started
+     *  early in the fluent self's line) from answering at its end. */
+    private var pronHeardSince: Long? = null
+    private var lastRealtimeState = RealtimeTalkClient.State.IDLE
     /** Where a scenario call takes place and who the other side is, for the
      *  "try saying" — "What can I get you?" only has one natural answer once
      *  it knows it is a café (iOS `coachSituation`). Null on every other call. */
@@ -386,15 +413,26 @@ class TalkViewModel(context: Context) : ViewModel() {
         _state.value = TalkUiState(phase = TalkPhase.CONNECTING,
             turns = resume?.turns.orEmpty(), resumedTurnCount = resume?.turns?.size ?: 0)
         coachOn = CoachMode.resolve(CoachMode.choice(appContext), config.level.code)
-        tutorThisCall = TutorMode.isOn(appContext) || config.forceTutor
+        // Only the ring's own page opens one: the key stays set while that
+        // page shows, and a daily call or a topic must never become a
+        // reading drill because of it (iOS ffaf0c58).
+        pronThisCall = config.entry == TalkEntry.TALK_RING && config.resume == null && !config.tutor &&
+            config.topic.isBlank() && config.cast == null && config.scenarioId == null &&
+            config.newsFacts.isEmpty() && !config.learnerPicksTopic && PronunciationCall.isOn(appContext)
+        if (pronThisCall) coachOn = false
+        tutorThisCall = (TutorMode.isOn(appContext) || config.forceTutor) && !pronThisCall
         tutorWasOn = tutorThisCall
+        pronUnheard = 0; pronWindowOpen = false; pronHeardSince = null; pronSendJob?.cancel()
+        lastRealtimeState = RealtimeTalkClient.State.IDLE
         tutorJustTicked = false
         tutorLastFixes = emptyList()
         resetTutorTries()
         tutorCheckTurnIds.clear()
         pendingTutorNudge = null
-        _state.update { it.copy(tutorOn = tutorThisCall) }
-        sendToAnswerOn = SendToAnswer.resolve(SendToAnswer.choice(appContext), config.level.code)
+        _state.update { it.copy(tutorOn = tutorThisCall, pronOn = pronThisCall) }
+        // Send-to-answer whatever the setting says on the pronunciation call:
+        // a learner murmuring along must not become a judged take.
+        sendToAnswerOn = SendToAnswer.resolve(SendToAnswer.choice(appContext), config.level.code) || pronThisCall
         promptForTutor = null
         coachPlan = CoachPlan()
         coachSteerSent = ""
@@ -550,6 +588,7 @@ class TalkViewModel(context: Context) : ViewModel() {
     }
 
     private fun persist() {
+        if (pronThisCall) { finishPronunciationCall(); return }
         if (discardOnEnd) return
         val cfg = config ?: return
         val turns = _state.value.turns
@@ -713,8 +752,10 @@ class TalkViewModel(context: Context) : ViewModel() {
                         tutorPlanning = _state.value.tutorPlanning,
                     ) + ConversationPrompt.REALTIME_STYLE_RULES
                 }
-                promptForTutor = build
-                realtimeSystem = build(tutorThisCall)
+                promptForTutor = if (pronThisCall) { _ -> pronSystemPrompt(config) } else build
+                realtimeSystem = promptForTutor!!(tutorThisCall)
+                // A reading drill: the voice waits for the first sentence.
+                if (pronThisCall) { beginPronunciationCall(config); return@launch }
                 // A resumed talk carries its history so the fluent self knows
                 // what was already said, and opens on the learner's mic — no
                 // opener, no "you go first".
@@ -866,8 +907,11 @@ class TalkViewModel(context: Context) : ViewModel() {
         cfg.cast?.name ?: cfg.topic.ifBlank {
             // Named after the home ring's page it came from (iOS
             // `callDisplayTitle` → `emptyTopicTitle`, d3a28206).
-            appContext.getString(if (tutorThisCall) com.roro.futurevoice.R.string.tutor
-                else com.roro.futurevoice.R.string.let_s_talk)
+            appContext.getString(when {
+                pronThisCall -> com.roro.futurevoice.R.string.pronunciation
+                tutorThisCall -> com.roro.futurevoice.R.string.tutor
+                else -> com.roro.futurevoice.R.string.let_s_talk
+            })
         }
 
     private fun updateCallNotification(cfg: TalkConfig, phase: TalkPhase) {
@@ -912,6 +956,8 @@ class TalkViewModel(context: Context) : ViewModel() {
             native = cfg.nativeLanguage,
             manualTurns = sendToAnswerOn,
             meterFromStart = tutorThisCall,
+            repeatAfterMe = pronThisCall,
+            mode = callMode,
         )
         syncCoachSteer()
         // A picked-up call is a new gateway session: a running lesson's hold
@@ -931,6 +977,9 @@ class TalkViewModel(context: Context) : ViewModel() {
                 RealtimeTalkClient.State.IDLE, RealtimeTalkClient.State.FAILED -> null
             }
             if (st == RealtimeTalkClient.State.LISTENING) speakLocalOpener()
+            val was = lastRealtimeState
+            lastRealtimeState = st
+            if (pronThisCall) viewModelScope.launch { pronStateChanged(was, st) }
             if (st == RealtimeTalkClient.State.HEARING) markLearnerSpoke()
             val over = _state.value.phase == TalkPhase.ENDED || _state.value.phase == TalkPhase.IDLE
             if (phase != null && !over) {
@@ -941,8 +990,13 @@ class TalkViewModel(context: Context) : ViewModel() {
         }
         realtime.onPartial = { text ->
             // An empty partial is also the gateway's "nothing to send".
+            val wasPending = _state.value.sendPending
             _state.update { it.copy(partial = text, level = realtime.level,
                 sendPending = it.sendPending && text.isNotEmpty()) }
+            if (pronThisCall) viewModelScope.launch {
+                if (wasPending && !_state.value.sendPending) pronSendSettled()
+                pronHeard(text)
+            }
         }
         realtime.onUserTurn = turn@{ said, wav, ms, fluency, flags ->
             markLearnerSpoke()
@@ -961,9 +1015,10 @@ class TalkViewModel(context: Context) : ViewModel() {
                             fluency = fluency, audioURL = audio, suggestion = null) else it
                     })
                 }
-                val correction = if (flags.native) CompletableDeferred<List<TurnFix>?>(null)
+                val correction = if (flags.native || pronThisCall) CompletableDeferred<List<TurnFix>?>(null)
                     else requestRealtimeSuggestion(last.id, joined, cfg)
                 tutorTurn(last.id, joined, correction)
+                pronTurn(last.id, joined)
                 return@turn
             }
             // Measured off the take (iOS 55088c28): realtime turns used to
@@ -976,9 +1031,10 @@ class TalkViewModel(context: Context) : ViewModel() {
             viewModelScope.launch { syncCoachSteer() }
             // A line said in their own language was answered with the target
             // way to say it; a correction would be built on the wrong language.
-            val correction = if (flags.native) CompletableDeferred<List<TurnFix>?>(null)
+            val correction = if (flags.native || pronThisCall) CompletableDeferred<List<TurnFix>?>(null)
                 else requestRealtimeSuggestion(turn.id, said, cfg)
             tutorTurn(turn.id, said, correction)
+            pronTurn(turn.id, said)
         }
         realtime.onReplyAudio = { ctx, pcm, rate ->
             realtimeReplyTurns[ctx]?.let { id ->
@@ -1419,7 +1475,8 @@ class TalkViewModel(context: Context) : ViewModel() {
                 // Picking a tutor topic or waiting for its plan is someone
                 // being here (iOS 74d3ccf3: the call put itself down while the
                 // learner chose, and the "ready" note went into a hung-up call).
-                if (somethingIsHappening() || tutorTopicsShowing || _state.value.tutorPlanning) {
+                if (somethingIsHappening() || tutorTopicsShowing || _state.value.tutorPlanning ||
+                    pronTopicsShowing || _state.value.pronPlanning) {
                     lastActivityAt = System.currentTimeMillis(); continue
                 }
                 // Send-to-answer with words held: they are composing, not
@@ -1755,7 +1812,7 @@ class TalkViewModel(context: Context) : ViewModel() {
      *  new rules, and a reconnect opens on it too; the classic path reads it
      *  at its next turn. Once on, the call is a practice call. */
     fun setTutorMode(on: Boolean) {
-        if (on == tutorThisCall) return
+        if (on == tutorThisCall || pronThisCall) return
         tutorThisCall = on
         if (on) { tutorWasOn = true; realtime.tutorCall = true }
         _state.update { it.copy(tutorOn = on) }
@@ -1765,6 +1822,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             val phase = _state.value.phase
             if (phase != TalkPhase.IDLE && phase != TalkPhase.ENDED) {
                 realtime.setMeterFromStart(on)
+                realtime.setCallMode(callMode)
                 realtime.setSystem(realtimeSystem)
                 if (on && _state.value.tutorLesson == null) realtime.nudge(TutorNudges.TURNED_ON)
             }
@@ -1785,6 +1843,413 @@ class TalkViewModel(context: Context) : ViewModel() {
 
     private val callIsLive: Boolean
         get() = _state.value.phase.let { it != TalkPhase.IDLE && it != TalkPhase.ENDED }
+
+    // MARK: - Pronunciation call (iOS `PronunciationCall`, ffaf0c58)
+
+    /** What kind of call this is, for the usage page's split. */
+    private val callMode: String get() = when {
+        pronThisCall -> "pron"
+        tutorThisCall -> "tutor"
+        else -> "free"
+    }
+
+    private fun pronSystemPrompt(cfg: TalkConfig): String =
+        PronunciationNotes.systemPrompt(cfg.targetLanguage, cfg.level,
+            _state.value.pronRound, _state.value.pronPlanning) + ConversationPrompt.REALTIME_STYLE_RULES
+
+    /** How a pronunciation call opens: silent while the first round is
+     *  written (the card says "Preparing…"), then asks for the first
+     *  sentence. Every learner turn is held ([tutorJudging]) and answered
+     *  with the app's note. */
+    private suspend fun beginPronunciationCall(cfg: TalkConfig) {
+        connectRealtime(cfg, null, emptyList())
+        realtime.setHoldReplies(true)
+        val topic = PronunciationCall.startingTopic(appContext, cfg.targetLanguage, cfg.level)
+        if (topic == null) { tutorNudge(PronunciationNotes.PLAN_FAILED); return }
+        startPronRound(topic, note = null, first = true)
+    }
+
+    /** The course sheet opened or closed — choosing is someone being here. */
+    fun setPronTopicsShowing(on: Boolean) {
+        pronTopicsShowing = on
+        if (on) {
+            lastActivityAt = System.currentTimeMillis()
+            _state.update { it.copy(pronTopicsRequested = false) }
+        }
+    }
+
+    /** A sound picked in the course sheet. */
+    fun pickPronTopic(topic: PronunciationCourse.Topic) =
+        startPronRound(topic, PronunciationNotes.preparing(topic, picked = true))
+
+    /** Write a round for [topic] and put it on screen. [note]: what the
+     *  voice says while it is written. */
+    private fun startPronRound(topic: PronunciationCourse.Topic, note: String?, first: Boolean = false) {
+        val cfg = config ?: return
+        if (!pronThisCall || _state.value.pronPlanning) return
+        val prev = _state.value.pronRound
+        val avoid = if (prev?.topic?.id == topic.id) prev.lines.map { it.text } else emptyList()
+        _state.update { it.copy(pronPlanning = true, pronTopic = topic, pronRound = null) }
+        pronUnheard = 0
+        PronunciationCall.rememberTopic(appContext, cfg.targetLanguage, topic.id)
+        sendTutorSystem()
+        note?.let { tutorNudge(it) }
+        viewModelScope.launch {
+            val review = withContext(Dispatchers.IO) {
+                PronunciationProgressStore.all(appContext, cfg.targetLanguage)[topic.id]?.missedWords.orEmpty()
+            }
+            val round = PronunciationPlanner.plan(topic, cfg.targetLanguage, cfg.nativeLanguage, cfg.level,
+                cfg.persona, avoid, review)
+            if (tutorCallOver || _state.value.pronTopic?.id != topic.id) return@launch
+            _state.update { it.copy(pronPlanning = false, pronRound = round) }
+            sendTutorSystem()
+            if (round == null) {
+                com.roro.futurevoice.core.Telemetry.log("pron_plan_failed", mapOf("topic" to topic.id))
+                tutorNudge(PronunciationNotes.PLAN_FAILED)
+                return@launch
+            }
+            com.roro.futurevoice.core.Telemetry.log("pron_round_started", mapOf("topic" to topic.id,
+                "lines" to round.lines.size.toString(), "first" to if (first) "1" else "0"))
+            tutorNudge(PronunciationNotes.ready(round, first))
+        }
+    }
+
+    /** One learner turn of a pronunciation call. The take is read by Azure
+     *  against the sentence on screen and the verdict is code
+     *  ([PronunciationJudge]); the voice then says exactly one line for it. */
+    private fun pronTurn(turnId: String, said: String) {
+        if (!pronThisCall) return
+        val cfg = config ?: return
+        if (_state.value.pronPlanning) { tutorNudge(PronunciationNotes.SPOKE_WHILE_PLANNING); return }
+        val round = _state.value.pronRound ?: run { tutorNudge(PronunciationNotes.PLAN_FAILED); return }
+        if (round.isFinished) { pronAfterRound(turnId, said, round); return }
+        val i = round.current ?: return
+        val line = round.lines[i]
+        val drill = line.drillWord
+        val audio = _state.value.turns.firstOrNull { it.id == turnId }?.audioURL?.let { java.io.File(it) }
+            ?.takeIf { it.exists() }
+        val target = cfg.targetLanguage
+        viewModelScope.launch {
+            var result: PronunciationResult? = null
+            var outcome = PronunciationAssessor.Outcome.SKIPPED
+            if (audio != null) {
+                val a = PronunciationAssessor.assess(appContext, audio, drill ?: line.text, target, "pron_call")
+                result = a.result; outcome = a.outcome
+            }
+            var now = _state.value.pronRound ?: return@launch
+            if (tutorCallOver || !tutorStillSaid(turnId, said) || now.id != round.id || now.current != i) return@launch
+            result?.let { r ->
+                withContext(Dispatchers.IO) {
+                    runCatching { com.roro.futurevoice.data.PronunciationLedger.shared(appContext)
+                        .record(listOf(r), turnId, EarlierToday.PRON_SURFACE, target) }
+                }
+            }
+            if (drill != null) { pronWordTake(drill, result, outcome, said, audio == null, now, i); return@launch }
+            // No reader at all (no key, the day's cap, no audio), or two takes
+            // in a row with nothing usable: judge the words alone, so the
+            // call can never loop on "read it again".
+            val noReader = result == null && (outcome == PronunciationAssessor.Outcome.UNCONFIGURED ||
+                outcome == PronunciationAssessor.Outcome.CAPPED || outcome == PronunciationAssessor.Outcome.SKIPPED ||
+                audio == null || pronUnheard >= 2)
+            val verdict = if (noReader) PronunciationJudge.fallback(line, said, target)
+                else PronunciationJudge.verdict(result, line, said, now.topic.phonemes, target)
+            com.roro.futurevoice.core.Telemetry.log("pron_take", mapOf(
+                "topic" to now.topic.id, "verdict" to verdict.name,
+                "score" to (result?.soundScore?.toString() ?: ""),
+                "fluency" to (result?.fluency?.toString() ?: ""),
+                "prosody" to (result?.prosody?.toString() ?: ""),
+                "outcome" to outcome.raw, "try" to (line.tries + 1).toString()))
+            val fb = PronunciationJudge.feedback(verdict, result, line, now.topic.phonemes)
+            val heard = (verdict as? PronunciationJudge.Verdict.NotYet)?.takeIf { it.heard != null }
+            now = now.replacing(i) { l ->
+                l.copy(lastResult = result ?: l.lastResult, feedback = fb ?: l.feedback,
+                    notSmooth = verdict is PronunciationJudge.Verdict.NotSmooth,
+                    heardWord = heard?.word, heardAs = heard?.heard)
+            }.copy(carried = null)
+            when (verdict) {
+                PronunciationJudge.Verdict.OffScript -> {
+                    pronUnheard = 0
+                    _state.update { it.copy(pronRound = now) }
+                    tutorNudge(PronunciationNotes.offScript(said))
+                }
+                PronunciationJudge.Verdict.Unheard -> {
+                    pronUnheard += 1
+                    tutorNudge(PronunciationNotes.UNHEARD)
+                }
+                is PronunciationJudge.Verdict.Pass -> {
+                    pronUnheard = 0
+                    pronClearMissed(line.text, now.topic.id)
+                    now = now.replacing(i) { l ->
+                        l.copy(passed = true, bestScore = if (verdict.score > 0) maxOf(l.bestScore ?: 0, verdict.score) else l.bestScore)
+                    }
+                    _state.update { it.copy(pronRound = now) }
+                    com.roro.futurevoice.ui.HapticEngine.success(appContext)
+                    sendTutorSystem()
+                    if (now.isFinished) finishPronRound(now)
+                    tutorNudge(PronunciationNotes.passed(verdict.score, now.current?.let { now.lines[it] }, now,
+                        afterMisses = line.tries > 0))
+                }
+                is PronunciationJudge.Verdict.NotSmooth -> {
+                    pronUnheard = 0
+                    // Nothing moves on by itself: only the learner's own
+                    // "Next sentence" leaves a sentence.
+                    now = now.replacing(i) { l -> l.copy(tries = l.tries + 1, bestScore = maxOf(l.bestScore ?: 0, verdict.score)) }
+                    _state.update { it.copy(pronRound = now) }
+                    tutorNudge(PronunciationNotes.notSmooth(line.text))
+                }
+                is PronunciationJudge.Verdict.NotYet -> {
+                    pronUnheard = 0
+                    // The word on its own first, then the sentence again.
+                    val drillText = PronunciationJudge.drillText(verdict.word, line.text, target)
+                    now = now.replacing(i) { l ->
+                        l.copy(tries = l.tries + 1, bestScore = maxOf(l.bestScore ?: 0, verdict.score),
+                            drillWord = drillText, drillTries = 0)
+                    }
+                    _state.update { it.copy(pronRound = now) }
+                    sendTutorSystem()
+                    tutorNudge(PronunciationNotes.notYet(drillText, verdict.sound, verdict.heard, now.topic, line.text,
+                        PronunciationJudge.heardAs(result, verdict.word, verdict.sound)))
+                }
+            }
+        }
+    }
+
+    /** The pronunciation call's turn-taking (iOS `pronStateChanged`): the
+     *  gateway holds everything (send-to-answer) and the APP sends. What was
+     *  heard while the fluent self was speaking — reading along, a murmur —
+     *  is thrown away when it stops; from then on is the learner's turn,
+     *  sent by itself once they go quiet. */
+    private fun pronStateChanged(old: RealtimeTalkClient.State, new: RealtimeTalkClient.State) {
+        if (!pronThisCall) return
+        if (new == RealtimeTalkClient.State.SPEAKING) {
+            pronWindowOpen = false
+            pronSendJob?.cancel()
+        } else if (old == RealtimeTalkClient.State.SPEAKING) {
+            // Reading along early in the line is thrown away; words begun in
+            // its last second are the learner answering, and stay.
+            val held = _state.value.partial.isNotBlank()
+            val since = pronHeardSince
+            if (held && since != null && System.currentTimeMillis() - since > 1000) {
+                sendPendingJob?.cancel()
+                _state.update { it.copy(sendPending = false, partial = "") }
+                realtime.discardTurn(filterStale = false)
+                pronHeardSince = null
+            }
+            pronWindowOpen = true
+            if (_state.value.partial.isNotBlank()) pronHeard(_state.value.partial)
+        }
+    }
+
+    /** A send the gateway had nothing for: it is still their turn. */
+    private fun pronSendSettled() {
+        if (pronThisCall && !_state.value.sendPending && realtime.state != RealtimeTalkClient.State.SPEAKING) {
+            pronWindowOpen = true
+        }
+    }
+
+    /** Words arriving in the learner's window: send once they stop. Quicker
+     *  when the sentence on screen is (nearly) all there — a reader pausing
+     *  mid-sentence for a hard word must not be cut off. */
+    private fun pronHeard(partial: String) {
+        if (!pronThisCall) return
+        if (partial.isBlank()) pronHeardSince = null
+        else if (pronHeardSince == null) pronHeardSince = System.currentTimeMillis()
+        if (!pronWindowOpen || _state.value.sendPending) return
+        pronSendJob?.cancel()
+        if (partial.isBlank()) return
+        val round = _state.value.pronRound
+        val sentence = round?.current?.let { round.lines[it].drillWord ?: round.lines[it].text }.orEmpty()
+        val whole = sentence.isNotEmpty() && PronunciationJudge.overlap(partial, sentence) >= 0.8
+        pronSendJob = viewModelScope.launch {
+            delay(if (whole) 1000 else 2500)
+            // Still voicing (the transcript lags the mouth): give it a beat.
+            var extra = 0
+            while (realtime.level > 0.25f && extra < 10) { delay(300); extra++ }
+            if (!pronWindowOpen || _state.value.partial != partial || _state.value.sendPending ||
+                realtime.state == RealtimeTalkClient.State.SPEAKING) return@launch
+            pronWindowOpen = false
+            _state.update { it.copy(sendPending = true) }
+            realtime.sendTurn()
+            sendPendingJob?.cancel()
+            sendPendingJob = viewModelScope.launch {
+                delay(5000)
+                if (_state.value.sendPending) { _state.update { it.copy(sendPending = false) }; pronSendSettled() }
+            }
+        }
+    }
+
+    /** The learner's own "Next sentence": the only way a sentence is left
+     *  unpassed. Its word and when it comes back are said, and shown. */
+    fun pronSkipSentence() {
+        if (!pronThisCall || _state.value.pronPlanning) return
+        var now = _state.value.pronRound ?: return
+        val i = now.current ?: return
+        if (_state.value.partial.isNotBlank()) discardHeldForPron()
+        val fb = now.lines[i].feedback
+        val word = if (fb?.ok == false) fb.word else null
+        val sound = if (fb?.ok == false) fb.sound else null
+        val (round, later) = pronGiveUp(now, i, word, sound)
+        now = round
+        com.roro.futurevoice.core.Telemetry.log("pron_skip", mapOf("topic" to now.topic.id,
+            "tries" to now.lines[i].tries.toString(), "retry" to if (later) "0" else "1"))
+        _state.update { it.copy(pronRound = now) }
+        sendTutorSystem()
+        if (now.isFinished) finishPronRound(now)
+        tutorNudge(PronunciationNotes.moveOn(word, sound, now.topic, now.current?.let { now.lines[it] }, now, later))
+    }
+
+    /** The learner's own "Back to the sentence" while a word is drilled. */
+    fun pronLeaveWord() {
+        if (!pronThisCall) return
+        val now = _state.value.pronRound ?: return
+        val i = now.current ?: return
+        val word = now.lines[i].drillWord ?: return
+        if (_state.value.partial.isNotBlank()) discardHeldForPron()
+        val next = now.replacing(i) { it.copy(drillWord = null, drillTries = 0) }
+        _state.update { it.copy(pronRound = next) }
+        sendTutorSystem()
+        tutorNudge(PronunciationNotes.wordBack(word, next.lines[i].feedback?.sound, next.topic))
+    }
+
+    private fun discardHeldForPron() {
+        sendPendingJob?.cancel()
+        _state.update { it.copy(sendPending = false, partial = "") }
+        realtime.discardTurn(filterStale = false)
+    }
+
+    /** A sentence the learner skipped. The first time it goes to the END of
+     *  the round, once (true); its second time it is left, and its word is
+     *  kept for the next round on this sound (false). */
+    private fun pronGiveUp(round: PronunciationRound, i: Int, word: String?, sound: String?): Pair<PronunciationRound, Boolean> {
+        val cfg = config
+        val clean = word?.trim { !it.isLetterOrDigit() }
+        val line = round.lines[i]
+        var next = round.replacing(i) { it.copy(skipped = true, drillWord = null) }
+            .copy(carried = PronunciationRound.Carried(clean, sound, laterInRound = !line.isRetry))
+        if (!line.isRetry) {
+            next = next.copy(lines = next.lines + PronunciationRound.Line(text = line.text, focus = line.focus, isRetry = true))
+            return next to true
+        }
+        if (cfg != null && !clean.isNullOrEmpty()) {
+            PronunciationProgressStore.update(appContext, cfg.targetLanguage, round.topic.id) { p ->
+                val list = p.missedWords.orEmpty().filter { PronunciationJudge.key(it) != PronunciationJudge.key(clean) } + clean
+                p.copy(missedWords = list.takeLast(8))
+            }
+        }
+        return next to false
+    }
+
+    /** Words kept from earlier rounds leave the list once said right. */
+    private fun pronClearMissed(text: String, topicId: String) {
+        val lang = config?.targetLanguage ?: return
+        val missed = PronunciationProgressStore.all(appContext, lang)[topicId]?.missedWords
+        if (missed.isNullOrEmpty()) return
+        val said = text.split(Regex("\\s+")).map { PronunciationJudge.key(it) }.toSet()
+        val left = missed.filter { PronunciationJudge.key(it) !in said }
+        if (left.size == missed.size) return
+        PronunciationProgressStore.update(appContext, lang, topicId) { it.copy(missedWords = left) }
+    }
+
+    /** A take of one word said on its own ([PronunciationRound.Line.drillWord]).
+     *  Right → back to the sentence; not yet → the word again, until it is
+     *  right or the learner taps "Back to the sentence". */
+    private fun pronWordTake(word: String, result: PronunciationResult?, outcome: PronunciationAssessor.Outcome,
+                             said: String, noAudio: Boolean, round: PronunciationRound, i: Int) {
+        val target = config?.targetLanguage ?: return
+        val probe = PronunciationRound.Line(text = word, focus = word.split(Regex("\\s+")).filter { it.isNotEmpty() })
+        val noReader = result == null && (outcome == PronunciationAssessor.Outcome.UNCONFIGURED ||
+            outcome == PronunciationAssessor.Outcome.CAPPED || outcome == PronunciationAssessor.Outcome.SKIPPED ||
+            noAudio || pronUnheard >= 2)
+        var verdict = if (noReader) PronunciationJudge.fallback(probe, said, target)
+            else PronunciationJudge.verdict(result, probe, said, round.topic.phonemes, target)
+        // One word has no rhythm to judge: its sounds are the take.
+        if (verdict is PronunciationJudge.Verdict.NotSmooth) verdict = PronunciationJudge.Verdict.Pass(verdict.score)
+        com.roro.futurevoice.core.Telemetry.log("pron_word_take", mapOf("topic" to round.topic.id,
+            "verdict" to verdict.name, "score" to (result?.soundScore?.toString() ?: ""),
+            "try" to (round.lines[i].drillTries + 1).toString()))
+        var now = round
+        PronunciationJudge.feedback(verdict, result, probe, round.topic.phonemes)?.let { fb ->
+            now = now.replacing(i) { it.copy(feedback = fb) }
+        }
+        when (verdict) {
+            is PronunciationJudge.Verdict.Pass, is PronunciationJudge.Verdict.NotSmooth -> {
+                pronUnheard = 0
+                pronClearMissed(word, now.topic.id)
+                now = now.replacing(i) { it.copy(drillWord = null, drillTries = 0) }
+                _state.update { it.copy(pronRound = now) }
+                com.roro.futurevoice.ui.HapticEngine.success(appContext)
+                sendTutorSystem()
+                tutorNudge(PronunciationNotes.wordPassed(word))
+            }
+            is PronunciationJudge.Verdict.NotYet -> {
+                pronUnheard = 0
+                now = now.replacing(i) { it.copy(drillTries = it.drillTries + 1) }
+                _state.update { it.copy(pronRound = now) }
+                // Every third miss carries a tip.
+                tutorNudge(PronunciationNotes.wordAgain(word, verdict.sound, now.topic,
+                    withTip = now.lines[i].drillTries % 3 == 0))
+            }
+            PronunciationJudge.Verdict.OffScript -> {
+                pronUnheard = 0
+                tutorNudge(PronunciationNotes.wordOffScript(word))
+            }
+            PronunciationJudge.Verdict.Unheard -> {
+                pronUnheard += 1
+                tutorNudge(PronunciationNotes.UNHEARD)
+            }
+        }
+    }
+
+    /** The round's last sentence was passed or left: the course remembers it. */
+    private fun finishPronRound(round: PronunciationRound) {
+        val lang = config?.targetLanguage ?: return
+        val mean = round.meanScore
+        PronunciationCall.markFinished(appContext, lang)
+        PronunciationProgressStore.update(appContext, lang, round.topic.id) { p ->
+            p.copy(rounds = p.rounds + 1, passed = p.passed + round.passedCount,
+                lastScore = mean ?: p.lastScore,
+                bestScore = mean?.let { maxOf(p.bestScore ?: 0, it) } ?: p.bestScore)
+        }
+        com.roro.futurevoice.core.Telemetry.log("pron_round_done", mapOf("topic" to round.topic.id,
+            "passed" to round.passedCount.toString(), "of" to round.lines.size.toString(),
+            "mean" to (mean?.toString() ?: "")))
+    }
+
+    /** After a round: another round of the same sound, another sound (the
+     *  course opens), or done for today. */
+    private fun pronAfterRound(turnId: String, said: String, round: PronunciationRound) {
+        val asked = tutorLine(answeredBy = turnId)
+        viewModelScope.launch {
+            val answer = TutorNext.read(said, asked, "pronunciation of ${round.topic.symbol}")
+            if (tutorCallOver || !tutorStillSaid(turnId, said) || _state.value.pronRound?.id != round.id) return@launch
+            when (answer?.choice) {
+                TutorNext.Choice.MORE, TutorNext.Choice.AGAIN -> startPronRound(round.topic,
+                    "They want another round of \"${round.topic.symbol}\". Say in a few words that you're getting new sentences — nothing else.")
+                TutorNext.Choice.NEW -> {
+                    tutorNudge("They want a different sound. Say in a few words that they can pick one on their screen now.")
+                    _state.update { it.copy(pronTopicsRequested = true) }
+                }
+                TutorNext.Choice.STOP -> tutorNudge(PronunciationNotes.GOODBYE)
+                else -> tutorNudge(PronunciationNotes.UNCLEAR_NEXT)
+            }
+        }
+    }
+
+    /** End: no summary and no book — a round of read sentences is not a
+     *  conversation. What it leaves is the ledger and the course's progress.
+     *  The next call today opens on it (`EarlierToday`). */
+    private fun finishPronunciationCall() {
+        val lines = _state.value.pronRound?.lines.orEmpty()
+        com.roro.futurevoice.core.Telemetry.log("pron_call_ended", mapOf(
+            "topic" to (_state.value.pronTopic?.id ?: ""),
+            "passed" to lines.count { it.passed }.toString(),
+            "done" to lines.count { it.passed || it.skipped }.toString()))
+        pronSendJob?.cancel()
+        val cfg = config ?: return
+        if (lines.isNotEmpty()) CoroutineScope(Dispatchers.IO).launch {
+            runCatching { FreeTalkOpeners(appContext).prepareSameDayOpener(cfg.targetLanguage, cfg.voiceId) }
+        }
+    }
 
     /** The call screen is gone (iOS `isTornDown`). A PAUSED call is not: a
      *  plan or a verdict that lands while it is down still counts, and its
@@ -2322,6 +2787,7 @@ class TalkViewModel(context: Context) : ViewModel() {
      *  waits for the app's verdict (iOS `tutorJudging`). */
     private val tutorJudging: Boolean
         get() {
+            if (pronThisCall) return true
             if (!tutorThisCall || _state.value.tutorPlanning) return false
             val lesson = _state.value.tutorLesson ?: return false
             return lesson.droppedAt == null
@@ -2558,10 +3024,16 @@ class TalkViewModel(context: Context) : ViewModel() {
         learnerSpokeThisCall = true
     }
 
-    private fun isBillableMoment(): Boolean =
-        // Every call counts from the start, opener included (iOS,
-        // 2026-10-27); silence is still free.
-        TalkMeter.isBillable(moment(learnerSpoke = true))
+    private fun isBillableMoment(): Boolean {
+        // Every call counts from its start without stopping (iOS ffaf0c58,
+        // founder 2026-11-04) until 30 s of nothing, when it puts itself
+        // down — the gateway's rule too (`idleBillMs`).
+        if (REALTIME && callIsLive && _state.value.phase != TalkPhase.PAUSED) {
+            return TalkMeter.isBillable(moment(learnerSpoke = true)) ||
+                System.currentTimeMillis() - lastActivityAt < IDLE_PAUSE_SECONDS * 1000L
+        }
+        return TalkMeter.isBillable(moment(learnerSpoke = true))
+    }
 
     /** Someone is speaking, being answered or being heard — billing's
      *  predicate without its "not before the first turn" gate. */

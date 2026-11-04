@@ -201,6 +201,8 @@
     <string name="after_each_thing_your_future_self_says_you_see_a_way_to_answ_35f388">"After each thing your future self says, you see a way to answer. Sometimes it uses a word you're studying, and your most common mistake becomes the call's focus."</string>
     <string name="after_work_drinks">"After-work drinks"</string>
     <string name="again">"Again"</string>
+    <string name="again_at_the_end_of_this_round">"Again at the end of this round"</string>
+    <string name="again_in_the_next_round">"Again in the next round"</string>
     <string name="age_confirmed">"Age confirmed"</string>
     <string name="agreeing_and_disagreeing">"Agreeing and disagreeing"</string>
     <string name="ahead_of_2_by_lld">"Ahead of #2 by %d"</string>
@@ -349,6 +351,7 @@
     <string name="back_to_colours">"Back to colours"</string>
     <string name="back_to_me">"Back to me"</string>
     <string name="back_to_the_book">"Back to the book"</string>
+    <string name="back_to_the_sentence">"Back to the sentence"</string>
     <string name="back_to_the_voice_your_recording_makes_on_its_own">"Back to the voice your recording makes on its own."</string>
     <string name="back_to_the_welcome_screen">"Back to the welcome screen?"</string>
     <string name="back_tomorrow">"Back tomorrow"</string>
@@ -547,6 +550,7 @@
     <string name="congratulations">"Congratulations!"</string>
     <string name="connecting">"Connecting…"</string>
     <string name="consent">"Consent"</string>
+    <string name="consonants">"Consonants"</string>
     <string name="contact_us">"Contact us"</string>
     <string name="contents">"Contents"</string>
     <string name="continue_">"Continue"</string>
@@ -785,6 +789,7 @@
     <string name="each_talk_fills_these_bars_a1_to_c2">"Each talk fills these bars, A1 to C2."</string>
     <!-- 'Each time your fluent self speaks, a short answer you could give appears above the button, at your level, with its meaning in your language. A blank (___) is where only you know the answer.' -->
     <string name="each_time_your_fluent_self_speaks_a_short_answer_you_could_g_5bd1c9">"Each time your fluent self speaks, a short answer you could give appears above the button, at your level, with its meaning in your language. A blank (___) is where only you know the answer."</string>
+    <string name="earlier_calls">"Earlier calls"</string>
     <string name="earphone_mic">"Earphone mic"</string>
     <string name="easy">"Easy"</string>
     <string name="easy_to_understand">"easy to understand"</string>
@@ -810,6 +815,7 @@
     <string name="end_this_call_first">"End this call first"</string>
     <string name="ended">"Ended"</string>
     <string name="ended_challenges_keep_their_final_standings">"Ended challenges keep their final standings."</string>
+    <string name="endings_and_flow">"Endings and flow"</string>
     <string name="engaging_natural">"Engaging, natural"</string>
     <string name="engrave_your_cube">"Engrave your cube"</string>
     <string name="enough_new_conversation">"Enough new conversation"</string>
@@ -979,6 +985,7 @@
     <string name="first_test_done">"First test done"</string>
     <string name="first_time">"First time"</string>
     <string name="fix_the_sentence">"Fix the sentence"</string>
+    <string name="flow">"Flow"</string>
     <string name="fluency">"Fluency"</string>
     <string name="fluency_pace">"Fluency &amp; pace"</string>
     <string name="fluent">"Fluent"</string>
@@ -1565,6 +1572,7 @@
     <string name="lld_of_lld_min_today">"%1$d of %2$d min today"</string>
     <string name="lld_of_lld_scenes_left">"%1$d of %2$d scenes left"</string>
     <string name="lld_of_lld_seats_taken">"%1$d of %2$d seats taken."</string>
+    <string name="lld_of_lld_sentences_passed">"%1$d of %2$d sentences passed"</string>
     <string name="lld_of_lld_topics_passed">"%1$d of %2$d topics passed"</string>
     <string name="lld_of_your_turns_lld_min">"%1$d of your turns · %2$d min"</string>
     <string name="lld_out_of_5">"%d out of 5"</string>
@@ -1850,6 +1858,7 @@
     <string name="next_lld">"Next %d"</string>
     <string name="next_one">"Next one %s"</string>
     <string name="next_report_in_lldd_lld_more_minutes_of_practice">"Next report in %1$dd · %2$d more minutes of practice."</string>
+    <string name="next_sentence">"Next sentence"</string>
     <string name="next_shadowing">"Next: shadowing"</string>
     <string name="next_up">"Next up"</string>
     <string name="next_week_s_arrives">"Next week's arrives %s"</string>
@@ -2218,6 +2227,7 @@
     <string name="preparing_study_notes">"Preparing study notes…"</string>
     <string name="preparing_the_file">"Preparing the file…"</string>
     <string name="preparing_your_lesson">"Preparing your lesson…"</string>
+    <string name="preparing_your_sentences">"Preparing your sentences…"</string>
     <string name="preparing_your_video">"Preparing your video…"</string>
     <string name="present_a_real_product_or_invention">"Present a real product or invention"</string>
     <string name="presentation">"Presentation"</string>
@@ -2298,6 +2308,8 @@
     <string name="read_it">"Read it"</string>
     <string name="read_it_aloud_five_times">"Read it aloud five times"</string>
     <string name="read_it_hear_it_in_your_voice_then_say_it">"Read it, hear it in your voice, then say it"</string>
+    <string name="read_it_hear_it_right">"Read it, hear it right"</string>
+    <string name="read_it_in_one_go_without_stopping">"Read it in one go, without stopping"</string>
     <string name="read_it_naturally_mistakes_are_fine_just_keep_going">"Read it naturally. Mistakes are fine — just keep going."</string>
     <string name="read_it_out_loud">"Read it out loud"</string>
     <!-- 'Read once. The files stay where they are on your phone — only what was read is kept.' -->
@@ -2459,6 +2471,7 @@
     <string name="role_you_re_applying_for_e_g_backend_developer">"Role you're applying for — e.g. backend developer"</string>
     <!-- "Rough transcript — the final recognition pass didn't finish (network). The score may be off this time." -->
     <string name="rough_transcript_the_final_recognition_pass_didn_t_finish_ne_ac415f">"Rough transcript — the final recognition pass didn't finish (network). The score may be off this time."</string>
+    <string name="round_done">"Round done"</string>
     <string name="routine_lld_done_lld_to_go_about_lld_minutes">"Routine: %1$d done, %2$d to go, about %3$d minutes."</string>
     <string name="run_again">"Run again"</string>
     <!-- "Run your review cards — they're built from your own slips and target exactly these." -->
@@ -2542,6 +2555,8 @@
     <string name="say_it_the_right_way">"Say it the right way"</string>
     <string name="say_it_then_check">"Say it, then check"</string>
     <string name="say_it_yourself">"Say it yourself"</string>
+    <string name="say_just_this_part">"Say just this part"</string>
+    <string name="say_just_this_word">"Say just this word"</string>
     <!-- 'Say more in one sentence — a reason, a condition, what happened before. Longer sentences are what move this band.' -->
     <string name="say_more_in_one_sentence_a_reason_a_condition_what_happened_9100fc">"Say more in one sentence — a reason, a condition, what happened before. Longer sentences are what move this band."</string>
     <string name="say_s_line">"Say %s's line"</string>
@@ -2718,7 +2733,9 @@
     <string name="soon">"Soon"</string>
     <string name="sorting_it_out">"Sorting it out…"</string>
     <string name="sound_mic">"Sound &amp; mic"</string>
+    <string name="sounded_like">"“%1$s” sounded like “%2$s”"</string>
     <string name="sounds">"Sounds"</string>
+    <string name="sounds_to_practice">"Sounds to practice"</string>
     <string name="sounds_to_work_on">"Sounds to work on: %s"</string>
     <string name="source">"Source"</string>
     <string name="sources">"Sources"</string>
@@ -3255,6 +3272,7 @@
     <string name="tip">"Tip"</string>
     <string name="title_optional">"Title (optional)"</string>
     <string name="to_reach">"To reach %s"</string>
+    <string name="to_redo">"To redo: %s"</string>
     <string name="to_study">"To study"</string>
     <string name="today">"Today"</string>
     <string name="today_fills_as_you_go">"Today fills as you go"</string>
@@ -3427,6 +3445,8 @@
     <string name="voicepreset_male">"Male"</string>
     <string name="voicepreset_mark">"Natural, conversational"</string>
     <string name="voicepreset_paige">"Engaging, natural"</string>
+    <string name="vowel">"+ vowel"</string>
+    <string name="vowels">"Vowels"</string>
     <string name="vs_last_week">"vs last week"</string>
     <string name="vs_previous_30_days">"vs previous 30 days"</string>
     <string name="waiting_for_the_first_sync">"Waiting for the first sync"</string>

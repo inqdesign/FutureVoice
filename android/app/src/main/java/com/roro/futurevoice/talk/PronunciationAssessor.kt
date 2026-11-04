@@ -88,7 +88,15 @@ data class PronunciationResult(
     }
 
     @Serializable
-    data class Phoneme(val phoneme: String, val accuracy: Int? = null)
+    data class Phoneme(
+        val phoneme: String,
+        val accuracy: Int? = null,
+        /** What Azure heard this sound AS, best first (en-US only, iOS
+         *  ffaf0c58): "f" with p at 100 here is an f that came out as p. */
+        val heard: List<Candidate>? = null,
+    ) {
+        @Serializable data class Candidate(val phoneme: String, val score: Int)
+    }
 
     /** Reference words only, in reference order. */
     val referenceWords: List<Word> get() = words.filter { !it.isInsertion }
@@ -156,7 +164,8 @@ object PronunciationAssessor {
             val duration_ms: Int? = null,
             val phonemes: List<P>? = null,
         )
-        @Serializable data class P(val phoneme: String, val accuracy: Int? = null)
+        @Serializable data class P(val phoneme: String, val accuracy: Int? = null,
+                                   val heard: List<PronunciationResult.Phoneme.Candidate>? = null)
     }
 
     /** Its own connection pool: the take's base64 must not sit in front of
@@ -227,7 +236,7 @@ object PronunciationAssessor {
                         PronunciationResult.Word(
                             word = w.word, accuracy = w.accuracy, error = w.error ?: "None",
                             offsetMs = w.offset_ms ?: 0, durationMs = w.duration_ms ?: 0,
-                            phonemes = w.phonemes.orEmpty().map { PronunciationResult.Phoneme(it.phoneme, it.accuracy) })
+                            phonemes = w.phonemes.orEmpty().map { PronunciationResult.Phoneme(it.phoneme, it.accuracy, it.heard) })
                     },
                 ), Outcome.SCORED)
             }

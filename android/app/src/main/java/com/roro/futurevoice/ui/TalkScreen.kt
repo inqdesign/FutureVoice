@@ -24,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.produceState
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.outlined.Translate
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material3.IconButton
@@ -401,6 +402,7 @@ fun TalkScreen(
     var showsGoalChips by remember { mutableStateOf(CallSettings.flag(context, CallSettings.SHOWS_GOAL_CHIPS)) }
     var showingCallSettings by remember { mutableStateOf(false) }
     var showingTutorTopics by remember { mutableStateOf(false) }
+    var showingPronTopics by remember { mutableStateOf(false) }
     var tutorStripExpanded by remember { mutableStateOf(true) }
     // Coach mode: the learner's flip, else on for A1/A2 (`CoachMode.resolve`).
     var coachMode by remember {
@@ -779,7 +781,11 @@ fun TalkScreen(
                                 // A call with no topic is named after the home ring's
                                 // page it came from (iOS `emptyTopicTitle`).
                                 else -> topic.ifBlank { stringResource(
-                                    if (state.tutorOn) TalkRingMode.TUTOR.title else TalkRingMode.FREE_TALK.title) }
+                                    when {
+                                        state.pronOn -> TalkRingMode.PRONUNCIATION.title
+                                        state.tutorOn -> TalkRingMode.TUTOR.title
+                                        else -> TalkRingMode.FREE_TALK.title
+                                    }) }
                             },
                             style = MaterialTheme.typography.titleMedium,
                             maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
@@ -810,7 +816,8 @@ fun TalkScreen(
                     // flow: summary, drills) and discarding. Only the
                     // LEARNER's turns count: an opener alone is not a talk.
                     IconButton(onClick = {
-                        if (vm.hasUnsavedTalk) {
+                        // A reading drill keeps no talk: ✕ just closes (iOS).
+                        if (vm.hasUnsavedTalk && !state.pronOn) {
                             confirmingDiscard = true
                         } else {
                             // Nothing new to keep: hang up without saving, or a
@@ -864,6 +871,19 @@ fun TalkScreen(
             // this call is about, and the chips are the things to spend.
             // Tutor mode's checklist (iOS `TutorLessonStrip`), above
             // everything: the lesson is what this call is for.
+            // The pronunciation call's card (iOS `PronunciationCard`): the
+            // sentence to read, pinned above everything for the whole call.
+            if (state.pronOn && !ended) {
+                PronunciationCard(state.pronRound, state.pronTopic, state.pronPlanning,
+                    onSkip = { vm.pronSkipSentence() }, onLeaveWord = { vm.pronLeaveWord() })
+                androidx.compose.material3.HorizontalDivider(Modifier.alpha(0.15f))
+            }
+            if (showingPronTopics) {
+                PronunciationTopicSheet(targetLanguage, level, state.pronTopic?.id,
+                    onPick = { vm.pickPronTopic(it) }, onDismiss = { showingPronTopics = false })
+            }
+            LaunchedEffect(showingPronTopics) { vm.setPronTopicsShowing(showingPronTopics) }
+            LaunchedEffect(state.pronTopicsRequested) { if (state.pronTopicsRequested) showingPronTopics = true }
             if (state.tutorOn && (state.tutorLesson != null || state.tutorPlanning) && !ended) {
                 TutorLessonStrip(state.tutorLesson, state.tutorPlanning, tutorStripExpanded,
                     onToggle = { tutorStripExpanded = !tutorStripExpanded },
@@ -887,7 +907,7 @@ fun TalkScreen(
             }
             // The final check: nothing on screen to lean on (iOS 23ce515f).
             val tutorInFinalCheck = state.tutorOn && state.tutorLesson?.inFinalCheck == true
-            if (goals.isNotEmpty() && !ended && showsGoalChips && !tutorInFinalCheck) {
+            if (goals.isNotEmpty() && !ended && showsGoalChips && !tutorInFinalCheck && !state.pronOn) {
                 TalkGoalChipsRow(goals, goalsUsed, onTap = { openGoal = it })
             }
             // Nothing pauses underneath: WordLore is free and globally
@@ -1126,7 +1146,7 @@ fun TalkScreen(
                             }
                             // Send-to-answer and it is the learner's turn: the
                             // pill IS Send (iOS `sendModeActive`).
-                            val sendMode = sendToAnswer && onCall &&
+                            val sendMode = (sendToAnswer || state.pronOn) && onCall &&
                                 (state.phase == TalkPhase.LISTENING || state.sendPending)
                             val hasHeldWords = state.partial.isNotBlank()
                             // Send-to-answer once the learner has started: the
@@ -1213,6 +1233,13 @@ fun TalkScreen(
                                     Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.clear),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
+                            } else if (state.pronOn && onCall) {
+                                // The pronunciation call: the course of sounds.
+                                IconButton(onClick = { showingPronTopics = true }, enabled = !state.pronPlanning,
+                                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 16.dp)) {
+                                    Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = stringResource(R.string.sounds_to_practice),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                             } else if (state.tutorOn && onCall) {
                                 val inFinalCheck = state.tutorLesson?.inFinalCheck == true
                                 IconButton(onClick = { showingTutorTopics = true },
@@ -1233,7 +1260,7 @@ fun TalkScreen(
                             }
                             // The phase, quietly, where the hand is.
                             Text(
-                                if (sendToAnswer && onCall && state.phase == TalkPhase.LISTENING && !paused)
+                                if ((sendToAnswer || state.pronOn) && onCall && state.phase == TalkPhase.LISTENING && !paused)
                                     stringResource(if (state.partial.isNotBlank()) R.string.take_your_time_tap_to_send
                                         else R.string.speak_then_tap_to_send)
                                 else phaseHint(state.phase, paused, state.pausedForIdle),

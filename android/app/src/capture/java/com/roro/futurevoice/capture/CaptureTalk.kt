@@ -139,6 +139,10 @@ object CaptureTalk {
         "call-goal-sheet" to { ctx -> CallGoalSheet(ctx) },
         "call-focus" to { ctx -> CallFocus(ctx, sheet = false) },
         "call-focus-sheet" to { ctx -> CallFocus(ctx, sheet = true) },
+        "call-pron" to { ctx -> CallPron(ctx, "call-pron") },
+        "call-pron-miss" to { ctx -> CallPron(ctx, "call-pron-miss") },
+        "call-pron-drill" to { ctx -> CallPron(ctx, "call-pron-drill") },
+        "call-pron-sheet" to { ctx -> CallPron(ctx, "call-pron-sheet") },
         "focus-result" to { ctx -> FocusResult(ctx) },
         "call-settings" to { ctx -> CallSettingsShot(ctx) },
         "voice-revival" to { ctx -> Revival(ctx, tune = false) },
@@ -531,6 +535,58 @@ object CaptureTalk {
             titleRes = R.string.free_talk,
         ), seed = { com.roro.futurevoice.talk.CoachMode.setChoice(context, true) })
         if (sheet) GrammarFocusSheet(focus, repeats = 1, onDismiss = {})
+    }
+
+    /**
+     * iOS `call-pron` / `-miss` / `-drill` / `-sheet` (ffaf0c58): the
+     * pronunciation call's card — a round on "th", sentence 2 on screen;
+     * `-miss` after a take Azure marked "think" on, `-drill` with "think"
+     * practiced alone, `-sheet` with the course open over it.
+     */
+    @Composable
+    private fun CallPron(context: Context, name: String) {
+        val ko = koNative(context)
+        val topic = com.roro.futurevoice.talk.PronunciationCourse.topic("en.th", "en")!!
+        val lines = mutableListOf(
+            com.roro.futurevoice.talk.PronunciationRound.Line(text = "I think it's Thursday.", focus = listOf("think", "Thursday"), passed = true),
+            com.roro.futurevoice.talk.PronunciationRound.Line(text = "Thanks, I think three is enough.", focus = listOf("Thanks", "think", "three")),
+            com.roro.futurevoice.talk.PronunciationRound.Line(text = "My birthday is on the third.", focus = listOf("birthday", "third")),
+            com.roro.futurevoice.talk.PronunciationRound.Line(text = "I thought about it a lot.", focus = listOf("thought")),
+            com.roro.futurevoice.talk.PronunciationRound.Line(text = "Both of them are healthy.", focus = listOf("Both", "healthy")),
+        )
+        fun w(s: String, a: Int, ph: List<Pair<String, Int>> = emptyList()) =
+            com.roro.futurevoice.talk.PronunciationResult.Word(word = s, accuracy = a, durationMs = 300,
+                phonemes = ph.map { com.roro.futurevoice.talk.PronunciationResult.Phoneme(it.first, it.second) })
+        if (name == "call-pron-miss") {
+            lines[1] = lines[1].copy(tries = 1,
+                lastResult = com.roro.futurevoice.talk.PronunciationResult(score = 74, accuracy = 72, fluency = 90,
+                    completeness = 100, locale = "en-US", recognized = "Thanks I sink three is enough",
+                    words = listOf(w("Thanks", 66, listOf("θ" to 41)), w("I", 98), w("think", 38, listOf("θ" to 22)),
+                        w("three", 81), w("is", 95), w("enough", 92))),
+                feedback = com.roro.futurevoice.talk.PronunciationRound.Feedback("think", "θ", 22, ok = false))
+        }
+        if (name == "call-pron-drill") {
+            lines[1] = lines[1].copy(tries = 1, drillWord = "think",
+                feedback = com.roro.futurevoice.talk.PronunciationRound.Feedback("think", "θ", 41, ok = false))
+        }
+        val round = com.roro.futurevoice.talk.PronunciationRound(topic = topic,
+            tip = if (ko) "혀끝을 윗니와 아랫니 사이에 살짝 내밀고 바람만 내보내요. ㅆ이나 ㄸ이 되지 않게요."
+                else "Put the tip of your tongue lightly between your teeth and let the air out — not 's', not 't'.",
+            lines = lines, language = "en")
+        val turns = mutableListOf(fluent("Yes, that's it! Next one's on your screen. Read it out loud.", 0))
+        if (name == "call-pron-miss") {
+            turns += user("Thanks, I sink three is enough.", 1)
+            turns += fluent("Almost. Think. Think. Tongue between your teeth. Thanks, I think three is enough. Try again!", 2)
+        }
+        Call(context, TalkCaptureFlags.CallPreview(
+            TalkUiState(phase = TalkPhase.LISTENING, level = 0.3f, turns = turns,
+                pronOn = true, pronRound = round, pronTopic = topic),
+            goals = emptyList(), goalsUsed = emptySet(),
+            titleRes = R.string.pronunciation,
+        ))
+        if (name == "call-pron-sheet") {
+            com.roro.futurevoice.ui.PronunciationTopicSheet("en", CefrLevel.A2, "en.th", onPick = {}, onDismiss = {})
+        }
     }
 
     /**

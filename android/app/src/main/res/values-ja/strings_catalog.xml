@@ -201,6 +201,8 @@
     <string name="after_each_thing_your_future_self_says_you_see_a_way_to_answ_35f388">"流暢な自分が話すたびに、答え方の例が出ます。勉強中の単語が入ることもあり、いちばんよくするミスがこの通話のポイントになります。"</string>
     <string name="after_work_drinks">"仕事終わりの一杯"</string>
     <string name="again">"もう一度"</string>
+    <string name="again_at_the_end_of_this_round">"この回の最後にもう一度"</string>
+    <string name="again_in_the_next_round">"次の回でもう一度"</string>
     <string name="age_confirmed">"年齢確認済み"</string>
     <string name="agreeing_and_disagreeing">"賛成と反対"</string>
     <string name="ahead_of_2_by_lld">"2位と%d点差です"</string>
@@ -348,6 +350,7 @@
     <string name="back_in_3_days">"3日後にまた出てきます"</string>
     <string name="back_to_colours">"色を選び直す"</string>
     <string name="back_to_the_book">"教材に戻る"</string>
+    <string name="back_to_the_sentence">"文に戻る"</string>
     <string name="back_to_the_voice_your_recording_makes_on_its_own">"録音そのままの声に戻ります。"</string>
     <string name="back_to_the_welcome_screen">"最初の画面に戻りますか？"</string>
     <string name="back_tomorrow">"明日また出てきます"</string>
@@ -543,6 +546,7 @@
     <string name="congratulations">"おめでとうございます！"</string>
     <string name="connecting">"接続中…"</string>
     <string name="consent">"同意"</string>
+    <string name="consonants">"子音"</string>
     <string name="contact_us">"お問い合わせ"</string>
     <string name="contents">"目次"</string>
     <string name="continue_">"続ける"</string>
@@ -780,6 +784,7 @@
     <string name="each_talk_fills_these_bars_a1_to_c2">"通話するたびに、A1からC2までのバーが埋まっていきます。"</string>
     <!-- 'Each time your fluent self speaks, a short answer you could give appears above the button, at your level, with its meaning in your language. A blank (___) is where only you know the answer.' -->
     <string name="each_time_your_fluent_self_speaks_a_short_answer_you_could_g_5bd1c9">"流暢な自分が話すたびに、レベルに合った短い答えの例がボタンの上に表示されます。意味も一緒に出ます。空欄（___）は、自分にしかわからない内容を入れるところです。"</string>
+    <string name="earlier_calls">"区分前の通話"</string>
     <string name="earphone_mic">"イヤホンのマイク"</string>
     <string name="easy">"簡単だった"</string>
     <string name="easy_to_understand">"わかりやすい"</string>
@@ -805,6 +810,7 @@
     <string name="end_this_call_first">"先に通話を終えてください"</string>
     <string name="ended">"通話終了"</string>
     <string name="ended_challenges_keep_their_final_standings">"終わったチャレンジも、最終順位を見られます。"</string>
+    <string name="endings_and_flow">"語尾とつながり"</string>
     <string name="engrave_your_cube">"キューブに刻む"</string>
     <string name="enough_new_conversation">"新しいトークは十分"</string>
     <string name="enough_to_keep_the_habit_going">"短くても続けていけます"</string>
@@ -972,6 +978,7 @@
     <string name="first_test_done">"はじめてのテスト、完了です"</string>
     <string name="first_time">"はじめて"</string>
     <string name="fix_the_sentence">"文を直す"</string>
+    <string name="flow">"流れ"</string>
     <string name="fluency">"流暢さ"</string>
     <string name="fluency_pace">"流暢さとテンポ"</string>
     <string name="fluent">"流暢な速さ"</string>
@@ -1556,6 +1563,7 @@
     <string name="lld_of_lld_min_today">"今日 %1$d / %2$d分"</string>
     <string name="lld_of_lld_scenes_left">"シーン練習 残り%1$d回(全%2$d回)"</string>
     <string name="lld_of_lld_seats_taken">"%2$d席のうち%1$d席が埋まりました。"</string>
+    <string name="lld_of_lld_sentences_passed">"%2$d文中%1$d文クリア"</string>
     <string name="lld_of_lld_topics_passed">"%2$d個のトピック中%1$d個クリア"</string>
     <string name="lld_of_your_turns_lld_min">"自分の発話%1$d回 · %2$d分"</string>
     <string name="lld_out_of_5">"5点中%d点"</string>
@@ -1836,6 +1844,7 @@
     <string name="next_lld">"次の%d件"</string>
     <string name="next_one">"次は%s"</string>
     <string name="next_report_in_lldd_lld_more_minutes_of_practice">"次のレポートまで%1$d日 · 練習あと%2$d分。"</string>
+    <string name="next_sentence">"次の文"</string>
     <string name="next_shadowing">"次はシャドーイング"</string>
     <string name="next_up">"次にやること"</string>
     <string name="next_week_s_arrives">"次の振り返りは%sに届きます"</string>
@@ -2201,6 +2210,7 @@
     <string name="preparing_study_notes">"学習メモを用意しています…"</string>
     <string name="preparing_the_file">"ファイルを準備しています…"</string>
     <string name="preparing_your_lesson">"レッスンを準備中…"</string>
+    <string name="preparing_your_sentences">"文を用意しています…"</string>
     <string name="preparing_your_video">"動画を準備しています…"</string>
     <string name="present_a_real_product_or_invention">"実在の製品や発明を紹介"</string>
     <string name="presentation">"発表"</string>
@@ -2281,6 +2291,8 @@
     <string name="read_it">"読む"</string>
     <string name="read_it_aloud_five_times">"声に出して5回読む"</string>
     <string name="read_it_hear_it_in_your_voice_then_say_it">"読んで、自分の声で聞いて、言ってみましょう"</string>
+    <string name="read_it_hear_it_right">"声に出して読もう"</string>
+    <string name="read_it_in_one_go_without_stopping">"止まらずに、ひと息で読んでみて"</string>
     <string name="read_it_naturally_mistakes_are_fine_just_keep_going">"自然に読んでください。間違えても大丈夫なので、そのまま続けてください。"</string>
     <string name="read_it_out_loud">"声に出して読む"</string>
     <!-- 'Read once. The files stay where they are on your phone — only what was read is kept.' -->
@@ -2442,6 +2454,7 @@
     <string name="role_you_re_applying_for_e_g_backend_developer">"応募する職種（例：バックエンドエンジニア）"</string>
     <!-- "Rough transcript — the final recognition pass didn't finish (network). The score may be off this time." -->
     <string name="rough_transcript_the_final_recognition_pass_didn_t_finish_ne_ac415f">"文字起こしが粗いです。ネットワークのせいで最終認識が終わりませんでした。今回のスコアは正確でないかもしれません。"</string>
+    <string name="round_done">"ぜんぶ読みました"</string>
     <string name="routine_lld_done_lld_to_go_about_lld_minutes">"ルーティンは%1$d件終わって残り%2$d件、あと%3$d分ほどです。"</string>
     <string name="run_again">"もう一度最初から"</string>
     <!-- "Run your review cards — they're built from your own slips and target exactly these." -->
@@ -2524,6 +2537,8 @@
     <string name="say_it_the_right_way">"正しく言い直す"</string>
     <string name="say_it_then_check">"まず言ってから確認"</string>
     <string name="say_it_yourself">"自分で言ってみる"</string>
+    <string name="say_just_this_part">"この部分だけ言ってみて"</string>
+    <string name="say_just_this_word">"この単語だけ言ってみて"</string>
     <!-- 'Say more in one sentence — a reason, a condition, what happened before. Longer sentences are what move this band.' -->
     <string name="say_more_in_one_sentence_a_reason_a_condition_what_happened_9100fc">"1つの文にもっと込めてみましょう。理由、条件、その前にあったこと。このバンドを動かすのは長い文です。"</string>
     <string name="say_s_line">"%sのセリフです"</string>
@@ -2700,7 +2715,9 @@
     <string name="soon">"もうすぐ"</string>
     <string name="sorting_it_out">"整理中…"</string>
     <string name="sound_mic">"サウンドとマイク"</string>
+    <string name="sounded_like">"こう聞こえました：%1$s → %2$s"</string>
     <string name="sounds">"効果音"</string>
+    <string name="sounds_to_practice">"練習する音"</string>
     <string name="source">"出典"</string>
     <string name="sources">"出典"</string>
     <string name="speak_every_day_and_keep_everything_it_teaches_you">"毎日話して、そこで学んだことはすべて残しておきましょう。"</string>
@@ -3236,6 +3253,7 @@
     <string name="tip">"ヒント"</string>
     <string name="title_optional">"タイトル（任意）"</string>
     <string name="to_reach">"%sに届くには"</string>
+    <string name="to_redo">"もう一度：%s"</string>
     <string name="to_study">"学習するもの"</string>
     <string name="today">"今日"</string>
     <string name="today_fills_as_you_go">"今日は、やるほど満ちていきます"</string>
@@ -3408,6 +3426,8 @@
     <string name="voicepreset_male">"男性"</string>
     <string name="voicepreset_mark">"自然な話し言葉"</string>
     <string name="voicepreset_paige">"親しみやすく自然"</string>
+    <string name="vowel">"+ 母音が入った"</string>
+    <string name="vowels">"母音"</string>
     <string name="vs_last_week">"先週比"</string>
     <string name="vs_previous_30_days">"前の30日比"</string>
     <string name="waiting_for_the_first_sync">"最初の同期を待っています"</string>
