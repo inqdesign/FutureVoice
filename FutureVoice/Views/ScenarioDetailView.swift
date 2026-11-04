@@ -404,6 +404,7 @@ struct ScenarioDetailView: View {
                         .buttonStyle(.bordered)
                     }
                 }
+                .buttonRowFitsOneLine()
                 .controlSize(.large)
                 // The talk book's third door, on its own row for the same reason
                 // there. It needs the scene AND a line of the learner's in it,

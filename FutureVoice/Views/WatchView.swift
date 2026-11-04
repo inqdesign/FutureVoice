@@ -705,6 +705,7 @@ struct WatchView: View {
                 .disabled(turns.isEmpty || loading)
             }
         }
+        .buttonRowFitsOneLine()
         .controlSize(.large)
         .padding(.horizontal, 16)
         .padding(.vertical, 10)

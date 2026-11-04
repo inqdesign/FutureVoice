@@ -445,6 +445,7 @@ struct SetupFlowView: View {
             .accentProminent()
             .controlSize(.large)
         }
+        .buttonRowFitsOneLine()
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(.bar)

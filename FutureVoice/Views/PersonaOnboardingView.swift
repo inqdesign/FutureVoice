@@ -490,6 +490,7 @@ struct PersonaOnboardingView: View {
             .controlSize(.large)
             .disabled(!canAdvance)
         }
+        .buttonRowFitsOneLine()
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(.bar)

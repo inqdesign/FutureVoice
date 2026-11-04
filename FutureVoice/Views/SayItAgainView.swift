@@ -629,6 +629,7 @@ struct SayItAgainView: View {
                 }
                 .accentProminent()
             }
+            .buttonRowFitsOneLine()
             .controlSize(.large)
         }
     }

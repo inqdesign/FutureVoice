@@ -274,6 +274,7 @@ struct RoutineOnboardingView: View {
                 .accentProminent()
                 .controlSize(.large)
             }
+            .buttonRowFitsOneLine()
             .disabled(working)
         }
         .padding(.horizontal, 20)

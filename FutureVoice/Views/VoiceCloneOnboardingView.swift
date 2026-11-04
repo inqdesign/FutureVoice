@@ -1491,6 +1491,7 @@ struct VoiceCloneOnboardingView: View {
                     .accentProminent()
                     .controlSize(.large)
                 }
+                .buttonRowFitsOneLine()
 
                 // Escape hatch for the second pass — including after a failed
                 // re-clone, where the live voice is still intact.
@@ -1621,6 +1622,7 @@ struct VoiceCloneOnboardingView: View {
             // its Next (the consent toggle) becomes a wall.
             .disabled(nextDisabled)
         }
+        .buttonRowFitsOneLine()
     }
 
     @ViewBuilder

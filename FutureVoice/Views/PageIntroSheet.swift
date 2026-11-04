@@ -262,6 +262,7 @@ struct PageIntroSheet: View {
                 .accentProminent()
                 .controlSize(.large)
             }
+            .buttonRowFitsOneLine()
             Text("You can see these again anytime in Me → App guide.")
                 .font(.caption)
                 .foregroundStyle(.secondary)

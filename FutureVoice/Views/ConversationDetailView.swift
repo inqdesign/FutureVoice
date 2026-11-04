@@ -300,6 +300,7 @@ struct ConversationDetailView: View {
                     }
                     .buttonStyle(.bordered)
                 }
+                .buttonRowFitsOneLine()
                 .controlSize(.large)
                 // The third door, on its own row: a run-through is a longer
                 // act than either button above it, and three large labels in
@@ -1311,6 +1312,7 @@ struct TalkTranscriptView: View {
             }
             .accentProminent()
         }
+        .buttonRowFitsOneLine()
         .controlSize(.large)
         .padding(.horizontal, 16)
         .padding(.vertical, 10)

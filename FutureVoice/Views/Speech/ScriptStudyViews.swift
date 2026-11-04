@@ -432,6 +432,7 @@ struct ScriptVoiceoverSection: View {
                 }
                 .buttonStyle(.bordered)
             }
+            .buttonRowFitsOneLine()
             .controlSize(.large)
         } else if case .making(let done, let total)? = center.job(for: script, voiceId: voiceId) {
             HStack(spacing: 12) {

@@ -156,6 +156,14 @@ struct ThemedSwitchStyle: ToggleStyle {
 
 extension View {
     func accentProminent() -> some View { modifier(AccentProminent()) }
+
+    /// A row of buttons sharing the width: each label stays on ONE line and
+    /// shrinks a little rather than wrapping. Two capsules side by side leave
+    /// each half the screen, and a Korean or German label ("교재로 공부하기",
+    /// "Im Lernbuch lernen") broke into two lines inside a pill.
+    func buttonRowFitsOneLine() -> some View {
+        lineLimit(1).minimumScaleFactor(0.7)
+    }
 }
 
 /// Futureself — the call button's living surface (Shaders/Futureself.metal):

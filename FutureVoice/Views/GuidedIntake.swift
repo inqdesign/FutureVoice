@@ -484,6 +484,7 @@ struct IntakeBottomBar: View {
             .controlSize(.large)
             .disabled(!nextEnabled || isWorking)
         }
+        .buttonRowFitsOneLine()
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(.bar)
