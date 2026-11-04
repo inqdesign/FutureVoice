@@ -108,6 +108,9 @@ import com.roro.futurevoice.ui.PaywallScreen
 import com.roro.futurevoice.ui.SheetHeader
 import com.roro.futurevoice.ui.bottomBarInsets
 import com.roro.futurevoice.ui.brand.AppSurfaces
+import com.roro.futurevoice.ui.brand.ContinuousShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import com.roro.futurevoice.ui.brand.IosButton
 import com.roro.futurevoice.ui.brand.IosGlassButton
 import com.roro.futurevoice.ui.brand.IosGlassTextButton
@@ -186,140 +189,82 @@ internal fun SpeechTabBody(language: String, native: String, level: CefrLevel,
     LaunchedEffect(Unit) { store.reloadIfLanguageChanged() }
     val canWrite = SpeechGate.cachedCanWrite
 
-    Column {
-        if (challengeScripts.isNotEmpty()) {
-            // The newest three on the tab; everything else, past ones
-            // included, one tap away (iOS `challengesOnTab`) — from the
-            // header now: a plain row under the cards read as a fourth card.
-            val live = challengeScripts.filter { standings[it.id]?.retiredAt == null }
-            val hasMore = live.size > CHALLENGES_ON_TAB || live.size < challengeScripts.size
-            Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 28.dp, bottom = 2.dp),
-                verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.challenges), style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-                if (hasMore) {
-                    Row(Modifier.clickable(onClick = onOpenAllChallenges),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.all_challenges), style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary)
-                        Text("${challengeScripts.size}", style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary)
+    // Challenges and the learner's own scripts are two tabs, each a grid of
+    // cards two across (iOS 2dea9661, founder 2026-11-04). A sideways row of
+    // challenges above a list of scripts came before. The tab is remembered.
+    val prefs = remember { context.getSharedPreferences("futurevoice", 0) }
+    var page by remember { mutableStateOf(prefs.getString(SPEECH_PAGE_KEY, "challenges") ?: "challenges") }
+    val ownScripts = scripts.filter { s -> challengeScripts.none { it.id == s.id } }
+    Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        com.roro.futurevoice.ui.brand.IosSegmented(
+            options = listOf(stringResource(R.string.challenges), stringResource(R.string.my_scripts)),
+            selected = if (page == "mine") 1 else 0,
+            onSelect = { i ->
+                page = if (i == 1) "mine" else "challenges"
+                prefs.edit().putString(SPEECH_PAGE_KEY, page).apply()
+            },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (page == "mine") {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                // A script that is also a challenge (the bundled sample is
+                // the first one) lives on the other tab, so for most learners
+                // this starts empty and says what goes here.
+                if (ownScripts.isEmpty()) {
+                    Box(Modifier.fillMaxWidth().clip(ContinuousShape(18.dp)).background(AppSurfaces.card)) {
+                        SpeechScriptsEmptyState(
+                            onWrite = { startNewScript(scope, SpeechTabRequests.Kind.WRITE) },
+                            onOwn = { startNewScript(scope, SpeechTabRequests.Kind.OWN) })
                     }
-                }
-            }
-            // One row that scrolls sideways (iOS 2026-10-17: three stacked
-            // cards took most of the screen). Two cards across and a sliver
-            // of the third at the screen's edge, so it reads as a row that
-            // scrolls; the row runs to both screen edges rather than stopping
-            // at the page's margins, and the first card lines up with the
-            // list's cards below. All cards share the tallest one's height;
-            // a fling settles on a card (iOS `.viewAligned`).
-            val shown = live.take(CHALLENGES_ON_TAB)
-            val margin = SPEECH_PAGE_MARGIN
-            val gap = 10.dp
-            val peek = 20.dp
-            androidx.compose.foundation.layout.BoxWithConstraints(
-                Modifier.fillMaxWidth()
-                    // Bleed out over the page's own side padding.
-                    .bleedHorizontally(margin)
-            ) {
-                // maxWidth is the screen's width here: margin + two cards +
-                // two gaps + a sliver of the third (iOS, 2026-10-18: 20).
-                val cardWidth = (maxWidth - margin - gap * 2 - peek) / 2
-                val scroll = rememberScrollState()
-                val density = androidx.compose.ui.platform.LocalDensity.current
-                val stridePx = with(density) { (cardWidth + gap).toPx() }
-                val snap = remember(scroll, stridePx) { CardSnap(scroll, stridePx) }
-                Row(
-                    Modifier.fillMaxWidth()
-                        .horizontalScroll(scroll,
-                            flingBehavior = androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior(snap))
-                        .padding(horizontal = margin)
-                        .height(androidx.compose.foundation.layout.IntrinsicSize.Max),
-                    horizontalArrangement = Arrangement.spacedBy(gap),
-                ) {
-                    shown.forEach { script ->
-                        SpeechChallengeRow(script, standings[script.id],
-                            modifier = Modifier.width(cardWidth).fillMaxHeight(),
-                            onClick = { onOpenChallenge(script) })
-                    }
-                }
-            }
-            GroupedFooter(stringResource(R.string.everyone_reads_the_same_script_your_best_take_goes_on_the_bo_281410))
-        }
-        // A script that is also a challenge (the bundled sample is the first
-        // one) is listed once, up there — so this is THEIR scripts, and it
-        // starts empty. Empty, it says what goes here and offers both ways
-        // to make one (iOS `SpeechScriptsEmptyState`).
-        val ownScripts = scripts.filter { s -> challengeScripts.none { it.id == s.id } }
-        GroupedSectionHeader(stringResource(R.string.my_scripts))
-        GroupedCard {
-            if (ownScripts.isEmpty()) {
-                SpeechScriptsEmptyState(
-                    onWrite = { startNewScript(scope, SpeechTabRequests.Kind.WRITE) },
-                    onOwn = { startNewScript(scope, SpeechTabRequests.Kind.OWN) })
-            }
-            ownScripts.forEachIndexed { i, script ->
-                if (i > 0) GroupedRowDivider()
-                // iOS `.swipeActions(edge: .trailing)`: Delete (not the
-                // bundled sample) outermost, then Edit (own scripts, accent);
-                // a full swipe deletes.
-                val deleteLabel = stringResource(R.string.delete)
-                val editLabel = stringResource(R.string.edit)
-                val publishLabel = stringResource(R.string.publish_as_challenge)
-                val accent = MaterialTheme.colorScheme.primary
-                val actions = buildList {
-                    if (!script.isBuiltIn) add(IosSwipeAction(Icons.Filled.Delete, deleteLabel, Color(0xFFFF3B30)) {
-                        store.deleteScript(script.id)
-                    })
-                    if (script.genre == SpeechGenre.OWN) add(IosSwipeAction(Icons.Filled.Edit, editLabel, accent) {
-                        editing = script
-                    })
-                    // Admin accounts put one of their own scripts on every
-                    // learner's tab as a challenge (iOS: a leading swipe).
-                    if (BillingGate.account?.unlimited == true && !script.isBuiltIn) {
-                        add(IosSwipeAction(Icons.Outlined.EmojiEvents, publishLabel, Color(0xFFFF9500)) {
-                            publishing = script
-                        })
-                    }
-                }
-                IosSwipeActions(actions, background = AppSurfaces.card) {
-                    Row(
-                        Modifier.fillMaxWidth()
-                            .clickable { practicing = script }
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.Top,
-                    ) {
-                        // Pinned to the title's first line, not centred on
-                        // the row (iOS `HStack(alignment: .top)`, 2026-10-16).
-                        Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
-                            Icon(script.genre.icon(), contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
-                        }
-                        Spacer(Modifier.width(16.dp))
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Text(script.title, style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                            val parts = listOfNotNull(
-                                lengthLabel(SpeechLibrary.estimatedSeconds(script.body, script.language)),
-                                script.genre.title(),
-                                if (script.isBuiltIn) stringResource(R.string.sample) else null,
-                            )
-                            Text(parts.joinToString("  ·  "), style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
+                } else {
+                    TwoAcross(ownScripts, spacing = 12.dp) { script, mod ->
                         val best = takes.filter { it.scriptId == script.id }.maxOfOrNull { it.metrics.overall }
-                        if (best != null) {
-                            Spacer(Modifier.width(8.dp))
-                            Text("$best", style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold, color = scoreColor(best))
-                        }
+                        SpeechScriptCard(script, best, mod,
+                            onClick = { practicing = script },
+                            // A card has no swipe: its actions are a long press.
+                            onEdit = if (script.genre == SpeechGenre.OWN) ({ editing = script }) else null,
+                            onPublish = if (BillingGate.account?.unlimited == true && !script.isBuiltIn) ({ publishing = script }) else null,
+                            onDelete = if (!script.isBuiltIn) ({ store.deleteScript(script.id) }) else null)
+                    }
+                }
+                if (!canWrite) {
+                    Text(stringResource(R.string.write_scripts_on_any_topic_or_add_your_own_with_plus),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 4.dp))
+                }
+            }
+        } else {
+            val live = challengeScripts.filter { standings[it.id]?.retiredAt == null }
+            val pastCount = challengeScripts.size - live.size
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                // The card carries 6 dp above and below, so 0 here is a 12 dp gap.
+                TwoAcross(live, spacing = 12.dp, rowSpacing = 0.dp) { script, mod ->
+                    SpeechChallengeRow(script, standings[script.id], modifier = mod,
+                        onClick = { onOpenChallenge(script) })
+                }
+                Text(stringResource(R.string.everyone_reads_the_same_script_your_best_take_goes_on_the_bo_281410),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 4.dp))
+                if (pastCount > 0) {
+                    Row(
+                        Modifier.fillMaxWidth().clip(ContinuousShape(14.dp)).background(AppSurfaces.card)
+                            .clickable(onClick = onOpenAllChallenges).padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(stringResource(R.string.past_challenges), style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.weight(1f))
+                        Text("$pastCount", style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.width(6.dp))
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(20.dp))
                     }
                 }
             }
         }
-        if (!canWrite) GroupedFooter(stringResource(R.string.write_scripts_on_any_topic_or_add_your_own_with_plus))
+        Spacer(Modifier.height(8.dp))
     }
 
     when (request) {
@@ -368,7 +313,89 @@ internal fun SpeechTabBody(language: String, native: String, level: CefrLevel,
     }
 }
 
-internal const val CHALLENGES_ON_TAB = 10
+private const val SPEECH_PAGE_KEY = "speech.page"
+
+/** A grid two across inside the page's own scroll (a lazy grid can't sit in
+ *  a verticalScroll): each row as tall as its taller card, iOS
+ *  `LazyVGrid(columns: [.flexible, .flexible], alignment: .top)`. */
+@Composable
+private fun <T> TwoAcross(items: List<T>, spacing: androidx.compose.ui.unit.Dp,
+                          rowSpacing: androidx.compose.ui.unit.Dp = spacing,
+                          cell: @Composable (T, Modifier) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(rowSpacing)) {
+        items.chunked(2).forEach { pair ->
+            Row(Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Max),
+                horizontalArrangement = Arrangement.spacedBy(spacing)) {
+                pair.forEach { cell(it, Modifier.weight(1f).fillMaxHeight()) }
+                if (pair.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+/** One of the learner's own scripts as a card, the challenge card's anatomy
+ *  (iOS `SpeechScriptCard`): the genre in a tinted disc, the best score
+ *  top-right, the title, one quiet line at the foot. Its actions are a long
+ *  press. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun SpeechScriptCard(script: SpeechScript, best: Int?, modifier: Modifier,
+                             onClick: () -> Unit, onEdit: (() -> Unit)?,
+                             onPublish: (() -> Unit)?, onDelete: (() -> Unit)?) {
+    val accent = MaterialTheme.colorScheme.primary
+    var menu by remember { mutableStateOf(false) }
+    val hasMenu = onEdit != null || onPublish != null || onDelete != null
+    Box(modifier) {
+        Column(
+            Modifier.fillMaxWidth().fillMaxHeight().heightIn(min = 170.dp)
+                .clip(ContinuousShape(18.dp))
+                .background(AppSurfaces.card)
+                .combinedClickable(onClick = onClick, onLongClick = if (hasMenu) ({ menu = true }) else null)
+                .padding(18.dp),
+        ) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                com.roro.futurevoice.ui.brand.BookIconDisc(accent = accent) {
+                    Icon(script.genre.icon(), contentDescription = null, tint = accent,
+                        modifier = Modifier.size(22.dp))
+                }
+                Spacer(Modifier.weight(1f))
+                if (best != null) {
+                    Text("$best", style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold, color = scoreColor(best))
+                }
+            }
+            Text(script.title, style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold, maxLines = 3, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 14.dp))
+            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.weight(1f))
+            val length = lengthLabel(SpeechLibrary.estimatedSeconds(script.body, script.language))
+            val kind = if (script.isBuiltIn) stringResource(R.string.sample) else script.genre.title()
+            Text("$length · $kind", style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            onEdit?.let { act ->
+                com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
+                    text = { Text(stringResource(R.string.edit)) },
+                    leadingIcon = { Icon(Icons.Filled.Edit, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                    onClick = { menu = false; act() })
+            }
+            onPublish?.let { act ->
+                com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
+                    text = { Text(stringResource(R.string.publish_as_challenge)) },
+                    leadingIcon = { Icon(Icons.Outlined.EmojiEvents, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                    onClick = { menu = false; act() })
+            }
+            onDelete?.let { act ->
+                com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
+                    text = { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) },
+                    leadingIcon = { Icon(Icons.Filled.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                    onClick = { menu = false; act() })
+            }
+        }
+    }
+}
 
 /** The empty state's buttons, on the header's rule: a yes from cache, a no
  *  only after a fresh fetch, the Plus sheet otherwise. */
@@ -1154,42 +1181,3 @@ internal fun takeDateLabel(at: Long): String {
     return java.text.SimpleDateFormat(pattern, locale).format(Date(at))
 }
 
-/** The page's side padding (RootScreen's scrolling tab column): where the
- *  list's cards start, and how far the challenge row bleeds back out. */
-private val SPEECH_PAGE_MARGIN = 20.dp
-
-/** Widen past the parent's horizontal padding by [by] on each side, so a
- *  row can run to the screen's edges. */
-private fun Modifier.bleedHorizontally(by: androidx.compose.ui.unit.Dp): Modifier =
-    this.layout { measurable, constraints ->
-        val extra = by.roundToPx() * 2
-        val wide = constraints.copy(
-            minWidth = (constraints.minWidth + extra),
-            maxWidth = if (constraints.hasBoundedWidth) constraints.maxWidth + extra else constraints.maxWidth)
-        val placeable = measurable.measure(wide)
-        layout(placeable.width - extra, placeable.height) { placeable.place(-by.roundToPx(), 0) }
-    }
-
-/** Settles a fling on a card edge (iOS `.scrollTargetBehavior(.viewAligned)`):
- *  the next card in the fling's direction, the nearest when it has none. */
-@OptIn(ExperimentalFoundationApi::class)
-private class CardSnap(
-    private val scroll: androidx.compose.foundation.ScrollState,
-    private val stride: Float,
-) : androidx.compose.foundation.gestures.snapping.SnapLayoutInfoProvider {
-    override fun calculateApproachOffset(velocity: Float, decayOffset: Float): Float = 0f
-    override fun calculateSnapOffset(velocity: Float): Float {
-        if (stride <= 0f) return 0f
-        val current = scroll.value.toFloat()
-        val max = scroll.maxValue.toFloat()
-        val lower = kotlin.math.floor(current / stride) * stride
-        val upper = kotlin.math.min(lower + stride, max)
-        val target = when {
-            velocity > 0f -> upper
-            velocity < 0f -> lower
-            current - lower < upper - current -> lower
-            else -> upper
-        }
-        return target.coerceIn(0f, max) - current
-    }
-}
