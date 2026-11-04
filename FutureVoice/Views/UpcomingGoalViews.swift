@@ -297,11 +297,18 @@ struct UpcomingGoalPage: View {
     /// The goal as stored now — reading its material saves it again.
     private var goal: UpcomingGoal { store.goals.first { $0.id == initial.id } ?? initial }
 
-    init(goal: UpcomingGoal) { initial = goal }
+    init(goal: UpcomingGoal) {
+        initial = goal
+        #if DEBUG
+        // Captures: `-goaltab prepared` opens on the second tab.
+        if UserDefaults.standard.string(forKey: "goaltab") == "prepared" { _tab = State(initialValue: .prepared) }
+        #endif
+    }
     @State private var questions: [GoalPrep.Question]?
     @State private var failed = false
     @State private var reading: TutorReading?
     @State private var editing = false
+    @State private var tab: Tab = .questions
 
     var body: some View {
         NavigationStack {
@@ -312,58 +319,35 @@ struct UpcomingGoalPage: View {
                         Text(goal.notes).font(.subheadline).foregroundStyle(.secondary)
                     }
                 }
-                if goal.brief?.hasSources == true { materialSection }
-                Section {
-                    if let questions {
-                        ForEach(questions) { q in
-                            Button { drill(q.text) } label: {
-                                HStack(alignment: .top, spacing: 12) {
-                                    VStack(alignment: .leading, spacing: 3) {
-                                        Text(q.text).foregroundStyle(.primary)
-                                        if !q.looksFor.isEmpty {
-                                            Text(q.looksFor).font(.footnote).foregroundStyle(.secondary)
-                                        }
-                                    }
-                                    Spacer(minLength: 8)
-                                    Image(systemName: "graduationcap.fill")
-                                        .foregroundStyle(goal.kind.tint)
-                                        .accessibilityHidden(true)
-                                }
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    } else if failed {
-                        Button("Try again") { failed = false; Task { await load() } }
-                    } else {
-                        HStack(spacing: 10) {
-                            ProgressView()
-                            Text("Working out what they'll ask…").foregroundStyle(.secondary)
-                        }
-                    }
-                } header: {
-                    Text("Likely questions")
-                } footer: {
-                    if questions != nil {
-                        Text("Tap one to practice it with your tutor until it comes out clean.")
-                    }
-                }
                 let days = GoalPrep.days(for: goal)
+                // Two kinds of thing live here: what the day will ask (to
+                // practice) and what the tutor already wrote (to review).
+                // With nothing prepared yet there is only the first.
                 if !days.isEmpty {
-                    Section("Prepared so far") {
-                        ForEach(days) { day in
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(day.focus).font(.subheadline.weight(.semibold))
-                                Button { open(day, .reading) } label: {
-                                    Label(day.reading.title, systemImage: "text.book.closed.fill")
-                                }
-                                Button { open(day, .speech) } label: {
-                                    Label(day.speech.question ?? day.speech.title, systemImage: "music.mic")
-                                }
-                            }
-                            .buttonStyle(.borderless)
-                            .multilineTextAlignment(.leading)
-                            .padding(.vertical, 4)
+                    Section {
+                        Picker("", selection: $tab) {
+                            Text("Questions").tag(Tab.questions)
+                            Text("Prepared").tag(Tab.prepared)
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+                }
+                if days.isEmpty || tab == .questions {
+                    questionsSection
+                    if goal.brief?.hasSources == true { materialSection }
+                } else {
+                    ForEach(days) { day in
+                        Section {
+                            Text(day.focus)
+                                .font(.subheadline.weight(.semibold))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            prepRow(day.reading.title, icon: "text.book.closed.fill") { open(day, .reading) }
+                            prepRow(day.speech.question ?? day.speech.title, icon: "music.mic") { open(day, .speech) }
+                        } header: {
+                            Text(day.createdAt.formatted(date: .abbreviated, time: .omitted))
                         }
                     }
                 }
@@ -400,6 +384,63 @@ struct UpcomingGoalPage: View {
             }
             await load()
         }
+    }
+
+    private enum Tab: Hashable { case questions, prepared }
+
+    private var questionsSection: some View {
+        Section {
+            if let questions {
+                ForEach(questions) { q in
+                    Button { drill(q.text) } label: {
+                        HStack(alignment: .top, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(q.text).foregroundStyle(.primary)
+                                if !q.looksFor.isEmpty {
+                                    Text(q.looksFor).font(.footnote).foregroundStyle(.secondary)
+                                }
+                            }
+                            Spacer(minLength: 8)
+                            Image(systemName: "graduationcap.fill")
+                                .foregroundStyle(goal.kind.tint)
+                                .accessibilityHidden(true)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            } else if failed {
+                Button("Try again") { failed = false; Task { await load() } }
+            } else {
+                HStack(spacing: 10) {
+                    ProgressView()
+                    Text("Working out what they'll ask…").foregroundStyle(.secondary)
+                }
+            }
+        } footer: {
+            if questions != nil {
+                Text("Tap one to practice it with your tutor until it comes out clean.")
+            }
+        }
+    }
+
+    /// One piece of a prepared day: a full-width row, text left-aligned
+    /// however many lines it wraps to (a bare Label button centred them).
+    private func prepRow(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Image(systemName: icon).foregroundStyle(.tint).frame(width: 24)
+                Text(title)
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     /// What the material is and what the reading found, with Read again.
