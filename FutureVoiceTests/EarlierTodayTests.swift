@@ -1,0 +1,145 @@
+import XCTest
+@testable import FutureVoice
+
+/// The second call of the day (2026-11-04, founder: "I call again the same
+/// morning and it says 'did you sleep well?' again"). The opener looked only
+/// at the hour; a later call now picks up what came earlier — a talk, a tutor
+/// lesson, or a pronunciation drill.
+final class EarlierTodayTests: XCTestCase {
+
+    private var cal: Calendar = {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        return c
+    }()
+
+    private func at(_ day: Int, _ hour: Int, _ minute: Int = 0) -> Date {
+        cal.date(from: DateComponents(year: 2026, month: 11, day: day, hour: hour, minute: minute))!
+    }
+
+    private func talk(endingAt end: Date, said: String = "I have a meeting at ten",
+                      counterpart: UUID? = nil, lesson: TutorLessonRecord? = nil) -> Session {
+        let turns = [
+            Turn(id: UUID(), role: .user, audioURL: nil, transcript: said,
+                 durationMs: 1000, timestamp: end.addingTimeInterval(-60), suggestion: nil),
+            Turn(id: UUID(), role: .fluentSelf, audioURL: nil, transcript: "Good luck!",
+                 durationMs: 1000, timestamp: end, suggestion: nil),
+        ]
+        return Session(id: UUID(), userId: UUID(), targetLanguage: "en", mode: .conversation,
+                       topic: nil, startedAt: end.addingTimeInterval(-300), endedAt: end,
+                       turns: turns, summary: nil, counterpartId: counterpart, tutorLesson: lesson)
+    }
+
+    private func take(at date: Date, words: [(String, Int)], surface: String = "pron_call") -> PronunciationEntry {
+        let json: [String: Any] = [
+            "id": UUID().uuidString,
+            "date": date.timeIntervalSinceReferenceDate,
+            "surface": surface, "locale": "en-US", "accuracy": 70, "score": 70,
+            "words": words.map { ["w": $0.0, "a": $0.1] },
+            "phonemes": [],
+        ]
+        let data = try! JSONSerialization.data(withJSONObject: json)
+        return try! JSONDecoder().decode(PronunciationEntry.self, from: data)
+    }
+
+    // MARK: - What came earlier
+
+    func testNothingEarlierTodayIsNil() {
+        let e = EarlierToday.latest(now: at(4, 9), sessions: [talk(endingAt: at(3, 22))],
+                                    pronEntries: [], calendar: cal)
+        XCTAssertNil(e)
+    }
+
+    func testTalkEarlierTodayCarriesTheLearnersOwnWords() throws {
+        let e = try XCTUnwrap(EarlierToday.latest(now: at(4, 11), sessions: [talk(endingAt: at(4, 8))],
+                                                  pronEntries: [], calendar: cal))
+        XCTAssertEqual(e.kind, .talk)
+        XCTAssertTrue(e.record.contains("I have a meeting at ten"))
+        XCTAssertTrue(e.record.contains("about 3 hours ago"))
+    }
+
+    func testATalkWithSomeoneElseIsNotTheFluentSelfsToPickUp() {
+        let e = EarlierToday.latest(now: at(4, 11), sessions: [talk(endingAt: at(4, 8), counterpart: UUID())],
+                                    pronEntries: [], calendar: cal)
+        XCTAssertNil(e)
+    }
+
+    func testALessonSaysWhatWasPractised() throws {
+        let lesson = TutorLessonRecord(lessonId: UUID(), title: "Ordering coffee",
+                                       done: [.init(goal: "ask for a size", line: "Can I get a large one?")],
+                                       total: 3, finished: false)
+        let e = try XCTUnwrap(EarlierToday.latest(now: at(4, 11), sessions: [talk(endingAt: at(4, 8), lesson: lesson)],
+                                                  pronEntries: [], calendar: cal))
+        XCTAssertEqual(e.kind, .lesson)
+        XCTAssertTrue(e.record.contains("Ordering coffee"))
+        XCTAssertTrue(e.record.contains("1 of 3"))
+        XCTAssertTrue(e.record.contains("Can I get a large one?"))
+    }
+
+    func testAPronunciationDrillAfterTheTalkWinsAndNamesTheHardWords() throws {
+        let takes = [
+            take(at: at(4, 9, 0), words: [("think", 40), ("is", 95)]),
+            take(at: at(4, 9, 5), words: [("three", 55), ("Think", 50)]),
+            take(at: at(4, 9, 6), words: [("hello", 90)], surface: "shadow"),
+        ]
+        let e = try XCTUnwrap(EarlierToday.latest(now: at(4, 12), sessions: [talk(endingAt: at(4, 8))],
+                                                  pronEntries: takes, calendar: cal))
+        XCTAssertEqual(e.kind, .pronunciation)
+        XCTAssertTrue(e.record.contains("2 sentences"))
+        XCTAssertTrue(e.record.contains("\"think\", \"three\""))
+        XCTAssertFalse(e.record.contains("\"is\""))
+    }
+
+    func testATalkAfterTheDrillWins() throws {
+        let takes = [take(at: at(4, 7), words: [("think", 40)])]
+        let e = try XCTUnwrap(EarlierToday.latest(now: at(4, 12), sessions: [talk(endingAt: at(4, 8))],
+                                                  pronEntries: takes, calendar: cal))
+        XCTAssertEqual(e.kind, .talk)
+    }
+
+    // MARK: - The opener
+
+    func testFirstTalkOfTheDayIsTheHelloForTheTimeOfDay() {
+        let now = Calendar.current.date(bySettingHour: 8, minute: 0, second: 0, of: Date())!
+        let pick = FreeTalkOpeners.callOpener(language: "en", earlier: nil, talkedEarlierToday: false, at: now)
+        XCTAssertEqual(pick.line, "Hi, did you sleep well?")
+        XCTAssertNil(pick.usedKey)
+    }
+
+    func testASecondCallNeverAsksAboutSleepAgain() {
+        let now = Calendar.current.date(bySettingHour: 8, minute: 0, second: 0, of: Date())!
+        let earlier = EarlierToday(kind: .talk, key: UUID().uuidString,
+                                   endedAt: now.addingTimeInterval(-3600), record: "A talk.")
+        let pick = FreeTalkOpeners.callOpener(language: "en", earlier: earlier, talkedEarlierToday: true, at: now)
+        XCTAssertNotEqual(pick.line, "Hi, did you sleep well?")
+        // Only a talk with someone else earlier: still not the first hello.
+        let other = FreeTalkOpeners.callOpener(language: "en", earlier: nil, talkedEarlierToday: true, at: now)
+        XCTAssertEqual(other.line, FreeTalkOpeners.againLine(language: "en"))
+    }
+
+    func testATalkCutOffMinutesAgoIsCarriedOn() {
+        let now = Date()
+        let earlier = EarlierToday(kind: .talk, key: UUID().uuidString,
+                                   endedAt: now.addingTimeInterval(-120), record: "A talk.")
+        let pick = FreeTalkOpeners.callOpener(language: "ko", earlier: earlier, talkedEarlierToday: true, at: now)
+        XCTAssertEqual(pick.line, FreeTalkOpeners.resumeLine(language: "ko"))
+    }
+
+    // MARK: - The prompt
+
+    func testFreeTalkPromptCarriesEarlierTodayOnlyWhenThereIsOne() {
+        func prompt(_ e: EarlierToday?) -> String {
+            ConversationEngine.conversationSystemPrompt(
+                targetLanguage: "en", nativeLanguage: "ko", level: .b1, topPatterns: [],
+                weakVocabAreas: [], topic: "", earlierToday: e)
+        }
+        let earlier = EarlierToday(kind: .talk, key: "k", endedAt: Date(),
+                                   record: "A talk that ended about 2 hours ago.")
+        XCTAssertFalse(prompt(nil).contains("EARLIER TODAY"))
+        XCTAssertTrue(prompt(nil).contains("only a friend's hello for the time of day"))
+        let withIt = prompt(earlier)
+        XCTAssertTrue(withIt.contains("EARLIER TODAY"))
+        XCTAssertTrue(withIt.contains("A talk that ended about 2 hours ago."))
+        XCTAssertTrue(withIt.contains("second call the same day"))
+    }
+}

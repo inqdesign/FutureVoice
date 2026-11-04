@@ -160,6 +160,7 @@ enum ConversationEngine {
         clock: PromptClock? = nil,
         tutor: Bool = false,
         freeTalkCue: FreeTalkCue = .plainQuestion,
+        earlierToday: EarlierToday? = nil,
         learnerPicksTopic: Bool = false,
         tutorLesson: TutorLesson? = nil,
         tutorJustTicked: Bool = false,
@@ -292,11 +293,18 @@ enum ConversationEngine {
         // that going?"). Not for the first meeting, whose block owns the call.
         // 2026-10-17 (founder): the news is never the opener, and not every
         // call's second line either — `freeTalkCue` is drawn once per call.
-        let theyCalledBlock = (topic.isEmpty && counterpart == nil && !firstMeeting && !learnerPicksTopic && !tutor) ? """
+        let isFreeTalk = topic.isEmpty && counterpart == nil && !firstMeeting && !learnerPicksTopic && !tutor
+        // A later call the same day (2026-11-04, founder: "a second call
+        // shouldn't ask 'did you sleep well?' again") opens on what came
+        // earlier (`FreeTalkOpeners.callOpener`), so the line says so.
+        let sameDay = isFreeTalk ? earlierToday : nil
+        let openerKind = sameDay == nil
+            ? "only a friend's hello for the time of day (\"what are you up to?\", \"how was your day?\")"
+            : "a friend's hello for a second call the same day, picking up what came earlier"
+        let theyCalledBlock = isFreeTalk ? """
 
 
-        THEY CALLED YOU. Your opening line was only a friend's hello for \
-        the time of day ("what are you up to?", "how was your day?"), so \
+        THEY CALLED YOU. Your opening line was \(openerKind), so \
         whatever they bring first IS the call — go with it, and don't steer \
         to something you'd rather ask about. If their answer brings no \
         subject of their own — they only answer the greeting ("good, you?", \
@@ -307,6 +315,23 @@ enum ConversationEngine {
         something wrong?", 무슨 일 있어?, 왜 전화했어?). Later in the call, \
         once their subject has run its course, bring something the same way.
         """ : ""
+
+        // What you did together earlier today (`EarlierToday`): a talk, a
+        // tutor lesson, a scene or a pronunciation drill. Free talk only;
+        // nil = no block, so every prompt from before is byte-identical.
+        let earlierBlock = sameDay.map { e in """
+
+
+        EARLIER TODAY — what you and they did before this call (this is the \
+        same day, so you are carrying on, not catching up after a while):
+        \(e.record)
+        Treat it as something you both remember. If they take up what your \
+        opening line asked about, stay on it; if they bring something else, \
+        go with theirs. Never recap it, quote it back at length, or score \
+        it — a lesson or a drill is time you spent with them, mentioned the \
+        way a friend would, not a report. If it was a talk that stopped only \
+        minutes ago, simply carry on from its last lines.
+        """ } ?? ""
 
         // "My own topic" (topics page, draft 2026-10-18): not a free talk.
         // A free talk catches up and lets a subject arrive; this call was
@@ -360,7 +385,7 @@ enum ConversationEngine {
         The point is for it to sound like two actual people talking — not a \
         language-class exchange. Read everything below, then talk like a real person.
 
-        \(counterpart.map { personaBlock(forCast: $0, persona: persona, languageName: languageName) } ?? personaBlock(persona, languageName: languageName))\(futureBlock)\(counterpartBlock)\(firstMeetingBlock)\(theyCalledBlock)\(ownTopicBlock)\(clockBlock)
+        \(counterpart.map { personaBlock(forCast: $0, persona: persona, languageName: languageName) } ?? personaBlock(persona, languageName: languageName))\(futureBlock)\(counterpartBlock)\(firstMeetingBlock)\(theyCalledBlock)\(earlierBlock)\(ownTopicBlock)\(clockBlock)
 
         Language profile:
         - Native language: \(LanguageCatalog.englishName(nativeLanguage))

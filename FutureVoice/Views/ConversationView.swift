@@ -54,6 +54,10 @@ struct ConversationView: View {
     /// How this call follows a hello answered with no subject — drawn with
     /// the clock, once per call (`ConversationEngine.FreeTalkCue`).
     @State private var freeTalkCue: ConversationEngine.FreeTalkCue = .plainQuestion
+    /// What came earlier today (`EarlierToday`) — read with the clock, so the
+    /// opener and the prompt agree on it. Nil on the day's first talk and
+    /// on a resumed talk, which has its own lines.
+    @State private var earlierToday: EarlierToday?
     /// Set when a reply (Gemini/TTS) fails for the latest user turn — drives
     /// an inline Retry button so a network blip doesn't lose what they said.
     @State private var failedTurnId: UUID?
@@ -2860,8 +2864,15 @@ struct ConversationView: View {
                 // (`FreeTalkOpeners.pickUpLines`) — the texts repeat
                 // verbatim, so the TTS content cache makes the voice free
                 // after each line's first play. Recent news is the call's
-                // second line, not its first (THEY CALLED YOU).
-                opener = FreeTalkOpeners.pickUpOpener(language: appState.targetLanguage)
+                // second line, not its first (THEY CALLED YOU). A later
+                // call the same day picks up what came earlier instead
+                // (`FreeTalkOpeners.callOpener`, 2026-11-04).
+                if promptClock == nil { pinPromptClock() }
+                let pick = FreeTalkOpeners.callOpener(
+                    language: appState.targetLanguage, earlier: earlierToday,
+                    talkedEarlierToday: (promptClock?.talksEarlierToday ?? 0) > 0)
+                if let key = pick.usedKey { FreeTalkOpeners.markSameDayUsed(key) }
+                opener = pick.line
             } else if let line = learnerOpensLine {
                 // A starter the LEARNER opens (asking a stranger the way):
                 // the other side waits to be spoken to, and the coach's own
@@ -5030,6 +5041,8 @@ struct ConversationView: View {
         )
         freeTalkCue = .random(hasRecentNews: appState.persona?.currentNotes()
             .contains { $0.kind == .now } ?? false)
+        earlierToday = isResuming ? nil
+            : EarlierToday.current(language: appState.targetLanguage, excluding: sessionId)
         personHistory = sessionCounterpartId.flatMap {
             PersonHistory.build(personId: $0, sessions: SessionStore.shared.load(),
                                 excluding: sessionId, pickUp: pickUpLastTalk)
@@ -5641,6 +5654,7 @@ struct ConversationView: View {
             clock: promptClock,
             tutor: tutorThisCall,
             freeTalkCue: freeTalkCue,
+            earlierToday: earlierToday,
             learnerPicksTopic: learnerPicksTopic,
             tutorLesson: tutorLesson,
             tutorJustTicked: tutorJustTicked,
