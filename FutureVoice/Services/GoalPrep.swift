@@ -173,7 +173,8 @@ enum GoalPrep {
                 List the 6 to 8 questions or tasks they will most likely meet on the day, most likely \
                 first — what an interviewer, examiner or the people there really ask or expect, for this \
                 kind of goal and, where it is widely known, this organisation or exam. No invented \
-                specifics (no figures, no names of people, no dates).
+                specifics (no figures, no names of people, no dates). If their notes name a question \
+                they dread or a part they're unsure of, it is on the list.
                 - "question": as it would be said to them, in \(target).
                 - "looks_for": ALWAYS present, in \(native), one short sentence on what it checks and what a strong \
                 answer does.\(korean)
@@ -265,6 +266,10 @@ enum GoalPrep {
             if !p.interests.isEmpty { about.append("Interests: \(p.interests.joined(separator: ", "))") }
             for n in p.currentNotes(at: now).suffix(8) { about.append(n.text) }
         }
+        // The goal's notes are the learner's own words about THIS day: an
+        // experience they want to tell is theirs to use in the answer, and
+        // the part they dread is where the days should go.
+        if !goal.notes.isEmpty { about.append("About this goal, in their words: \(goal.notes)") }
         let done = earlier.prefix(10).map { "- \($0.day): \($0.focus) (reading \"\($0.reading.title)\", answer \"\($0.speech.title)\")" }
         let korean = appState.nativeLanguage == "ko" ? " Korean notes end every sentence in polite 해요체 (-요: \"설명해요\", \"전달해 보세요\"), never 합니다체; never 당신." : ""
         return """
@@ -286,7 +291,9 @@ enum GoalPrep {
             TODAY
             - "focus": today's angle in \(native), under 40 characters (e.g. for an airline interview: \
             the airline's service culture, "why this company", a difficult passenger, the group exercise; \
-            for an exam: its speaking part 2, describing a graph, opinion questions).
+            for an exam: its speaking part 2, describing a graph, opinion questions). When their own \
+            words about this goal name a part they're unsure of, a question they dread or a point they \
+            want to get across, give it one of the first days.
             - "reading": something to read that gives them knowledge and words for today's angle — \
             the organisation, the role, the exam's format, the place, what is expected on the day. \
             Title and body in \(target), at \(level). A short "summary" in \(native): what it covers \

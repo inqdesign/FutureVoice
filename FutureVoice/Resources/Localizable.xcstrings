@@ -139153,232 +139153,232 @@
         }
       }
     },
-    "The role, questions you expect, what worries you…" : {
+    "The role, an experience you want to tell, a question you dread…" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die Stelle, Fragen, mit denen du rechnest, was dich nervös macht…"
+            "value" : "Die Stelle, eine Erfahrung, die du erzählen willst, eine Frage, vor der dir graut…"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "El puesto, las preguntas que esperas, lo que te preocupa…"
+            "value" : "El puesto, una experiencia que quieres contar, una pregunta que te da miedo…"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Le poste, les questions que tu attends, ce qui t’inquiète…"
+            "value" : "Le poste, une expérience à raconter, une question que tu redoutes…"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "応募する職種、聞かれそうなこと、不安なところ…"
+            "value" : "応募する職種、ぜひ話したい経験、自信のない質問…"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "지원 직무, 예상 질문, 걱정되는 부분…"
+            "value" : "지원 직무, 꼭 말하고 싶은 경험, 자신 없는 질문…"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "应聘的职位、可能被问的问题、担心的地方…"
+            "value" : "应聘的职位、一定想讲的经历、没把握的问题…"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "應徵的職位、可能會被問的問題、擔心的地方…"
+            "value" : "應徵的職位、一定想講的經驗、沒把握的問題…"
           }
         }
       }
     },
-    "The score you need, your weakest part, the format…" : {
+    "The part you're unsure of, where you got stuck last time…" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die Punktzahl, die du brauchst, dein schwächster Teil, das Format…"
+            "value" : "Der Teil, bei dem du unsicher bist, wo du letztes Mal hängen geblieben bist…"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "La puntuación que necesitas, la parte que más te cuesta, el formato…"
+            "value" : "La parte que menos dominas, dónde te atascaste la última vez…"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Le score à viser, la partie la plus dure, le format…"
+            "value" : "La partie où tu doutes, là où tu as bloqué la dernière fois…"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "目標スコア、苦手なパート、試験の形式…"
+            "value" : "自信のないパート、前回つまずいたところ…"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "목표 점수, 가장 어려운 파트, 시험 형식…"
+            "value" : "자신 없는 파트, 지난번에 막혔던 것…"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "目标分数、最难的部分、考试形式…"
+            "value" : "没把握的部分、上次卡住的地方…"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "目標分數、最難的部分、考試形式…"
+            "value" : "沒把握的部分、上次卡住的地方…"
           }
         }
       }
     },
-    "The topic, how long you speak, questions after…" : {
+    "What it's about, the point to get across, a question you dread…" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Das Thema, wie lange du sprichst, Fragen danach…"
+            "value" : "Worum es geht, deine Kernbotschaft, eine Frage, vor der dir graut…"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "El tema, cuánto tiempo hablas, las preguntas del final…"
+            "value" : "De qué trata, la idea que quieres dejar clara, una pregunta que te da miedo…"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Le sujet, la durée, les questions à la fin…"
+            "value" : "Le sujet, le message à faire passer, une question que tu redoutes…"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "テーマ、持ち時間、終わったあとの質疑…"
+            "value" : "何について話すか、必ず伝えたいこと、心配な質問…"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "발표 주제, 발표 시간, 끝나고 나올 질문…"
+            "value" : "무슨 내용인지, 꼭 전할 메시지, 걱정되는 질문…"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "主题、讲多久、讲完会被问什么…"
+            "value" : "讲什么内容、一定要传达的重点、担心被问的问题…"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "主題、要講多久、講完會被問什麼…"
+            "value" : "講什麼內容、一定要傳達的重點、擔心被問的問題…"
           }
         }
       }
     },
-    "What to sort out there: a flat, the bank, a visa…" : {
+    "What to sort out there (a flat, the bank, a visa), what's already settled…" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Was dort zu erledigen ist: Wohnung, Bank, Visum…"
+            "value" : "Was dort zu erledigen ist (Wohnung, Bank, Visum), was schon feststeht…"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lo que tendrás que resolver allí: buscar casa, el banco, la visa…"
+            "value" : "Lo que tendrás que resolver allí (casa, banco, visa), lo que ya está decidido…"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ce qu’il faudra régler là-bas : logement, banque, visa…"
+            "value" : "Ce qu’il faudra régler là-bas (logement, banque, visa), ce qui est déjà décidé…"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "向こうでやること：部屋探し、銀行、ビザ…"
+            "value" : "向こうで片づけること（部屋、銀行、ビザ）、もう決まっていること…"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "가서 해결할 일: 집 구하기, 은행, 비자…"
+            "value" : "가서 처리할 일(집, 은행, 비자), 이미 정해진 것…"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "到那边要办的事：找房子、银行、签证…"
+            "value" : "到那边要办的事（房子、银行、签证）、已经定下来的…"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "到那邊要辦的事：找房子、銀行、簽證…"
+            "value" : "到那邊要辦的事（房子、銀行、簽證）、已經確定的…"
           }
         }
       }
     },
-    "What you'll do there, who you'll meet…" : {
+    "What you'll do there, who you'll meet, where you'll need to talk…" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Was du dort vorhast, wen du triffst…"
+            "value" : "Was du dort vorhast, wen du triffst, wo du reden musst…"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lo que vas a hacer allí, a quién vas a ver…"
+            "value" : "Lo que vas a hacer allí, a quién vas a ver, dónde tendrás que hablar…"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ce que tu vas y faire, qui tu vas voir…"
+            "value" : "Ce que tu vas y faire, qui tu vas voir, où il faudra parler…"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "向こうでしたいこと、会う人…"
+            "value" : "向こうでしたいこと、会う人、話す必要がありそうな場面…"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "가서 하고 싶은 것, 만날 사람…"
+            "value" : "가서 할 일, 만날 사람, 말이 필요할 상황…"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "到那边想做什么、要见谁…"
+            "value" : "到那边想做什么、要见谁、哪些场合要开口…"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "到那邊想做什麼、要見誰…"
+            "value" : "到那邊想做什麼、要見誰、哪些場合要開口…"
           }
         }
       }

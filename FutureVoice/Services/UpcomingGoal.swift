@@ -85,16 +85,18 @@ struct UpcomingGoal: Codable, Identifiable, Equatable {
             }
         }
 
-        /// The notes field's example, per kind: what is worth telling the
-        /// tutor about THIS kind of day (one example for all of them asked
-        /// a presentation for "the score you need").
+        /// The notes field's example, per kind: only what the tutor can't
+        /// know by itself and what changes what it prepares (the part to
+        /// work on, the point to land, the question they dread). A target
+        /// score or an exam's format changes nothing: lengths follow the
+        /// learner's level, and a known exam's format the model has.
         var notesPrompt: String {
             switch self {
-            case .interview:    return explain("The role, questions you expect, what worries you…")
-            case .exam:         return explain("The score you need, your weakest part, the format…")
-            case .presentation: return explain("The topic, how long you speak, questions after…")
-            case .move:         return explain("What to sort out there: a flat, the bank, a visa…")
-            case .trip:         return explain("What you'll do there, who you'll meet…")
+            case .interview:    return explain("The role, an experience you want to tell, a question you dread…")
+            case .exam:         return explain("The part you're unsure of, where you got stuck last time…")
+            case .presentation: return explain("What it's about, the point to get across, a question you dread…")
+            case .move:         return explain("What to sort out there (a flat, the bank, a visa), what's already settled…")
+            case .trip:         return explain("What you'll do there, who you'll meet, where you'll need to talk…")
             case .other:        return explain("What it is, who's involved, what worries you…")
             }
         }
