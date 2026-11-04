@@ -603,7 +603,7 @@ struct PaywallView: View {
     // every card on two rows that were identical on all of them, and three
     // cards plus a pack needed two screens of scrolling to compare. Now the
     // whole choice is on one screen and comparing is a glance down a column:
-    // each row carries its minutes, its scenes on a line of their own, the
+    // each row carries its minutes, the
     // price, and the price PER MINUTE — the one number that says what a bigger
     // plan buys. What every plan shares is said once, under the ladder.
     //
@@ -771,13 +771,12 @@ struct PaywallView: View {
     }
 
     /// One line of the ladder: name and minutes, a bar for the size, the
-    /// per-day cue and scenes, the price and the price per minute.
+    /// per-day cue, the price and the price per minute.
     private func ladderRow(tier: String) -> some View {
         let opt = option(tier: tier)
         let monthlyOnly = opt == nil && period == .annual
         let shown = opt ?? store.options.first { $0.plan.tier == tier && $0.plan.period == "monthly" }
         let minutes = (shown?.plan.monthly_seconds ?? 0) / 60
-        let scenes = shown?.plan.monthly_scenes ?? 0
         let perDay = minutes / 30
         let on = selectedTier == tier && !monthlyOnly
         let isCurrent = isCurrentPlan(tier: tier, period: period)
@@ -821,15 +820,12 @@ struct PaywallView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                    // Since 2026-10-19 a scene is paid for out of the same
-                    // minutes for anyone subscribing from then on, so it is
-                    // not a thing the plan includes and the row says nothing
-                    // about it (founder). The count is printed only to an
-                    // account still on it, which is what that account buys.
-                    if !account.scenesCostTalk && scenes > 0 {
-                        Text(explain("+ \(scenes) scenes"))
-                            .font(.subheadline.weight(.medium))
-                    }
+                    // No scene count on a plan row, for anyone (2026-11-04,
+                    // founder). A scene is paid for out of these minutes for
+                    // every plan sold since 2026-10-19; the accounts still on
+                    // the old count keep it (Usage shows it), but the card is
+                    // what a purchase brings today, and a catalog count here
+                    // read as a feature of the plan.
                 }
                 Spacer(minLength: 8)
                 VStack(alignment: .trailing, spacing: 2) {
