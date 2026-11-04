@@ -2188,6 +2188,7 @@
     <string name="practise_on_your_phone_pick_it_up_on_your_tablet_everything_0cf690">"Übe auf dem Handy, mach auf dem Tablet weiter. Alles liegt in deinem eigenen Google Drive, Audio inklusive, in einem versteckten Ordner, den nur diese App öffnen kann."</string>
     <!-- 'Practised on another phone or tablet with sync on? Your talks, cards, words and recordings are in your Google Drive. Choose the same Google account you used there.' -->
     <string name="practised_on_another_phone_or_tablet_with_sync_on_your_talks_dc3ff4">"Hast du auf einem anderen Handy oder Tablet mit eingeschalteter Synchronisierung geübt? Dann sind deine Gespräche, Karten, Wörter und Aufnahmen in deinem Google Drive. Wähl dasselbe Google-Konto wie dort."</string>
+    <string name="prepared">"Vorbereitet"</string>
     <string name="prepared_so_far">"Bisher vorbereitet"</string>
     <string name="preparing">"In Vorbereitung"</string>
     <!-- "Preparing for something? An interview, an exam, a presentation. Tell me what and when, and every day I'll prepare you for it." -->
@@ -2236,6 +2237,7 @@
     <string name="put_it_in_my_seat">"Auf meinen Platz setzen"</string>
     <string name="put_your_headphones_in_it_starts_playing_when_you_tap">"Kopfhörer rein und tippen. Es spielt sofort los."</string>
     <string name="putting_it_on_the_board">"Wird eingetragen…"</string>
+    <string name="questions">"Fragen"</string>
     <string name="questions_for_them">"Eigene Fragen stellen"</string>
     <string name="quick_quiz">"Schnelles Quiz"</string>
     <string name="quiet">"ruhig"</string>

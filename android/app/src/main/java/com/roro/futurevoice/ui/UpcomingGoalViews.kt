@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.CameraAlt
@@ -504,6 +505,8 @@ fun UpcomingGoalPage(initial: UpcomingGoal, state: AppState, onDismiss: () -> Un
     var attempt by remember { mutableStateOf(0) }
     var reading by remember { mutableStateOf<com.roro.futurevoice.talk.TutorReading?>(null) }
     var editing by remember { mutableStateOf(false) }
+    /** 0 = what the day will ask (to practice), 1 = what the tutor already wrote (to review). */
+    var tab by remember { mutableStateOf(0) }
 
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     LaunchedEffect(goal.updatedAt, attempt) {
@@ -544,110 +547,119 @@ fun UpcomingGoalPage(initial: UpcomingGoal, state: AppState, onDismiss: () -> Un
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
             }
         }
-        if (goal.brief?.hasSources == true) {
-            // What the material is and what the reading found, with Read again.
-            val brief = goal.brief ?: ScenarioBrief()
-            val reading = goal.id in UpcomingGoalStore.readingMaterial
-            FormSection(stringResource(R.string.material),
-                footer = brief.readAt?.let { stringResource(R.string.read, abbreviatedDate(it)) }) {
-                if (reading) {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        val days = remember(goal.updatedAt, reading) { com.roro.futurevoice.talk.GoalPrep.days(context, goal) }
+        // Two kinds of thing live here: what the day will ask (to practice)
+        // and what the tutor already wrote (to review). With nothing
+        // prepared yet there is only the first (iOS UpcomingGoalPage tabs).
+        if (days.isNotEmpty()) {
+            com.roro.futurevoice.ui.brand.IosSegmented(
+                listOf(stringResource(R.string.questions), stringResource(R.string.prepared)),
+                selected = tab, onSelect = { tab = it },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp))
+        }
+        if (days.isEmpty() || tab == 0) {
+            val loaded = questions
+            FormSection(null,
+                footer = if (loaded != null) stringResource(R.string.tap_one_to_practice_it_with_your_tutor_until_it_comes_out_cl_2ab412) else null) {
+                when {
+                    loaded != null -> loaded.forEachIndexed { i, q ->
+                        if (i > 0) FormDivider()
+                        Row(Modifier.fillMaxWidth().clickable { drill(q.text) }
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text(q.text, style = MaterialTheme.typography.bodyLarge)
+                                if (q.looksFor.isNotEmpty()) {
+                                    Text(q.looksFor, style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                            Icon(Icons.Filled.School, contentDescription = null, tint = goal.kind.color(),
+                                modifier = Modifier.size(20.dp))
+                        }
+                    }
+                    failed -> Text(stringResource(R.string.try_again), style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.fillMaxWidth().clickable { failed = false; attempt += 1 }
+                            .padding(horizontal = 16.dp, vertical = 12.dp))
+                    else -> Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                        Text(stringResource(R.string.reading_your_material), style = MaterialTheme.typography.bodyLarge,
+                        Text(stringResource(R.string.working_out_what_they_ll_ask), style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    FormDivider()
-                } else if (brief.summary.isNotEmpty()) {
-                    Text(brief.summary, style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
-                    FormDivider()
-                }
-                brief.sources.forEach { src ->
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Icon(briefSourceIcon(src), contentDescription = null, tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp))
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(briefChipLabel(src), style = MaterialTheme.typography.bodyLarge, maxLines = 1,
-                                overflow = androidx.compose.ui.text.style.TextOverflow.MiddleEllipsis)
-                            src.detail?.takeIf { it.isNotEmpty() }?.let {
-                                Text(it, style = MaterialTheme.typography.labelMedium,
-                                    color = if (src.readOK) MaterialTheme.colorScheme.onSurfaceVariant
-                                        else MaterialTheme.colorScheme.error)
-                            }
-                        }
-                    }
-                    FormDivider()
-                }
-                if (goal.id in UpcomingGoalStore.materialFailed) {
-                    Text(stringResource(R.string.couldn_t_read_it_this_time), style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-                    FormDivider()
-                }
-                if (!reading) {
-                    Text(stringResource(if (brief.readAt == null) R.string.read_it else R.string.read_again),
-                        style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.fillMaxWidth().clickable {
-                            val g = goal.copy(brief = brief.copy(readAt = null))
-                            UpcomingGoalStore.save(context, g)
-                            scope.launch {
-                                UpcomingGoalStore.readMaterial(context, g.id, state.persona, state.nativeLanguage)
-                            }
-                        }.padding(horizontal = 16.dp, vertical = 12.dp))
                 }
             }
-        }
-        val loaded = questions
-        FormSection(stringResource(R.string.likely_questions),
-            footer = if (loaded != null) stringResource(R.string.tap_one_to_practice_it_with_your_tutor_until_it_comes_out_cl_2ab412) else null) {
-            when {
-                loaded != null -> loaded.forEachIndexed { i, q ->
-                    if (i > 0) FormDivider()
-                    Row(Modifier.fillMaxWidth().clickable { drill(q.text) }
-                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Text(q.text, style = MaterialTheme.typography.bodyLarge)
-                            if (q.looksFor.isNotEmpty()) {
-                                Text(q.looksFor, style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (goal.brief?.hasSources == true) {
+                // What the material is and what the reading found, with Read again.
+                val brief = goal.brief ?: ScenarioBrief()
+                val reading = goal.id in UpcomingGoalStore.readingMaterial
+                FormSection(stringResource(R.string.material),
+                    footer = brief.readAt?.let { stringResource(R.string.read, abbreviatedDate(it)) }) {
+                    if (reading) {
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                            Text(stringResource(R.string.reading_your_material), style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        FormDivider()
+                    } else if (brief.summary.isNotEmpty()) {
+                        Text(brief.summary, style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp))
+                        FormDivider()
+                    }
+                    brief.sources.forEach { src ->
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Icon(briefSourceIcon(src), contentDescription = null, tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp))
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(briefChipLabel(src), style = MaterialTheme.typography.bodyLarge, maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.MiddleEllipsis)
+                                src.detail?.takeIf { it.isNotEmpty() }?.let {
+                                    Text(it, style = MaterialTheme.typography.labelMedium,
+                                        color = if (src.readOK) MaterialTheme.colorScheme.onSurfaceVariant
+                                            else MaterialTheme.colorScheme.error)
+                                }
                             }
                         }
-                        Icon(Icons.Filled.School, contentDescription = null, tint = goal.kind.color(),
-                            modifier = Modifier.size(20.dp))
+                        FormDivider()
+                    }
+                    if (goal.id in UpcomingGoalStore.materialFailed) {
+                        Text(stringResource(R.string.couldn_t_read_it_this_time), style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                        FormDivider()
+                    }
+                    if (!reading) {
+                        Text(stringResource(if (brief.readAt == null) R.string.read_it else R.string.read_again),
+                            style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.fillMaxWidth().clickable {
+                                val g = goal.copy(brief = brief.copy(readAt = null))
+                                UpcomingGoalStore.save(context, g)
+                                scope.launch {
+                                    UpcomingGoalStore.readMaterial(context, g.id, state.persona, state.nativeLanguage)
+                                }
+                            }.padding(horizontal = 16.dp, vertical = 12.dp))
                     }
                 }
-                failed -> Text(stringResource(R.string.try_again), style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.fillMaxWidth().clickable { failed = false; attempt += 1 }
-                        .padding(horizontal = 16.dp, vertical = 12.dp))
-                else -> Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                    Text(stringResource(R.string.working_out_what_they_ll_ask), style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
             }
-        }
-        val days = remember(goal.updatedAt, reading) { com.roro.futurevoice.talk.GoalPrep.days(context, goal) }
-        if (days.isNotEmpty()) {
-            FormSection(stringResource(R.string.prepared_so_far)) {
-                days.forEachIndexed { i, day ->
-                    if (i > 0) FormDivider()
-                    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(day.focus, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                        PreparedLink(Icons.AutoMirrored.Filled.MenuBook, day.reading.title) {
-                            reading = com.roro.futurevoice.talk.TutorReading(
-                                script = day.script(com.roro.futurevoice.talk.GoalPrep.Part.READING),
-                                goal = goal, part = com.roro.futurevoice.talk.GoalPrep.Part.READING)
-                        }
-                        PreparedLink(Icons.Filled.MicExternalOn, day.speech.question ?: day.speech.title) {
-                            reading = com.roro.futurevoice.talk.TutorReading(
-                                script = day.script(com.roro.futurevoice.talk.GoalPrep.Part.SPEECH),
-                                goal = goal, part = com.roro.futurevoice.talk.GoalPrep.Part.SPEECH)
-                        }
+        } else {
+            days.forEach { day ->
+                FormSection(abbreviatedDate(day.createdAt)) {
+                    Text(day.focus, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp))
+                    FormDivider()
+                    PreparedLink(Icons.AutoMirrored.Filled.MenuBook, day.reading.title) {
+                        reading = com.roro.futurevoice.talk.TutorReading(
+                            script = day.script(com.roro.futurevoice.talk.GoalPrep.Part.READING),
+                            goal = goal, part = com.roro.futurevoice.talk.GoalPrep.Part.READING)
+                    }
+                    FormDivider()
+                    PreparedLink(Icons.Filled.MicExternalOn, day.speech.question ?: day.speech.title) {
+                        reading = com.roro.futurevoice.talk.TutorReading(
+                            script = day.script(com.roro.futurevoice.talk.GoalPrep.Part.SPEECH),
+                            goal = goal, part = com.roro.futurevoice.talk.GoalPrep.Part.SPEECH)
                     }
                 }
             }
@@ -663,13 +675,16 @@ fun UpcomingGoalPage(initial: UpcomingGoal, state: AppState, onDismiss: () -> Un
     }
 }
 
-/** A day's reading or answer on the goal page (iOS `.buttonStyle(.borderless)` Label). */
+/** A day's reading or answer on the goal page: a full-width row, text
+ *  left-aligned however many lines it wraps to (iOS `prepRow`). */
 @Composable
 private fun PreparedLink(icon: ImageVector, title: String, onClick: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clickable(onClick = onClick), verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(top = 2.dp).size(18.dp))
-        Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.primary)
+            modifier = Modifier.padding(top = 2.dp).size(20.dp))
+        Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp).size(20.dp))
     }
 }
