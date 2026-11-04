@@ -120,6 +120,9 @@ enum SpeechChallengeCategory {
         case "movie_scene": return explain(key: "speech.category.movie_scene", default: "Movie scene")
         case "acceptance": return explain(key: "speech.category.acceptance", default: "Acceptance speech")
         case "product_launch": return explain(key: "speech.category.product_launch", default: "Product launch")
+        case "in_flight": return explain(key: "speech.category.in_flight", default: "In-flight announcement")
+        case "podcast": return explain(key: "speech.category.podcast", default: "Podcast")
+        case "short_talk": return explain(key: "speech.category.short_talk", default: "Short talk")
         default: return nil
         }
     }
