@@ -28,7 +28,9 @@ struct SpeechPrompterView: View {
     init(script: SpeechScript, native: String, level: CEFRLevel, previewCursor: Int? = nil) {
         let session = SpeechTakeSession(script: script, native: native, level: level)
         #if DEBUG
-        if let previewCursor { session.preview(cursor: previewCursor) }
+        if let previewCursor, !UserDefaults.standard.bool(forKey: "speechautostart") {
+            session.preview(cursor: previewCursor)
+        }
         #endif
         _session = StateObject(wrappedValue: session)
     }
@@ -56,7 +58,14 @@ struct SpeechPrompterView: View {
                 prompterScreen
             }
         }
-        .task { await session.appear() }
+        .task {
+            await session.appear()
+            #if DEBUG
+            // `-speechautostart 1`: a real take starts by itself (no tap in
+            // the simulator), to test following the voice with a played file.
+            if UserDefaults.standard.bool(forKey: "speechautostart") { await session.start() }
+            #endif
+        }
         // The script is drawn for the video AHEAD of the take — three full
         // column renders took a visible beat when done on the record tap.
         .task(id: videoKey) {

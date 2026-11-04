@@ -90,6 +90,19 @@ final class LiveTranscriber: ObservableObject {
 
     private var engine: AVAudioEngine?
     private var recognizer: SFSpeechRecognizer?
+    /// Apple's SERVER recognizer refused this device (2026-11-04, founder:
+    /// the speech prompter stopped following the voice on every build, the
+    /// same code that followed it the day before). The server has a per-device
+    /// quota, and once it is spent every request fails at once with no
+    /// partial, forever restarting — the prompter never moves while the take
+    /// still records. After a refusal every segment runs ON DEVICE for an
+    /// hour, in every transcriber of this process.
+    private static var serverRefusedAt: Date?
+    private static let onDeviceFor: TimeInterval = 3600
+    private var useOnDevice: Bool {
+        guard let at = Self.serverRefusedAt else { return false }
+        return Date().timeIntervalSince(at) < Self.onDeviceFor
+    }
     private var currentRequest: SFSpeechAudioBufferRecognitionRequest?
     private var currentTask: SFSpeechRecognitionTask?
     private var taskGeneration = 0
@@ -644,6 +657,9 @@ final class LiveTranscriber: ObservableObject {
         if !contextualStrings.isEmpty {
             req.contextualStrings = contextualStrings
         }
+        if useOnDevice, recognizer.supportsOnDeviceRecognition {
+            req.requiresOnDeviceRecognition = true
+        }
         appender.setRequest(req)
         currentRequest = req
 
@@ -800,7 +816,21 @@ final class LiveTranscriber: ObservableObject {
 
         // Error path: preserve whatever we already showed, then resume. No
         // final will follow an error, so this chunk stays as-is.
-        if error != nil {
+        if let error {
+            // A server segment that failed before hearing a single word:
+            // the server is refusing (quota, outage, no network). Fall back
+            // on device instead of asking it again forever.
+            // Only a FAST failure counts: "no speech detected" (1110) also
+            // ends a wordless segment, but after seconds of silence.
+            let ns = error as NSError
+            let quick = segmentAnchorAt.map { Date().timeIntervalSince($0) < 2.0 } ?? false
+            if lastSegmentText.isEmpty, quick, ns.code != 1110, !useOnDevice,
+               currentRequest?.requiresOnDeviceRecognition != true,
+               recognizer?.supportsOnDeviceRecognition == true {
+                Self.serverRefusedAt = Date()
+                print("🎙️ [stt] server refused (\(ns.domain) \(ns.code)): on device for an hour")
+                Analytics.capture("stt_on_device_fallback", ["domain": ns.domain, "code": ns.code])
+            }
             commitAndRestart(awaitingFinal: false)
         }
     }
