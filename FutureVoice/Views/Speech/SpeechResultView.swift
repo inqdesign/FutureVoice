@@ -29,6 +29,8 @@ struct SpeechResultView: View {
     @State private var confirmDeleteVideo = false
     /// The script with the take's misreadings marked on it, by take id.
     @State private var scriptMarks: (takeId: UUID, marks: [[SpeechAnalyzer.ScriptMark]]?)?
+    /// The assessment sheet — every word and sound of the take.
+    @State private var showingPronunciation = false
 
     private var take: SpeechTake? {
         let stored = store.takes.first { $0.id == takeId }
@@ -106,11 +108,28 @@ struct SpeechResultView: View {
                 if let pron = m.pronunciation {
                     // What stood out: this take's low SOUNDS (English), or a
                     // word low here that is low across recent takes. A word
-                    // low once is not said — see `PronunciationLedger`.
-                    metricRow("Pronunciation", icon: "waveform.badge.mic",
-                              value: "\(pron)",
-                              detail: pronunciationDetail(take, language: script.language),
-                              score: pron)
+                    // low once is not said — see `PronunciationLedger`. The
+                    // whole assessment is a tap away when the take kept it.
+                    let row = metricRow("Pronunciation", icon: "waveform.badge.mic",
+                                        value: "\(pron)",
+                                        detail: pronunciationDetail(take, language: script.language),
+                                        score: pron)
+                    if let all = take.assessments, !all.isEmpty {
+                        Button { showingPronunciation = true } label: {
+                            HStack(spacing: 6) {
+                                row
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .sheet(isPresented: $showingPronunciation) {
+                            PronunciationDetailSheet(results: all, language: script.language)
+                        }
+                    } else {
+                        row
+                    }
                 }
                 metricRow("Pace", icon: "speedometer",
                           value: SpeechFormat.rate(m.rate, language: script.language),

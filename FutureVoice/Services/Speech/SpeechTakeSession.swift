@@ -406,7 +406,8 @@ final class SpeechTakeSession: ObservableObject {
                               durationSeconds: duration, audioFilename: audioName,
                               videoFilename: nil, transcript: transcript,
                               metrics: metrics, coaching: nil,
-                              pronunciationWords: pronunciation?.weakWords)
+                              pronunciationWords: pronunciation?.weakWords,
+                              assessments: prons.isEmpty ? nil : prons)
         SpeechStore.shared.save(take)
         PronunciationLedger.shared.record(prons, id: id, surface: "speech", language: script.language)
         SyncEngine.noteChanged(.blobSpeechAudio)

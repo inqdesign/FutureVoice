@@ -79,6 +79,8 @@ struct ShadowDrillView: View {
     /// with the paywall instead of a dead-end OK.
     @State private var outOfCredits = false
     @State private var showingPaywall = false
+    /// The assessment sheet — every word and sound of the take on screen.
+    @State private var showingPronunciation = false
     @State private var targetDurationMs: Int = 0
     @State private var lastAttemptDurationMs: Int = 0
     @State private var cachedAudioURL: URL?
@@ -175,6 +177,11 @@ struct ShadowDrillView: View {
             }
             .sheet(isPresented: $showingPaywall) {
                 PaywallView(source: "shadow")
+            }
+            .sheet(isPresented: $showingPronunciation) {
+                if let assessment {
+                    PronunciationDetailSheet(results: [assessment], language: targetLanguage)
+                }
             }
             .sheet(isPresented: $askingMicChoice, onDismiss: resumeAfterMicChoice) {
                 MicChoiceSheet { _ in }
@@ -591,30 +598,38 @@ struct ShadowDrillView: View {
     @ViewBuilder
     private var pronunciationSection: some View {
         if let a = assessment {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    Label("Pronunciation", systemImage: "waveform.badge.mic")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    if let p = a.prosody {
-                        Text(explain("intonation \(p)"))
-                            .font(.caption2)
+            // A tap opens the whole assessment (every word and sound).
+            Button { showingPronunciation = true } label: {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Label("Pronunciation", systemImage: "waveform.badge.mic")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        if let p = a.prosody {
+                            Text(explain("intonation \(p)"))
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                        Text("\(a.soundScore)")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(scoreColor(a.soundScore))
+                            .monospacedDigit()
+                        Image(systemName: "chevron.right")
+                            .font(.caption2.weight(.semibold))
                             .foregroundStyle(.tertiary)
                     }
-                    Text("\(a.soundScore)")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(scoreColor(a.soundScore))
-                        .monospacedDigit()
+                    // The sounds first (en-US names them), the words otherwise.
+                    if let line = Self.pronunciationLine(a) {
+                        Text(line)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
                 }
-                // The sounds first (en-US names them), the words otherwise.
-                if let line = Self.pronunciationLine(a) {
-                    Text(line)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                }
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
         }
     }
 

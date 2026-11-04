@@ -20,6 +20,8 @@ struct ScorecardView: View {
     var onSessionUpdated: ((Session) -> Void)? = nil
 
     @State private var showGrammarReview = false
+    /// The pronunciation standing (every sound over the month).
+    @State private var showPronunciation = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -101,7 +103,19 @@ struct ScorecardView: View {
     /// never stored on the talk, because a talk did not measure it.
     private var pronunciationRow: some View {
         let measured = scorecard.pronunciation ?? PronunciationRead.recentAxis()
-        return VStack(alignment: .leading, spacing: 6) {
+        return Button { showPronunciation = true } label: {
+            pronunciationBody(measured)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(measured == nil)
+        .sheet(isPresented: $showPronunciation) {
+            PronunciationDetailSheet(results: [])
+        }
+    }
+
+    private func pronunciationBody(_ measured: AxisScore?) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Image(systemName: "waveform.badge.mic")
                     .foregroundStyle(.secondary)

@@ -14,6 +14,8 @@ struct PronunciationCard: View {
     var onSkip: () -> Void = {}
     /// The learner leaves the word drill for the sentence.
     var onLeaveWord: () -> Void = {}
+    /// The last take's whole assessment, behind the verdict pill.
+    @State private var showingDetail = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -66,7 +68,17 @@ struct PronunciationCard: View {
                         .accessibilityLabel(line.text)
                 }
                 if let fb = line.feedback {
-                    PronunciationFeedbackPill(feedback: fb)
+                    if let result = line.lastResult {
+                        Button { showingDetail = true } label: {
+                            PronunciationFeedbackPill(feedback: fb)
+                        }
+                        .buttonStyle(.plain)
+                        .sheet(isPresented: $showingDetail) {
+                            PronunciationDetailSheet(results: [result])
+                        }
+                    } else {
+                        PronunciationFeedbackPill(feedback: fb)
+                    }
                 }
                 if let word = line.heardWord, let heard = line.heardAs {
                     Text(explain("“\(word)” sounded like “\(heard)”"))

@@ -2343,6 +2343,10 @@ struct SpeechTake: Codable, Identifiable, Hashable {
     /// worst first, over the whole take (2026-11-03). nil on takes made
     /// before it, or when the server could not assess the take.
     var pronunciationWords: [PronunciationResult.Word]? = nil
+    /// The assessment itself, piece by piece in order (2026-11-04), so the
+    /// detail sheet can show every word and sound of the take. nil on takes
+    /// made before it or not assessed.
+    var assessments: [PronunciationResult]? = nil
 }
 
 struct SpeechMetrics: Codable, Hashable {
