@@ -85,6 +85,20 @@ struct UpcomingGoal: Codable, Identifiable, Equatable {
             }
         }
 
+        /// The notes field's example, per kind: what is worth telling the
+        /// tutor about THIS kind of day (one example for all of them asked
+        /// a presentation for "the score you need").
+        var notesPrompt: String {
+            switch self {
+            case .interview:    return explain("The role, questions you expect, what worries you…")
+            case .exam:         return explain("The score you need, your weakest part, the format…")
+            case .presentation: return explain("The topic, how long you speak, questions after…")
+            case .move:         return explain("What to sort out there: a flat, the bank, a visa…")
+            case .trip:         return explain("What you'll do there, who you'll meet…")
+            case .other:        return explain("What it is, who's involved, what worries you…")
+            }
+        }
+
         var placePrompt: String {
             switch self {
             case .interview:    return explain("Company or place")

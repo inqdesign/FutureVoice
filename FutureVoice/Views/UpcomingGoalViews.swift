@@ -94,7 +94,7 @@ struct UpcomingGoalEditor: View {
                     TextField(goal.kind.placePrompt, text: $goal.place)
                 }
                 Section {
-                    TextField(explain("The role, the score you need, who will be there…"),
+                    TextField(goal.kind.notesPrompt,
                               text: $goal.notes, axis: .vertical)
                         .lineLimit(3...8)
                 } header: {
