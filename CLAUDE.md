@@ -2405,6 +2405,15 @@ scorecard's Pronunciation axis had been `nil` since it was drawn.
   five marked words were not. Tests: `PronunciationProfileTests`. In the
   speech overall since 2026-11-04 (above), nowhere else; still unmeasured
   on other learners.
+- **Everything the assessment reported is one sheet away**
+  (`PronunciationDetailSheet`, 2026-11-04, founder): this take's five Azure
+  numbers and the model it was judged against, every word with its score
+  and its sounds ("θ 32 (sounded like s) · ɪ 95"; a word not heard or added
+  is listed, never marked), the take's sound means, what the model heard,
+  the last 30 days' standing, and the bars the marks use. Opened from the
+  shadow result's Pronunciation line, the speech result's Pronunciation row
+  (`SpeechTake.assessments` keeps the pieces since then), the pronunciation
+  call's verdict pill and the scorecard's axis (standing only).
 - Android: owed (the whole reader).
 
 ## Japanese as a TARGET language (2026-09-18)
