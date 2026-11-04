@@ -64,10 +64,15 @@ struct PlanPageView: View {
                 // pool's own, and these are its parts.
                 if usage.loaded, !usage.talkModes.isEmpty {
                     ForEach(usage.talkModes) { m in
-                        row(icon: m.icon, title: m.title, subtitle: m.discountNote,
-                            value: m.durationLabel)
-                            .padding(.leading, 24)
-                            .foregroundStyle(.secondary)
+                        if let full = m.fullLabel {
+                            discountedRow(m, full: full)
+                                .padding(.leading, 24)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            row(icon: m.icon, title: m.title, value: m.durationLabel)
+                                .padding(.leading, 24)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
                 // Invite minutes are time ON TOP of the pool, so they are
@@ -363,6 +368,32 @@ struct PlanPageView: View {
     /// visually from the list that pushed it. `subtitle` is optional: a row
     /// whose title and trailing value already say everything must not be given
     /// a line of prose to fill the slot.
+    /// A kind of call charged at a discount (pronunciation, half): the time
+    /// practiced struck through, then what it cost, "50% off" under it.
+    private func discountedRow(_ m: UsageBreakdown.Meter, full: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: m.icon)
+                .font(.subheadline)
+                .foregroundStyle(.tint)
+                .frame(width: 22)
+            Text(m.title).font(.body)
+            Spacer(minLength: 8)
+            VStack(alignment: .trailing, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(full)
+                        .strikethrough()
+                        .foregroundStyle(.tertiary)
+                    Text(m.durationLabel)
+                        .foregroundStyle(Color.secondary)
+                }
+                .font(.body.monospacedDigit())
+                Text(explain("50% off"))
+                    .font(.caption)
+                    .foregroundStyle(.green)
+            }
+        }
+    }
+
     private func row(icon: String, title: String, subtitle: String? = nil,
                      value: String? = nil) -> some View {
         HStack(spacing: 12) {

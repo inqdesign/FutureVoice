@@ -3231,8 +3231,9 @@ call time." `PronunciationCall.swift`, `PronunciationCallViews.swift`.
   routine and the streak count THAT (`talk_seconds_by_local_day`
   `20261104180000`, `TalkTimeLog`'s row fallback), the call clock runs at
   real time with a green "½" beside it, and Usage's Pronunciation row shows
-  the minutes charged with "N min practiced · half the talk time" under it.
-  Said before the tap on the ring page. Order: migration + `talk-tick`
+  the time practiced struck through beside the minutes charged, "50% off"
+  under it. Nothing else says it (founder: no sentence on the ring page —
+  "통화 시간이 절반만 들어요" read oddly). Order: migration + `talk-tick`
   first, then the gateway (otherwise the ring reads half until they land).
 - **Tutor mode's contract with Azure as the judge.** Every learner turn is
   held (`tutorJudging` is true for the whole call); the turn's audio goes to

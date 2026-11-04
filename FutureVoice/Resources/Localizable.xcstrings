@@ -150991,48 +150991,48 @@
         }
       }
     },
-    "%@ practiced · half the talk time" : {
+    "50% off" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ geübt · halbe Sprechzeit"
+            "value" : "50 % Rabatt"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ de práctica · la mitad del tiempo"
+            "value" : "50 % de descuento"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ de pratique · moitié du temps"
+            "value" : "−50 %"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@練習 · トーク時間は半分"
+            "value" : "50%オフ"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ 연습 · 통화 시간은 절반만"
+            "value" : "50% 할인"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "练习 %@ · 只扣一半时间"
+            "value" : "五折"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "練習 %@ · 只扣一半時間"
+            "value" : "五折"
           }
         }
       }

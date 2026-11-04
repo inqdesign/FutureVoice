@@ -32,13 +32,12 @@ struct UsageBreakdown {
                           : explain("\(seconds) sec")
         }
 
-        /// "14 min practiced · half the talk time", on a row that cost less
-        /// than it ran; nil otherwise. The value beside it stays the
-        /// minutes charged, so the rows still add up to the pool.
-        var discountNote: String? {
+        /// The time practiced, on a row that cost less than it ran — drawn
+        /// struck through beside the minutes charged (founder, 2026-11-04:
+        /// "22 struck, 11, and a small note"); nil otherwise.
+        var fullLabel: String? {
             guard let call = callSeconds, call > seconds else { return nil }
-            let practiced = call >= 60 ? explain("\(call / 60) min") : explain("\(call) sec")
-            return explain("\(practiced) practiced · half the talk time")
+            return call >= 60 ? explain("\(call / 60) min") : explain("\(call) sec")
         }
     }
 
