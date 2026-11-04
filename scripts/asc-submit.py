@@ -342,6 +342,25 @@ def main() -> None:
         return
 
     vid = ver["id"]
+    # A version already sent for review holds its build: pull it back first
+    # (cancel the waiting submission), so a fixed build can take its place.
+    if ver["attributes"]["appStoreState"] in ("WAITING_FOR_REVIEW", "IN_REVIEW"):
+        if ver["attributes"]["appStoreState"] == "IN_REVIEW":
+            sys.exit(f"version {version} is IN_REVIEW — Apple is reviewing it; not pulling it back")
+        waiting = call("GET", f"/reviewSubmissions?filter[app]={APP_ID}&filter[platform]={PLATFORM}"
+                              f"&filter[state]=WAITING_FOR_REVIEW&limit=5")["data"]
+        for w in waiting:
+            call("PATCH", f"/reviewSubmissions/{w['id']}", {"data": {
+                "type": "reviewSubmissions", "id": w["id"], "attributes": {"canceled": True}}})
+            print(f"review submission {w['id']}: canceled, to swap in build {build_no}")
+        for _ in range(40):
+            st = call("GET", f"/appStoreVersions/{vid}")["data"]["attributes"]["appStoreState"]
+            if st not in ("WAITING_FOR_REVIEW", "IN_REVIEW"):
+                print(f"version {version}: back to {st}")
+                break
+            time.sleep(15)
+        else:
+            sys.exit("the canceled submission never let go of the version")
     call("PATCH", f"/appStoreVersions/{vid}", {"data": {
         "type": "appStoreVersions", "id": vid,
         "attributes": {"releaseType": "AFTER_APPROVAL"}}})
