@@ -190,6 +190,8 @@ struct PaywallView: View {
     var body: some View {
         VStack(spacing: 0) {
             topBar
+                // Its own ✕ / back is the sheet's close; the Mac adds none.
+                .macOwnClose()
             ScrollView {
                 Group {
                     switch step {
