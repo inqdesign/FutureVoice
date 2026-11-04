@@ -163,8 +163,47 @@ struct ScenePlayerSheet: View {
     private var allLines: [PlaylistLine] { tracks.flatMap(\.lines) }
     private var showLines: [PlaylistLine] { shows.flatMap(\.lines) }
 
+    /// In the Mac's Talk column the LIST is the page (founder, 2026-11-04:
+    /// a tab that opens on the player hid what there is to hear one push
+    /// away); the player is pushed from the bar or by a pick.
+    @State private var showingPlayer = false
+
     var body: some View {
         NavigationStack {
+            if inColumn {
+                library(afterPick: { showingPlayer = true })
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button { showingPlayer = true } label: {
+                                Image(systemName: player.isPlaying ? "waveform" : "play.circle")
+                            }
+                            .accessibilityLabel(Text("Player"))
+                        }
+                    }
+                    .navigationDestination(isPresented: $showingPlayer) { playerPage }
+            } else {
+                playerPage
+                    .navigationDestination(isPresented: $showingList) {
+                        library(afterPick: nil)
+                    }
+            }
+        }
+        .task { await load() }
+        .presentationDetents([.medium, .large])
+        .presentationBackgroundInteraction(.enabled(upThrough: .medium))
+    }
+
+    private func library(afterPick: (() -> Void)?) -> some View {
+        // Bindings, not values: a destination already on screen is not
+        // rebuilt when the sheet's state changes, and the episodes
+        // arrive after the download — handed over as values, a list
+        // opened early stayed empty.
+        PlayerLibrary(tracks: $tracks, shows: $shows, onPick: play(from:),
+                      onPickShow: play(show:), onPlayAllShows: playAllShows,
+                      afterPick: afterPick)
+    }
+
+    private var playerPage: some View {
             VStack(spacing: 0) {
                 NowPlayingCaption(isEmpty: loaded && tracks.isEmpty && shows.isEmpty)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -177,10 +216,12 @@ struct ScenePlayerSheet: View {
             .navigationTitle(Text("Player"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button { showingList = true } label: { Image(systemName: "list.bullet") }
-                        .accessibilityLabel(Text("Situations"))
-                        .disabled(tracks.isEmpty && shows.isEmpty)
+                if !inColumn {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button { showingList = true } label: { Image(systemName: "list.bullet") }
+                            .accessibilityLabel(Text("Situations"))
+                            .disabled(tracks.isEmpty && shows.isEmpty)
+                    }
                 }
                 ToolbarItem(placement: .topBarTrailing) { PlayerOptionsMenu() }
                 #if targetEnvironment(macCatalyst)
@@ -194,30 +235,20 @@ struct ScenePlayerSheet: View {
                 }
                 #endif
             }
-            .navigationDestination(isPresented: $showingList) {
-                // Bindings, not values: a destination already on screen is not
-                // rebuilt when the sheet's state changes, and the episodes
-                // arrive after the download — handed over as values, a list
-                // opened early stayed empty.
-                PlayerLibrary(tracks: $tracks, shows: $shows, onPick: play(from:),
-                              onPickShow: play(show:), onPlayAllShows: playAllShows)
-            }
+    }
+
+    // On the sheet, not the player page: opened straight on the library
+    // the page never appears, and nothing would load.
+    private func load() async {
+        tracks = SceneLibrary.tracks(scenarios: ScenarioStore.shared.load(),
+                                     cloneId: appState.speakingVoiceId)
+        loaded = true
+        shows = await NewsShow.episodes(language: appState.targetLanguage)
+        // A list left paused carries on where it stopped.
+        if autoplay, !player.isPlaying {
+            if player.hasQueue { player.resume() }
+            else if !tracks.isEmpty || !shows.isEmpty { playAll() }
         }
-        // On the sheet, not the player page: opened straight on the library
-        // the page never appears, and nothing would load.
-        .task {
-            tracks = SceneLibrary.tracks(scenarios: ScenarioStore.shared.load(),
-                                         cloneId: appState.speakingVoiceId)
-            loaded = true
-            shows = await NewsShow.episodes(language: appState.targetLanguage)
-            // A list left paused carries on where it stopped.
-            if autoplay, !player.isPlaying {
-                if player.hasQueue { player.resume() }
-                else if !tracks.isEmpty || !shows.isEmpty { playAll() }
-            }
-        }
-        .presentationDetents([.medium, .large])
-        .presentationBackgroundInteraction(.enabled(upThrough: .medium))
     }
 
     private func playAll() {
@@ -262,7 +293,8 @@ struct ScenePlayerSheet: View {
 
 /// What there is to hear, behind two tabs: the nawana Podcast (the
 /// platform's daily episodes) and the learner's own situations. Picking one
-/// plays it and goes back to the player.
+/// plays it and goes back to the player (in the Mac's Talk column, where
+/// this list is the page, it opens the player).
 private struct PlayerLibrary: View {
     @Environment(\.inTalkSideColumn) private var inColumn
     @Binding var tracks: [SceneTrack]
@@ -270,6 +302,9 @@ private struct PlayerLibrary: View {
     let onPick: (SceneTrack) -> Void
     let onPickShow: (NewsShowEpisode) async -> Void
     let onPlayAllShows: () async -> Void
+    /// After a pick: nil goes back to the player (the list is pushed over
+    /// it); in the Talk column, where the list is the page, it opens it.
+    var afterPick: (() -> Void)? = nil
     /// What is being fetched right now: an episode, or `allId` for Play all.
     @State private var fetching: UUID?
     @State private var reading: NewsShowEpisode?
@@ -423,8 +458,12 @@ private struct PlayerLibrary: View {
         Task {
             await action()
             fetching = nil
-            dismiss()
+            done()
         }
+    }
+
+    private func done() {
+        if let afterPick { afterPick() } else { dismiss() }
     }
 
     @ViewBuilder private var situations: some View {
@@ -439,7 +478,7 @@ private struct PlayerLibrary: View {
             ForEach(tracks) { track in
                 Button {
                     onPick(track)
-                    dismiss()
+                    done()
                 } label: { row(track) }
                 .buttonStyle(.plain)
             }

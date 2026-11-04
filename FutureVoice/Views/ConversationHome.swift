@@ -473,7 +473,8 @@ struct ConversationHome: View {
         Group {
             switch sideColumn.tab {
             case .podcast:
-                ScenePlayerSheet(startOnList: !PlaylistPlayer.shared.hasQueue)
+                // The column's player opens on its list by itself.
+                ScenePlayerSheet()
                     // A call holds the audio; nothing plays over it.
                     .disabled(callLaunch != nil)
             case .topics:
