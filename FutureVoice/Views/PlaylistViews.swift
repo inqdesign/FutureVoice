@@ -141,6 +141,7 @@ struct PlayingBars: View {
 struct ScenePlayerSheet: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismissSheet
+    @Environment(\.inTalkSideColumn) private var inColumn
     @ObservedObject private var player = PlaylistPlayer.shared
     @State private var tracks: [SceneTrack] = []
     @State private var shows: [NewsShowEpisode] = []
@@ -185,12 +186,15 @@ struct ScenePlayerSheet: View {
                 #if targetEnvironment(macCatalyst)
                 // On the phone the player is a half sheet you swipe away, so
                 // it has no close button; a Mac can't swipe. Closing it never
-                // stops what is playing.
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismissSheet() }
+                // stops what is playing. As a tab of the Talk column it stays.
+                if !inColumn {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Done") { dismissSheet() }
+                    }
                 }
                 #endif
             }
+            .talkSideTabBar(inColumn)
             .navigationDestination(isPresented: $showingList) {
                 // Bindings, not values: a destination already on screen is not
                 // rebuilt when the sheet's state changes, and the episodes
@@ -261,6 +265,7 @@ struct ScenePlayerSheet: View {
 /// platform's daily episodes) and the learner's own situations. Picking one
 /// plays it and goes back to the player.
 private struct PlayerLibrary: View {
+    @Environment(\.inTalkSideColumn) private var inColumn
     @Binding var tracks: [SceneTrack]
     @Binding var shows: [NewsShowEpisode]
     let onPick: (SceneTrack) -> Void
@@ -312,6 +317,8 @@ private struct PlayerLibrary: View {
             }
         }
         .navigationTitle(Text("Listen"))
+        // A tab of the Mac's Talk column opens here; the tabs stay in reach.
+        .talkSideTabBar(inColumn)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $reading) { episode in
             SpeechScriptSheet(script: episode.script,

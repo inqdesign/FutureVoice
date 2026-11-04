@@ -1,7 +1,8 @@
 import SwiftUI
 
 // The tutor bot's three surfaces (`TutorBot`): the face, the note and the
-// bubble float over the Talk home; the chat is a sheet.
+// bubble float over the Talk home; the chat is a sheet. On the Mac's
+// two-column Talk page the chat is the column's Tutor tab (`TalkSideColumn`).
 
 /// The face at the bottom right. Tap = ask; hold = today's plan again,
 /// the quiz, or the bot's introduction.
@@ -49,10 +50,15 @@ struct TutorBotButton: View {
 struct TutorBotLayer: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var bot = TutorBot.shared
+    /// The Mac's two-column Talk page: the note and the chat live in the
+    /// column's Tutor tab, and there is no bottom row to sit above.
+    var inColumnMode = false
+    /// False while the Tutor tab is showing — it says the same thing.
+    var showBubble = true
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
-            if bot.noteShown {
+            if bot.noteShown && !inColumnMode {
                 Color.clear
                     .contentShape(Rectangle())
                     .onTapGesture { bot.closeNote() }
@@ -61,10 +67,10 @@ struct TutorBotLayer: View {
                     .padding(.horizontal, 12)
                     .padding(.bottom, 80)
                     .transition(.scale(scale: 0.6, anchor: .bottomTrailing).combined(with: .opacity))
-            } else if let b = bot.bubble {
+            } else if let b = bot.bubble, showBubble {
                 TutorBubbleView(bubble: b)
                     .padding(.trailing, 16)
-                    .padding(.bottom, 82)
+                    .padding(.bottom, inColumnMode ? 16 : 82)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
@@ -77,7 +83,7 @@ struct TutorBotLayer: View {
             UpcomingGoalPage(goal: goal).environmentObject(appState)
         }
         // The chat shows its own; this one is for a reading opened from the note.
-        .sheet(item: Binding(get: { bot.chatOpen ? nil : bot.reading },
+        .sheet(item: Binding(get: { bot.chatOpen || inColumnMode ? nil : bot.reading },
                              set: { bot.reading = $0 })) { r in
             TutorReadingSheet(reading: r).environmentObject(appState)
         }
@@ -313,6 +319,7 @@ private struct TutorBubbleView: View {
 struct TutorChatView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.inTalkSideColumn) private var inColumn
     @ObservedObject private var bot = TutorBot.shared
     @ObservedObject private var chat = TutorChat.shared
     @State private var draft = ""
@@ -389,9 +396,12 @@ struct TutorChatView: View {
             .navigationTitle(Text("Personal tutor"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button { dismiss() } label: { Image(systemName: "xmark") }
-                        .accessibilityLabel(Text("Close"))
+                // A tab of the Mac's Talk column stays open; only the sheet closes.
+                if !inColumn {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button { dismiss() } label: { Image(systemName: "xmark") }
+                            .accessibilityLabel(Text("Close"))
+                    }
                 }
                 if !chat.messages.isEmpty {
                     ToolbarItem(placement: .primaryAction) {
@@ -409,6 +419,7 @@ struct TutorChatView: View {
             // The call's own bottom bar (`fadingBottomBar`): the messages
             // dissolve under the chips and the box instead of being cut.
             .fadingBottomBar { composer }
+            .talkSideTabBar(inColumn)
         }
         .sheet(item: $bot.reading) { r in
             TutorReadingSheet(reading: r).environmentObject(appState)

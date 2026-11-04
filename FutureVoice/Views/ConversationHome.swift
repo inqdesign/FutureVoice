@@ -48,6 +48,7 @@ struct ConversationHome: View {
     /// The onboarding routine lands in the streak chip (`RoutineOnboardingView`).
     @ObservedObject private var routineHandoff = RoutineHandoff.shared
     @ObservedObject private var tutorBot = TutorBot.shared
+    @ObservedObject private var sideColumn = TalkSideColumn.shared
     /// Discover rail's "All scenarios" card → the full collection page.
     @State private var showingAllScenarios = false
     /// The topics page behind the home's one door (`TalkTopicsPage`).
@@ -97,7 +98,7 @@ struct ConversationHome: View {
             // While the tutor's note is up, the page goes soft behind it so
             // the note and the face it comes from are what's left in focus.
             .overlay {
-                if tutorBot.noteShown {
+                if tutorBot.noteShown && !sideSplit {
                     Rectangle().fill(.ultraThinMaterial)
                         .ignoresSafeArea()
                         .onTapGesture { tutorBot.closeNote() }
@@ -110,37 +111,22 @@ struct ConversationHome: View {
             // like Watch's "New situation": glass capsule, floating at the
             // bottom centre over the page.
             .overlay(alignment: .bottom) {
-                // Three slots (2026-10-18, founder): the player on the left,
-                // the topics button centred, the tutor's face on the right
-                // (the quick quiz's until 2026-10-28; the quiz is now one of
-                // the things the tutor hands you). The two side slots take equal widths so the centre
-                // never moves.
-                HStack(spacing: 12) {
-                    HStack {
-                        PlaylistButton()
-                        Spacer(minLength: 0)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .modifier(SoftenedBehindNote(on: tutorBot.noteShown))
-                    Button { openTopics() } label: {
-                        Label("Find a topic", systemImage: "sparkles")
-                            .font(.body.weight(.semibold))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 4)
-                    }
-                    .modifier(GlassFloatingButton())
-                    .fixedSize()
-                    .modifier(SoftenedBehindNote(on: tutorBot.noteShown))
-                    HStack {
-                        Spacer(minLength: 0)
-                        TutorBotButton()
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .padding(16)
+                // On a wide Mac window these three are the tabs of the column
+                // beside the page instead (`TalkSideColumn`).
+                if !sideSplit { bottomRow }
             }
             // The tutor's note and bubble, over the page and above the row.
-            .overlay { TutorBotLayer() }
+            .overlay { TutorBotLayer(inColumnMode: sideSplit, showBubble: !sideSplit || sideColumn.tab != .tutor) }
+            // The face hosts the quiz on the phone's page; beside the column
+            // there is no face, so the page does.
+            .fullScreenCover(isPresented: Binding(get: { sideSplit && tutorBot.quizOpen },
+                                                  set: { tutorBot.quizOpen = $0 })) {
+                QuickQuizView().environmentObject(appState)
+            }
+            .task(id: scenePhase == .active && sideSplit) {
+                guard scenePhase == .active, sideSplit else { return }
+                QuickQuizStock.prewarm(appState: appState)
+            }
             #if DEBUG
             .defaultScrollAnchor(DebugCapture.previewScenariosTab ? .bottom : nil)
             #endif
@@ -230,6 +216,8 @@ struct ConversationHome: View {
             .onChange(of: tutorBot.goalCall) { _, call in
                 guard let call else { return }
                 tutorBot.goalCall = nil
+                // Beside the column a call may already be running.
+                if callInTopicsPane, callLaunch != nil { topicsBusy = true; return }
                 BillingGate.start(orShow: $showingPaywall) {
                     callLaunch = CallLaunch(topic: call.topic, blurb: call.blurb, entry: .tutorBot, tutor: call.tutor)
                 }
@@ -329,6 +317,38 @@ struct ConversationHome: View {
         }
     }
 
+    /// The phone's bottom row: the player, the topics, the tutor's face.
+    private var bottomRow: some View {
+        // Three slots (2026-10-18, founder): the player on the left,
+        // the topics button centred, the tutor's face on the right
+        // (the quick quiz's until 2026-10-28; the quiz is now one of
+        // the things the tutor hands you). The two side slots take equal widths so the centre
+        // never moves.
+        HStack(spacing: 12) {
+            HStack {
+                PlaylistButton()
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity)
+            .modifier(SoftenedBehindNote(on: tutorBot.noteShown))
+            Button { openTopics() } label: {
+                Label("Find a topic", systemImage: "sparkles")
+                    .font(.body.weight(.semibold))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 4)
+            }
+            .modifier(GlassFloatingButton())
+            .fixedSize()
+            .modifier(SoftenedBehindNote(on: tutorBot.noteShown))
+            HStack {
+                Spacer(minLength: 0)
+                TutorBotButton()
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .padding(16)
+    }
+
     private func callView(_ launch: CallLaunch, onClose: (() -> Void)?) -> ConversationView {
         ConversationView(initialTopic: launch.topic, initialBlurb: launch.blurb,
                          initialIsNews: launch.isNews,
@@ -353,22 +373,23 @@ struct ConversationHome: View {
         Task { await prewarmFreeTalkOpenerAudio() }
     }
 
-    // MARK: - Topics beside Talk (Mac)
+    // MARK: - The column beside Talk (Mac)
 
-    /// True while the topics stand in a column right of Talk (the Mac, a
-    /// wide window); a call a topic starts then opens on Talk's side.
-    @State private var topicsBeside = false
-    /// A pick while a call runs beside the topics: the call has to end first
+    /// True while the page is two columns (the Mac, a wide window): Talk on
+    /// the left, the player · topics · tutor as tabs on the right
+    /// (`TalkSideColumn`); a call then opens on Talk's side.
+    @State private var sideSplit = false
+    /// A pick while a call runs beside the column: the call has to end first
     /// (a new launch would tear the running one down with no summary).
     @State private var topicsBusy = false
 
-    private var callInTopicsPane: Bool { topicsBeside }
+    private var callInTopicsPane: Bool { sideSplit }
 
-    /// "Find a topic": a column beside Talk on a wide Mac window, the
+    /// "Find a topic": the Topics tab beside Talk on a wide Mac window, the
     /// pushed page everywhere else.
     private func openTopics() {
-        if MacLayout.isMac, MacLayout.screenWidth >= MacLayout.reviewSplitMinWidth {
-            topicsBeside = true
+        if sideSplit {
+            sideColumn.tab = .topics
         } else {
             showingTopics = true
         }
@@ -376,44 +397,53 @@ struct ConversationHome: View {
 
     var body: some View {
         #if targetEnvironment(macCatalyst)
-        // The Mac: "Find a topic" keeps Talk on the left and opens the topics
-        // in a column on the right; a call a topic starts takes Talk's side,
-        // so the topics and the talk are on screen together (founder,
-        // 2026-10-30). Each side is its own stack: a stack inside a pushed
-        // page draws no bar, and the call's ✕, title and clock live in its bar.
-        HStack(spacing: 0) {
-            ZStack {
-                homeStack
-                if topicsBeside, let launch = callLaunch {
-                    callView(launch, onClose: {
-                        callLaunch = nil
-                        callEnded()
-                    })
-                    .environmentObject(appState)
-                    .id(launch.id)
-                    .background(Color(.systemBackground).ignoresSafeArea())
+        // The Mac (founder, 2026-11-04): the page starts as two columns —
+        // Talk on the left, and the three doors of the phone's bottom row
+        // (the player, the topics, the tutor) as tabs of one column on the
+        // right. A call takes Talk's side, so the column stays on screen
+        // beside it. Each side is its own stack: a stack inside a pushed page
+        // draws no bar, and the call's ✕, title and clock live in its bar. A
+        // narrow window is the phone's page, bottom row and all.
+        GeometryReader { geo in
+            let split = geo.size.width >= MacLayout.reviewSplitMinWidth
+            HStack(spacing: 0) {
+                ZStack {
+                    homeStack
+                    if split, let launch = callLaunch {
+                        callView(launch, onClose: {
+                            callLaunch = nil
+                            callEnded()
+                        })
+                        .environmentObject(appState)
+                        .id(launch.id)
+                        .background(Color(.systemBackground).ignoresSafeArea())
+                    }
+                }
+                if split {
+                    Divider().ignoresSafeArea()
+                    sideColumnPane
+                        .frame(width: MacLayout.reviewShelfWidth)
                 }
             }
-            if topicsBeside {
-                Divider().ignoresSafeArea()
-                NavigationStack {
-                    topicsDestination
-                        .toolbar {
-                            ToolbarItem(placement: .topBarLeading) {
-                                Button { topicsBeside = false } label: {
-                                    Label("Close", systemImage: "xmark")
-                                }
-                                .labelStyle(.iconOnly)
-                                // Closing would take the running call with it.
-                                .disabled(callLaunch != nil)
-                            }
-                        }
-                }
-                .frame(width: MacLayout.reviewShelfWidth)
-            }
+            .onAppear { sideSplit = split }
+            .onChange(of: split) { _, now in sideSplit = now }
         }
-        .onChange(of: topicsBeside, initial: true) { _, open in
-            MacLayout.Wide.shared.talkSplit = open
+        // The Talk tab always asks for the wide column; the width decides
+        // whether there is room for two.
+        .onAppear { MacLayout.Wide.shared.talkSplit = true }
+        // The tutor's daily note and anything that opens the chat land on the
+        // Tutor tab; the chat there already opens on today's plan.
+        .onChange(of: tutorBot.noteShown) { _, shown in
+            if shown, sideSplit { moveTutorToColumn() }
+        }
+        .onChange(of: tutorBot.chatOpen) { _, open in
+            if open, sideSplit { moveTutorToColumn() }
+        }
+        .onChange(of: tutorBot.reading?.id) { _, id in
+            if id != nil, sideSplit { sideColumn.tab = .tutor }
+        }
+        .onChange(of: sideSplit) { _, split in
+            if split, tutorBot.noteShown || tutorBot.chatOpen { moveTutorToColumn() }
         }
         .alert(explain("End this call first"), isPresented: $topicsBusy) {
             Button("OK", role: .cancel) {}
@@ -424,6 +454,35 @@ struct ConversationHome: View {
         homeStack
         #endif
     }
+
+    #if targetEnvironment(macCatalyst)
+    /// The column's three tabs, each the page the phone opens from its row.
+    @ViewBuilder
+    private var sideColumnPane: some View {
+        Group {
+            switch sideColumn.tab {
+            case .podcast:
+                ScenePlayerSheet(startOnList: !PlaylistPlayer.shared.hasQueue)
+                    // A call holds the audio; nothing plays over it.
+                    .disabled(callLaunch != nil)
+            case .topics:
+                NavigationStack { topicsDestination.talkSideTabBar(true) }
+            case .tutor:
+                TutorChatView()
+            }
+        }
+        .environment(\.inTalkSideColumn, true)
+        .environmentObject(appState)
+    }
+
+    /// The note or the chat sheet, asked for while the column is up: the
+    /// Tutor tab shows them instead.
+    private func moveTutorToColumn() {
+        if tutorBot.noteShown { tutorBot.closeNote() }
+        if tutorBot.chatOpen { tutorBot.chatOpen = false }
+        sideColumn.tab = .tutor
+    }
+    #endif
 
     /// A topic pick from the page — refused while a call runs beside it.
     private func fromTopics<T>(_ run: @escaping (T) -> Void) -> (T) -> Void {
@@ -947,7 +1006,7 @@ struct ConversationHome: View {
         Task { @MainActor in
             if delay > 0 { try? await Task.sleep(for: .seconds(delay)) }
             let visible = homeOnScreen && scenePhase == .active && callLaunch == nil
-                && !appState.talkRingProxyActive && !showingTopics && !topicsBeside && !showingActivity
+                && !appState.talkRingProxyActive && !showingTopics && !showingActivity
                 && !showingPaywall && !showingProfile && !routineHandoff.showHint
             TutorBot.shared.refresh(appState: appState, visible: visible)
         }

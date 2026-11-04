@@ -3517,14 +3517,23 @@ sync container carry over. `./scripts/mac-run.sh` builds and opens it.
   never fires the old tab's `onDisappear`, so Speech kept the split width).
   Speech is held NARROW the same way (`ColumnMode.narrow`, founder: it read
   too wide).
-- **Talk's topics sit beside Talk** (2026-10-30, founder). On a wide
-  window "Find a topic" keeps Talk on the left and opens the topics as a
-  400 pt column on the right (`ConversationHome.openTopics`, `topicsBeside`);
-  a call a topic starts opens on Talk's side, so both stay on screen, and
-  the column grows like Review's (`MacLayout.Wide.talkSplit`). Each side is
+- **Talk is two columns from the start** (2026-11-04, founder; topics
+  alone opened beside Talk from 2026-10-30). From `reviewSplitMinWidth` the
+  phone's bottom row (the player, "Find a topic", the tutor's face) is gone
+  and its three pages are the TABS of a 400 pt column on the right:
+  Podcast · Topics · Tutor (`TalkSideColumn.swift`, a segmented picker in
+  each page's bar through `\.inTalkSideColumn` + `talkSideTabBar`, which
+  also hides the page's own close/Done; the tab is remembered). The
+  tutor's daily note and anything that opens the chat bring the Tutor tab
+  forward instead (the chat opens on today's plan); a bubble still shows
+  on the left page, not while the Tutor tab is up; the quiz cover moves to
+  the page (`ConversationHome.sideSplit`). A call takes Talk's side so the
+  column stays beside it; while it runs, a topic or a tutor call asks to end
+  it first and the Podcast tab is disabled. A narrow window is the phone's
+  page, row and all. The Talk tab always asks for the wide column
+  (`MacLayout.Wide.talkSplit`). Each side is
   its own stack: a stack inside a pushed page draws no bar, and the call's
-  ✕, title and clock live in its bar. While a call runs, a topic tap asks
-  to end it first and the column's ✕ is off. In a call, the tutor's topic
+  ✕, title and clock live in its bar. In a call, the tutor's topic
   page is an inspector column beside the talk, and a pick leaves it open
   (`TutorTopicSheet(onClose:)`). **An inspector's toolbar items join the
   HOST's bar, even while it is shut**: the tutor page's "Close" sat beside
