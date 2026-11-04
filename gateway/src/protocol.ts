@@ -54,6 +54,16 @@ export interface StartMessage {
    *  stop to find a word and were answered mid-sentence. Absent = the usual
    *  pause-ends-the-turn call. */
   manualTurns?: boolean
+  /** A repeat-after-me call (the app's pronunciation call, 2026-11-04): the
+   *  learner is ASKED to say the very words the fluent self just said, so a
+   *  line that quotes the reply is the answer, not the speaker coming back.
+   *  Once the reply has finished playing, the text echo checks stand down.
+   *  Absent = every other call, unchanged. */
+  repeatAfterMe?: boolean
+  /** What kind of call this is, for the usage page's split (2026-11-04):
+   *  "free" · "tutor" · "pron". Rides on every billing tick; anything else
+   *  is dropped. Absent on older builds. */
+  mode?: string
   /** Ignored since 2026-10-27: every call is counted from the start. Was
    *  tutor mode's switch to count from the start (2026-10-25); older builds
    *  still send it. */
@@ -107,6 +117,8 @@ export interface EndMessage {
  *  talking to an older gateway simply has no mid-call speed control. */
 export interface SetMessage {
   type: "set"
+  /** `StartMessage.mode`, changed mid-call (tutor mode switched on). */
+  mode?: string
   /** 0.7–1.2, clamped the same way `start.speed` is. */
   speed?: number
   /** Coach mode (2026-09-28): a short instruction appended to the system

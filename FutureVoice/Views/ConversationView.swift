@@ -126,7 +126,7 @@ struct ConversationView: View {
     private var coachMode: Bool {
         _ = coachModeChoice
         _ = proficiencyRaw
-        return CoachMode.isOn
+        return CoachMode.isOn && !pronThisCall
     }
     /// nil until the learner flips it — the level decides (`SendToAnswer`).
     @AppStorage(SendToAnswer.key) private var sendToAnswerChoice: Bool?
@@ -135,7 +135,7 @@ struct ConversationView: View {
     private var sendToAnswer: Bool {
         _ = sendToAnswerChoice
         _ = proficiencyRaw
-        return SendToAnswer.isOn
+        return SendToAnswer.isOn || pronThisCall
     }
     /// Watched only to tell a live call when the rung moves (the sheet
     /// writes it) — see the `CallSettingsSheet` presentation.
@@ -278,7 +278,16 @@ struct ConversationView: View {
         self.pickUpLastTalk = pickUpLastTalk && resumeSession == nil
         self.learnerPicksTopic = learnerPicksTopic && resumeSession == nil
         self.forceTutor = tutor && resumeSession == nil
-        if self.forceTutor {
+        // Only the ring's own page opens one: the key stays set while that
+        // page shows, and a daily call or a topic must never become a
+        // reading drill because of it.
+        let pron = entry == .talkRing && resumeSession == nil && !tutor
+            && initialTopic.isEmpty && initialCounterpart == nil && PronunciationCall.isOn
+        if pron {
+            _pronThisCall = State(initialValue: true)
+            _tutorThisCall = State(initialValue: false)
+            _tutorWasOn = State(initialValue: false)
+        } else if self.forceTutor {
             _tutorThisCall = State(initialValue: true)
             _tutorWasOn = State(initialValue: true)
         }
@@ -701,6 +710,25 @@ struct ConversationView: View {
     /// new one (`RealtimeTalkClient.setSystem`, 2026-10-14 — it used to wait
     /// for the next call); the classic path rebuilds the prompt every turn.
     @State private var tutorThisCall = TutorMode.isOn
+    /// The pronunciation call (`PronunciationCall`): opened from the Talk
+    /// ring's third page, fixed for the whole call.
+    @State private var pronThisCall = false
+    /// The round on screen: five sentences for one sound.
+    @State private var pronRound: PronunciationRound?
+    /// The sound being practiced (set before its round is written).
+    @State private var pronTopic: PronunciationCourse.Topic?
+    /// A round is being written.
+    @State private var pronPlanning = false
+    /// Takes in a row that came back with nothing usable on this sentence.
+    @State private var pronUnheard = 0
+    @State private var showingPronTopics = false
+    /// The learner's turn to read: opened the moment the fluent self stops
+    /// speaking, closed when the take is sent (`pronHeard`).
+    @State private var pronWindowOpen = false
+    @State private var pronSendTask: Task<Void, Never>?
+    /// When the words now held started — to tell reading along (started
+    /// early in the fluent self's line) from answering at its end.
+    @State private var pronHeardSince: Date?
     /// Tutor mode was on at some point in this call — the whole call is then
     /// a practice call (`Session.coached`).
     @State private var tutorWasOn = TutorMode.isOn
@@ -827,7 +855,14 @@ struct ConversationView: View {
     /// (2026-09-07), with tutor mode the one exception (2026-10-25). Silence
     /// is still free: only seconds where something is happening count.
     private func isBillableMoment() -> Bool {
-        somethingIsHappening()
+        // Every call counts from its start without stopping (founder,
+        // 2026-11-04) until 30 s of nothing, when it puts itself down — the
+        // gateway's rule too (`idleBillMs`), whose count replaces this one
+        // once it reports.
+        if RealtimeMode.isEnabled && phoneCallActive {
+            return somethingIsHappening() || Date().timeIntervalSince(lastActivityAt) < Self.idlePauseSeconds
+        }
+        return somethingIsHappening()
     }
 
     /// Is anyone in this call right now — the fluent self speaking, a reply
@@ -915,6 +950,17 @@ struct ConversationView: View {
                 // anything inside the transcript is gone after two turns.
                 // The grammar focus sits above the chips: it is the one thing
                 // this call is about, and the chips are the things to spend.
+                if pronThisCall {
+                    PronunciationCard(round: pronRound, topic: pronTopic, planning: pronPlanning,
+                                      onSkip: pronSkipSentence, onLeaveWord: pronLeaveWord)
+                        // The call's turn-taking rides on the card, which
+                        // exists exactly as long as this call does.
+                        .onChange(of: realtime.state) { old, new in pronStateChanged(from: old, to: new) }
+                        .onChange(of: realtime.partial) { _, p in pronHeard(p) }
+                        .onChange(of: realtime.sendPending) { _, pending in pronSendSettled(pending) }
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    Divider().opacity(0.15)
+                }
                 if tutorThisCall, tutorLesson != nil || tutorPlanning {
                     TutorLessonStrip(lesson: tutorLesson, planning: tutorPlanning,
                                      expanded: $tutorStripExpanded) {
@@ -939,7 +985,7 @@ struct ConversationView: View {
                     .transition(.opacity.combined(with: .move(edge: .top)))
                     Divider().opacity(0.15)
                 }
-                if !goalItems.isEmpty, showsGoalChips, !tutorInFinalCheck {
+                if !goalItems.isEmpty, showsGoalChips, !tutorInFinalCheck, !pronThisCall {
                     TalkGoalChipsRow(items: goalItems, used: usedGoalKeys) { item in
                         goalDetail = item
                     }
@@ -1093,12 +1139,13 @@ struct ConversationView: View {
                 if on { realtime.tutorCall = true }
             }
             .onChange(of: tutorModeChoice) { _, on in
-                guard on != tutorThisCall else { return }
+                guard on != tutorThisCall, !pronThisCall else { return }
                 tutorThisCall = on
                 if on { tutorWasOn = true }
                 // The classic path reads `tutorThisCall` at its next turn.
                 guard RealtimeMode.isEnabled, phoneCallActive else { return }
                 realtime.setMeterFromStart(on)
+                realtime.setCallMode(on ? "tutor" : "free")
                 realtime.setSystem(systemPrompt() + Self.realtimeStyleRules)
                 if on, tutorLesson == nil {
                     realtime.nudge("Tutor mode was just turned on. Ask them, in one short question, what they want to be able to say today — they can also pick a topic from the button on their screen.")
@@ -1122,6 +1169,12 @@ struct ConversationView: View {
                     .environmentObject(appState)
             }
             #endif
+            .sheet(isPresented: $showingPronTopics) {
+                PronunciationTopicSheet(currentId: pronTopic?.id) { topic in
+                    startPronRound(topic: topic, note: PronunciationNotes.preparing(topic, picked: true))
+                }
+                    .environmentObject(appState)
+            }
             .sheet(item: $goalDetail) { item in
                 TalkGoalSheet(item: item, used: usedGoalKeys.contains(item.key))
                     .environmentObject(appState)
@@ -1453,7 +1506,8 @@ struct ConversationView: View {
                 // saving (the End flow: summary + drills) and discarding.
                 // Only the USER's turns count: if all that happened is the
                 // fluent self's opener, there's nothing worth saving.
-                if turns.contains(where: { $0.role == .user }) && !didSaveCurrentSession {
+                if turns.contains(where: { $0.role == .user }) && !didSaveCurrentSession
+                    && !pronThisCall {
                     confirmingDiscard = true
                 } else {
                     close()
@@ -1869,6 +1923,8 @@ struct ConversationView: View {
                 // time.
                 if sendReady {
                     clearTurnButton
+                } else if pronThisCall && RealtimeMode.isEnabled && phoneCallActive {
+                    pronTopicButton
                 } else if tutorThisCall && RealtimeMode.isEnabled && phoneCallActive {
                     tutorTopicButton
                 } else if sendToAnswer && RealtimeMode.isEnabled && phoneCallActive {
@@ -1927,6 +1983,23 @@ struct ConversationView: View {
 
     private var hasHeldWords: Bool {
         !realtime.partial.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// The pronunciation call: the course of sounds.
+    private var pronTopicButton: some View {
+        Button {
+            showingPronTopics = true
+        } label: {
+            Image(systemName: "character.book.closed")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 44, height: 44)
+                .background(Color(.secondarySystemBackground), in: Circle())
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .disabled(pronPlanning)
+        .accessibilityLabel(Text(explain("Sounds to practice")))
     }
 
     /// Tutor mode: topics to practice, for a learner with no idea. Same
@@ -2262,7 +2335,8 @@ struct ConversationView: View {
                 // here (device, 2026-10-28: the call put itself down while
                 // the learner chose in the topic sheet, and the lesson's
                 // "ready" note went into a hung-up call).
-                if somethingIsHappening() || showingTutorTopics || tutorPlanning {
+                if somethingIsHappening() || showingTutorTopics || tutorPlanning
+                    || showingPronTopics || pronPlanning {
                     lastActivityAt = Date(); continue
                 }
                 // Send-to-answer with words held: they are composing, not
@@ -2290,7 +2364,8 @@ struct ConversationView: View {
     /// A call with no topic is named after the home ring's page it came
     /// from: the tutor call is "Tutor", not "Let's talk".
     private var emptyTopicTitle: String {
-        (tutorThisCall ? TalkRingMode.tutor : TalkRingMode.freeTalk).title
+        (pronThisCall ? TalkRingMode.pronunciation
+            : tutorThisCall ? TalkRingMode.tutor : TalkRingMode.freeTalk).title
     }
 
     // MARK: - Surviving the screen going away
@@ -2840,6 +2915,11 @@ struct ConversationView: View {
                 // piece. Anything generated here would talk over a question
                 // the learner is mid-way through answering.
                 opener = initialOpener
+            } else if pronThisCall {
+                // A reading drill: the voice waits for the first sentence.
+                await audioSessionReady.value
+                await beginPronunciationCall()
+                return
             } else if tutorThisCall {
                 // A lesson, not a chat: the tutor opens on the topic, the
                 // lesson left halfway, or the question of what to practice.
@@ -3043,9 +3123,10 @@ struct ConversationView: View {
                 }
                 didSaveCurrentSession = false
                 creditGoalChips(turnId: id)
-                let correction = flags.native ? Task { [TurnFix]?.none }
+                let correction = flags.native || pronThisCall ? Task { [TurnFix]?.none }
                     : requestRealtimeSuggestion(for: id, said: joined)
                 tutorTurn(turnId: id, said: joined, correction: correction)
+                pronTurn(turnId: id, said: joined)
                 return
             }
             var turn = Turn(id: UUID(), role: .user, audioURL: nil,
@@ -3075,9 +3156,10 @@ struct ConversationView: View {
             // A line said in their own language was answered with the target
             // way to say it; a correction of it would be built on words in
             // the wrong language.
-            let correction = flags.native ? Task { [TurnFix]?.none }
+            let correction = flags.native || pronThisCall ? Task { [TurnFix]?.none }
                 : requestRealtimeSuggestion(for: turn.id, said: text)
             tutorTurn(turnId: turn.id, said: text, correction: correction)
+            pronTurn(turnId: turn.id, said: text)
         }
         // The bubble appears WITH the voice and fills as the line is written —
         // the same "you read what you are hearing" the HTTP path gets from
@@ -3143,6 +3225,8 @@ struct ConversationView: View {
             advanceCoach(afterReply: text, turnId: id)
         }
         realtime.tutorCall = tutorWasOn || tutorThisCall
+        realtime.forceManualTurns = pronThisCall
+        realtime.callMode = pronThisCall ? "pron" : (tutorThisCall ? "tutor" : "free")
         await realtime.connect(
             voiceId: voiceId,
             language: appState.targetLanguage,
@@ -3396,7 +3480,7 @@ struct ConversationView: View {
     private func resumeAfterFirstCallSetup() {
         // Tutor mode decides the opener, read right after this resumes; take
         // the sheet's answer here rather than trust `onChange` to have run.
-        tutorThisCall = TutorMode.isOn || forceTutor
+        tutorThisCall = (TutorMode.isOn || forceTutor) && !pronThisCall
         if tutorThisCall { tutorWasOn = true }
         firstCallSetupContinuation?.resume()
         firstCallSetupContinuation = nil
@@ -4677,6 +4761,10 @@ struct ConversationView: View {
         // on build 65 (prod, 2026-10-02). When that second run failed it left
         // the draft's `summary: nil` on disk over a summary that had worked.
         guard !turns.isEmpty, !isEnding, !postCallExitStarted, !isTornDown else { return }
+        if pronThisCall {
+            finishPronunciationCall()
+            return
+        }
         phoneCallActive = false
         // The call is over — summary generation isn't talk time, and the lock
         // screen must stop showing a call that has hung up.
@@ -4908,7 +4996,7 @@ struct ConversationView: View {
         sessionStartedAt = Date()
         turns = []
         pinPromptClock()
-        tutorThisCall = TutorMode.isOn || forceTutor
+        tutorThisCall = (TutorMode.isOn || forceTutor) && !pronThisCall
         tutorWasOn = tutorThisCall
         tutorCheckTurnIds = []
         learnerSpokeThisCall = false
@@ -5026,7 +5114,7 @@ struct ConversationView: View {
     /// abandoned call that said nothing is not counted as having met anyone.
     private var isFirstMeeting: Bool {
         appState.persona?.metAt == nil && topic.isEmpty && counterpart == nil && !learnerPicksTopic
-            && !tutorThisCall
+            && !tutorThisCall && !pronThisCall
     }
 
     /// Read the clock for a call that is starting. A resumed talk's saved
@@ -5047,6 +5135,443 @@ struct ConversationView: View {
             PersonHistory.build(personId: $0, sessions: SessionStore.shared.load(),
                                 excluding: sessionId, pickUp: pickUpLastTalk)
         }
+    }
+
+    // MARK: - Pronunciation call (`PronunciationCall`)
+
+    /// How a pronunciation call opens: the voice says hi while the first
+    /// round is written, then asks for the first sentence. Every learner
+    /// turn is held (`tutorJudging` is true for the whole call) and answered
+    /// with the app's note.
+    private func beginPronunciationCall() async {
+        await startRealtimeCall(opener: nil)
+        realtime.setHoldReplies(true)
+        guard let topic = PronunciationCall.startingTopic(language: appState.targetLanguage,
+                                                          level: appState.proficiency) else {
+            tutorNudge(PronunciationNotes.planFailed)
+            return
+        }
+        // Silent while the round is written (the card says "Preparing…"):
+        // a hello and then the sound's intro was two openers in a row
+        // (founder, 2026-11-04: "Hi there!" isn't needed).
+        startPronRound(topic: topic, note: nil, first: true)
+    }
+
+    /// Write a round for `topic` and put it on screen. `note`: what the voice
+    /// says while it is written.
+    private func startPronRound(topic: PronunciationCourse.Topic, note: String?, first: Bool = false) {
+        guard pronThisCall, !pronPlanning else { return }
+        let avoid = pronRound?.topic.id == topic.id ? (pronRound?.lines.map(\.text) ?? []) : []
+        withAnimation(.easeInOut(duration: 0.25)) {
+            pronPlanning = true
+            pronTopic = topic
+            pronRound = nil
+        }
+        pronUnheard = 0
+        UserDefaults.standard.set(topic.id, forKey: PronunciationCall.lastTopicKey(appState.targetLanguage))
+        UserDefaults.standard.set(false, forKey: PronunciationCall.lastFinishedKey(appState.targetLanguage))
+        sendTutorSystem()
+        if let note { tutorNudge(note) }
+        Task { @MainActor in
+            let round = await PronunciationPlanner.plan(
+                topic: topic, targetLanguage: appState.targetLanguage,
+                nativeLanguage: appState.nativeLanguage, level: appState.proficiency,
+                persona: appState.persona, avoid: avoid,
+                review: PronunciationProgressStore.all(language: appState.targetLanguage)[topic.id]?.missedWords ?? [])
+            guard !isTornDown, pronTopic?.id == topic.id else { return }
+            withAnimation(.easeInOut(duration: 0.3)) {
+                pronPlanning = false
+                pronRound = round
+            }
+            sendTutorSystem()
+            guard let round else {
+                Telemetry.log("pron_plan_failed", ["topic": topic.id])
+                tutorNudge(PronunciationNotes.planFailed)
+                return
+            }
+            Telemetry.log("pron_round_started", ["topic": topic.id, "lines": String(round.lines.count),
+                                                 "first": first ? "1" : "0"])
+            tutorNudge(PronunciationNotes.ready(round, first: first))
+        }
+    }
+
+    /// One learner turn of a pronunciation call. The take is read by Azure
+    /// against the sentence on screen and the verdict is code
+    /// (`PronunciationJudge`); the voice then says exactly one line for it.
+    private func pronTurn(turnId: UUID, said: String) {
+        guard pronThisCall else { return }
+        if pronPlanning {
+            tutorNudge("They spoke while the sentences are still being prepared. Say \"one moment\" in a few words.")
+            return
+        }
+        guard let round = pronRound else {
+            tutorNudge(PronunciationNotes.planFailed)
+            return
+        }
+        if round.isFinished {
+            pronAfterRound(turnId: turnId, said: said, round: round)
+            return
+        }
+        guard let i = round.current else { return }
+        let line = round.lines[i]
+        let drill = line.drillWord
+        let audioURL = turns.first(where: { $0.id == turnId })?.audioURL
+        let target = appState.targetLanguage
+        Task { @MainActor in
+            var result: PronunciationResult?
+            var outcome = PronunciationAssessor.Outcome.skipped
+            if let audioURL {
+                (result, outcome) = await PronunciationAssessor.assess(
+                    audioURL: audioURL, reference: drill ?? line.text, language: target, surface: "pron_call")
+            }
+            guard !isTornDown, tutorStillSaid(turnId, said), var now = pronRound,
+                  now.id == round.id, now.current == i else { return }
+            if let result {
+                PronunciationLedger.shared.record([result], id: turnId, surface: "pron_call")
+            }
+            if let drill {
+                pronWordTake(drill, result: result, outcome: outcome, said: said,
+                             noAudio: audioURL == nil, round: &now, index: i)
+                return
+            }
+            // No reader at all (no key, the day's cap, no audio on file), or
+            // two takes in a row with nothing usable: judge the words alone,
+            // so the call can never loop on "read it again".
+            let noReader = result == nil
+                && (outcome == .unconfigured || outcome == .capped || outcome == .skipped
+                    || audioURL == nil || pronUnheard >= 2)
+            let verdict = noReader
+                ? PronunciationJudge.fallback(line: line, said: said, language: target)
+                : PronunciationJudge.verdict(result: result, line: line, said: said,
+                                             phonemes: now.topic.phonemes, language: target)
+            Telemetry.log("pron_take", [
+                "topic": now.topic.id,
+                "verdict": Self.pronVerdictName(verdict),
+                "score": result.map { String($0.soundScore) } ?? "",
+                "fluency": result.map { String($0.fluency) } ?? "",
+                "prosody": result?.prosody.map(String.init) ?? "",
+                "outcome": outcome.rawValue,
+                "try": String(line.tries + 1),
+            ])
+            if let result { now.lines[i].lastResult = result }
+            // The note about the sentence left before this one has been read.
+            now.carried = nil
+            if let fb = PronunciationJudge.feedback(for: verdict, result: result, line: line,
+                                                    phonemes: now.topic.phonemes) {
+                now.lines[i].feedback = fb
+            }
+            if case .notSmooth = verdict { now.lines[i].notSmooth = true } else { now.lines[i].notSmooth = false }
+            if case .notYet(let w, _, _, let heard) = verdict, let heard {
+                now.lines[i].heardWord = w
+                now.lines[i].heardAs = heard
+            } else {
+                now.lines[i].heardWord = nil
+                now.lines[i].heardAs = nil
+            }
+            switch verdict {
+            case .offScript:
+                pronUnheard = 0
+                withAnimation(.easeInOut(duration: 0.25)) { pronRound = now }
+                tutorNudge(PronunciationNotes.offScript(said: said))
+            case .unheard:
+                pronUnheard += 1
+                tutorNudge(PronunciationNotes.unheard)
+            case .pass(let score):
+                pronUnheard = 0
+                pronClearMissed(in: line.text, topicId: now.topic.id)
+                now.lines[i].passed = true
+                if score > 0 { now.lines[i].bestScore = max(now.lines[i].bestScore ?? 0, score) }
+                withAnimation(.easeInOut(duration: 0.3)) { pronRound = now }
+                HapticEngine.success()
+                sendTutorSystem()
+                if now.isFinished { finishPronRound(now) }
+                tutorNudge(PronunciationNotes.passed(score: score,
+                                                     next: now.current.map { now.lines[$0] },
+                                                     round: now))
+            case .notSmooth(let score):
+                pronUnheard = 0
+                now.lines[i].tries += 1
+                now.lines[i].bestScore = max(now.lines[i].bestScore ?? 0, score)
+                // Nothing moves on by itself (founder, 2026-11-04): only
+                // the learner's own "Next sentence" leaves a sentence.
+                withAnimation(.easeInOut(duration: 0.25)) { pronRound = now }
+                tutorNudge(PronunciationNotes.notSmooth(sentence: line.text))
+            case .notYet(let word, let sound, let score, let heard):
+                pronUnheard = 0
+                now.lines[i].tries += 1
+                now.lines[i].bestScore = max(now.lines[i].bestScore ?? 0, score)
+                // The word on its own first, then the sentence again.
+                now.lines[i].drillWord = PronunciationJudge.drillText(for: word, in: line.text, language: target)
+                now.lines[i].drillTries = 0
+                withAnimation(.easeInOut(duration: 0.25)) { pronRound = now }
+                sendTutorSystem()
+                tutorNudge(PronunciationNotes.notYet(word: now.lines[i].drillWord ?? word, sound: sound, heard: heard,
+                                                     topic: now.topic, sentence: line.text,
+                                                     heardAs: PronunciationJudge.heardAs(result: result, word: word, sound: sound)))
+            }
+        }
+    }
+
+    /// The pronunciation call's turn-taking (founder, 2026-11-04): the
+    /// gateway holds everything (send-to-answer), and the APP sends. What
+    /// was heard while the fluent self was speaking — reading along, a
+    /// murmur — is thrown away when it stops; from then on is the learner's
+    /// turn, sent by itself once they go quiet.
+    private func pronStateChanged(from old: RealtimeTalkClient.State, to new: RealtimeTalkClient.State) {
+        guard pronThisCall else { return }
+        if new == .speaking {
+            pronWindowOpen = false
+            pronSendTask?.cancel()
+        } else if old == .speaking {
+            // Reading along early in the line is thrown away; words begun in
+            // its last second are the learner answering, and stay (a one-word
+            // answer comes that fast — founder, 2026-11-04: "I said it and it
+            // vanished").
+            if hasHeldWords, let since = pronHeardSince, Date().timeIntervalSince(since) > 1.0 {
+                realtime.discardTurn(filterStale: false)
+                pronHeardSince = nil
+            }
+            pronWindowOpen = true
+            // Words kept from the end of the line: send them by the usual rule.
+            if hasHeldWords { pronHeard(realtime.partial) }
+        }
+    }
+
+    /// A send the gateway had nothing for: it is still their turn.
+    private func pronSendSettled(_ pending: Bool) {
+        if pronThisCall, !pending, realtime.state == .listening { pronWindowOpen = true }
+    }
+
+    /// Words arriving in the learner's window: send once they stop. Quicker
+    /// when the sentence on screen is (nearly) all there — a reader pausing
+    /// mid-sentence for a hard word must not be cut off.
+    private func pronHeard(_ partial: String) {
+        guard pronThisCall else { return }
+        if partial.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            pronHeardSince = nil
+        } else if pronHeardSince == nil {
+            pronHeardSince = Date()
+        }
+        guard pronWindowOpen, !realtime.sendPending else { return }
+        pronSendTask?.cancel()
+        guard !partial.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        let sentence = pronRound?.current.map { pronRound!.lines[$0].drillWord ?? pronRound!.lines[$0].text } ?? ""
+        let whole = !sentence.isEmpty && PronunciationJudge.overlap(said: partial, line: sentence) >= 0.8
+        pronSendTask = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(whole ? 1.0 : 2.5))
+            // Still voicing (the transcript lags the mouth): give it a beat.
+            var extra = 0
+            while !Task.isCancelled, realtime.level > 0.25, extra < 10 {
+                try? await Task.sleep(for: .milliseconds(300))
+                extra += 1
+            }
+            guard !Task.isCancelled, pronWindowOpen, realtime.partial == partial,
+                  !realtime.sendPending, realtime.state != .speaking else { return }
+            pronWindowOpen = false
+            realtime.sendTurn()
+        }
+    }
+
+    /// The learner's own "Next sentence": the only way a sentence is left
+    /// unpassed. Its word and when it comes back are said, and shown.
+    private func pronSkipSentence() {
+        guard pronThisCall, !pronPlanning, var now = pronRound, let i = now.current else { return }
+        if hasHeldWords { realtime.discardTurn(filterStale: false) }
+        let fb = now.lines[i].feedback
+        let word = fb?.ok == false ? fb?.word : nil
+        let sound = fb?.ok == false ? fb?.sound : nil
+        let later = pronGiveUp(&now, index: i, word: word, sound: sound)
+        Telemetry.log("pron_skip", ["topic": now.topic.id, "tries": String(now.lines[i].tries),
+                                    "retry": later ? "0" : "1"])
+        withAnimation(.easeInOut(duration: 0.3)) { pronRound = now }
+        sendTutorSystem()
+        if now.isFinished { finishPronRound(now) }
+        tutorNudge(PronunciationNotes.moveOn(word: word, sound: sound, topic: now.topic,
+                                             next: now.current.map { now.lines[$0] },
+                                             round: now, laterInRound: later))
+    }
+
+    /// The learner's own "Back to the sentence" while a word is drilled.
+    private func pronLeaveWord() {
+        guard pronThisCall, var now = pronRound, let i = now.current,
+              let word = now.lines[i].drillWord else { return }
+        if hasHeldWords { realtime.discardTurn(filterStale: false) }
+        now.lines[i].drillWord = nil
+        now.lines[i].drillTries = 0
+        withAnimation(.easeInOut(duration: 0.25)) { pronRound = now }
+        sendTutorSystem()
+        tutorNudge(PronunciationNotes.wordBack(word: word, sound: now.lines[i].feedback?.sound,
+                                               topic: now.topic))
+    }
+
+    /// A sentence the learner skipped. The first time it goes to the END
+    /// of the round, once (true); its second time it is left, and its word
+    /// is kept for the next round on this sound (false).
+    private func pronGiveUp(_ round: inout PronunciationRound, index i: Int,
+                            word: String?, sound: String?) -> Bool {
+        round.lines[i].skipped = true
+        round.lines[i].drillWord = nil
+        round.carried = .init(word: word?.trimmingCharacters(in: .punctuationCharacters), sound: sound,
+                              laterInRound: !round.lines[i].isRetry)
+        if !round.lines[i].isRetry {
+            var again = PronunciationRound.Line(id: UUID(), text: round.lines[i].text,
+                                                focus: round.lines[i].focus)
+            again.isRetry = true
+            round.lines.append(again)
+            return true
+        }
+        if let word = word?.trimmingCharacters(in: .punctuationCharacters), !word.isEmpty {
+            PronunciationProgressStore.update(language: appState.targetLanguage, topicId: round.topic.id) {
+                var list = ($0.missedWords ?? []).filter {
+                    PronunciationJudge.key($0) != PronunciationJudge.key(word)
+                }
+                list.append(word)
+                $0.missedWords = Array(list.suffix(8))
+            }
+        }
+        return false
+    }
+
+    /// Words kept from earlier rounds leave the list once said right.
+    private func pronClearMissed(in text: String, topicId: String) {
+        let lang = appState.targetLanguage
+        guard let missed = PronunciationProgressStore.all(language: lang)[topicId]?.missedWords,
+              !missed.isEmpty else { return }
+        let said = Set(text.split(whereSeparator: \.isWhitespace).map { PronunciationJudge.key(String($0)) })
+        let left = missed.filter { !said.contains(PronunciationJudge.key($0)) }
+        guard left.count != missed.count else { return }
+        PronunciationProgressStore.update(language: lang, topicId: topicId) { $0.missedWords = left }
+    }
+
+    /// A take of one word said on its own (`Line.drillWord`). Right → back
+    /// to the sentence; not yet → the word again, until it is right or the
+    /// learner taps "Back to the sentence".
+    private func pronWordTake(_ word: String, result: PronunciationResult?,
+                              outcome: PronunciationAssessor.Outcome, said: String,
+                              noAudio: Bool, round now: inout PronunciationRound, index i: Int) {
+        let probe = PronunciationRound.Line(id: UUID(), text: word,
+                                            focus: word.split(whereSeparator: \.isWhitespace).map(String.init))
+        let noReader = result == nil
+            && (outcome == .unconfigured || outcome == .capped || outcome == .skipped
+                || noAudio || pronUnheard >= 2)
+        var verdict = noReader
+            ? PronunciationJudge.fallback(line: probe, said: said, language: appState.targetLanguage)
+            : PronunciationJudge.verdict(result: result, line: probe, said: said,
+                                         phonemes: now.topic.phonemes, language: appState.targetLanguage)
+        // One word has no rhythm to judge: its sounds are the take.
+        if case .notSmooth(let score) = verdict { verdict = .pass(score: score) }
+        Telemetry.log("pron_word_take", [
+            "topic": now.topic.id,
+            "verdict": Self.pronVerdictName(verdict),
+            "score": result.map { String($0.soundScore) } ?? "",
+            "try": String(now.lines[i].drillTries + 1),
+        ])
+        if let fb = PronunciationJudge.feedback(for: verdict, result: result, line: probe,
+                                                phonemes: now.topic.phonemes) {
+            now.lines[i].feedback = fb
+        }
+        switch verdict {
+        case .pass, .notSmooth:
+            // One word has no rhythm to judge: its sounds are the take.
+            pronUnheard = 0
+            pronClearMissed(in: word, topicId: now.topic.id)
+            now.lines[i].drillWord = nil
+            now.lines[i].drillTries = 0
+            withAnimation(.easeInOut(duration: 0.3)) { pronRound = now }
+            HapticEngine.success()
+            sendTutorSystem()
+            tutorNudge(PronunciationNotes.wordPassed(word: word))
+        case .notYet(_, let sound, _, _):
+            pronUnheard = 0
+            now.lines[i].drillTries += 1
+            // The word stays until it is right or the learner leaves it
+            // ("Back to the sentence"); every third miss carries a tip.
+            withAnimation(.easeInOut(duration: 0.25)) { pronRound = now }
+            tutorNudge(PronunciationNotes.wordAgain(word: word, sound: sound, topic: now.topic,
+                                                   withTip: now.lines[i].drillTries % 3 == 0))
+        case .offScript:
+            pronUnheard = 0
+            tutorNudge(PronunciationNotes.wordOffScript(word: word))
+        case .unheard:
+            pronUnheard += 1
+            tutorNudge(PronunciationNotes.unheard)
+        }
+    }
+
+    private static func pronVerdictName(_ v: PronunciationJudge.Verdict) -> String {
+        switch v {
+        case .pass: return "pass"
+        case .notYet: return "not_yet"
+        case .notSmooth: return "not_smooth"
+        case .offScript: return "off_script"
+        case .unheard: return "unheard"
+        }
+    }
+
+    /// The round's last sentence was passed or left: the course remembers it.
+    private func finishPronRound(_ round: PronunciationRound) {
+        let mean = round.meanScore
+        UserDefaults.standard.set(true, forKey: PronunciationCall.lastFinishedKey(appState.targetLanguage))
+        PronunciationProgressStore.update(language: appState.targetLanguage, topicId: round.topic.id) {
+            $0.rounds += 1
+            $0.passed += round.passedCount
+            if let mean {
+                $0.lastScore = mean
+                $0.bestScore = max($0.bestScore ?? 0, mean)
+            }
+        }
+        Telemetry.log("pron_round_done", ["topic": round.topic.id,
+                                          "passed": String(round.passedCount),
+                                          "of": String(round.lines.count),
+                                          "mean": mean.map(String.init) ?? ""])
+    }
+
+    /// After a round: another round of the same sound, another sound (the
+    /// course opens), or done for today.
+    private func pronAfterRound(turnId: UUID, said: String, round: PronunciationRound) {
+        let asked = tutorLine(answeredBy: turnId)
+        let target = appState.targetLanguage
+        Task { @MainActor in
+            let answer = await TutorNext.read(said, askedWith: asked,
+                                              lesson: "pronunciation of \(round.topic.symbol)",
+                                              targetLanguage: target)
+            guard !isTornDown, tutorStillSaid(turnId, said), pronRound?.id == round.id else { return }
+            switch answer?.choice {
+            case .more, .again:
+                startPronRound(topic: round.topic,
+                               note: "They want another round of \"\(round.topic.symbol)\". Say in a few words that you're getting new sentences — nothing else.")
+            case .new:
+                tutorNudge("They want a different sound. Say in a few words that they can pick one on their screen now.")
+                showingPronTopics = true
+            case .stop:
+                tutorNudge(PronunciationNotes.goodbye)
+            default:
+                tutorNudge(PronunciationNotes.unclearNext)
+            }
+        }
+    }
+
+    /// End: no summary and no book — a round of read sentences is not a
+    /// conversation. What it leaves is the ledger and the course's progress.
+    private func finishPronunciationCall() {
+        phoneCallActive = false
+        meter.stop()
+        CallNowPlaying.end()
+        DailyCallScheduler.releaseAfterLiveCall()
+        cancelSilenceTimer()
+        cancelIdleWatch()
+        if phase == .listening { stopListeningDiscardingChunks() }
+        if phase == .speaking { player.stop() }
+        realtime.hangUp()
+        let lines = pronRound?.lines ?? []
+        Telemetry.log("pron_call_ended", [
+            "topic": pronTopic?.id ?? "",
+            "passed": String(lines.filter(\.passed).count),
+            "done": String(lines.filter { $0.passed || $0.skipped }.count),
+        ])
+        didSaveCurrentSession = true
+        phase = .idle
+        endAndClose()
     }
 
     // MARK: - Tutor lesson (`TutorLesson`)
@@ -5614,6 +6139,7 @@ struct ConversationView: View {
     /// A lesson is running (a challenge or the final check): every answer
     /// waits for the app's verdict.
     private var tutorJudging: Bool {
+        if pronThisCall { return true }
         guard tutorThisCall, !tutorPlanning, let lesson = tutorLesson else { return false }
         return lesson.droppedAt == nil
     }
@@ -5635,6 +6161,11 @@ struct ConversationView: View {
         // Pinned in onAppear; a prompt asked for before that still gets a
         // clock rather than none.
         if promptClock == nil { pinPromptClock() }
+        if pronThisCall {
+            return PronunciationNotes.systemPrompt(target: appState.targetLanguage,
+                                                   level: appState.proficiency,
+                                                   round: pronRound, planning: pronPlanning)
+        }
         let composedTopic = topicBlurb.isEmpty ? topic : "\(topic). \(topicBlurb)"
         return ConversationEngine.conversationSystemPrompt(
             targetLanguage: appState.targetLanguage,

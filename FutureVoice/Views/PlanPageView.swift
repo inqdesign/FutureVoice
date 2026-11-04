@@ -59,6 +59,16 @@ struct PlanPageView: View {
                     title: account.isTrialing ? explain("Trial talk time") : explain("Talk time"),
                     subtitle: trialPoolSubtitle,
                     value: talkValue)
+                // Where the minutes went, by kind of call (founder,
+                // 2026-11-04). From the ledger: the figure above stays the
+                // pool's own, and these are its parts.
+                if usage.loaded, !usage.talkModes.isEmpty {
+                    ForEach(usage.talkModes) { m in
+                        row(icon: m.icon, title: m.title, value: m.durationLabel)
+                            .padding(.leading, 24)
+                            .foregroundStyle(.secondary)
+                    }
+                }
                 // Invite minutes are time ON TOP of the pool, so they are
                 // their own row and never part of the figure above — added in,
                 // they would make the fraction stop adding up; left out
@@ -223,9 +233,9 @@ struct PlanPageView: View {
         .task {
             if let previewInvite { invite = previewInvite }
             else if poolIsSpent { invite = await InviteOffer.load(for: account) }
-            // Only an uncapped plan needs the ledger: every other tier's
-            // number is the pool the server already reported.
-            guard isUncappedTalk else { return }
+            // Every account reads the ledger now: the talk time's split by
+            // kind of call comes from it (the pool figure stays the
+            // server's own; on an uncapped plan it is also the headline).
             if let previewUsage { usage = previewUsage; return }
             usage = await UsageBreakdown.fetch(periodStart: account.periodStart)
         }

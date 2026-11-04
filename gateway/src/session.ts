@@ -354,6 +354,16 @@ export class CallSession implements DurableObject {
    *  (the hold, the merge, speculation, the re-read) runs as usual; only the
    *  hold's clock is never armed. */
   private manualTurns = false
+  /** `StartMessage.repeatAfterMe`. */
+  private repeatAfterMe = false
+  /** `StartMessage.mode`, read by each billing tick. */
+  private callMode: string | null = null
+  private static readonly callModes = new Set(["free", "tutor", "pron"])
+  /** When the call started (billing's first quiet stretch counts from here). */
+  private callStartedAt = 0
+  /** Silence counted before a call stops being billed (the app's own idle
+   *  pause is 30 s too). */
+  private static readonly idleBillMs = 30_000
   /** `SetMessage.holdReplies`: a committed turn waits for the app's note. */
   private holdReplies = false
   private heldReplyTimer: number | null = null
@@ -374,6 +384,15 @@ export class CallSession implements DurableObject {
   /** The next final belongs to words the learner already sent or threw
    *  away (the commit took them from the interim) — skip it. */
   private dropNextFinal = false
+  /** Send-to-answer's reset (`discard`), 2026-11-04 — founder: "the reset
+   *  button doesn't reset in one tap". Two things outlived a reset: a final
+   *  already being re-read landed after it and became the held line again,
+   *  and the transcriber's interims are CUMULATIVE within an utterance, so
+   *  the next interim of a still-open utterance carried the thrown-away
+   *  words back. `discardEpoch` voids the first; `discardedInterim` is cut
+   *  off the front of the second (and of its final) until a final closes it. */
+  private discardEpoch = 0
+  private discardedInterim = ""
   private sends = 0
   /** EVERY final is held this long before it becomes a turn — not only
    *  the hanging-word ones. The transcriber's final is not "the learner
@@ -703,6 +722,7 @@ export class CallSession implements DurableObject {
       // Mid-call settings. Nothing here may end a call: a setting the gateway
       // cannot honour is dropped, never raised.
       if (msg.speed !== undefined) this.tts?.setSpeed(clampSpeed(msg.speed))
+      if (typeof msg.mode === "string" && CallSession.callModes.has(msg.mode)) this.callMode = msg.mode
       if (typeof msg.steer === "string") {
         const steer = msg.steer.trim().slice(0, MAX_STEER_CHARS)
         this.pendingSteer = steer
@@ -753,7 +773,11 @@ export class CallSession implements DurableObject {
       this.cancelSend()
       this.clearPending()
       this.dropSpec()
-      if (this.lastInterimAt > this.lastFinalAt) this.dropNextFinal = true
+      this.discardEpoch++
+      // The open utterance's words so far: what follows them is the new try.
+      if (this.lastInterimAt > this.lastFinalAt && this.lastInterimText.trim()) {
+        this.discardedInterim = this.lastInterimText
+      }
       this.lastInterimText = ""
       this.emit({ type: "user_partial", text: "" })
       console.log("discard: turn cleared")
@@ -768,24 +792,32 @@ export class CallSession implements DurableObject {
       // still pays (the classic path's talk-tick is client-driven, which
       // was the one bypass left on this path). Same billable rule as
       // ConversationView.isBillableMoment, read off session state.
+      this.callStartedAt = Date.now()
       this.billing = new TalkBilling(
         this.env,
         msg.token,
         crypto.randomUUID(),
         msg.language || null,
         // Counted from the moment the call starts, opener included
-        // (founder, 2026-10-27). Until then nothing counted before the
-        // learner's first committed turn (2026-09-07), with tutor mode the
-        // one exception (2026-10-25). Silence is still free.
+        // (founder, 2026-10-27), and WITHOUT STOPPING since 2026-11-04
+        // (founder: "the clock keeps going, every call — it stops only on a
+        // long pause, when nobody says anything"). Until then only speech
+        // and replies counted, and the clock stood still through every
+        // thought, every judged take, every wait. Now a call is counted
+        // while it is connected and someone has been heard (or the fluent
+        // self has spoken) within `idleBillMs` — the same 30 s after which
+        // the app puts a quiet call down itself; this is the server's own
+        // bar, so a client that never pauses can't bill a silent room.
         () => this.clientPresent(CallSession.billableClientGapMs)
           && (this.activeContext !== null
-            || Date.now() - this.lastSpokeAt < 2000
-            || Date.now() - this.lastInterimAt < TalkBilling.graceMs),
+            || Date.now() - Math.max(this.lastSpokeAt, this.lastInterimAt, this.callStartedAt)
+              < CallSession.idleBillMs),
         (code) => this.wall(code),
         // Rides on each tick as `learner_seconds` so the ledger can say how
         // much of a billed minute was the learner's own voice.
         () => this.speechSeconds,
         (seconds) => this.emit({ type: "meter", seconds }),
+        () => this.callMode,
       )
       // Preflight — an empty allowance must surface BEFORE the greeting
       // speaks, not a free minute later (same rule as the classic path). It
@@ -837,6 +869,8 @@ export class CallSession implements DurableObject {
     this.history = msg.history ? [...msg.history] : []
     this.language = msg.language || "en"
     this.manualTurns = msg.manualTurns === true
+    this.repeatAfterMe = msg.repeatAfterMe === true
+    this.callMode = msg.mode && CallSession.callModes.has(msg.mode) ? msg.mode : null
     const base = (code: string) => code.toLowerCase().split("-")[0]
     this.native = msg.native && base(msg.native) !== base(this.language) ? msg.native : null
     this.replyEngine = new ReplyEngine({
@@ -928,7 +962,18 @@ export class CallSession implements DurableObject {
       this.env.GEMINI_LIVE_MODEL ?? DEFAULT_TRANSCRIBE_MODEL,
       msg.language || "en",
       {
-        onInterim: (text) => {
+        onInterim: (raw) => {
+          let text = raw
+          if (this.discardedInterim) {
+            const rest = CallSession.afterWords(this.discardedInterim, raw)
+            if (rest === null) {
+              this.discardedInterim = ""
+            } else if (!rest) {
+              return   // still only the words that were thrown away
+            } else {
+              text = rest
+            }
+          }
           this.lastInterimAt = Date.now()
           this.lastInterimText = text
           this.armIdleHangUp()
@@ -979,18 +1024,41 @@ export class CallSession implements DurableObject {
                                         CallSession.specSettleMs) as unknown as number
           }
         },
-        onUtterance: (text) => {
+        onUtterance: (raw) => {
           const audio = this.utteranceAudio
           this.utteranceAudio = []
           this.utteranceAudioBytes = 0
           this.lastFinalAt = Date.now()
+          let text = raw
+          if (this.discardedInterim) {
+            const rest = CallSession.afterWords(this.discardedInterim, raw)
+            this.discardedInterim = ""
+            if (rest !== null) {
+              if (!rest) {
+                console.log(`final dropped (discarded): "${raw.slice(0, 60)}"`)
+                return
+              }
+              text = rest
+            }
+          }
           if (this.dropNextFinal) {
             this.dropNextFinal = false
             console.log(`final dropped (already sent or discarded): "${text.slice(0, 60)}"`)
             return
           }
+          const epoch = this.discardEpoch
           this.finalsChain = this.finalsChain
-            .then(() => this.acceptFinal(text, audio))
+            .then(async () => {
+              // Reset before this final got its turn: it is thrown away too.
+              if (epoch !== this.discardEpoch) return
+              await this.acceptFinal(text, audio)
+              // Reset while it was being re-read: it must not come back as
+              // the held line.
+              if (epoch !== this.discardEpoch && this.manualTurns) {
+                this.clearPending()
+                this.emit({ type: "user_partial", text: "" })
+              }
+            })
             .catch((e) => this.warn("script_mismatch", `final handling failed: ${String(e).slice(0, 120)}`))
             .then(() => this.maybeFinishSend())
         },
@@ -1353,7 +1421,13 @@ export class CallSession implements DurableObject {
     // ("Apple Watch", speakerphone, 2026-09-03). The client's level gate
     // can't catch this case: it learns the echo's own average level, so the
     // loud syllables of the same echo sail over its margin.
-    if (this.pendingUtterance === null && this.isLikelyEcho(text)) {
+    // A repeat-after-me call, once the line has finished playing: saying
+    // the line's own words back IS the answer (founder, 2026-11-04 — every
+    // one-word "rain" after "Again. Rain." was dropped as echo). While it
+    // still plays, the checks stand as everywhere else.
+    const repeatingBack = this.repeatAfterMe && this.activeContext === null
+      && Date.now() > this.playoutEndAt
+    if (!repeatingBack && this.pendingUtterance === null && this.isLikelyEcho(text)) {
       console.log(`echo-drop: "${text.slice(0, 60)}"`)
       return
     }
@@ -1363,8 +1437,8 @@ export class CallSession implements DurableObject {
     // behind it and passes the client's gate, so it never gets this far
     // silently; what lands here is the room.
     const sinceSpoke = Date.now() - this.lastSpokeAt
-    if (CallSession.isScrap(text, this.language) && sinceSpoke < CallSession.echoSuspicionMs
-        && this.pendingUtterance === null) {
+    if (!repeatingBack && CallSession.isScrap(text, this.language)
+        && sinceSpoke < CallSession.echoSuspicionMs && this.pendingUtterance === null) {
       return
     }
 
@@ -1397,6 +1471,26 @@ export class CallSession implements DurableObject {
     this.armPending(hanging ? CallSession.pendingHoldMs
                     : unfinished ? CallSession.unfinishedMs
                     : CallSession.continuationMs)
+  }
+
+  /** `text` with `prefix`'s words cut off its front ("" when it is only
+   *  they), or null when it doesn't start with them. Words compared on
+   *  letters alone; the last prefix word may still be growing. */
+  static afterWords(prefix: string, text: string): string | null {
+    const key = (w: string) => w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "")
+    const old = prefix.split(/\s+/).map(key).filter(Boolean)
+    const words = text.split(/\s+/).filter(Boolean)
+    if (old.length === 0) return null
+    let i = 0, matched = 0
+    while (i < words.length && matched < old.length) {
+      const k = key(words[i])
+      if (!k) { i++; continue }
+      const last = matched === old.length - 1
+      if (k !== old[matched] && !(last && k.startsWith(old[matched]))) break
+      matched++; i++
+    }
+    if (matched < old.length) return i === words.length && matched > 0 ? "" : null
+    return words.slice(i).join(" ")
   }
 
   /** (Re)start the clock on the held utterance. When it fires the pause was

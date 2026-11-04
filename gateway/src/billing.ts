@@ -52,7 +52,10 @@ export class TalkBilling {
               /** The session's running learner-speech seconds (`speechSeconds`). */
               private speech: () => number = () => 0,
               /** Called when `counted` moves (≤ once a second). */
-              private onCount: (seconds: number) => void = () => {}) {}
+              private onCount: (seconds: number) => void = () => {},
+              /** The call's kind ("free" · "tutor" · "pron"), on every tick
+               *  for the usage page's split; null when the app didn't say. */
+              private mode: () => string | null = () => null) {}
 
   /** Charge 1 s before the opener speaks — same trick as the classic path's
    *  preflight tick, so an empty allowance surfaces BEFORE the greeting
@@ -140,6 +143,7 @@ export class TalkBilling {
           language: this.language,
           preflight,
           ...(spoke !== null ? { learner_seconds: Math.min(spoke, 600) } : {}),
+          ...(this.mode() ? { mode: this.mode() } : {}),
         }),
       })
       if (r.status === 402) {

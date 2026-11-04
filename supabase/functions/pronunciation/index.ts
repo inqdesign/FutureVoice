@@ -86,9 +86,14 @@ type AzureWord = Scores & {
   Offset?: number
   Duration?: number
   PronunciationAssessment?: Scores
-  Phonemes?: (Scores & { Phoneme: string; PronunciationAssessment?: Scores })[]
+  Phonemes?: (Scores & {
+    Phoneme: string
+    PronunciationAssessment?: Scores & { NBestPhonemes?: NBestPhoneme[] }
+    NBestPhonemes?: NBestPhoneme[]
+  })[]
   Feedback?: { Prosody?: { Intonation?: { ErrorTypes?: string[] } } }
 }
+type NBestPhoneme = { Phoneme: string; Score: number }
 type AzureNBest = Scores & {
   Display?: string
   PronunciationAssessment?: Scores
@@ -177,6 +182,12 @@ Deno.serve(async (req) => {
     // IPA for every locale, so a phoneme the app shows reads the same in
     // German and Korean. (The default alphabet is SAPI for English only.)
     PhonemeAlphabet: "IPA",
+    // What each sound was heard AS (2026-11-04, founder: "show how it
+    // sounded"). Measured that day: "프라이트" scored f 38 with p at 100 on
+    // this list, and "드링크" scored d 60 with a vowel at 77 — the list is
+    // how the app can say "your f came out as p" or "a vowel slipped in".
+    // Phoneme names come back for en-US only; elsewhere this is empty.
+    NBestPhonemeCount: 3,
   }
   const url = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1`
     + `?language=${encodeURIComponent(locale)}&format=detailed`
@@ -219,10 +230,15 @@ Deno.serve(async (req) => {
       error: error === "None" && monotone ? "Monotone" : error,
       offset_ms: ms(w.Offset),
       duration_ms: ms(w.Duration),
-      phonemes: (w.Phonemes ?? []).map((p) => ({
-        phoneme: p.Phoneme,
-        accuracy: score(pick(p, "AccuracyScore") as number | undefined),
-      })),
+      phonemes: (w.Phonemes ?? []).map((p) => {
+        const nbest = p.NBestPhonemes ?? p.PronunciationAssessment?.NBestPhonemes ?? []
+        return {
+          phoneme: p.Phoneme,
+          accuracy: score(pick(p, "AccuracyScore") as number | undefined),
+          // Only when there is something to say: an older app ignores it.
+          ...(nbest.length ? { heard: nbest.slice(0, 3).map((c) => ({ phoneme: c.Phoneme, score: Math.round(c.Score) })) } : {}),
+        }
+      }),
     }
   })
 

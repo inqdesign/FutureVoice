@@ -57,6 +57,10 @@ struct UsageBreakdown {
     /// narrowed to the current UTC day, kept because "what did this call just
     /// cost me?" is a different question from "where did the month go?".
     var period: [Meter] = []
+    /// This period's talk time by kind of call — free talk, tutor,
+    /// pronunciation, and the calls from before the kind was recorded
+    /// (founder, 2026-11-04). Empty when nothing was talked.
+    var talkModes: [Meter] = []
     var today: [Meter] = []
     var freeToday: [FreeItem] = []
     var days: [Day] = []
@@ -83,6 +87,9 @@ struct UsageBreakdown {
         struct Metadata: Decodable {
             let seconds: Int?
             let purpose: String?
+            /// The kind of call a talk tick was ("free" · "tutor" · "pron"),
+            /// on rows from 2026-11-04 on.
+            let mode: String?
         }
     }
 
@@ -172,6 +179,16 @@ struct UsageBreakdown {
         }
     }
 
+    /// A talk row's kind, as the usage page names it.
+    private static func modeTitle(_ mode: String?) -> (String, String, String) {
+        switch mode {
+        case "free": return ("free", explain("Free talk"), "bubble.left.and.bubble.right.fill")
+        case "tutor": return ("tutor", explain("Tutor"), "graduationcap.fill")
+        case "pron": return ("pron", explain("Pronunciation"), "mouth.fill")
+        default: return ("earlier", explain("Earlier calls"), "clock.arrow.circlepath")
+        }
+    }
+
     private static func aggregate(_ rows: [LedgerRow], since periodStart: Date?) -> UsageBreakdown {
         var out = UsageBreakdown()
         out.loaded = true
@@ -186,11 +203,20 @@ struct UsageBreakdown {
         var periodMeters: [String: Meter] = [:]
         var free: [String: FreeItem] = [:]
         var dayTotals: [String: Day] = [:]
+        var modes: [String: Meter] = [:]
 
         for row in rows {
             let day = String(row.created_at.prefix(10))
             let seconds = row.metadata?.seconds ?? 0
             let inPeriod = periodKey.map { day >= $0 } ?? true
+
+            if row.action == "talk_time", seconds > 0, inPeriod {
+                let (key, title, icon) = modeTitle(row.metadata?.mode)
+                var m = modes[key] ?? Meter(key: key, title: title, icon: icon, seconds: 0, count: 0)
+                m.seconds += seconds
+                m.count += 1
+                modes[key] = m
+            }
 
             if let (title, icon) = meterTitle(row.action), seconds > 0 {
                 if inPeriod {
@@ -233,6 +259,7 @@ struct UsageBreakdown {
         let order = ["talk_time", "tts_scene", "scene_play"]
         out.today = order.compactMap { todayMeters[$0] }
         out.period = order.compactMap { periodMeters[$0] }
+        out.talkModes = ["free", "tutor", "pron", "earlier"].compactMap { modes[$0] }
         out.freeToday = free.values.sorted { $0.count > $1.count }
         out.days = dayTotals.values.sorted { $0.date > $1.date }
         return out
@@ -254,6 +281,12 @@ struct UsageBreakdown {
                   icon: "phone.fill", seconds: 3300, count: 24),
             Meter(key: "tts_scene", title: explain("Watch scenes"),
                   icon: "play.circle.fill", seconds: 780, count: 12),
+        ]
+        out.talkModes = [
+            Meter(key: "free", title: explain("Free talk"), icon: "bubble.left.and.bubble.right.fill", seconds: 1500, count: 10),
+            Meter(key: "tutor", title: explain("Tutor"), icon: "graduationcap.fill", seconds: 900, count: 6),
+            Meter(key: "pron", title: explain("Pronunciation"), icon: "mouth.fill", seconds: 420, count: 4),
+            Meter(key: "earlier", title: explain("Earlier calls"), icon: "clock.arrow.circlepath", seconds: 480, count: 4),
         ]
         out.today = [
             Meter(key: "talk_time", title: explain("Talking"),

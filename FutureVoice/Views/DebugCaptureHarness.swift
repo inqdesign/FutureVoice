@@ -1264,6 +1264,76 @@ enum DebugCapture {
                     ToolbarItem(placement: .topBarTrailing) { Text("End").fontWeight(.semibold) }
                 }
             })
+        case "call-pron", "call-pron-miss", "call-pron-sheet", "call-pron-drill":
+            // The pronunciation call's card: a round on "th", sentence 2 on
+            // screen; `-miss` after a take Azure marked "think" on.
+            let topic = PronunciationCourse.topic("en.th", language: "en")!
+            let ko = appState.nativeLanguage.hasPrefix("ko")
+            var lines: [PronunciationRound.Line] = [
+                .init(id: UUID(), text: "I think it's Thursday.", focus: ["think", "Thursday"]),
+                .init(id: UUID(), text: "Thanks, I think three is enough.", focus: ["Thanks", "think", "three"]),
+                .init(id: UUID(), text: "My birthday is on the third.", focus: ["birthday", "third"]),
+                .init(id: UUID(), text: "I thought about it a lot.", focus: ["thought"]),
+                .init(id: UUID(), text: "Both of them are healthy.", focus: ["Both", "healthy"]),
+            ]
+            lines[0].passed = true
+            if name == "call-pron-miss" {
+                lines[1].tries = 1
+                func w(_ s: String, _ a: Int, _ ph: [(String, Int)] = []) -> PronunciationResult.Word {
+                    .init(word: s, accuracy: a, error: "None", offsetMs: 0, durationMs: 300,
+                          phonemes: ph.map { .init(phoneme: $0.0, accuracy: $0.1) })
+                }
+                lines[1].lastResult = PronunciationResult(
+                    score: 74, accuracy: 72, fluency: 90, completeness: 100, prosody: nil,
+                    locale: "en-US", recognized: "Thanks I sink three is enough",
+                    words: [w("Thanks", 66, [("θ", 41)]), w("I", 98), w("think", 38, [("θ", 22)]),
+                            w("three", 81), w("is", 95), w("enough", 92)])
+            }
+            if name == "call-pron-miss" {
+                lines[1].feedback = .init(word: "think", sound: "θ", score: 22, ok: false)
+            }
+            if name == "call-pron-drill" {
+                lines[1].tries = 1
+                lines[1].drillWord = "think"
+                lines[1].feedback = .init(word: "think", sound: "θ", score: 41, ok: false)
+            }
+            let round = PronunciationRound(
+                id: UUID(), topic: topic,
+                tip: ko ? "혀끝을 윗니와 아랫니 사이에 살짝 내밀고 바람만 내보내요. ㅆ이나 ㄸ이 되지 않게요."
+                        : "Put the tip of your tongue lightly between your teeth and let the air out — not 's', not 't'.",
+                lines: lines, language: "en")
+            return AnyView(NavigationStack {
+                VStack(spacing: 0) {
+                    PronunciationCard(round: round, topic: topic, planning: false)
+                    Divider().opacity(0.15)
+                    VStack(alignment: .leading, spacing: 18) {
+                        DialogueLine(speaker: .other, name: "Future self") {
+                            Text("Yes, that's it! Next one's on your screen. Read it out loud.")
+                        }
+                        if name == "call-pron-miss" {
+                            DialogueLine(speaker: .user, name: "You") {
+                                Text("Thanks, I sink three is enough.")
+                            }
+                            DialogueLine(speaker: .other, name: "Future self") {
+                                Text("Almost. Think. Think. Tongue between your teeth. Thanks, I think three is enough. Try again!")
+                            }
+                        }
+                    }
+                    .padding(20)
+                    Spacer()
+                }
+                .background(Color(.systemBackground))
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .principal) { Text(TalkRingMode.pronunciation.title).font(.headline) }
+                    ToolbarItem(placement: .topBarLeading) { Image(systemName: "xmark") }
+                    ToolbarItem(placement: .topBarTrailing) { Text("End").fontWeight(.semibold) }
+                }
+                .sheet(isPresented: .constant(name == "call-pron-sheet")) {
+                    PronunciationTopicSheet(currentId: "en.th") { _ in }
+                        .environmentObject(appState)
+                }
+            })
         case "call-focus", "call-focus-sheet":
             // Coach mode's grammar focus pinned above the chips, one repeat
             // already counted, and the learner's card wearing the badge.

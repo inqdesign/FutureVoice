@@ -3193,6 +3193,70 @@ that back. `TutorLesson.swift`, `TutorLessonViews.swift`,
   printed): after the fix, move-on 3/3 ko, 2–3/3 en; the flash-lite hedge
   moves on 4/4. Not yet tried in a real call.
 
+## The pronunciation call — the ring's third page (2026-11-04)
+
+Founder: "a call whose goal is pronunciation, like tutor mode, mainly for
+beginners — show the sentence, they speak, the voice gives feedback; it is
+call time." `PronunciationCall.swift`, `PronunciationCallViews.swift`.
+
+- **It is a call**: the Talk ring's third page writes
+  `PronunciationCall.key`, and only a ring launch (`entry == .talkRing`, no
+  topic, no person) opens one. Same gateway, voice, `BillingGate` and
+  `TalkMeter` as any call, so it spends talk time like one.
+- **Tutor mode's contract with Azure as the judge.** Every learner turn is
+  held (`tutorJudging` is true for the whole call); the turn's audio goes to
+  `PronunciationAssessor` against the sentence on screen, `PronunciationJudge`
+  (code) decides pass · not yet (ONE word, its weakest sound) · off script ·
+  unheard, and one `nudge` note is what the voice says. Not yet = the word
+  said twice in the learner's own voice, the sentence once, "again". Three
+  tries, then it moves on. No reader (no key, capped, two empty reads in a
+  row) falls back to a words-only verdict so it can never loop.
+- **The course** (`PronunciationCourse`, "교재"): sounds by chapter per
+  target language (en/de/ja/ko/es), the book button right of the pill. A
+  round is 5 sentences written for the sound at the learner's level by
+  `PronunciationPlanner` (purpose `tutor`), with a tip in the native
+  language on the card. The voice speaks the target language only.
+- **No summary, no book, no correction call, no coach**: what it leaves is
+  `PronunciationLedger` (surface `pron_call`) and
+  `pronunciation_course.json` (device-local). ✕ closes without the save
+  dialog. Telemetry `pron_round_started` · `pron_take` · `pron_round_done`
+  · `pron_call_ended`.
+- **The AUDIO judges, never the transcript** (same day, founder: "why
+  analyze the transcription?" — a transcriber writes the word it can tell
+  was meant, which hides what this call is for). Set on the founder's own
+  takes: Azure's sentence and word scores are lenient ("프-라이트" kept
+  flight at 73, sentence 95) and the accent is in the phonemes (its l at
+  60; "lead" for "read" left r at 17). So: a LESSON phoneme under 70 →
+  not yet on that word; else ANY phoneme under 65 (a word-final stop under
+  55); else any word under 70 or omitted; else prosody (en-US) under 80 or
+  fluency under 70 → not smooth; else pass. The transcript is read only
+  when there is no audio judge at all.
+- **Measured the same day** (macOS voices, en-US, `scratchpad` probe):
+  word scores can't tell "드링크" from a native "drink" (97 both);
+  phonemes can — Korean-style readings put consonants at 23–60, native at
+  81–100 — and Azure's `NBestPhonemes` says what was heard instead (프라이트's
+  f: p 100; 드링크's d: a vowel at 77). Not yet used: the `pronunciation`
+  function doesn't request NBest (needs a deploy). Synthetic voices only;
+  real takes still decide the bars.
+- **A missed word is practiced ALONE** (same day, founder: "that word, not
+  the whole sentence again"): the card shows just the word
+  (`Line.drillWord`), Azure judges it against itself, and only once it is
+  right is the sentence read again.
+- **Nothing moves on by itself** (same day, founder): no try limit. A word
+  stays until it is right or the learner taps "Back to the sentence"; a
+  sentence until it passes or they tap "Next sentence" (shown after the
+  first try). Leaving says what wasn't there, one tip, the word said right,
+  and when it comes back — never just "tricky one" — and the next card
+  keeps that line ("rain /ɹ/ · Again at the end of this round"). Every
+  take shows what decided it: "think /θ/ 41 Not yet", "Flow 72 Not yet".
+- **"We'll come back to it" is kept**: a skipped sentence goes to the END
+  of the round once (`Line.isRetry`); skipped again, its
+  word is kept on the topic (`missedWords`, newest 8), the next round on
+  that sound is written around those words, and a word leaves the list
+  when it is said right. The course lists them ("To redo").
+- Unmeasured on learners other than the founder. Captures `-capture call-pron` /
+  `call-pron-miss` / `call-pron-sheet`. Android: owed.
+
 ## The tutor bot is an AGENT, and the center of the app (2026-10-30)
 
 Founder: learners find the app "difficult, too many things to do"; the tutor

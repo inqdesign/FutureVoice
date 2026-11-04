@@ -501,6 +501,22 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// Tutor mode was on at some point on this connection — set by the call
     /// screen, read only for `talk_rt_session`'s `tutor` field.
     var tutorCall = false
+    /// Send-to-answer whatever the setting says — the pronunciation call
+    /// (`PronunciationCall`): a learner murmuring along in the background
+    /// must not become a judged take and move the call on (founder,
+    /// 2026-11-04). Set by the call screen before `connect`.
+    var forceManualTurns = false
+    /// What kind of call this is — "free" · "tutor" · "pron" — for the
+    /// usage page's split (`StartMessage.mode`). Set before `connect`.
+    var callMode = "free"
+    private var manualTurns: Bool { SendToAnswer.isOn || forceManualTurns }
+    /// The words thrown away by the last `discardTurn`, until the next turn.
+    /// A final the gateway was already re-reading when the reset landed, or
+    /// an interim of the same still-open utterance, comes back AFTER the
+    /// reset carrying them (2026-11-04, founder: "the reset button doesn't
+    /// reset in one tap"); they are cut off the front of what arrives.
+    private var discardedText = ""
+    private var discardedAt = Date.distantPast
 
     // MARK: - Lifecycle
 
@@ -952,15 +968,51 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         }
     }
 
+    /// `text` without the discarded words in front of it: "" when it is
+    /// only (a part of) them. Compared word by word on letters alone, since
+    /// a re-read final rarely matches the interim's punctuation or case.
+    static func cutting(_ discarded: String, from text: String) -> String {
+        guard !discarded.isEmpty, !text.isEmpty else { return text }
+        func key(_ w: Substring) -> String { w.lowercased().filter { $0.isLetter || $0.isNumber } }
+        let old = discarded.split(whereSeparator: \.isWhitespace).map(key).filter { !$0.isEmpty }
+        let words = text.split(whereSeparator: \.isWhitespace)
+        var i = 0, matched = 0
+        while i < words.count, matched < old.count {
+            let k = key(words[i])
+            if k.isEmpty { i += 1; continue }
+            guard k == old[matched] else { break }
+            matched += 1; i += 1
+        }
+        // Nothing of the old line at its head: a new utterance.
+        guard matched > 0, matched >= min(old.count, 2) || matched == old.count else { return text }
+        return words[i...].joined(separator: " ")
+    }
+
     /// Send-to-answer: throw this turn away and start it again.
-    func discardTurn() {
+    /// `filterStale`: drop a late copy of the discarded words for a moment —
+    /// right for the reset button, wrong when the app discards by itself
+    /// (the pronunciation call's murmur reset): a learner who says the same
+    /// one word again at once had it erased twice (founder, 2026-11-04).
+    func discardTurn(filterStale: Bool = true) {
         guard !isTornDown else { return }
         Self.step("discard")
         sendControl(["type": "discard"])
         sendPending = false
+        if filterStale, !partial.isEmpty {
+            discardedText = partial; discardedAt = Date()
+        } else {
+            discardedText = ""
+        }
         partial = ""
         userPCM = Data()
         if state == .hearing { state = .listening }
+    }
+
+    /// The call's kind changed mid-call (tutor mode switched on or off).
+    func setCallMode(_ mode: String) {
+        callMode = mode
+        guard !isTornDown else { return }
+        sendControl(["type": "set", "mode": mode])
     }
 
     /// Send-to-answer switched mid-call. Off with words held: the gateway
@@ -2127,7 +2179,12 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         payload["native"] = LanguageCatalog.currentNative
         // Send-to-answer (`SendToAnswer`): a pause never ends the turn. A
         // gateway before this ignores it and the call ends turns by pauses.
-        payload["manualTurns"] = SendToAnswer.isOn
+        payload["manualTurns"] = manualTurns
+        // The pronunciation call: the learner repeats the fluent self's own
+        // words, which the gateway's echo checks would otherwise drop
+        // (`StartMessage.repeatAfterMe`). An older gateway ignores it.
+        if forceManualTurns { payload["repeatAfterMe"] = true }
+        payload["mode"] = callMode
         // Tutor mode is counted from the start (2026-10-25): the tutor talks
         // first and that is the lesson. A gateway before this counts from
         // the first turn, as before.
@@ -2242,7 +2299,13 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             state = .listening
             playLocalOpener()
         case "user_partial":
-            let text = json["text"] as? String ?? ""
+            // Only a STALE arrival is dropped: one that is nothing but the
+            // discarded words, within a moment of the reset. Later, the same
+            // words are the learner reading the line again (the gateway
+            // keeps the open utterance's discarded words out itself).
+            let incoming = json["text"] as? String ?? ""
+            let text = Date().timeIntervalSince(discardedAt) < 1
+                && Self.cutting(discardedText, from: incoming).isEmpty ? "" : incoming
             // Every interim, stamped: how far behind the mouth the on-screen
             // line runs is exactly the thing being debugged (2026-09-04).
             if text != partial { Self.step("partial(\(text.count)): \(text.suffix(40))") }
@@ -2252,6 +2315,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             if state != .speaking { state = partial.isEmpty ? .listening : .hearing }
         case "user_turn":
             let said = json["text"] as? String ?? ""
+            discardedText = ""
             let flags = UserTurnFlags(native: json["native"] as? Bool ?? false,
                                       continues: json["continues"] as? Bool ?? false)
             Self.step("heard: \(said)\(flags.native ? " [native]" : "")\(flags.continues ? " [continues]" : "")")
@@ -2634,7 +2698,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// See `bargeRMS`. Runs per mic buffer on the main actor.
     private func considerBarge(rms: Float, muted: Bool, gateActive: Bool,
                                halfDuplex: Bool, seconds: Double) {
-        guard state == .speaking, !SendToAnswer.isOn, !(gateActive && halfDuplex) else {
+        guard state == .speaking, !manualTurns, !(gateActive && halfDuplex) else {
             bargeVoiced = 0; bargeQuiet = 0
             return
         }

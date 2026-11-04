@@ -87,6 +87,14 @@ struct PronunciationResult: Codable, Hashable {
     struct Phoneme: Codable, Hashable {
         var phoneme: String
         var accuracy: Int?
+        /// What Azure heard this sound AS, best first (en-US only, from
+        /// 2026-11-04): "f" with p at 100 here is an f that came out as p.
+        var heard: [Candidate]?
+
+        struct Candidate: Codable, Hashable {
+            var phoneme: String
+            var score: Int
+        }
     }
 
     /// Reference words only (an Insertion is something the learner added and
@@ -167,7 +175,11 @@ enum PronunciationAssessor {
                 let duration_ms: Int?
                 let phonemes: [Phoneme]?
             }
-            struct Phoneme: Decodable { let phoneme: String; let accuracy: Int? }
+            struct Phoneme: Decodable {
+                let phoneme: String
+                let accuracy: Int?
+                let heard: [PronunciationResult.Phoneme.Candidate]?
+            }
             let locale: String?
             let score: Int?
             let accuracy: Int?
@@ -228,7 +240,9 @@ enum PronunciationAssessor {
                 words: (wire.words ?? []).map {
                     .init(word: $0.word, accuracy: $0.accuracy, error: $0.error ?? "None",
                           offsetMs: $0.offset_ms ?? 0, durationMs: $0.duration_ms ?? 0,
-                          phonemes: ($0.phonemes ?? []).map { .init(phoneme: $0.phoneme, accuracy: $0.accuracy) })
+                          phonemes: ($0.phonemes ?? []).map {
+                              .init(phoneme: $0.phoneme, accuracy: $0.accuracy, heard: $0.heard)
+                          })
                 }
             )
             return (result, .scored)
@@ -241,7 +255,23 @@ enum PronunciationAssessor {
     static func assess(audioURL: URL, reference: String, language: String,
                        surface: String, timeout: TimeInterval = 15)
     async -> (result: PronunciationResult?, outcome: Outcome) {
-        let wav = await Task.detached { AudioLoudness.wav16kMono(fromFileAt: audioURL) }.value
+        let wav = await Task.detached { () -> Data? in
+            // A live call's learner turn is WAV bytes filed under `.mp3`
+            // (`TurnAudioStore.save`'s default extension), and AVAudioFile
+            // goes by the extension: it refuses the file outright (measured
+            // 2026-11-04 — every take of the first pronunciation call came
+            // back "unheard"). Open such a file under its real name.
+            let head = (try? FileHandle(forReadingFrom: audioURL))
+                .flatMap { h in defer { try? h.close() }; return try? h.read(upToCount: 4) }
+            guard head == Data("RIFF".utf8), audioURL.pathExtension.lowercased() != "wav" else {
+                return AudioLoudness.wav16kMono(fromFileAt: audioURL)
+            }
+            let tmp = FileManager.default.temporaryDirectory
+                .appendingPathComponent(UUID().uuidString).appendingPathExtension("wav")
+            defer { try? FileManager.default.removeItem(at: tmp) }
+            guard (try? FileManager.default.copyItem(at: audioURL, to: tmp)) != nil else { return nil }
+            return AudioLoudness.wav16kMono(fromFileAt: tmp)
+        }.value
         guard let wav else { return (nil, .skipped) }
         return await assess(wav: wav, reference: reference, language: language,
                             surface: surface, timeout: timeout)

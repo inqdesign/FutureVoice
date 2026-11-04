@@ -1109,6 +1109,20 @@ private struct TalkHeroSection: View {
     @State private var ringFrame: CGRect = .zero
     @State private var mode = TalkRingMode.current
     @AppStorage(TutorMode.key) private var tutorModeOn = false
+    @AppStorage(PronunciationCall.key) private var pronunciationOn = false
+    /// Read from defaults, not AppState: this view is kept off AppState so
+    /// a publish elsewhere never re-renders the ring.
+    @AppStorage(LanguageCatalog.targetLanguageDefaultsKey) private var ringTarget = "en"
+    @AppStorage(AppState.proficiencyKey) private var ringLevelRaw = CEFRLevel.b1.rawValue
+
+    /// The pronunciation page's line: the sound the next call opens on.
+    private var pronunciationHeadline: String {
+        guard let topic = PronunciationCall.startingTopic(
+            language: ringTarget, level: CEFRLevel(rawValue: ringLevelRaw) ?? .b1) else {
+            return explain("Read it, hear it right")
+        }
+        return "\(topic.symbol) · \(topic.examples)"
+    }
 
     var body: some View {
         heroSection
@@ -1371,7 +1385,8 @@ private struct TalkHeroSection: View {
                                 Text(m.title)
                                     .geistPixel(20)
                                     .foregroundStyle(m.isAvailable ? .primary : .secondary)
-                                Text(m.isAvailable ? headline : explain("Coming soon"))
+                                Text(m.isAvailable ? (m == .pronunciation ? pronunciationHeadline : headline)
+                                                   : explain("Coming soon"))
                                     .font(.footnote.weight(.medium))
                                     .monospacedDigit()
                                     .foregroundStyle(.secondary)
@@ -1416,8 +1431,10 @@ private struct TalkHeroSection: View {
         }
         .onChange(of: mode) { _, m in
             // The ring IS the tutor switch: the call reads the same key the
-            // Call settings toggle writes. Pronunciation isn't built yet and
-            // leaves the last real mode as it was.
+            // Call settings toggle writes. The pronunciation page is its own
+            // key and leaves tutor mode as it was: it is a different call,
+            // not a setting of the talk.
+            pronunciationOn = m == .pronunciation
             switch m {
             case .freeTalk: tutorModeOn = false
             case .tutor: tutorModeOn = true
@@ -1446,10 +1463,12 @@ enum TalkRingMode: Int, CaseIterable {
         }
     }
 
-    var isAvailable: Bool { self != .pronunciation }
+    var isAvailable: Bool { true }
 
     /// What the ring shows on launch — the last mode the learner swiped to.
-    static var current: TalkRingMode { TutorMode.isOn ? .tutor : .freeTalk }
+    static var current: TalkRingMode {
+        PronunciationCall.isOn ? .pronunciation : (TutorMode.isOn ? .tutor : .freeTalk)
+    }
 }
 
 /// One talkable scenario — role icon for a face, one-line title, partner
