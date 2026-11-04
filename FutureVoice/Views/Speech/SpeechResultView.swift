@@ -1,4 +1,5 @@
 import AVKit
+import Combine
 import Photos
 import SwiftUI
 
@@ -500,11 +501,14 @@ private struct SpeechTakeVideo: View {
         .contentShape(Rectangle())
         .onTapGesture { toggle() }
         .animation(.easeOut(duration: 0.15), value: playing)
-        .onReceive(NotificationCenter.default.publisher(for: .AVPlayerItemDidPlayToEndTime)) { note in
-            guard (note.object as? AVPlayerItem) === player?.currentItem else { return }
-            playing = false
+        // Scrolled out of sight, the take keeps playing (founder, 2026-11-04:
+        // play it, then scroll down to read the script along with it). The
+        // row's state is read off the player, so a row scrolled back in shows
+        // the truth; the page itself pauses when it is left.
+        .onReceive(player?.publisher(for: \.timeControlStatus).receive(on: RunLoop.main).eraseToAnyPublisher()
+                   ?? Empty().eraseToAnyPublisher()) { status in
+            playing = status != .paused
         }
-        .onDisappear { player?.pause(); playing = false }
         .accessibilityElement()
         .accessibilityLabel(playing ? Text("Pause") : Text("Play"))
         .accessibilityAddTraits(.isButton)
