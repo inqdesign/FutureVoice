@@ -541,4 +541,5 @@
         <item quantity="other">%d번 도전</item>
     </plurals>
     <string name="paywall_unlimited_every_plan">모든 요금제에서 무제한</string>
+    <string name="watch_the_original">원본 영상 보기</string>
 </resources>

@@ -566,4 +566,5 @@
     <!-- iOS `explain("Coming soon")` has no catalog entry: English in every language. -->
     <string name="coming_soon" translatable="false">Coming soon</string>
     <string name="paywall_unlimited_every_plan">Unlimited on every plan</string>
+    <string name="watch_the_original">Watch the original</string>
 </resources>

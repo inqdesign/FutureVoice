@@ -534,4 +534,5 @@
         <item quantity="other">%d Versuche</item>
     </plurals>
     <string name="paywall_unlimited_every_plan">In jedem Tarif unbegrenzt</string>
+    <string name="watch_the_original">Original ansehen</string>
 </resources>

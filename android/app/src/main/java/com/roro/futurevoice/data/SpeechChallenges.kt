@@ -71,6 +71,8 @@ class SpeechChallenges private constructor(private val context: Context) {
         val category: String? = null,
         /** What it is and what to keep in mind, per app language ("ko", "zh-Hant", …). */
         val intro: Map<String, String>? = null,
+        /** The original (a video of the speech), opened outside the app. */
+        val link: String? = null,
     ) {
         /** The intro in the app's language, then English (iOS `SpeechChallenges.intro`). */
         fun introFor(appLanguage: String): String? {
@@ -205,6 +207,7 @@ class SpeechChallenges private constructor(private val context: Context) {
         val attempts: Int? = null,
         val category: String? = null,
         val intro: Map<String, String>? = null,
+        val link: String? = null,
     )
 
     suspend fun refresh(language: String) {
@@ -229,7 +232,7 @@ class SpeechChallenges private constructor(private val context: Context) {
         _standings.value = rows.associate { row ->
             row.id to Standing(row.entrants ?: 0, row.top_score, row.my_best, row.my_rank, row.my_attempts, row.top_three,
                 row.retired_at?.let { runCatching { OffsetDateTime.parse(it).toInstant().toEpochMilli() }.getOrNull() },
-                row.attempts, row.category, row.intro)
+                row.attempts, row.category, row.intro, row.link)
         }
         writeCache(language)
         importLocalBests()

@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowCircleUp
 import androidx.compose.material.icons.filled.EmojiEvents
@@ -385,7 +386,7 @@ internal fun SpeechChallengeScreen(
         // floating over the board so it shows through as it scrolls under
         // (iOS 2026-10-17, glass).
         if (script != null) {
-            ChallengeActionBar(script, intro = standing?.introFor(appLanguageCode()), isPast = isPast, hasBest = standing?.myBest != null,
+            ChallengeActionBar(script, intro = standing?.introFor(appLanguageCode()), link = standing?.link, isPast = isPast, hasBest = standing?.myBest != null,
                 takeCount = takeCount,
                 onTakes = { showingTakes = true },
                 onRead = { showingScript = true }, onStart = { start() },
@@ -439,7 +440,7 @@ internal fun SpeechChallengeScreen(
  *  keeps the takes and Read the script. iOS draws it in Liquid Glass; here a
  *  translucent card, so the board still shows through as it scrolls under. */
 @Composable
-private fun ChallengeActionBar(script: SpeechScript, intro: String?, isPast: Boolean, hasBest: Boolean,
+private fun ChallengeActionBar(script: SpeechScript, intro: String?, link: String?, isPast: Boolean, hasBest: Boolean,
                                takeCount: Int, onTakes: () -> Unit,
                                onRead: () -> Unit, onStart: () -> Unit,
                                modifier: Modifier = Modifier) {
@@ -462,6 +463,19 @@ private fun ChallengeActionBar(script: SpeechScript, intro: String?, isPast: Boo
             } else if (script.summary.isNotEmpty()) {
                 Text(script.summary, style = MaterialTheme.typography.bodyMedium,
                     maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+            // The original, to watch before reading it (iOS, 2026-11-04).
+            if (link != null) {
+                val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.clickable { runCatching { uriHandler.openUri(link) } }
+                        .padding(bottom = 4.dp)) {
+                    Icon(Icons.Filled.PlayArrow, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    Text(stringResource(R.string.watch_the_original), style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                }
             }
             Text(listOf(lengthLabel(SpeechLibrary.estimatedSeconds(script.body, script.language)),
                 script.genre.title()).joinToString(" · "),

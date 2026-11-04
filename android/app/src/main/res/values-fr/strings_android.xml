@@ -548,4 +548,5 @@
         <item quantity="other">%d essais</item>
     </plurals>
     <string name="paywall_unlimited_every_plan">Illimité dans tous les abonnements</string>
+    <string name="watch_the_original">Voir l\u2019original</string>
 </resources>

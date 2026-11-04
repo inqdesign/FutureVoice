@@ -541,4 +541,5 @@
         <item quantity="other">挑戦%d回</item>
     </plurals>
     <string name="paywall_unlimited_every_plan">どのプランでも無制限</string>
+    <string name="watch_the_original">元の映像を見る</string>
 </resources>

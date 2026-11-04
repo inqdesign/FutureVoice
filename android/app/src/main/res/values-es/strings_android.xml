@@ -561,4 +561,5 @@
         <item quantity="other">%d intentos</item>
     </plurals>
     <string name="paywall_unlimited_every_plan">Sin límite en todos los planes</string>
+    <string name="watch_the_original">Ver el original</string>
 </resources>

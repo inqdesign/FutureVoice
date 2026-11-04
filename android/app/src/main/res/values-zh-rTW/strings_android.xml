@@ -541,4 +541,5 @@
         <item quantity="other">%d 次挑戰</item>
     </plurals>
     <string name="paywall_unlimited_every_plan">所有方案不限次數</string>
+    <string name="watch_the_original">觀看原始影片</string>
 </resources>
