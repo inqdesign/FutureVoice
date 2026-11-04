@@ -2370,12 +2370,14 @@ struct SpeechMetrics: Codable, Hashable {
     /// before 2026-10-14, which were scored as if read to the end.
     var coverage: Double? = nil
     /// `SpeechAnalyzer.scoringVersion` the take was scored by; nil = before
-    /// 2026-10-14, when every part was lenient.
+    /// 2026-10-14, when every part was lenient; 2 = no pronunciation in
+    /// `overall`; 3 = with it.
     var scoring: Int? = nil
     /// Phoneme-level pronunciation, 0–100 (`PronunciationAssessor`, the
-    /// pieces' scores weighted by their words). Shown as its own row; NOT in
-    /// `overall`, whose weighting the challenge server re-checks
-    /// (`submit_speech_challenge_take`). nil = not assessed.
+    /// pieces' scores weighted by their words). Its own row, and a quarter
+    /// of `overall` since 2026-11-04 (`scoring` 3), whose weighting the
+    /// challenge server re-checks (`submit_speech_challenge_take`).
+    /// nil = not assessed; `overall` then uses the weighting without it.
     var pronunciation: Int? = nil
 }
 

@@ -1284,8 +1284,11 @@ has its own board. A learner's own scripts stay private and have no board.
   `fromCamera` to `SpeechChallenges.enter`.
 - **The best take stands**, attempts are counted. The score is
   `SpeechAnalyzer`'s (code); the server re-checks that `overall` is the
-  documented weighting of its five parts (±1) — keep the SQL in step if the
-  weights ever move.
+  documented weighting of its parts (±1, a range since coverage) — keep the
+  SQL in step if the weights ever move. Two weightings are accepted: with
+  pronunciation (scoring 3, the eleven-argument call) and without it
+  (scoring 2, what shipped builds and a failed assessment send). See
+  "Pronunciation is MEASURED per sound".
 - **A challenge IS a `SpeechScript`** whose `id` is the challenge id
   (`challengeId` set), so the prompter, takes and result page need nothing
   new; `SpeechStore.script(id:)` falls back to the challenge list (cached per
@@ -2325,14 +2328,22 @@ scorecard's Pronunciation axis had been `nil` since it was drawn.
   pieces' scores weighted by their words (`SpeechMetrics.pronunciation`,
   `SpeechTake.pronunciationWords`). A whole-file read is assessed only
   under 30 s.
-- **The score is SHOWN, not yet folded into any number that decides
-  something.** `ShadowAttempt.overallScore` (mastery) and
-  `SpeechMetrics.overall` (the public board, whose weighting
-  `submit_speech_challenge_take` re-checks) are unchanged; folding a new
-  reader into them is a decision taken after the probe
-  (`scripts/pronunciation-probe.sh`, the founder's own takes — never a
-  learner's recording), and for the board it changes what people already
-  on it were scored by. On the shadow screen: a dotted UNDERLINE under a
+- **A speech take's overall COUNTS the sounds since 2026-11-04** (founder:
+  challenge takes read 90–100 once the script was familiar — 6 of the
+  day's 19 takes were 100 — because nothing in the score listened to how a
+  word sounded; the four delivery parts max out for any confident reader
+  and the pause part counts breaths, not where they fall). With a
+  pronunciation score (`soundScore`): accuracy 30 · pronunciation 25 ·
+  pace 15 · pauses 10 · fillers 10 · steadiness 10, everything but
+  accuracy scaled by coverage (`SpeechAnalyzer.overall`, scoring 3).
+  Without one (assessment failed), the 2026-10-14 weighting (scoring 2).
+  The board KEEPS every entry scored the old way (founder's pick over a
+  fresh board), so old 100s stand beside new scores;
+  `submit_speech_challenge_take` gained an eleven-argument form with
+  `p_pronunciation` (`20261104190000`, stored on the entry) and the app
+  always sends it, null when not assessed. Shadowing's
+  `ShadowAttempt.overallScore` (mastery) still does NOT read it. On the
+  shadow screen: a dotted UNDERLINE under a
   word Azure faulted — text colour already means "wrong word" and the dot
   below means the beat — and
   a Pronunciation line under the diff with the score and the weak words.
@@ -2391,8 +2402,9 @@ scorecard's Pronunciation axis had been `nil` since it was drawn.
   measured elsewhere, and a piece judged against the script loses
   completeness to the prompter being a word off. His take on en-US: no
   sound under 78 on average, so nothing to work on, which is the truth the
-  five marked words were not. Tests: `PronunciationProfileTests`. Still
-  not folded into any deciding score; still unmeasured on other learners.
+  five marked words were not. Tests: `PronunciationProfileTests`. In the
+  speech overall since 2026-11-04 (above), nowhere else; still unmeasured
+  on other learners.
 - Android: owed (the whole reader).
 
 ## Japanese as a TARGET language (2026-09-18)

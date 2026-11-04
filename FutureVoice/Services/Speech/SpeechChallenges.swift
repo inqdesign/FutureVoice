@@ -241,7 +241,30 @@ final class SpeechChallenges: ObservableObject {
         let p_pause: Int
         let p_filler: Int
         let p_steadiness: Int
+        /// nil = not assessed; sent as null, never left out, so the call
+        /// always names the eleven-argument function.
+        let p_pronunciation: Int?
         let p_seconds: Int
+
+        enum CodingKeys: String, CodingKey {
+            case p_challenge, p_display_name, p_avatar, p_overall, p_accuracy, p_pace,
+                 p_pause, p_filler, p_steadiness, p_pronunciation, p_seconds
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(p_challenge, forKey: .p_challenge)
+            try c.encode(p_display_name, forKey: .p_display_name)
+            try c.encode(p_avatar, forKey: .p_avatar)
+            try c.encode(p_overall, forKey: .p_overall)
+            try c.encode(p_accuracy, forKey: .p_accuracy)
+            try c.encode(p_pace, forKey: .p_pace)
+            try c.encode(p_pause, forKey: .p_pause)
+            try c.encode(p_filler, forKey: .p_filler)
+            try c.encode(p_steadiness, forKey: .p_steadiness)
+            try c.encode(p_pronunciation, forKey: .p_pronunciation)
+            try c.encode(p_seconds, forKey: .p_seconds)
+        }
     }
 
     private struct SubmitRow: Decodable {
@@ -261,6 +284,7 @@ final class SpeechChallenges: ObservableObject {
                                   p_overall: overall, p_accuracy: m.accuracy,
                                   p_pace: m.paceScore, p_pause: m.pauseScore,
                                   p_filler: m.fillerScore, p_steadiness: m.steadiness,
+                                  p_pronunciation: m.pronunciation,
                                   p_seconds: max(1, Int(take.durationSeconds.rounded())))
         do {
             let rows: [SubmitRow] = try await SupabaseProvider.shared
@@ -315,7 +339,7 @@ final class SpeechChallenges: ObservableObject {
             let onBoard = standings[challengeId]?.myBest ?? -1
             let candidates = SpeechStore.shared.takes(for: script.id)
                 .filter { $0.videoFilename != nil && $0.metrics.overall > onBoard
-                    && ($0.metrics.scoring ?? 1) >= SpeechAnalyzer.scoringVersion }
+                    && ($0.metrics.scoring ?? 1) >= SpeechAnalyzer.scoringWithoutPronunciation }
                 .sorted { $0.metrics.overall > $1.metrics.overall }
             guard !candidates.isEmpty else { continue }
             importing.insert(challengeId)
@@ -335,7 +359,8 @@ final class SpeechChallenges: ObservableObject {
                 let m = take.metrics
                 let overall = SpeechAnalyzer.overall(accuracy: m.accuracy, pace: m.paceScore, pause: m.pauseScore,
                                                      filler: m.fillerScore, steadiness: m.steadiness,
-                                                     coverage: SpeechAnalyzer.coverage(diff.steps))
+                                                     coverage: SpeechAnalyzer.coverage(diff.steps),
+                                                     pronunciation: m.pronunciation)
                 if overall >= Self.boardBar, overall > onBoard, overall > (best?.overall ?? -1) { best = (take, overall) }
             }
             if let best {

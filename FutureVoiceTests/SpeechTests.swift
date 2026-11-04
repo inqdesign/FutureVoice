@@ -24,7 +24,7 @@ final class SpeechAnalyzerTests: XCTestCase {
             + "that is why you hear a train in the rails before you hear it in the air"
         let m = SpeechAnalyzer.analyze(script: speech, transcript: said, language: "en", envelope: nil)
         XCTAssertLessThanOrEqual(m.accuracy, 90)
-        XCTAssertEqual(m.scoring, SpeechAnalyzer.scoringVersion)
+        XCTAssertEqual(m.scoring, SpeechAnalyzer.scoringWithoutPronunciation)
     }
 
     func testSlowChoppyReadIsFarFromFullMarks() {

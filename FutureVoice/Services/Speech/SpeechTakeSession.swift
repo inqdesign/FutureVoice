@@ -392,14 +392,15 @@ final class SpeechTakeSession: ObservableObject {
         let readMs = ms(readStart)
         // The diff is O(script × transcript) — by syllable for Korean, a
         // million cells for a long script — so it runs off the main thread.
-        let body = script.body, language = script.language
-        var metrics = await Task.detached {
-            SpeechAnalyzer.analyze(script: body, transcript: transcript, language: language, envelope: envelope)
-        }.value
-        // One number for the take: each piece's score weighted by how many
-        // words it judged. Its own row on the result, not part of `overall`.
+        // One number for the take's sounds: each piece's score weighted by
+        // how many words it judged. Its own row on the result, and a quarter
+        // of `overall` (2026-11-04).
         let pronunciation = Self.pronunciation(of: prons)
-        metrics.pronunciation = pronunciation?.score
+        let body = script.body, language = script.language, pronScore = pronunciation?.score
+        let metrics = await Task.detached {
+            SpeechAnalyzer.analyze(script: body, transcript: transcript, language: language,
+                                   envelope: envelope, pronunciation: pronScore)
+        }.value
 
         let take = SpeechTake(id: id, scriptId: script.id, createdAt: Date(),
                               durationSeconds: duration, audioFilename: audioName,

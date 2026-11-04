@@ -28,8 +28,11 @@ enum SpeechAnalyzer {
 
     // MARK: - Whole take
 
+    /// `pronunciation` is the take's phoneme score (`PronunciationAssessor`,
+    /// the SOUND score), nil when nothing assessed it — the take is then
+    /// scored by the rules before sounds were measured.
     static func analyze(script: String, transcript: String, language: String,
-                        envelope: Envelope?) -> SpeechMetrics {
+                        envelope: Envelope?, pronunciation: Int? = nil) -> SpeechMetrics {
         let fillerCount = countFillers(in: transcript, script: script, language: language)
         let spoken = removingFillers(transcript, language: language, keepingThoseIn: script)
 
@@ -75,7 +78,8 @@ enum SpeechAnalyzer {
 
         let coverage = Self.coverage(diff.steps)
         let overall = Self.overall(accuracy: accuracy, pace: paceScore, pause: pauseScore,
-                                   filler: fillerScore, steadiness: steadiness, coverage: coverage)
+                                   filler: fillerScore, steadiness: steadiness, coverage: coverage,
+                                   pronunciation: pronunciation)
 
         return SpeechMetrics(
             accuracy: accuracy,
@@ -88,22 +92,34 @@ enum SpeechAnalyzer {
             missed: missed,
             overall: overall,
             coverage: coverage,
-            scoring: scoringVersion
+            scoring: pronunciation == nil ? scoringWithoutPronunciation : scoringVersion,
+            pronunciation: pronunciation
         )
     }
 
-    /// The one weighting (2026-10-14): accuracy 40%, and the delivery half
-    /// scaled by how far into the script the reader got — delivery is
-    /// measured only on what was said, so three sentences of a long script
-    /// read beautifully used to score like the whole thing. Coverage 1 is
-    /// the old weighting exactly. The server's check
-    /// (`submit_speech_challenge_take`) accepts anything from the accuracy
-    /// part alone up to that full weighting.
+    /// The weighting. Since 2026-11-04 the SOUNDS count (founder: every take
+    /// read 90–100 once the script was familiar, because nothing in the score
+    /// listened to how a word sounded): accuracy 30%, pronunciation 25%, pace
+    /// 15%, pauses 10%, fillers 10%, steadiness 10%. Everything measured on
+    /// what was SAID — pronunciation included — is scaled by how far into the
+    /// script the reader got (2026-10-14), so three sentences read well never
+    /// score like the whole thing.
+    ///
+    /// With no pronunciation (the assessment failed, or a take from before
+    /// it) the 2026-10-14 weighting stands: accuracy 40%, pace 20, pauses 15,
+    /// fillers 10, steadiness 15. The server's check
+    /// (`submit_speech_challenge_take`) knows both, and the board keeps the
+    /// entries scored the old way (founder, same day).
     static func overall(accuracy: Int, pace: Int, pause: Int, filler: Int, steadiness: Int,
-                        coverage: Double) -> Int {
-        let delivery = 0.20 * Double(pace) + 0.15 * Double(pause)
-            + 0.10 * Double(filler) + 0.15 * Double(steadiness)
-        return clamp(Int((0.40 * Double(accuracy) + coverage * delivery).rounded()))
+                        coverage: Double, pronunciation: Int? = nil) -> Int {
+        guard let pronunciation else {
+            let delivery = 0.20 * Double(pace) + 0.15 * Double(pause)
+                + 0.10 * Double(filler) + 0.15 * Double(steadiness)
+            return clamp(Int((0.40 * Double(accuracy) + coverage * delivery).rounded()))
+        }
+        let said = 0.25 * Double(pronunciation) + 0.15 * Double(pace) + 0.10 * Double(pause)
+            + 0.10 * Double(filler) + 0.10 * Double(steadiness)
+        return clamp(Int((0.30 * Double(accuracy) + coverage * said).rounded()))
     }
 
     /// How far into the script the reader got, 0…1, over the diff's own
@@ -140,10 +156,14 @@ enum SpeechAnalyzer {
 
     /// Which rules a take was scored by, stored on its metrics. 2 = the
     /// 2026-10-14 tightening (plain accuracy share, the narrower pace band
-    /// with slow reads costing more, choppy pauses costing more). A take
-    /// scored by older rules never goes onto a board
+    /// with slow reads costing more, choppy pauses costing more); 3 = the
+    /// same with pronunciation in the overall (2026-11-04). A take scored by
+    /// rules older than 2 never goes onto a board
     /// (`SpeechChallenges.importLocalBests`): its parts were all lenient.
-    static let scoringVersion = 2
+    static let scoringVersion = 3
+    /// The 2026-10-14 rules, which a take with no pronunciation is still
+    /// scored by.
+    static let scoringWithoutPronunciation = 2
 
     /// The plain share of the script said as written, 0–100.
     static func accuracy(_ diff: ShadowEngine.ShadowAnalysis) -> Int {

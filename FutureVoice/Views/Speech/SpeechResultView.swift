@@ -101,8 +101,8 @@ struct SpeechResultView: View {
             Section("Measured") {
                 metricRow("Accuracy", icon: "text.badge.checkmark",
                           value: "\(m.accuracy)%", score: m.accuracy)
-                // Measured per phoneme; its own row, not in the overall
-                // (the board's weighting is checked server-side).
+                // Measured per phoneme; a quarter of the overall since
+                // 2026-11-04 (the board's weighting is checked server-side).
                 if let pron = m.pronunciation {
                     // What stood out: this take's low SOUNDS (English), or a
                     // word low here that is low across recent takes. A word
