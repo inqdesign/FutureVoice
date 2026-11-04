@@ -20,12 +20,25 @@ struct UsageBreakdown {
         let icon: String
         var seconds: Int
         var count: Int
+        /// The call time behind `seconds`, where it cost less than it ran
+        /// (a pronunciation call costs half, 2026-11-04). Nil when every
+        /// second was charged whole.
+        var callSeconds: Int? = nil
 
         var minutes: Int { seconds / 60 }
         /// "12 min" / "40 sec" — under a minute must not read as "0 min".
         var durationLabel: String {
             seconds >= 60 ? explain("\(seconds / 60) min")
                           : explain("\(seconds) sec")
+        }
+
+        /// "14 min practiced · half the talk time", on a row that cost less
+        /// than it ran; nil otherwise. The value beside it stays the
+        /// minutes charged, so the rows still add up to the pool.
+        var discountNote: String? {
+            guard let call = callSeconds, call > seconds else { return nil }
+            let practiced = call >= 60 ? explain("\(call / 60) min") : explain("\(call) sec")
+            return explain("\(practiced) practiced · half the talk time")
         }
     }
 
@@ -90,6 +103,8 @@ struct UsageBreakdown {
             /// The kind of call a talk tick was ("free" · "tutor" · "pron"),
             /// on rows from 2026-11-04 on.
             let mode: String?
+            /// The call time a tick paid for, where it was charged less.
+            let call_seconds: Int?
         }
     }
 
@@ -215,6 +230,9 @@ struct UsageBreakdown {
                 var m = modes[key] ?? Meter(key: key, title: title, icon: icon, seconds: 0, count: 0)
                 m.seconds += seconds
                 m.count += 1
+                if let call = row.metadata?.call_seconds {
+                    m.callSeconds = (m.callSeconds ?? 0) + call
+                }
                 modes[key] = m
             }
 
@@ -285,7 +303,7 @@ struct UsageBreakdown {
         out.talkModes = [
             Meter(key: "free", title: explain("Free talk"), icon: "bubble.left.and.bubble.right.fill", seconds: 1500, count: 10),
             Meter(key: "tutor", title: explain("Tutor"), icon: "graduationcap.fill", seconds: 900, count: 6),
-            Meter(key: "pron", title: explain("Pronunciation"), icon: "mouth.fill", seconds: 420, count: 4),
+            Meter(key: "pron", title: explain("Pronunciation"), icon: "mouth.fill", seconds: 420, count: 4, callSeconds: 840),
             Meter(key: "earlier", title: explain("Earlier calls"), icon: "clock.arrow.circlepath", seconds: 480, count: 4),
         ]
         out.today = [

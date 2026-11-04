@@ -27,6 +27,11 @@ export class TalkBilling {
    *  each tick carries the difference. A record beside the bill, never part
    *  of it: `seconds` is what is charged. */
   private speechSent = 0
+  /** Seconds of call not yet reported, at FULL length — beside `billable`,
+   *  which is what they cost. The two differ only on a pronunciation call
+   *  (`rateFor`); every tick carries both, so the ring, the routine and the
+   *  usage page count the time practiced while the pool pays the rate. */
+  private callPending = 0
   private tickN = 0
   private timer: number | null = null
   private flushing = false
@@ -42,6 +47,13 @@ export class TalkBilling {
   /** Flush cadence. 15 s keeps a killed DO's unbilled tail small without
    *  hammering the edge function. */
   private static readonly flushEveryMs = 15_000
+
+  /** What one second of each kind of call costs (founder, 2026-11-04: a
+   *  pronunciation lesson spends talk time fast, so it costs half). Every
+   *  other kind, and a call that didn't say, costs a whole second. */
+  static rateFor(mode: string | null): number {
+    return mode === "pron" ? 0.5 : 1
+  }
 
   constructor(private env: Env,
               private token: string,
@@ -69,7 +81,8 @@ export class TalkBilling {
     let sinceFlush = 0
     this.timer = setInterval(() => {
       if (this.isBillable()) {
-        this.billable += 1
+        this.billable += TalkBilling.rateFor(this.mode())
+        this.callPending += 1
         this.counted += 1
         // Whole seconds: the app reads a fractional total as no report at
         // all (the clock froze at 0:05, 2026-10-25).
@@ -101,7 +114,9 @@ export class TalkBilling {
     this.billable -= seconds
     const spoke = Math.max(0, Math.floor(this.speech() - this.speechSent))
     this.speechSent += spoke
-    const wall = await this.send(seconds, false, spoke)
+    const call = Math.min(1200, Math.floor(this.callPending))
+    this.callPending -= call
+    const wall = await this.send(seconds, false, spoke, call)
     this.flushing = false
     if (wall) {
       this.walled = true
@@ -126,7 +141,8 @@ export class TalkBilling {
    *  (20260920180000). Mid-call ticks are never judged that way — that would
    *  throw away time the learner still has. */
   private async send(seconds: number, preflight = false,
-                     spoke: number | null = null): Promise<WallCode | null> {
+                     spoke: number | null = null,
+                     call: number | null = null): Promise<WallCode | null> {
     this.tickN += 1
     try {
       const r = await fetch(`${this.env.SUPABASE_URL}/functions/v1/talk-tick`, {
@@ -144,6 +160,9 @@ export class TalkBilling {
           preflight,
           ...(spoke !== null ? { learner_seconds: Math.min(spoke, 600) } : {}),
           ...(this.mode() ? { mode: this.mode() } : {}),
+          // The call time these seconds paid for, when it differs from what
+          // was charged — a record for the ring, never the price.
+          ...(call !== null && call !== seconds ? { call_seconds: call } : {}),
         }),
       })
       if (r.status === 402) {
@@ -157,6 +176,7 @@ export class TalkBilling {
         console.log(`billing: talk-tick ${r.status} — re-queueing ${seconds}s`)
         this.billable += seconds
         if (spoke) this.speechSent -= spoke
+        if (call) this.callPending += call
       }
       return null
     } catch (e) {
@@ -164,6 +184,7 @@ export class TalkBilling {
       console.log(`billing: talk-tick failed (${String(e)}) — re-queueing ${seconds}s`)
       this.billable += seconds
       if (spoke) this.speechSent -= spoke
+      if (call) this.callPending += call
       return null
     }
   }

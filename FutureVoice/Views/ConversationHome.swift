@@ -1390,6 +1390,14 @@ private struct TalkHeroSection: View {
                                     .font(.footnote.weight(.medium))
                                     .monospacedDigit()
                                     .foregroundStyle(.secondary)
+                                if m == .pronunciation, m.isAvailable {
+                                    // Said before the tap (2026-11-04): this
+                                    // call costs half (`TalkBilling.rateFor`).
+                                    Text(explain("Uses half the talk time"))
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(.green)
+                                        .padding(.top, 2)
+                                }
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .contentShape(Rectangle())

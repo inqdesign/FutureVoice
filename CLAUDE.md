@@ -3203,6 +3203,16 @@ call time." `PronunciationCall.swift`, `PronunciationCallViews.swift`.
   `PronunciationCall.key`, and only a ring launch (`entry == .talkRing`, no
   topic, no person) opens one. Same gateway, voice, `BillingGate` and
   `TalkMeter` as any call, so it spends talk time like one.
+- **It costs HALF the talk time** (same day, founder: a lesson burns
+  minutes fast; "it should feel like a discount"). The gateway charges 0.5 s
+  per counted second when `callMode == "pron"` (`TalkBilling.rateFor`) and
+  each tick carries the call's own length as `call_seconds`; the ring, the
+  routine and the streak count THAT (`talk_seconds_by_local_day`
+  `20261104180000`, `TalkTimeLog`'s row fallback), the call clock runs at
+  real time with a green "½" beside it, and Usage's Pronunciation row shows
+  the minutes charged with "N min practiced · half the talk time" under it.
+  Said before the tap on the ring page. Order: migration + `talk-tick`
+  first, then the gateway (otherwise the ring reads half until they land).
 - **Tutor mode's contract with Azure as the judge.** Every learner turn is
   held (`tutorJudging` is true for the whole call); the turn's audio goes to
   `PronunciationAssessor` against the sentence on screen, `PronunciationJudge`

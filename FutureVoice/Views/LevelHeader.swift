@@ -30,6 +30,10 @@ struct LevelHeaderTitle: View {
     /// Elapsed time counts UP, so it's safe on every tier including Plus,
     /// whose rule is only that nothing counts DOWN.
     var callClock: TalkClock? = nil
+    /// This call costs half its length (a pronunciation call, 2026-11-04):
+    /// a green "½" after the clock, so a clock that runs fast doesn't read
+    /// as the pool running out fast.
+    var halfRate = false
 
     @State private var showingInfo = false
 
@@ -60,6 +64,12 @@ struct LevelHeaderTitle: View {
                         Text("·")
                             .font(.caption2.weight(.semibold))
                         CallClockText(clock: callClock)
+                        if halfRate {
+                            Text(verbatim: "½")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(.green)
+                                .accessibilityLabel(Text(explain("Uses half the talk time")))
+                        }
                     }
                     if let minutesLeft {
                         Text("·")

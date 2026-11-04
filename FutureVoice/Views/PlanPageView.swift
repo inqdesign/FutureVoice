@@ -64,7 +64,8 @@ struct PlanPageView: View {
                 // pool's own, and these are its parts.
                 if usage.loaded, !usage.talkModes.isEmpty {
                     ForEach(usage.talkModes) { m in
-                        row(icon: m.icon, title: m.title, value: m.durationLabel)
+                        row(icon: m.icon, title: m.title, subtitle: m.discountNote,
+                            value: m.durationLabel)
                             .padding(.leading, 24)
                             .foregroundStyle(.secondary)
                     }

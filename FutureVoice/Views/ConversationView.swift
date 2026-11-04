@@ -1496,7 +1496,8 @@ struct ConversationView: View {
                              // the start, since the call is billed from the start
                              // (2026-10-27), and gone once the talk is wrapped up.
                              callClock: (phoneCallActive || !didSaveCurrentSession)
-                                 ? meter.clock : nil)
+                                 ? meter.clock : nil,
+                             halfRate: pronThisCall)
                 .environmentObject(appState)
         }
         ToolbarItem(placement: .topBarLeading) {

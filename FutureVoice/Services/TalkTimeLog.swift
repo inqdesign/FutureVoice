@@ -201,6 +201,10 @@ enum TalkTimeLog {
             let metadata: Metadata?
             struct Metadata: Decodable {
                 let seconds: Int?; let language: String?; let preflight: Bool?
+                /// The call time a tick paid for, where it was charged less
+                /// (a pronunciation call costs half, 2026-11-04). The ring
+                /// counts this, like `talk_seconds_by_local_day`.
+                let call_seconds: Int?
             }
             /// The second charged as a call OPENS, before anyone speaks — a
             /// wall check, never talk (see `TalkMeter.tick`). The gateway
@@ -238,7 +242,8 @@ enum TalkTimeLog {
                   let at = parseTimestamp(row.created_at) else { continue }
             // Ticks from a build that predates language reporting land under
             // the bare day key, exactly where this log used to put them.
-            out[key(day: at, language: row.metadata?.language), default: 0] += seconds
+            out[key(day: at, language: row.metadata?.language), default: 0] +=
+                row.metadata?.call_seconds ?? seconds
         }
         return out
     }

@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
   if (!idemKey) return errorResponse(400, "missing X-Idempotency-Key header")
 
   let body: { seconds?: number; session_id?: string; language?: string; preflight?: boolean
-              learner_seconds?: number; mode?: string }
+              learner_seconds?: number; mode?: string; call_seconds?: number }
   try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
   const seconds = body.seconds
   if (typeof seconds !== "number" || !Number.isInteger(seconds) ||
@@ -56,6 +56,13 @@ Deno.serve(async (req) => {
   // tutor · pronunciation). A record like `learner_seconds`: an unknown
   // value is dropped, never a reason to refuse the tick.
   const mode = ["free", "tutor", "pron"].includes(body.mode ?? "") ? body.mode! : null
+  // The call time these seconds paid for, when the gateway charged a
+  // different amount for it — a pronunciation call costs half (2026-11-04).
+  // The ring and the usage page count this; billing is `seconds` alone.
+  // A record again: anything malformed is dropped.
+  const call = body.call_seconds
+  const callSeconds = typeof call === "number" && Number.isInteger(call) &&
+    call >= 0 && call <= 1200 ? call : null
 
   const { data, error } = await billingClient().rpc("charge_talk_seconds", {
     p_user_id: user.id,
@@ -78,7 +85,8 @@ Deno.serve(async (req) => {
     p_metadata: { session_id: body.session_id ?? null, seconds,
                   preflight: body.preflight === true,
                   ...(learnerSeconds !== null ? { learner_seconds: learnerSeconds } : {}),
-                  ...(mode !== null ? { mode } : {}) },
+                  ...(mode !== null ? { mode } : {}),
+                  ...(callSeconds !== null ? { call_seconds: callSeconds } : {}) },
     // The Core is one club per target language and this tick is the only
     // place the server hears which language was spoken. Absent on older
     // builds — those seconds bill normally and count toward no club, which
