@@ -1291,6 +1291,7 @@
     <string name="interview">"Entrevista"</string>
     <string name="interview_chip_about_yourself_why_this_job">"Chip Entrevista · hablar de ti, por qué este puesto"</string>
     <string name="interviews_the_field_i_m_applying_to">"Entrevistas, el sector al que me presento"</string>
+    <string name="intonation_lld">"entonación %d"</string>
     <string name="introduce_someone_worth_knowing">"Presenta a alguien que vale la pena conocer"</string>
     <string name="introducing_yourself">"Presentarte"</string>
     <string name="introduction">"Presentación"</string>
@@ -3699,6 +3700,7 @@
     <string name="work">"Trabajo"</string>
     <string name="work_chip_meetings_presentations_client_calls">"Chip Trabajo · reuniones, presentaciones, llamadas con clientes"</string>
     <string name="work_meetings">"Reuniones de trabajo"</string>
+    <string name="work_on">"Para practicar: %s"</string>
     <string name="work_stories">"Historias del trabajo"</string>
     <!-- 'Work, study, or your main project — what a typical day looks like' -->
     <string name="work_study_or_your_main_project_what_a_typical_day_looks_lik_e1886c">"Trabajo, estudio o tu proyecto principal — cómo es un día normal para ti"</string>

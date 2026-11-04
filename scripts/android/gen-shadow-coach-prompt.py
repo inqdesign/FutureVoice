@@ -35,6 +35,7 @@ user = kotlin(literal_at(src, 'return """', src.index("static func userMessage("
     "ratio": "ratio",
     "renderDiffForPrompt(diffSteps)": "diff",
     "renderRhythmForPrompt(rhythm)": "rhythmText",
+    "renderPronunciationForPrompt(pronunciation)": "pronunciationText",
 }, "            ")
 
 emit(OUT, f'''package com.roro.futurevoice.talk
@@ -63,6 +64,7 @@ object ShadowCoachPrompt {{
         learnerDurationMs: Int,
         diffSteps: List<ShadowScore.DiffStep>,
         rhythm: ShadowScore.RhythmAnalysis?,
+        pronunciation: PronunciationResult? = null,
     ): String {{
         val ratio = if (targetDurationMs > 0)
             String.format(java.util.Locale.US, "%.2f", learnerDurationMs.toDouble() / targetDurationMs)
@@ -70,6 +72,7 @@ object ShadowCoachPrompt {{
         val learnerShown = if (learnerText.isEmpty()) "(empty)" else learnerText
         val diff = ShadowScore.renderDiffForPrompt(diffSteps)
         val rhythmText = ShadowScore.renderRhythmForPrompt(rhythm)
+        val pronunciationText = ShadowScore.renderPronunciationForPrompt(pronunciation)
         return {user}
     }}
 }}

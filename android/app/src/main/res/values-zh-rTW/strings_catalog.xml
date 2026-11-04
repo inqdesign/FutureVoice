@@ -1294,6 +1294,7 @@
     <string name="interview">"面試"</string>
     <string name="interview_chip_about_yourself_why_this_job">"面試標籤・自我介紹、應徵動機"</string>
     <string name="interviews_the_field_i_m_applying_to">"面試、想進的產業"</string>
+    <string name="intonation_lld">"語調 %d"</string>
     <string name="introduce_someone_worth_knowing">"介紹一位值得認識的人"</string>
     <string name="introducing_yourself">"自我介紹"</string>
     <string name="introduction">"介紹"</string>
@@ -3703,6 +3704,7 @@
     <string name="work">"工作"</string>
     <string name="work_chip_meetings_presentations_client_calls">"工作標籤・會議、簡報、客戶電話"</string>
     <string name="work_meetings">"工作會議"</string>
+    <string name="work_on">"多練：%s"</string>
     <string name="work_stories">"工作的事"</string>
     <!-- 'Work, study, or your main project — what a typical day looks like' -->
     <string name="work_study_or_your_main_project_what_a_typical_day_looks_lik_e1886c">"工作、唸書，或正在做的專案 — 平常一天是什麼樣子"</string>

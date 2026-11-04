@@ -1302,6 +1302,7 @@
     <string name="interview">"Interview"</string>
     <string name="interview_chip_about_yourself_why_this_job">"Interview chip · about yourself, why this job"</string>
     <string name="interviews_the_field_i_m_applying_to">"Interviews, the field I'm applying to"</string>
+    <string name="intonation_lld">"intonation %d"</string>
     <string name="introduce_someone_worth_knowing">"Introduce someone worth knowing"</string>
     <string name="introducing_yourself">"Introducing yourself"</string>
     <string name="introduction">"Introduction"</string>
@@ -1377,6 +1378,7 @@
     <string name="keep_your_practice_in_google_drive">"Keep your practice in Google Drive?"</string>
     <string name="keep_your_practice_in_icloud">"Keep your practice in iCloud?"</string>
     <string name="keeping_a_first_conversation_going">"Keeping a first conversation going"</string>
+    <string name="keeps_coming_out_low">"Keeps coming out low: %s"</string>
     <string name="kept_for_lld_days">"Kept for %d days"</string>
     <string name="kept_from_a_talk">"Kept from a talk"</string>
     <!-- 'Kept in your own Google Drive, it waits on any phone or tablet you sign into, your voice recording too, so your voice comes back without recording again.' -->
@@ -1681,6 +1683,7 @@
     <string name="me">"Me"</string>
     <string name="meaning">"Meaning"</string>
     <string name="measured">"Measured"</string>
+    <string name="measured_per_sound_over_lld_recent_takes">"Measured per sound over %d recent takes."</string>
     <string name="medium">"Medium"</string>
     <string name="meet_other_learners">"Meet other learners"</string>
     <string name="meet_your_ai_tutor">"Meet your AI tutor"</string>
@@ -1879,6 +1882,7 @@
     <string name="no_seat_right_now">"No seat right now"</string>
     <string name="no_sessions_yet">"No sessions yet"</string>
     <string name="no_situations_to_hear_yet">"No situations to hear yet"</string>
+    <string name="no_sound_stood_out">"No sound stood out"</string>
     <string name="no_streak_yet">"No streak yet"</string>
     <string name="no_takes_came_back_please_try_again">"No takes came back. Please try again."</string>
     <string name="no_takes_yet">"No takes yet"</string>
@@ -2715,6 +2719,7 @@
     <string name="sorting_it_out">"Sorting it out…"</string>
     <string name="sound_mic">"Sound &amp; mic"</string>
     <string name="sounds">"Sounds"</string>
+    <string name="sounds_to_work_on">"Sounds to work on: %s"</string>
     <string name="source">"Source"</string>
     <string name="sources">"Sources"</string>
     <string name="speak_every_day_and_keep_everything_it_teaches_you">"Speak every day — and keep everything it teaches you."</string>
@@ -3722,6 +3727,7 @@
     <string name="work">"Work"</string>
     <string name="work_chip_meetings_presentations_client_calls">"Work chip · meetings, presentations, client calls"</string>
     <string name="work_meetings">"Work meetings"</string>
+    <string name="work_on">"Work on: %s"</string>
     <string name="work_stories">"Work stories"</string>
     <!-- 'Work, study, or your main project — what a typical day looks like' -->
     <string name="work_study_or_your_main_project_what_a_typical_day_looks_lik_e1886c">"Work, study, or your main project — what a typical day looks like"</string>

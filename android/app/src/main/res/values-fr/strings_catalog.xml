@@ -1291,6 +1291,7 @@
     <string name="interview">"Entretien"</string>
     <string name="interview_chip_about_yourself_why_this_job">"Puce Entretien · te présenter, pourquoi ce poste"</string>
     <string name="interviews_the_field_i_m_applying_to">"Entretiens, le secteur que je vise"</string>
+    <string name="intonation_lld">"intonation %d"</string>
     <string name="introduce_someone_worth_knowing">"Présente quelqu’un qui vaut le détour"</string>
     <string name="introducing_yourself">"Se présenter"</string>
     <string name="introduction">"Présentation"</string>
@@ -3699,6 +3700,7 @@
     <string name="work">"Travail"</string>
     <string name="work_chip_meetings_presentations_client_calls">"Puce Travail · réunions, présentations, appels clients"</string>
     <string name="work_meetings">"Réunions de travail"</string>
+    <string name="work_on">"À travailler : %s"</string>
     <string name="work_stories">"Histoires de boulot"</string>
     <!-- 'Work, study, or your main project — what a typical day looks like' -->
     <string name="work_study_or_your_main_project_what_a_typical_day_looks_lik_e1886c">"Travail, études, ou ton projet principal — à quoi ressemble une journée type"</string>

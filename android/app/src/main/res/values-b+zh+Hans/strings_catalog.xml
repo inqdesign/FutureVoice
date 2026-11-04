@@ -1294,6 +1294,7 @@
     <string name="interview">"面试"</string>
     <string name="interview_chip_about_yourself_why_this_job">"面试标签・自我介绍、求职动机"</string>
     <string name="interviews_the_field_i_m_applying_to">"面试、想进的行业"</string>
+    <string name="intonation_lld">"语调 %d"</string>
     <string name="introduce_someone_worth_knowing">"介绍一位值得认识的人"</string>
     <string name="introducing_yourself">"自我介绍"</string>
     <string name="introduction">"介绍"</string>
@@ -3703,6 +3704,7 @@
     <string name="work">"工作"</string>
     <string name="work_chip_meetings_presentations_client_calls">"工作标签・开会、汇报、客户电话"</string>
     <string name="work_meetings">"工作会议"</string>
+    <string name="work_on">"多练：%s"</string>
     <string name="work_stories">"工作的事"</string>
     <!-- 'Work, study, or your main project — what a typical day looks like' -->
     <string name="work_study_or_your_main_project_what_a_typical_day_looks_lik_e1886c">"工作、念书，或正在做的项目 — 平常一天是什么样子"</string>

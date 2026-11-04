@@ -73,6 +73,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -183,6 +184,9 @@ internal fun attemptCutoffMs(targetMs: Int): Int =
 private data class ShadowFeedback(
     val pronunciation: String, val pacing: String, val fix: String,
     val matchScore: Int, val rhythmScore: Int?,
+    /** The phoneme assessment's score, shown beside the headline — not in
+     *  it (iOS 0971c05d). */
+    val pronunciationScore: Int? = null,
 ) { val overallScore: Int get() = ShadowScore.overallScore(matchScore, rhythmScore) }
 
 @Serializable
@@ -307,6 +311,12 @@ private fun ShadowLineScreen(
     var takeRecording by remember { mutableStateOf<String?>(null) }
     var learnerTimings by remember { mutableStateOf<List<WordTiming>>(emptyList()) }
     var lastAttemptDurationMs by remember { mutableIntStateOf(0) }
+    /** The phoneme assessment of the take on screen, and its words placed on
+     *  the line (target index → verdict). Null/empty until a result lands;
+     *  the server may also simply not answer, and the take is then scored
+     *  by words alone (iOS 0971c05d). */
+    var assessment by remember { mutableStateOf<com.roro.futurevoice.talk.PronunciationResult?>(null) }
+    var wordMarks by remember { mutableStateOf<Map<Int, com.roro.futurevoice.talk.PronunciationResult.Word>>(emptyMap()) }
     var saved by remember { mutableStateOf(false) }
     var past by remember { mutableStateOf<List<ShadowAttempt>>(emptyList()) }
     var reload by remember { mutableIntStateOf(0) }
@@ -472,6 +482,7 @@ private fun ShadowLineScreen(
     fun resetResult() {
         feedback = null; heardNothing = false; coachPending = false; shownAttemptId = null
         steps = emptyList(); rhythm = null; learnerTimings = emptyList()
+        assessment = null; wordMarks = emptyMap()
     }
 
     fun cancelTake() {
@@ -499,7 +510,8 @@ private fun ShadowLineScreen(
                 messages = listOf(GeminiClient.Message(
                     role = GeminiClient.Message.Role.USER,
                     content = ShadowCoachPrompt.userMessage(attemptTargetText, scoredText,
-                        attemptTargetDurationMs, learnerDurMs, analysis.steps, r))),
+                        attemptTargetDurationMs, learnerDurMs, analysis.steps, r,
+                        pronunciation = attempt.assessment))),
                 serializer = CoachPayload.serializer(),
                 // Three native-language bullets — 300 left no room for
                 // thinking, and a truncation drops the feedback entirely.
@@ -629,7 +641,8 @@ private fun ShadowLineScreen(
             delay(300)   // tail grace: the last syllable is still arriving
             runCatching { recorder.stop() }
             withContext(Dispatchers.IO) { trimLeading(takeFile, goSeconds) }
-            val read = ShadowTranscriber.read(takeFile, targetLanguage)
+            val read = ShadowTranscriber.read(takeFile, targetLanguage,
+                referenceText = attemptTargetText, context = context)
             if (read.source == ShadowTranscriber.Source.FAILED && read.text.isEmpty() && takeFile.length() > 44L) {
                 logTranscript(read, range, timed = false)
                 takeRecording = takeFile.absolutePath
@@ -638,6 +651,15 @@ private fun ShadowLineScreen(
             }
             val text = read.text
             said = text
+            assessment = read.pronunciation
+            // The practiced range's words are re-based onto the whole line, as
+            // the beat dots are.
+            wordMarks = read.pronunciation?.let { a ->
+                val base = range?.first ?: 0
+                val targetWords = (range?.let { timings.slice(it) } ?: timings).map { it.word }
+                com.roro.futurevoice.talk.PronunciationAssessor.wordMarks(a, targetWords, targetLanguage)
+                    .mapKeys { it.key + base }
+            }.orEmpty()
             // A take with no speech is not a 0 — it is nothing: not saved,
             // counted or coached.
             if (text.isBlank()) {
@@ -680,7 +702,8 @@ private fun ShadowLineScreen(
                 pronunciation = if (coachable) "" else context.getString(if (r == null)
                     R.string.nailed_it_matched_the_line_almost_word_for_word
                 else R.string.nailed_it_matched_the_line_almost_word_for_word_on_the_beat),
-                pacing = "", fix = "", matchScore = analysis.score, rhythmScore = r?.score)
+                pacing = "", fix = "", matchScore = analysis.score, rhythmScore = r?.score,
+                pronunciationScore = assessment?.score)
             coachPending = coachable
             takeRecording = takeFile.absolutePath
             phase = ShadowPhase.RESULT
@@ -699,6 +722,7 @@ private fun ShadowLineScreen(
                 phraseFirst = range?.first,
                 phraseLast = range?.last,
                 recordingFilename = takeFile.absolutePath,
+                assessment = assessment,
             )
             shownAttemptId = attempt.id
             attempts.add(attempt, targetLanguage)
@@ -824,7 +848,8 @@ private fun ShadowLineScreen(
             ) {
                 // ---- target line
                 TargetLineSection(line, timings, selection, activeRange, practiceRange != null, rhythm, steps,
-                    wordOps, wordBeats, spaced, phase, syncStartedAt, target, tick, ::tapWord, targetLanguage)
+                    wordOps, wordBeats, spaced, phase, syncStartedAt, target, tick, ::tapWord, targetLanguage,
+                    wordMarks)
 
                 // ---- durations (after analysis only)
                 if (steps.isNotEmpty() && attemptTargetDurationMs > 0) {
@@ -861,7 +886,7 @@ private fun ShadowLineScreen(
 
                 // ---- your take
                 feedback?.let { fb ->
-                    TakeSection(fb, steps, said, takeRecording != null, coachPending,
+                    TakeSection(fb, steps, said, assessment, takeRecording != null, coachPending,
                         onHearTarget = ::previewTarget,
                         onHearTake = { takeRecording?.let { playTake(it) } },
                         onTogether = ::playTogether)
@@ -956,7 +981,8 @@ private fun logTranscript(read: ShadowTranscriber.Read, range: IntRange?, timed:
         "audio_ms" to read.ms.toString(),
         "partial" to if (range != null) "1" else "0",
         "timed" to if (timed) "1" else "0",
-        "timing" to "take_align"))
+        "timing" to "take_align",
+        "pron" to read.pronunciationOutcome.raw))
 }
 
 /** Cut everything before the go beat out of the take (the countdown). */
@@ -1218,6 +1244,7 @@ private fun TargetLineSection(
     wordOps: Map<Int, ShadowScore.DiffOp>, wordBeats: Map<Int, ShadowScore.RhythmWord>, spaced: Boolean,
     phase: ShadowPhase, syncStartedAt: Long, target: TargetPlayer, tick: Long, tapWord: (Int) -> Unit,
     targetLanguage: String,
+    wordMarks: Map<Int, com.roro.futurevoice.talk.PronunciationResult.Word> = emptyMap(),
 ) {
     val secondary = MaterialTheme.colorScheme.onSurfaceVariant
     val tertiary = secondary.copy(alpha = 0.6f)
@@ -1284,9 +1311,17 @@ private fun TargetLineSection(
                         val wordStyle = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold)
                         val color = wordColor(i, wt, nowMs, recording = phase == ShadowPhase.RECORDING,
                             activeRange = activeRange, hasDiff = steps.isNotEmpty(), ops = wordOps)
+                        // The SOUND verdict rides on a dotted underline: text
+                        // colour already means "wrong word" and the dot below
+                        // means the beat, so a word heard but not pronounced
+                        // well is underlined in the score's colour scale.
+                        // Nothing while the karaoke is moving (iOS 0971c05d).
+                        val mark = pronunciationMark(wordMarks[i],
+                            moving = nowMs != null || phase == ShadowPhase.RECORDING)
                         val wordModifier = Modifier.clip(RoundedCornerShape(4.dp))
                             .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.22f) else Color.Transparent)
                             .padding(horizontal = if (spaced) 2.dp else 0.dp, vertical = 1.dp)
+                            .then(if (mark != null) Modifier.dottedUnderline(mark) else Modifier)
                         if (rubyRuns.isEmpty()) Text(wt.word, style = wordStyle, color = color, modifier = wordModifier)
                         else FuriganaWord(wt.word, starts[i], rubyRuns, style = wordStyle, color = color,
                             modifier = wordModifier)
@@ -1302,7 +1337,8 @@ private fun TargetLineSection(
  *  the coach. */
 @Composable
 private fun TakeSection(
-    fb: ShadowFeedback, steps: List<ShadowScore.DiffStep>, said: String, hasTake: Boolean, coachPending: Boolean,
+    fb: ShadowFeedback, steps: List<ShadowScore.DiffStep>, said: String,
+    assessment: com.roro.futurevoice.talk.PronunciationResult?, hasTake: Boolean, coachPending: Boolean,
     onHearTarget: () -> Unit, onHearTake: () -> Unit, onTogether: () -> Unit,
 ) {
     val secondary = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1337,6 +1373,7 @@ private fun TakeSection(
                 }
             }
         }
+        assessment?.let { PronunciationSection(it) }
         if (hasTake) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1363,5 +1400,79 @@ private fun TakeSection(
         if (fb.pronunciation.isNotEmpty()) Bullet(Icons.Filled.GraphicEq, stringResource(R.string.pronunciation), fb.pronunciation)
         if (fb.pacing.isNotEmpty()) Bullet(Icons.Filled.AvTimer, stringResource(R.string.pacing), fb.pacing)
         if (fb.fix.isNotEmpty()) Bullet(Icons.Filled.AutoAwesome, stringResource(R.string.try_this), fb.fix)
+    }
+}
+
+// MARK: - Pronunciation marks (iOS 0971c05d, fede7981, 14706881)
+
+/**
+ * The underline colour for a word the phoneme assessment faulted — red /
+ * orange by `PronunciationResult.Word`'s bars (a weak SOUND counts, not only
+ * a weak word) — and null for a word said well, unmeasured, or skipped.
+ * Hidden while the line is being read back, like the colours.
+ */
+@Composable
+private fun pronunciationMark(w: com.roro.futurevoice.talk.PronunciationResult.Word?, moving: Boolean): Color? {
+    if (moving || w == null || w.isOmission) return null
+    return when (com.roro.futurevoice.talk.PronunciationResult.grade(w)) {
+        2 -> null
+        1 -> orange()
+        else -> red()
+    }
+}
+
+/** A dotted line under the word, in [color] (SwiftUI `.underline(pattern: .dot)`). */
+private fun Modifier.dottedUnderline(color: Color): Modifier = drawBehind {
+    val y = size.height - 1.dp.toPx()
+    drawLine(color, androidx.compose.ui.geometry.Offset(2.dp.toPx(), y),
+        androidx.compose.ui.geometry.Offset(size.width - 2.dp.toPx(), y),
+        strokeWidth = 1.5.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round,
+        pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(
+            floatArrayOf(0.01f, 3.dp.toPx())))
+}
+
+/** This take's low sounds ("θ 48 · l 55"), or its low words where the
+ *  locale names no sounds; null when nothing stood out. */
+internal fun pronunciationLine(a: com.roro.futurevoice.talk.PronunciationResult): String? {
+    if (a.namedPhonemes.isNotEmpty()) {
+        val by = LinkedHashMap<String, MutableList<Int>>()
+        for (p in a.namedPhonemes) by.getOrPut(p.phoneme) { mutableListOf() }.add(p.accuracy ?: 100)
+        val low = by.mapNotNull { (p, v) -> val mean = v.sum() / v.size; if (mean < 60) p to mean else null }
+            .sortedWith(compareBy<Pair<String, Int>>({ it.second }, { it.first }))
+        val parts = low.take(4).map { "${it.first} ${it.second}" }
+        return if (parts.isEmpty()) null else parts.joinToString(" · ")
+    }
+    val parts = a.weakWords.take(4).map { "${it.word} ${it.accuracy ?: 0}" }
+    return if (parts.isEmpty()) null else parts.joinToString(" · ")
+}
+
+/**
+ * One line under the diff: the measured pronunciation score and the sounds
+ * (or words) that let it down. Only when the take was assessed — a take the
+ * server could not score shows nothing here, because the words-only score
+ * above is still complete.
+ */
+@Composable
+private fun PronunciationSection(a: com.roro.futurevoice.talk.PronunciationResult) {
+    val secondary = MaterialTheme.colorScheme.onSurfaceVariant
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Icon(Icons.Filled.GraphicEq, null, Modifier.size(14.dp), tint = secondary)
+            Text(stringResource(R.string.pronunciation), style = MaterialTheme.typography.labelMedium,
+                color = secondary)
+            Spacer(Modifier.weight(1f))
+            a.prosody?.let { p ->
+                Text(stringResource(R.string.intonation_lld, p), style = MaterialTheme.typography.labelSmall,
+                    color = secondary.copy(alpha = 0.6f))
+            }
+            Text("${a.soundScore}", style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold, color = scoreColor(a.soundScore))
+        }
+        // The sounds first (en-US names them), the words otherwise.
+        pronunciationLine(a)?.let { line ->
+            Text(line, style = MaterialTheme.typography.bodySmall, color = secondary,
+                maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
     }
 }

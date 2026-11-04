@@ -470,7 +470,7 @@ fun SayItAgainScreen(
      *  attempt on file; everything else is counted as a rep and its
      *  recording dropped rather than left under a name nothing references. */
     suspend fun score(step: SayItAgainScript.Step, file: File) {
-        val read = ShadowTranscriber.read(file, language)
+        val read = ShadowTranscriber.read(file, language, referenceText = step.text, context = context)
         // A retry cancels the task it replaced, but the read it was inside
         // finishes anyway — its verdict must not land on the NEW take.
         if (!currentCoroutineContextActive()) { file.delete(); return }
@@ -496,6 +496,7 @@ fun SayItAgainScreen(
             recordingFilename = file.absolutePath,
             matchScore = analysis.score,
             rhythmScore = null,
+            assessment = read.pronunciation,
         ), language)
     }
 

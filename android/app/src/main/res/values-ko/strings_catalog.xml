@@ -1294,6 +1294,7 @@
     <string name="interview">"면접"</string>
     <string name="interview_chip_about_yourself_why_this_job">"면접 칩 · 자기소개, 지원 동기"</string>
     <string name="interviews_the_field_i_m_applying_to">"면접, 지원하는 업계 이야기"</string>
+    <string name="intonation_lld">"억양 %d"</string>
     <string name="introduce_someone_worth_knowing">"알아둘 만한 사람 소개"</string>
     <string name="introducing_yourself">"자기소개하기"</string>
     <string name="introduction">"소개"</string>
@@ -3703,6 +3704,7 @@
     <string name="work">"일"</string>
     <string name="work_chip_meetings_presentations_client_calls">"업무 칩 · 회의, 발표, 고객 통화"</string>
     <string name="work_meetings">"회사 회의"</string>
+    <string name="work_on">"연습할 것: %s"</string>
     <string name="work_stories">"회사 이야기"</string>
     <!-- 'Work, study, or your main project — what a typical day looks like' -->
     <string name="work_study_or_your_main_project_what_a_typical_day_looks_lik_e1886c">"일, 공부, 하고 있는 프로젝트 — 보통 하루가 어떤지"</string>

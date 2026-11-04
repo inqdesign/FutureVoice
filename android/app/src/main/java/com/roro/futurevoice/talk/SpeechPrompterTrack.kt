@@ -123,6 +123,23 @@ class SpeechPrompterTrack(script: String, language: String) {
         return rate / maxOf(0.5, unitsPerWord)
     }
 
+    /**
+     * Whether the display word at [index] closes a sentence — its last
+     * letter-or-punctuation is a sentence end (a closing quote or bracket
+     * after it is skipped). The speech take cuts its pieces here, so each
+     * piece's reference is whole sentences of the script (iOS 14706881).
+     */
+    fun endsSentence(index: Int): Boolean {
+        if (index !in words.indices) return false
+        val trailing = setOf('"', '\'', '”', '’', ')', ']', '」', '』', '»')
+        val enders = setOf('.', '!', '?', '。', '！', '？', '…')
+        for (ch in words[index].text.reversed()) {
+            if (ch in trailing) continue
+            return ch in enders
+        }
+        return false
+    }
+
     companion object {
         private val breakers = setOf('、', '。', '！', '？', '，', ',', '.', '!', '?')
 

@@ -6727,6 +6727,52 @@
         }
       }
     },
+    "intonation %lld" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Intonation %lld"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "entonación %lld"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "intonation %lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "イントネーション %lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "억양 %lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "语调 %lld"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "語調 %lld"
+          }
+        }
+      }
+    },
     "It goes with the app" : {
       "localizations" : {
         "de" : {
@@ -7097,6 +7143,7 @@
         }
       }
     },
+    "Keeps coming out low: %@" : {},
     "Kept in your own Google Drive, it waits on any phone or tablet you sign into, your voice recording too, so your voice comes back without recording again." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7512,6 +7559,7 @@
         }
       }
     },
+    "Measured per sound over %lld recent takes." : {},
     "Mexican" : {
       "localizations" : {
         "de" : {
@@ -8111,6 +8159,7 @@
         }
       }
     },
+    "No sound stood out" : {},
     "Only Core members can see this." : {
       "localizations" : {
         "ko" : {
@@ -8525,6 +8574,7 @@
         }
       }
     },
+    "Sounds to work on: %@" : {},
     "Taken from the talk time above" : {
       "localizations" : {
         "de" : {
@@ -9257,6 +9307,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "流利的你，已經在做什麼了？"
+          }
+        }
+      }
+    },
+    "Work on: %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Üben: %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Para practicar: %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À travailler : %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "練習ポイント: %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "연습할 것: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "多练：%@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "多練：%@"
           }
         }
       }

@@ -548,8 +548,9 @@ fun WeeklyTestScreen(
         withContext(Dispatchers.IO) { runCatching { recorder.stop() } }
         val file = recordingFile
         speakPhase = SpeakPhase.READING
-        val heard = if (file == null) "" else
-            ShadowTranscriber.read(file, test.targetLanguage).text.trim()
+        val reading = if (file == null) null else
+            ShadowTranscriber.read(file, test.targetLanguage, referenceText = item.answer, context = context)
+        val heard = reading?.text?.trim().orEmpty()
         if (heard.isEmpty()) {
             withContext(Dispatchers.IO) { file?.delete() }
             recordingFile = null
@@ -567,6 +568,7 @@ fun WeeklyTestScreen(
             ShadowAttemptStore.shared(context).add(ShadowAttempt(
                 turnId = turnId, targetText = item.answer, learnerTranscript = heard,
                 recordingFilename = file.absolutePath, matchScore = score, rhythmScore = null,
+                assessment = reading?.pronunciation,
             ), test.targetLanguage)
         } else withContext(Dispatchers.IO) { file?.delete() }
         com.roro.futurevoice.data.PracticeLog.record(context,

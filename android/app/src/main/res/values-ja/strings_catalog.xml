@@ -1294,6 +1294,7 @@
     <string name="interview">"面接"</string>
     <string name="interview_chip_about_yourself_why_this_job">"面接チップ・自己紹介、志望動機"</string>
     <string name="interviews_the_field_i_m_applying_to">"面接、応募する業界の話"</string>
+    <string name="intonation_lld">"イントネーション %d"</string>
     <string name="introduce_someone_worth_knowing">"知っておきたい人を紹介"</string>
     <string name="introducing_yourself">"自己紹介する"</string>
     <string name="introduction">"紹介"</string>
@@ -3703,6 +3704,7 @@
     <string name="work">"仕事"</string>
     <string name="work_chip_meetings_presentations_client_calls">"仕事チップ・会議、プレゼン、お客さまとの電話"</string>
     <string name="work_meetings">"仕事の会議"</string>
+    <string name="work_on">"練習ポイント: %s"</string>
     <string name="work_stories">"仕事の話"</string>
     <!-- 'Work, study, or your main project — what a typical day looks like' -->
     <string name="work_study_or_your_main_project_what_a_typical_day_looks_lik_e1886c">"仕事、勉強、いま取り組んでいること。普通の一日がどんな感じか"</string>

@@ -293,6 +293,26 @@ object ShadowScore {
         }
     }
 
+    /**
+     * The measured assessment for the coach, or "n/a" (iOS
+     * `renderPronunciationForPrompt`, 0971c05d). Score and parts, then each
+     * faulted word with its weakest sounds — the model is told to name those
+     * and nothing it did not measure.
+     */
+    fun renderPronunciationForPrompt(p: PronunciationResult?): String {
+        if (p == null) return "n/a"
+        val parts = mutableListOf("overall ${p.score}", "accuracy ${p.accuracy}", "fluency ${p.fluency}")
+        p.prosody?.let { parts += "prosody $it" }
+        val weak = p.weakWords.take(6).map { w ->
+            val sounds = w.weakPhonemes.take(3).map { "${it.phoneme} ${it.accuracy ?: 0}" }
+            val tag = if (w.error == "None" || w.error == "Mispronunciation") "" else " ${w.error}"
+            "[${w.word} ${w.accuracy ?: 0}$tag${if (sounds.isEmpty()) "" else ": " + sounds.joinToString(", ")}]"
+        }
+        val monotone = if (p.words.any { it.error == "Monotone" }) " Monotone" else ""
+        return parts.joinToString(" · ") + monotone +
+            (if (weak.isEmpty()) " — every word scored well" else " — low words: " + weak.joinToString(" "))
+    }
+
     /** `[= the] [~ today/to-day] [- is] [+ uh]`. */
     fun renderDiffForPrompt(steps: List<DiffStep>): String = steps.joinToString(" ") { s ->
         when (s.op) {

@@ -45,15 +45,24 @@ object WeekRecapCoach {
             user += previous.grammar.joinToString("\n") { "- grammar: ${it.rule}" }
             user += "\n" + previous.upgrades.joinToString("\n") { "- upgrade: ${it.instead} → ${it.better}" }
         }
+        // What the sounds measured (iOS 14706881): the month's takes as the
+        // ledger reads them, so the plan can name a sound that STAYS low.
+        // Absent when under three takes were assessed — both prompts are then
+        // byte-identical to before.
+        var system = systemPrompt(targetLanguage, nativeLanguage, evidence.level)
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            com.roro.futurevoice.data.PronunciationProfile.current(context, targetLanguage, recap.end).promptLine
+        }?.let {
+            user += "\n\n# PRONUNCIATION (measured per sound against a native model, 0–100, over the month's takes — not from the talks)\n$it"
+            system += "\n\n" + PRONUNCIATION_NOTE
+        }
         // Streamed only for the stream's longer read timeout: three nested
         // arrays on the app's longest evidence prompt can sit silent past the
         // buffered client's 40 s (iOS gives this call 60 s).
         val response = GeminiClient(AuthRepository()).sendJsonStreamAccumulating(
             // The trial report reads the free minutes, not a week; the
             // weekly prompt is unchanged when this is off.
-            system = systemPrompt(targetLanguage, nativeLanguage, evidence.level).let {
-                if (firstTalks) it + "\n\n" + FIRST_TALKS_NOTE else it
-            },
+            system = if (firstTalks) system + "\n\n" + FIRST_TALKS_NOTE else system,
             messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER, user)),
             serializer = Payload.serializer(),
             // gen-3 thinks out of the same ceiling — a truncation loses it all.
@@ -74,6 +83,16 @@ object WeekRecapCoach {
         "\"this week\", \"last week\" or \"next week\" (or their translation) in any " +
         "field. The headline names what these first talks showed; the plan is " +
         "2-3 things for their next talks."
+
+    /** Appended to the system prompt only when a PRONUNCIATION section
+     *  rides in the evidence (iOS `pronunciationNote`). */
+    val PRONUNCIATION_NOTE = "PRONUNCIATION: the evidence carries a measured section. If it names a " +
+        "weak sound (an IPA symbol) or a word low in several takes, ONE item " +
+        "of \"plan\" may be about it — name the sound or word exactly as given, " +
+        "in a sentence a learner can act on (which word to practise it in, " +
+        "what the mouth does). Never name a sound or word the section does " +
+        "not list, and never judge pronunciation from the transcripts: a " +
+        "transcript cannot hear it."
 
     fun systemPrompt(targetLanguage: String, nativeLanguage: String, level: String): String {
         val targetName = LanguageCatalog.englishName(targetLanguage)

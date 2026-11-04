@@ -974,9 +974,10 @@ private fun MasteredBanner(onArchive: () -> Unit) {
  * coach's one-line verdict, then the axes — each a number, a bar and a line
  * saying what the number means.
  *
- * Pronunciation is drawn only when the analyzer produced it. It never does on
- * Android today, and an axis row reading "—" forever is a promise the app
- * can't keep.
+ * Pronunciation is the one axis a talk cannot judge from its transcript: it
+ * is read at display time from the learner's recent assessed takes (the
+ * phoneme assessment, averaged over the last month — `PronunciationRead`),
+ * never stored on the talk (iOS `ScorecardView.pronunciationRow`).
  */
 @Composable
 internal fun ScoreBlock(
@@ -1014,14 +1015,39 @@ internal fun ScoreBlock(
             AxisRow(card.expressiveness, stringResource(R.string.expressiveness),
                 Icons.Filled.FormatQuote)
             AxisRow(card.fluency, stringResource(R.string.fluency_pace), Icons.Filled.Speed)
-            card.pronunciation?.let {
-                AxisRow(it, stringResource(R.string.pronunciation), Icons.Filled.GraphicEq)
-            }
+            PronunciationAxisRow(card.pronunciation)
         }
     }
 }
 
 private const val NO_FLUENCY_READ_NOTE = "Speak a bit more next session for a fluency read."
+
+/** iOS `pronunciationRow`: muted label, the measured score (or "—"), and the
+ *  note — no bar, because most of the time nothing was measured. */
+@Composable
+private fun PronunciationAxisRow(stored: AxisScore?) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val measured = stored ?: remember { com.roro.futurevoice.talk.PronunciationRead.recentAxis(context) }
+    val secondary = MaterialTheme.colorScheme.onSurfaceVariant
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(Icons.Filled.GraphicEq, contentDescription = null, modifier = Modifier.size(18.dp),
+                tint = secondary)
+            Text(stringResource(R.string.pronunciation), style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium, color = secondary)
+            Spacer(Modifier.weight(1f))
+            if (measured != null) {
+                Text("${measured.score}", style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold, color = scoreColor(measured.score))
+            } else {
+                Text("—", style = MaterialTheme.typography.bodyMedium, color = secondary.copy(alpha = 0.6f))
+            }
+        }
+        Text(measured?.note ?: stringResource(R.string.practice_shadow_drills_to_track_this),
+            style = MaterialTheme.typography.bodySmall, color = secondary)
+    }
+}
 
 @Composable
 private fun AxisRow(

@@ -49,6 +49,12 @@ data class ShadowAttempt(
     val fix: String = "",
     @Serializable(with = IsoDateMillisSerializer::class)
     val createdAt: Long = System.currentTimeMillis(),
+    /**
+     * How the take was PRONOUNCED, per phoneme (`PronunciationAssessor`,
+     * iOS 0971c05d). Optional: attempts before it decode, and a take the
+     * server could not assess is still a take. Not part of [overallScore].
+     */
+    val assessment: com.roro.futurevoice.talk.PronunciationResult? = null,
 ) {
     /** A take of PART of the line — never a verdict on the line itself. */
     val isPartial: Boolean get() = phraseFirst != null && phraseLast != null
@@ -95,6 +101,12 @@ class ShadowAttemptStore private constructor(private val context: Context) {
             val all = (read(language) + attempt).takeLast(MAX)
             file(language).writeText(
                 StoreJson.json.encodeToString(ListSerializer(ShadowAttempt.serializer()), all))
+        }
+        // Every assessed take, whatever screen made it (shadow, say it again,
+        // the test), goes into the one ledger the standing is read from
+        // (iOS `AppState.saveShadowAttempt`, 14706881).
+        attempt.assessment?.let {
+            PronunciationLedger.shared(context).record(listOf(it), attempt.id, "shadow", language, attempt.createdAt)
         }
         StoreEvents.bump()
     }

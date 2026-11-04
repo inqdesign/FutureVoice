@@ -38,3 +38,5 @@ gen-level-tag-prompt.py 465331f6
 # + why they are learning: the manual line, the "purposes" button and the
 #   context line (iOS c8b22752).
 gen-tutor-agent-prompts.py c8b22752
+# The coach's measured pronunciation line (renderPronunciationForPrompt, iOS 0971c05d).
+gen-shadow-coach-prompt.py 0971c05d

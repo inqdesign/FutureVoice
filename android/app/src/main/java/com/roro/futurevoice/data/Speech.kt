@@ -87,6 +87,11 @@ data class SpeechMetrics(
     /** `SpeechAnalyzer.SCORING_VERSION` the take was scored by; null = before
      *  2026-10-14, when every part was lenient. */
     val scoring: Int? = null,
+    /** Phoneme-level pronunciation, 0–100 (`PronunciationAssessor`, the
+     *  pieces' sound scores weighted by their words). Its own row; NOT in
+     *  [overall], whose weighting the challenge server re-checks. Null = not
+     *  assessed (iOS 0971c05d). */
+    val pronunciation: Int? = null,
 )
 
 /** The model's notes on a take, in the NATIVE language. */
@@ -107,6 +112,10 @@ data class SpeechTake(
     val transcript: String = "",
     val metrics: SpeechMetrics,
     val coaching: SpeechCoaching? = null,
+    /** The words the phoneme assessment marked (mispronounced or shaky),
+     *  worst first, over the whole take. Null on takes made before it, or
+     *  when the server could not assess the take (iOS 0971c05d). */
+    val pronunciationWords: List<com.roro.futurevoice.talk.PronunciationResult.Word>? = null,
 )
 
 /**

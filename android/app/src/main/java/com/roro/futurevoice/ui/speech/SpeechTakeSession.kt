@@ -9,6 +9,7 @@ import com.roro.futurevoice.data.ActivityEventLog
 import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.data.MicPreference
+import com.roro.futurevoice.data.PronunciationLedger
 import com.roro.futurevoice.data.SpeechScript
 import com.roro.futurevoice.data.SpeechStore
 import com.roro.futurevoice.data.SpeechTake
@@ -16,6 +17,8 @@ import com.roro.futurevoice.data.StoreJson
 import com.roro.futurevoice.net.SpeechCoach
 import com.roro.futurevoice.net.SpeechReader
 import com.roro.futurevoice.talk.SpeechAnalyzer
+import com.roro.futurevoice.talk.PronunciationAssessor
+import com.roro.futurevoice.talk.PronunciationResult
 import com.roro.futurevoice.talk.SpeechPrompterTrack
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -23,6 +26,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -92,8 +97,11 @@ class SpeechTakeSession(
     private var position = 0.0
     private var wav: File? = null
     private var recordingVideo = false
-    private var pieces = mutableListOf<Deferred<String?>>()
+    private var pieces = mutableListOf<Deferred<Piece?>>()
     private var lastChunkAt = 0.0
+    /** The prompter cursor at the last cut: the script from here to the
+     *  cursor at the next cut is that piece's reference ([scriptSpan]). */
+    private var lastCutCursor = 0
     private var follows = 0
     private var partials = 0
     private var liveDropped = false
@@ -182,6 +190,7 @@ class SpeechTakeSession(
         capture = cap
         pieces = mutableListOf()
         lastChunkAt = 0.0
+        lastCutCursor = 0
         recordingVideo = _cameraOn.value && camera.running.value && composer.isPrepared
         if (recordingVideo) composer.begin(context.cacheDir)
         startedAtMs = System.currentTimeMillis()
@@ -242,11 +251,14 @@ class SpeechTakeSession(
         // last sentence was skipped. `voiceActive` already takes both.
         val quietFor = quietSeconds() ?: clock
 
-        // Cut a piece for the reader at a pause, never mid-word.
-        if (clock - lastChunkAt >= CHUNK_SECONDS && quietFor >= 0.35) {
+        // Cut a piece for the reader at a pause, never mid-word — and at a
+        // sentence end while one comes within CHUNK_HARD_SECONDS, so the
+        // piece's reference is whole script sentences (iOS 14706881).
+        if (clock - lastChunkAt >= CHUNK_SECONDS && quietFor >= 0.35 &&
+            (atSentenceEnd() || clock - lastChunkAt >= CHUNK_HARD_SECONDS)) {
             capture?.rotatePiece()?.let { piece ->
                 lastChunkAt = clock
-                pieces += readPiece(piece)
+                pieces += readPiece(piece, scriptSpan(_cursor.value))
             }
         }
         // Held: the reader stopped the text on purpose; nothing ends now.
@@ -295,7 +307,7 @@ class SpeechTakeSession(
         val meterVoiced = cap?.meterVoicedSeconds ?: 0.0
         val tail = cap?.stop()
         val liveText = stopLive()
-        tail?.let { pieces += readPiece(it) }
+        tail?.let { pieces += readPiece(it, scriptSpan(_track.value.words.size)) }
         val reads = pieces.toList()
         pieces = mutableListOf()
         val fromCamera = recordingVideo
@@ -335,10 +347,12 @@ class SpeechTakeSession(
         // scored as skipped words.
         val readStart = System.currentTimeMillis()
         val texts = mutableListOf<String>()
+        var prons = mutableListOf<PronunciationResult>()
         for (p in reads) {
-            val text = p.await()
-            if (text == null) { texts.clear(); break }
-            texts += text
+            val piece = p.await()
+            if (piece == null) { texts.clear(); prons.clear(); break }
+            texts += piece.text
+            piece.pron?.let { prons += it }
         }
         val transcript: String
         val audioGrounded: Boolean
@@ -348,20 +362,41 @@ class SpeechTakeSession(
             transcript = texts.map { it.trim() }.filter { it.isNotEmpty() }.joinToString(joiner)
             audioGrounded = true; path = "pieces"
         } else {
+            // A take longer than one assessment is cut into windows here and
+            // each is read and assessed on its own, BESIDE the whole read, so
+            // the sounds are still heard and the wait is the slower of the two
+            // (iOS 247383e9).
+            val language = script.language
+            val long = if (duration > PronunciationAssessor.MAX_SECONDS)
+                scope.async(Dispatchers.IO) { assessInWindows(audio, language) } else null
             val reading = SpeechReader.read(audio, liveText, script.language)
             transcript = reading.text; audioGrounded = reading.audioGrounded; path = "whole"
+            prons = mutableListOf()
+            if (long != null) {
+                prons = long.await().toMutableList()
+            } else if (reading.audioGrounded) {
+                PronunciationAssessor.assess(context, audio, transcript, script.language, "speech")
+                    .result?.let { prons = mutableListOf(it) }
+            }
         }
         val readMs = System.currentTimeMillis() - readStart
         // The diff is O(script × transcript) — off the main thread.
-        val metrics = withContext(Dispatchers.Default) {
+        val analyzed = withContext(Dispatchers.Default) {
             SpeechAnalyzer.analyze(script.body, transcript, script.language, envelope)
         }
+        // One number for the take: each piece's sound score weighted by how
+        // many words it judged. Its own row on the result, not part of
+        // `overall` (iOS 0971c05d).
+        val pronunciation = pronunciation(prons)
+        val metrics = analyzed.copy(pronunciation = pronunciation?.first)
         val take = SpeechTake(
             id = id, scriptId = script.id, createdAt = System.currentTimeMillis(),
             durationSeconds = duration, audioFilename = audioName, videoFilename = null,
             transcript = transcript, metrics = metrics, coaching = null,
+            pronunciationWords = pronunciation?.second,
         )
         store.save(take)
+        PronunciationLedger.shared(context).record(prons, id, "speech", script.language)
         // A saved take is what a Speech block in the routine asks for.
         ActivityEventLog.record(context, ActivityEventLog.Kind.SPEECH)
         // A challenge's board takes only what the camera recorded; the score
@@ -401,16 +436,91 @@ class SpeechTakeSession(
             "camera" to hasVideo, "follow" to _followVoice.value, "audio_grounded" to audioGrounded,
             "read_path" to path, "cursor_end" to _cursor.value, "words" to _track.value.words.size,
             "follows" to follows, "partials" to partials, "pieces" to reads.size,
+            // How many pieces came back with a phoneme assessment, and the
+            // take's number — the only record of whether the reader answers.
+            "pron_pieces" to prons.size,
+            "pron" to (metrics.pronunciation ?: -1),
             "meter_voiced" to meterVoiced.toInt(),
             "live_dropped" to liveDropped,
             "read_ms" to readMs, "result_ms" to resultMs, "coach_ms" to coachMs,
         ))
     }
 
-    private fun readPiece(file: File): Deferred<String?> {
+    /** Whether the word the reader just finished closes a sentence. */
+    private fun atSentenceEnd(): Boolean {
+        val cursor = _cursor.value
+        return cursor > lastCutCursor && _track.value.endsSentence(cursor - 1)
+    }
+
+    /**
+     * The script the prompter walked since the last cut — this piece's
+     * reference — and moves the mark. Two words of overlap at the start: a
+     * prompter a word AHEAD of the voice would otherwise open the next
+     * piece's audio on words its reference no longer has; a word already said
+     * in the previous piece is an omission here, which the marks ignore.
+     * Empty when the prompter did not move, and the reader's own words stand in.
+     */
+    private fun scriptSpan(upTo: Int): String {
+        val words = _track.value.words
+        val hi = minOf(upTo, words.size)
+        if (hi <= lastCutCursor) return ""
+        val lo = maxOf(0, lastCutCursor - 2)
+        lastCutCursor = hi
+        val joiner = if (LanguageCatalog.writesSpaces(_script.value.language)) " " else ""
+        return words.subList(lo, hi).joinToString(joiner) { it.text }
+    }
+
+    /**
+     * One piece of the take: its words, and how they were pronounced. The
+     * script sentences the prompter walked are the reference — what the
+     * learner was READING, judged for how it sounded; the two readers run
+     * side by side. Without one (the prompter never moved) the read-back is
+     * the reference and the assessment waits for it. Either way the result
+     * never waits on this piece: it runs while the next is still spoken.
+     */
+    private fun readPiece(file: File, reference: String): Deferred<Piece?> {
         val language = _script.value.language
         return scope.async(Dispatchers.IO) {
-            try { SpeechReader.readPiece(file, language) } finally { file.delete() }
+            try {
+                if (reference.isNotEmpty()) {
+                    coroutineScope {
+                        val read = async { SpeechReader.readPiece(file, language) }
+                        val pron = async { PronunciationAssessor.assess(context, file, reference, language, "speech") }
+                        val text = read.await()
+                        if (text == null) { pron.await(); null } else Piece(text, pron.await().result)
+                    }
+                } else {
+                    val text = SpeechReader.readPiece(file, language) ?: return@async null
+                    val trimmed = text.trim()
+                    if (trimmed.isEmpty()) Piece(text, null)
+                    else Piece(text, PronunciationAssessor.assess(context, file, trimmed, language, "speech").result)
+                }
+            } finally { file.delete() }
+        }
+    }
+
+    /**
+     * A long take's pronunciation when it was read as one file: windows of
+     * ~20 s ([PronunciationAssessor.windows]), each read for its own words and
+     * assessed, all at once. A window that can't be read or assessed is left
+     * out (iOS 247383e9).
+     */
+    private suspend fun assessInWindows(audio: File, language: String): List<PronunciationResult> {
+        if (!PronunciationAssessor.supports(language)) return emptyList()
+        val wav = withContext(Dispatchers.IO) { PronunciationAssessor.wav16kMono(audio) } ?: return emptyList()
+        val windows = PronunciationAssessor.windows(wav)
+        return coroutineScope {
+            windows.map { piece ->
+                async(Dispatchers.IO) {
+                    val tmp = File(context.cacheDir, "pron-${java.util.UUID.randomUUID()}.wav")
+                    if (runCatching { tmp.writeBytes(piece) }.isFailure) return@async null
+                    try {
+                        val text = SpeechReader.readPiece(tmp, language)
+                        if (text.isNullOrEmpty()) null
+                        else PronunciationAssessor.assess(context, piece, text, language, "speech").result
+                    } finally { tmp.delete() }
+                }
+            }.awaitAll().filterNotNull()
         }
     }
 
@@ -487,9 +597,29 @@ class SpeechTakeSession(
         _phase.value = Phase.Recording
     }
 
+    /** One piece of the take: its words and how they were pronounced
+     *  (null when the piece held no speech or the server did not answer). */
+    data class Piece(val text: String, val pron: PronunciationResult?)
+
     companion object {
         private const val CAMERA_KEY = "speech.cameraOn"
         private const val SPEED_KEY = "speech.speed"
         const val CHUNK_SECONDS = 12.0
+        /** A piece is cut at a SENTENCE END once it is CHUNK_SECONDS long, and
+         *  at the next pause whatever the word once it is this long (the
+         *  assessment endpoint takes ≤30 s). */
+        const val CHUNK_HARD_SECONDS = 22.0
+
+        /** The take's pronunciation from its pieces: the SOUND score weighted
+         *  by each piece's judged words, and every faulted word, worst first
+         *  (at most 12). Null when no piece was assessed. */
+        fun pronunciation(pieces: List<PronunciationResult>): Pair<Int, List<PronunciationResult.Word>>? {
+            val weighted = pieces.map { it.soundScore to maxOf(1, it.judgedWords.size) }
+            val total = weighted.sumOf { it.second }
+            if (total <= 0) return null
+            val score = weighted.sumOf { it.first * it.second } / total
+            val weak = pieces.flatMap { it.weakWords }.sortedBy { it.accuracy ?: 0 }
+            return score to weak.take(12)
+        }
     }
 }

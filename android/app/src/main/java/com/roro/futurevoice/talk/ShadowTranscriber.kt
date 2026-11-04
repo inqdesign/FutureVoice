@@ -1,12 +1,15 @@
 package com.roro.futurevoice.talk
 
+import android.content.Context
 import android.util.Base64
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.net.GeminiClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
 import java.io.File
 import java.io.RandomAccessFile
@@ -39,7 +42,21 @@ object ShadowTranscriber {
     /** What produced the words, for the telemetry row. */
     enum class Source { AUDIO_GROUNDED, FAILED }
 
-    data class Read(val text: String, val source: Source, val ms: Long)
+    data class Read(
+        val text: String,
+        val source: Source,
+        val ms: Long,
+        /** How the take was PRONOUNCED, per phoneme ([PronunciationAssessor]),
+         *  when a reference line was given and the server answered in time.
+         *  Null leaves the take scored by words alone (iOS 0971c05d). */
+        val pronunciation: PronunciationResult? = null,
+        val pronunciationOutcome: PronunciationAssessor.Outcome = PronunciationAssessor.Outcome.SKIPPED,
+    )
+
+    /** How long the phoneme assessment may still take once the words are in.
+     *  Azure answers a short take in ~1–2 s; this covers jitter. */
+    private const val PRONUNCIATION_GRACE_MS = 5_000L
+    private const val PRONUNCIATION_REQUEST_TIMEOUT_MS = 15_000L
 
     /** A take is one short sentence; past this the file is not a take. */
     private const val MAX_BYTES = 3_000_000
@@ -57,7 +74,17 @@ object ShadowTranscriber {
      * playback keeps the original — the take is theirs, the levelling is for
      * the machine.
      */
-    suspend fun read(wav: File, targetLanguage: String): Read = withContext(Dispatchers.IO) {
+    suspend fun read(
+        wav: File,
+        targetLanguage: String,
+        /** The line the learner was reading, for the phoneme assessment —
+         *  SCRIPTED by design, so it needs the line. It never touches the
+         *  words the take is scored on (those still come from the blind
+         *  reader), so handing it the target cannot inflate the match.
+         *  Null = no assessment. */
+        referenceText: String? = null,
+        context: Context? = null,
+    ): Read = withContext(Dispatchers.IO) {
         val started = System.currentTimeMillis()
         fun elapsed() = System.currentTimeMillis() - started
         val bytes = runCatching { levelled(wav) }.getOrNull()
@@ -65,6 +92,13 @@ object ShadowTranscriber {
         if (bytes.isEmpty() || bytes.size > MAX_BYTES) {
             return@withContext Read("", Source.FAILED, elapsed())
         }
+        // The phoneme assessment reads the SAME levelled bytes, beside the
+        // reader. Its own job so it can be abandoned: an upgrade, never
+        // something the score waits long for.
+        val pronunciationJob = if (referenceText != null && context != null) async {
+            PronunciationAssessor.assess(context, bytes, referenceText, targetLanguage,
+                surface = "shadow", timeoutMs = PRONUNCIATION_REQUEST_TIMEOUT_MS)
+        } else null
         val text = runCatching {
             withTimeout(TIMEOUT_MS) {
                 GeminiClient(AuthRepository()).sendJson(
@@ -86,8 +120,19 @@ object ShadowTranscriber {
         }.getOrElse { e ->
             if (e is TimeoutCancellationException) "" else ""
         }
-        if (text.isEmpty()) Read("", Source.FAILED, elapsed())
-        else Read(text, Source.AUDIO_GROUNDED, elapsed())
+        val ms = elapsed()
+        // The assessment has had the whole read so far; it gets a little
+        // more, then the take is scored without it.
+        var pronunciation: PronunciationResult? = null
+        var outcome = PronunciationAssessor.Outcome.SKIPPED
+        if (pronunciationJob != null) {
+            val answer = withTimeoutOrNull(PRONUNCIATION_GRACE_MS) { pronunciationJob.await() }
+            if (answer == null) pronunciationJob.cancel()
+            pronunciation = answer?.result
+            outcome = answer?.outcome ?: PronunciationAssessor.Outcome.FAILED
+        }
+        if (text.isEmpty()) Read("", Source.FAILED, ms, pronunciation, outcome)
+        else Read(text, Source.AUDIO_GROUNDED, ms, pronunciation, outcome)
     }
 
     /**

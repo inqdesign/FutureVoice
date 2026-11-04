@@ -190,6 +190,16 @@ internal fun SpeechResultScreen(takeId: String, live: SpeechTake?, onBack: () ->
             FormSection(stringResource(R.string.measured)) {
                 MetricRow(stringResource(R.string.accuracy), Icons.Filled.FactCheck, "${m.accuracy}%", null, m.accuracy)
                 FormDivider(inset = 52.dp)
+                // Measured per phoneme; its own row, not in the overall (the
+                // board's weighting is checked server-side). What stood out:
+                // this take's low SOUNDS (English), or a word low here that is
+                // low across recent takes — a word low once is not said
+                // (iOS 0971c05d, 14706881).
+                m.pronunciation?.let { pron ->
+                    val detail = remember(take.id, pron) { pronunciationDetail(context, take, script.language) }
+                    MetricRow(stringResource(R.string.pronunciation), Icons.Filled.GraphicEq, "$pron", detail, pron)
+                    FormDivider(inset = 52.dp)
+                }
                 MetricRow(stringResource(R.string.pace), Icons.Filled.Speed, rateLabel(m.rate, script.language),
                     stringResource(R.string.comfortable_lld_lld, m.rateLow, m.rateHigh),
                     // Outside the band is never shown as good, however close.
@@ -275,6 +285,17 @@ private fun ScoreRing(score: Int) {
         }
         Text("$score", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
     }
+}
+
+private fun pronunciationDetail(context: android.content.Context, take: SpeechTake, language: String): String {
+    com.roro.futurevoice.data.PronunciationLedger.shared(context).entry(take.id, language)?.let { entry ->
+        return com.roro.futurevoice.data.PronunciationProfile.current(context, language).noteLine(context, entry)
+            ?: context.getString(R.string.no_sound_stood_out)
+    }
+    // A take from before the ledger: its own marked words.
+    val weak = take.pronunciationWords.orEmpty().filter { it.isJudged }.take(3).map { it.word }
+    return if (weak.isEmpty()) context.getString(R.string.no_sound_stood_out)
+    else context.getString(R.string.work_on, weak.joinToString(" · "))
 }
 
 @Composable
