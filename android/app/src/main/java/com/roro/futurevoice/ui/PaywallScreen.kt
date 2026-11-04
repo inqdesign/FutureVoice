@@ -116,8 +116,7 @@ private val SavingsGreen = Color(0xFF34C759)
  * one line per plan (iOS `PaywallView`, 2026-10-02, founder: "make it easy to
  * compare"). The card layout it replaced spent half of every card on rows that
  * were identical on all of them, and three cards needed two screens to
- * compare. Each row carries its minutes, its scenes on a line of their own,
- * the price and the price PER MINUTE — the one number that says what a bigger
+ * compare. Each row carries its minutes, the price and the price PER MINUTE — the one number that says what a bigger
  * plan buys. What every plan shares is said once, under the ladder.
  *
  * The tiers are DATA: whatever `subscription_plans` sells (an inactive row is
@@ -810,7 +809,6 @@ private fun PlansStep(
                     pendingFrom = account?.pendingPlan
                         ?.takeIf { currentPlanId != null && it.planId == "${t}_$period" }
                         ?.let { account.renewalLabel(locale) },
-                    scenesCostTalk = account?.scenesCostTalk == true,
                     onSelect = { onTier(t) },
                 )
             }
@@ -842,7 +840,7 @@ private fun PlansStep(
 
 
 /**
- * One line of the ladder: name and minutes, scenes, the per-day cue, the
+ * One line of the ladder: name and minutes, the per-day cue, the
  * price and the price per minute. The selection is the whole row, lit — an
  * accent edge and a tinted fill that ease in and out (iOS slides one shape
  * between rows; the UI rules allow subtle motion only).
@@ -858,9 +856,6 @@ private fun LadderRow(
     /** The renewal date when this row is the plan the store switches to
      *  then — badged "From <date>" in place of a pitch. */
     pendingFrom: String? = null,
-    /** Scenes are paid for out of the minutes (since 2026-10-19), so the row
-     *  says nothing about them; only a viewer still on the count sees one. */
-    scenesCostTalk: Boolean = false,
     onSelect: () -> Unit,
 ) {
     val accent = MaterialTheme.colorScheme.primary
@@ -871,7 +866,6 @@ private fun LadderRow(
     val monthlyOnly = plan == null && period == "annual"
     val shown = plan ?: plans.firstOrNull { it.tier == tier && it.period == "monthly" }
     val minutes = ((shown?.monthly_seconds ?: 0L) / 60).toInt()
-    val scenes = (shown?.monthly_scenes ?: 0L).toInt()
     val on = selected && !monthlyOnly
     val price = shown?.let { prices[it.id] }
     val fill by androidx.compose.animation.animateColorAsState(
@@ -928,16 +922,15 @@ private fun LadderRow(
             }
             // A SIZE CUE, never a rule: the pool has no daily limit. It reads
             // the minutes it sits under, so it comes right after them (iOS
-            // 964bae15); scenes and Speech follow as what the plan includes.
+            // 964bae15).
             if (minutes / 30 > 0 && shown?.talk_unlimited != true) {
                 Text(stringResource(R.string.about_lld_min_a_day, minutes / 30),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            if (!scenesCostTalk && scenes > 0) {
-                Text(stringResource(R.string.paywall_plus_scenes, scenes),
-                    style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-            }
+            // No scene count on a plan row, for anyone (iOS, 2026-11-04,
+            // founder): a scene is paid for out of these minutes, and a
+            // catalog count here read as a feature of the plan.
         }
         Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
             when {
