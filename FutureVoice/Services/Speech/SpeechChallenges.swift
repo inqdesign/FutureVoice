@@ -42,6 +42,8 @@ final class SpeechChallenges: ObservableObject {
         /// ("ko", "en", "zh-Hant", …). It is coaching, so it is read in the
         /// learner's language, then English. nil from older servers.
         var intro: [String: String]? = nil
+        /// The original (a video of the speech), opened outside the app.
+        var link: URL? = nil
         /// Set once the challenge is retired: the board is frozen, nobody can
         /// enter, and it is listed under past challenges.
         var retiredAt: Date? = nil
@@ -152,6 +154,7 @@ final class SpeechChallenges: ObservableObject {
         let attempts: Int?
         let category: String?
         let intro: [String: String]?
+        let link: String?
     }
 
     func refresh(language: String) async {
@@ -184,7 +187,8 @@ final class SpeechChallenges: ObservableObject {
             (row.id, Standing(entrants: row.entrants ?? 0, topScore: row.top_score,
                               myBest: row.my_best, myRank: row.my_rank,
                               myAttempts: row.my_attempts, topThree: row.top_three, attempts: row.attempts,
-                              category: row.category, intro: row.intro, retiredAt: row.retired_at))
+                              category: row.category, intro: row.intro,
+                              link: row.link.flatMap { URL(string: $0) }, retiredAt: row.retired_at))
         })
         writeCache(language)
     }

@@ -364,6 +364,14 @@ struct SpeechChallengeView: View {
                         .foregroundStyle(.primary)
                         .lineLimit(2)
                 }
+                // The original, to watch before reading it (founder, 2026-11-04).
+                if let link = standing?.link {
+                    Link(destination: link) {
+                        Label("Watch the original", systemImage: "play.rectangle")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .padding(.bottom, 4)
+                }
                 HStack(spacing: 6) {
                     Text(SpeechFormat.length(SpeechLibrary.estimatedSeconds(script.body, language: script.language)))
                     Text("·")
