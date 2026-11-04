@@ -349,7 +349,16 @@ struct SpeechChallengeView: View {
     private var actionBar: some View {
         VStack(alignment: .leading, spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
-                if !script.summary.isEmpty {
+                // What the challenge is and what to keep in mind ("you're
+                // the show host…"), in the app's language (founder,
+                // 2026-11-04). The script's own summary stands in without one.
+                if let intro = SpeechChallenges.intro(standing, native: LanguageCatalog.currentNative) {
+                    Text(intro)
+                        .font(.subheadline)
+                        .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.bottom, 4)
+                } else if !script.summary.isEmpty {
                     Text(script.summary)
                         .font(.subheadline)
                         .foregroundStyle(.primary)

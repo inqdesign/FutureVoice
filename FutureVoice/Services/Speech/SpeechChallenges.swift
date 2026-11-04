@@ -38,9 +38,20 @@ final class SpeechChallenges: ObservableObject {
         /// What kind of challenge it is ("show_host", "famous_speech", …),
         /// a key the card names in the learner's language. nil on older ones.
         var category: String? = nil
+        /// What the challenge is and what to keep in mind, per APP language
+        /// ("ko", "en", "zh-Hant", …). It is coaching, so it is read in the
+        /// learner's language, then English. nil from older servers.
+        var intro: [String: String]? = nil
         /// Set once the challenge is retired: the board is frozen, nobody can
         /// enter, and it is listed under past challenges.
         var retiredAt: Date? = nil
+    }
+
+    static func intro(_ standing: Standing?, native: String) -> String? {
+        guard let intro = standing?.intro else { return nil }
+        let text = intro[native] ?? intro[String(native.prefix(2))] ?? intro["en"]
+        guard let text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        return text
     }
 
     struct BoardRow: Decodable, Hashable, Identifiable {
@@ -140,6 +151,7 @@ final class SpeechChallenges: ObservableObject {
         let top_three: [Face]?
         let attempts: Int?
         let category: String?
+        let intro: [String: String]?
     }
 
     func refresh(language: String) async {
@@ -172,7 +184,7 @@ final class SpeechChallenges: ObservableObject {
             (row.id, Standing(entrants: row.entrants ?? 0, topScore: row.top_score,
                               myBest: row.my_best, myRank: row.my_rank,
                               myAttempts: row.my_attempts, topThree: row.top_three, attempts: row.attempts,
-                              category: row.category, retiredAt: row.retired_at))
+                              category: row.category, intro: row.intro, retiredAt: row.retired_at))
         })
         writeCache(language)
     }

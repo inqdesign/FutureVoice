@@ -14,3 +14,6 @@ written for nawana.
 The show-host series (07-12) is what the founder wants more of: be the
 host selling one thing live. A famous speech goes up only in its REAL words.
 11, 13 and 14 are the skincare set. One challenge goes up at a time, never a batch (founder, 2026-10-30).
+
+Every challenge carries an INTRO in all eight app languages (what it is,
+what to keep in mind: "you are the show host…"), set with `intro` jsonb.
