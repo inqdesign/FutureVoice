@@ -459,6 +459,17 @@ struct ConversationHome: View {
     /// The column's three tabs, each the page the phone opens from its row.
     @ViewBuilder
     private var sideColumnPane: some View {
+        VStack(spacing: 0) {
+            TalkSideTabPicker()
+            sideColumnPage
+        }
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .environment(\.inTalkSideColumn, true)
+        .environmentObject(appState)
+    }
+
+    @ViewBuilder
+    private var sideColumnPage: some View {
         Group {
             switch sideColumn.tab {
             case .podcast:
@@ -466,13 +477,11 @@ struct ConversationHome: View {
                     // A call holds the audio; nothing plays over it.
                     .disabled(callLaunch != nil)
             case .topics:
-                NavigationStack { topicsDestination.talkSideTabBar(true) }
+                NavigationStack { topicsDestination }
             case .tutor:
                 TutorChatView()
             }
         }
-        .environment(\.inTalkSideColumn, true)
-        .environmentObject(appState)
     }
 
     /// The note or the chat sheet, asked for while the column is up: the

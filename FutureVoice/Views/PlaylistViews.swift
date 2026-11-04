@@ -194,7 +194,6 @@ struct ScenePlayerSheet: View {
                 }
                 #endif
             }
-            .talkSideTabBar(inColumn)
             .navigationDestination(isPresented: $showingList) {
                 // Bindings, not values: a destination already on screen is not
                 // rebuilt when the sheet's state changes, and the episodes
@@ -317,8 +316,6 @@ private struct PlayerLibrary: View {
             }
         }
         .navigationTitle(Text("Listen"))
-        // A tab of the Mac's Talk column opens here; the tabs stay in reach.
-        .talkSideTabBar(inColumn)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $reading) { episode in
             SpeechScriptSheet(script: episode.script,

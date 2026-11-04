@@ -392,7 +392,9 @@ struct TutorChatView: View {
                     if on { withAnimation { proxy.scrollTo("thinking", anchor: .bottom) } }
                 }
             }
-            .background(Color(.systemBackground).ignoresSafeArea())
+            // In the Mac's Talk column it wears the column's grouped ground,
+            // like the player and the topics beside it.
+            .background((inColumn ? Color(.systemGroupedBackground) : Color(.systemBackground)).ignoresSafeArea())
             .navigationTitle(Text("Personal tutor"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -419,7 +421,6 @@ struct TutorChatView: View {
             // The call's own bottom bar (`fadingBottomBar`): the messages
             // dissolve under the chips and the box instead of being cut.
             .fadingBottomBar { composer }
-            .talkSideTabBar(inColumn)
         }
         .sheet(item: $bot.reading) { r in
             TutorReadingSheet(reading: r).environmentObject(appState)

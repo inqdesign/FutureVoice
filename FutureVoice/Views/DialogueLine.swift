@@ -47,6 +47,10 @@ struct DialogueLine<Content: View, Accessory: View>: View {
     @ViewBuilder var accessory: () -> Accessory
 
     @AppStorage("futureselfTheme") private var storedTheme = FutureselfTheme.blue.rawValue
+    /// The Mac's Talk column is a grouped ground, where the plain neutral
+    /// fill is the ground's own colour: there the other side's bubble takes
+    /// the grouped card colour instead.
+    @Environment(\.inTalkSideColumn) private var onGroupedGround
 
     /// Mono is the one palette whose accent is INK rather than a hue, so the
     /// usual 18%-accent wash landed as a barely-there gray: the learner's own
@@ -62,7 +66,8 @@ struct DialogueLine<Content: View, Accessory: View>: View {
     private var bubbleFill: Color {
         if isMonoUser { return Color(.label) }
         return speaker.isUser ? Color.themeAccent.opacity(0.18)
-                              : Color(.secondarySystemBackground)
+                              : onGroupedGround ? Color(.secondarySystemGroupedBackground)
+                                                : Color(.secondarySystemBackground)
     }
 
     /// Only forced on the solid mono bubble; elsewhere the default cascade

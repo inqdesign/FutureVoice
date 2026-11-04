@@ -3521,9 +3521,11 @@ sync container carry over. `./scripts/mac-run.sh` builds and opens it.
   alone opened beside Talk from 2026-10-30). From `reviewSplitMinWidth` the
   phone's bottom row (the player, "Find a topic", the tutor's face) is gone
   and its three pages are the TABS of a 400 pt column on the right:
-  Podcast · Topics · Tutor (`TalkSideColumn.swift`, a segmented picker in
-  each page's bar through `\.inTalkSideColumn` + `talkSideTabBar`, which
-  also hides the page's own close/Done; the tab is remembered). The
+  Tutor · Podcast · Topics (`TalkSideColumn.swift`; one row of Progress's
+  chips on top of the column, the tutor first, the tab remembered). The
+  column is a grouped ground: `\.inTalkSideColumn` hides each page's own
+  close/Done, gives the tutor chat that ground, and gives `DialogueLine`'s
+  other-side bubble the grouped card fill so it doesn't vanish. The
   tutor's daily note and anything that opens the chat bring the Tutor tab
   forward instead (the chat opens on today's plan); a bubble still shows
   on the left page, not while the Tutor tab is up; the quiz cover moves to

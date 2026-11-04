@@ -13,7 +13,7 @@ final class TalkSideColumn: ObservableObject {
     static let shared = TalkSideColumn()
 
     enum Tab: String, CaseIterable, Identifiable {
-        case podcast, topics, tutor
+        case tutor, podcast, topics
         var id: String { rawValue }
     }
 
@@ -24,7 +24,7 @@ final class TalkSideColumn: ObservableObject {
     private static let key = "mac.talkSideTab"
 
     private init() {
-        tab = Tab(rawValue: UserDefaults.standard.string(forKey: Self.key) ?? "") ?? .topics
+        tab = Tab(rawValue: UserDefaults.standard.string(forKey: Self.key) ?? "") ?? .tutor
     }
 }
 
@@ -33,40 +33,42 @@ private struct InTalkSideColumnKey: EnvironmentKey {
 }
 
 extension EnvironmentValues {
-    /// True for a page drawn as a tab of the Talk column: it wears the tab
-    /// switcher in its bar and has no close button (the column stays).
+    /// True for a page drawn as a tab of the Talk column: it has no close
+    /// button (the column stays) and wears the column's grouped background.
     var inTalkSideColumn: Bool {
         get { self[InTalkSideColumnKey.self] }
         set { self[InTalkSideColumnKey.self] = newValue }
     }
 }
 
-/// The column's tabs, in the bar of whichever page is showing — in the
-/// order the phone's bottom row has them.
+/// The column's tabs, one row on top of the column — Progress's chips
+/// (the active one filled with the label colour), the tutor first
+/// (founder, 2026-11-04). Each page keeps its own bar under it.
 struct TalkSideTabPicker: View {
     @ObservedObject private var column = TalkSideColumn.shared
 
     var body: some View {
-        Picker(selection: $column.tab) {
-            Text("Podcast").tag(TalkSideColumn.Tab.podcast)
-            Text("Topics").tag(TalkSideColumn.Tab.topics)
-            Text("Tutor").tag(TalkSideColumn.Tab.tutor)
-        } label: {
-            EmptyView()
+        HStack(spacing: 8) {
+            chip(.tutor, "Tutor")
+            chip(.podcast, "Podcast")
+            chip(.topics, "Topics")
+            Spacer(minLength: 0)
         }
-        .pickerStyle(.segmented)
-        .labelsHidden()
-        .fixedSize()
+        .padding(.horizontal, 18)
+        .padding(.top, 10)
+        .padding(.bottom, 6)
     }
-}
 
-extension View {
-    /// The tab switcher in this page's bar, when the page is a column tab.
-    func talkSideTabBar(_ inColumn: Bool) -> some View {
-        toolbar {
-            if inColumn {
-                ToolbarItem(placement: .principal) { TalkSideTabPicker() }
-            }
+    private func chip(_ tab: TalkSideColumn.Tab, _ title: LocalizedStringKey) -> some View {
+        let on = column.tab == tab
+        return Button { column.tab = tab } label: {
+            Text(title)
+                .font(.body.weight(.medium))
+                .padding(.horizontal, 16).padding(.vertical, 9)
+                .background(Capsule().fill(on ? Color(.label) : Color(.secondarySystemGroupedBackground)))
+                .foregroundStyle(on ? Color(.systemBackground) : Color.primary)
         }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(on ? .isSelected : [])
     }
 }
