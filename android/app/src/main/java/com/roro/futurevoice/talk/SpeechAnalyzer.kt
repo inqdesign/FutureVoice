@@ -35,7 +35,11 @@ object SpeechAnalyzer {
         val speakingSeconds: Double get() = maxOf(0.0, lastVoice - firstVoice)
     }
 
-    fun analyze(script: String, transcript: String, language: String, envelope: Envelope?): SpeechMetrics {
+    /** `pronunciation` is the take's sound score (`PronunciationAssessor`), null
+     *  when nothing assessed it — the take is then scored by the rules before
+     *  sounds were measured (iOS 2026-11-04). */
+    fun analyze(script: String, transcript: String, language: String, envelope: Envelope?,
+                pronunciation: Int? = null): SpeechMetrics {
         val fillerCount = countFillers(transcript, script, language)
         val spoken = removingFillers(transcript, language, script)
 
@@ -69,26 +73,35 @@ object SpeechAnalyzer {
         val steadiness = steadinessScore(envelope?.phrases.orEmpty())
 
         val coverage = coverage(diff.steps)
-        val overall = overall(accuracy, paceScore, pauseScore, fillerScore, steadiness, coverage)
+        val overall = overall(accuracy, paceScore, pauseScore, fillerScore, steadiness, coverage, pronunciation)
 
         return SpeechMetrics(
             accuracy = accuracy, rate = rate, rateLow = band.first, rateHigh = band.last,
             paceScore = paceScore, pausesAtBreaks = pausesAtBreaks, breaks = breaks,
             hesitations = hesitations, pauseScore = pauseScore, fillers = fillerCount,
             fillerScore = fillerScore, steadiness = steadiness, missed = missed, overall = overall,
-            coverage = coverage, scoring = SCORING_VERSION,
+            coverage = coverage,
+            scoring = if (pronunciation == null) SCORING_WITHOUT_PRONUNCIATION else SCORING_VERSION,
+            pronunciation = pronunciation,
         )
     }
 
     /**
-     * The one weighting (2026-10-14, iOS `SpeechAnalyzer.overall`): accuracy
-     * 40%, and the delivery half scaled by how far into the script the reader
-     * got. Coverage 1 is the old weighting exactly; the server accepts
-     * anything from the accuracy part alone up to that full weighting.
+     * The weighting (iOS `SpeechAnalyzer.overall`, 2026-11-04): with a
+     * pronunciation score, accuracy 30%, pronunciation 25, pace 15, pauses 10,
+     * fillers 10, steadiness 10 — everything but accuracy scaled by how far
+     * into the script the reader got. Without one, the 2026-10-14 weighting:
+     * accuracy 40%, pace 20, pauses 15, fillers 10, steadiness 15. The server
+     * checks both.
      */
-    fun overall(accuracy: Int, pace: Int, pause: Int, filler: Int, steadiness: Int, coverage: Double): Int {
-        val delivery = 0.20 * pace + 0.15 * pause + 0.10 * filler + 0.15 * steadiness
-        return clamp((0.40 * accuracy + coverage * delivery).roundToInt())
+    fun overall(accuracy: Int, pace: Int, pause: Int, filler: Int, steadiness: Int, coverage: Double,
+                pronunciation: Int? = null): Int {
+        if (pronunciation == null) {
+            val delivery = 0.20 * pace + 0.15 * pause + 0.10 * filler + 0.15 * steadiness
+            return clamp((0.40 * accuracy + coverage * delivery).roundToInt())
+        }
+        val said = 0.25 * pronunciation + 0.15 * pace + 0.10 * pause + 0.10 * filler + 0.10 * steadiness
+        return clamp((0.30 * accuracy + coverage * said).roundToInt())
     }
 
     /**
@@ -116,9 +129,11 @@ object SpeechAnalyzer {
         return (reached + 1).toDouble() / total
     }
 
-    /** Which rules a take was scored by (iOS `scoringVersion`); an older
-     *  take never goes onto a board. */
-    const val SCORING_VERSION = 2
+    /** Which rules a take was scored by (iOS `scoringVersion`): 3 = with
+     *  pronunciation in `overall`; a take older than 2 never goes onto a board. */
+    const val SCORING_VERSION = 3
+    /** The 2026-10-14 rules, which a take with no pronunciation is still scored by. */
+    const val SCORING_WITHOUT_PRONUNCIATION = 2
 
     /** The plain share of the script said as written, 0–100. */
     fun accuracy(diff: ShadowScore.Analysis): Int = clamp((diff.ratio * 100).roundToInt())

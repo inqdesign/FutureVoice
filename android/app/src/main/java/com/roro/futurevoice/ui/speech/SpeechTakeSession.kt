@@ -381,14 +381,13 @@ class SpeechTakeSession(
         }
         val readMs = System.currentTimeMillis() - readStart
         // The diff is O(script × transcript) — off the main thread.
-        val analyzed = withContext(Dispatchers.Default) {
-            SpeechAnalyzer.analyze(script.body, transcript, script.language, envelope)
-        }
-        // One number for the take: each piece's sound score weighted by how
-        // many words it judged. Its own row on the result, not part of
-        // `overall` (iOS 0971c05d).
+        // One number for the take's sounds: each piece's sound score weighted
+        // by how many words it judged. Its own row on the result, and a
+        // quarter of `overall` (iOS 2026-11-04).
         val pronunciation = pronunciation(prons)
-        val metrics = analyzed.copy(pronunciation = pronunciation?.first)
+        val metrics = withContext(Dispatchers.Default) {
+            SpeechAnalyzer.analyze(script.body, transcript, script.language, envelope, pronunciation?.first)
+        }
         val take = SpeechTake(
             id = id, scriptId = script.id, createdAt = System.currentTimeMillis(),
             durationSeconds = duration, audioFilename = audioName, videoFilename = null,

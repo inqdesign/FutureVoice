@@ -85,12 +85,14 @@ data class SpeechMetrics(
      *  `overall` are scaled by it. Null on takes made before 2026-10-14. */
     val coverage: Double? = null,
     /** `SpeechAnalyzer.SCORING_VERSION` the take was scored by; null = before
-     *  2026-10-14, when every part was lenient. */
+     *  2026-10-14, when every part was lenient; 2 = no pronunciation in
+     *  `overall`; 3 = with it. */
     val scoring: Int? = null,
     /** Phoneme-level pronunciation, 0–100 (`PronunciationAssessor`, the
-     *  pieces' sound scores weighted by their words). Its own row; NOT in
-     *  [overall], whose weighting the challenge server re-checks. Null = not
-     *  assessed (iOS 0971c05d). */
+     *  pieces' sound scores weighted by their words). Its own row, and a
+     *  quarter of [overall] since 2026-11-04 (`scoring` 3), whose weighting
+     *  the challenge server re-checks. Null = not assessed; [overall] then
+     *  uses the weighting without it. */
     val pronunciation: Int? = null,
 )
 

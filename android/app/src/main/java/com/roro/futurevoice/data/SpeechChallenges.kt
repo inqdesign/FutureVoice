@@ -261,7 +261,7 @@ class SpeechChallenges private constructor(private val context: Context) {
                 val onBoard = _standings.value[challengeId]?.myBest ?: -1
                 val candidates = store.takes(script.id)
                     .filter { it.videoFilename != null && it.metrics.overall > onBoard &&
-                        (it.metrics.scoring ?: 1) >= com.roro.futurevoice.talk.SpeechAnalyzer.SCORING_VERSION }
+                        (it.metrics.scoring ?: 1) >= com.roro.futurevoice.talk.SpeechAnalyzer.SCORING_WITHOUT_PRONUNCIATION }
                     .sortedByDescending { it.metrics.overall }
                 // Re-scored with today's weighting (iOS): only the number sent
                 // changes, the take on the phone stays as it was.
@@ -276,7 +276,7 @@ class SpeechChallenges private constructor(private val context: Context) {
                     val m = take.metrics
                     val overall = com.roro.futurevoice.talk.SpeechAnalyzer.overall(m.accuracy, m.paceScore,
                         m.pauseScore, m.fillerScore, m.steadiness,
-                        com.roro.futurevoice.talk.SpeechAnalyzer.coverage(diff.steps))
+                        com.roro.futurevoice.talk.SpeechAnalyzer.coverage(diff.steps), m.pronunciation)
                     if (overall >= BOARD_BAR && overall > onBoard && overall > (best?.second ?: -1)) best = take to overall
                 }
                 best?.let { (take, overall) ->
@@ -335,6 +335,9 @@ class SpeechChallenges private constructor(private val context: Context) {
                 put("p_pause", m.pauseScore)
                 put("p_filler", m.fillerScore)
                 put("p_steadiness", m.steadiness)
+                // Always sent, null when not assessed: the call names the
+                // eleven-argument function (iOS 2026-11-04).
+                put("p_pronunciation", m.pronunciation)
                 put("p_seconds", maxOf(1, take.durationSeconds.roundToInt()))
             })
             val row = Edge.json.decodeFromString(ListSerializer(SubmitRow.serializer()), raw).firstOrNull()
