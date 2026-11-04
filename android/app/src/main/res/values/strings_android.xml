@@ -567,4 +567,7 @@
     <string name="coming_soon" translatable="false">Coming soon</string>
     <string name="paywall_unlimited_every_plan">Unlimited on every plan</string>
     <string name="watch_the_original">Watch the original</string>
+    <string name="speech_category_in_flight">In-flight announcement</string>
+    <string name="speech_category_podcast">Podcast</string>
+    <string name="speech_category_short_talk">Short talk</string>
 </resources>

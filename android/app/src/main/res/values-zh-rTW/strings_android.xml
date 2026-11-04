@@ -542,4 +542,7 @@
     </plurals>
     <string name="paywall_unlimited_every_plan">所有方案不限次數</string>
     <string name="watch_the_original">觀看原始影片</string>
+    <string name="speech_category_in_flight">機上廣播</string>
+    <string name="speech_category_podcast">Podcast</string>
+    <string name="speech_category_short_talk">短篇演講</string>
 </resources>

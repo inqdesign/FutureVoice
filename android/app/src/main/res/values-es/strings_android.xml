@@ -562,4 +562,7 @@
     </plurals>
     <string name="paywall_unlimited_every_plan">Sin límite en todos los planes</string>
     <string name="watch_the_original">Ver el original</string>
+    <string name="speech_category_in_flight">Anuncio a bordo</string>
+    <string name="speech_category_podcast">Pódcast</string>
+    <string name="speech_category_short_talk">Charla breve</string>
 </resources>

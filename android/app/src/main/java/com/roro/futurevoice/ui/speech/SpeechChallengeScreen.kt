@@ -849,6 +849,9 @@ private fun challengeCategoryLabel(key: String?): String? = when (key) {
     "movie_scene" -> stringResource(R.string.speech_category_movie_scene)
     "acceptance" -> stringResource(R.string.speech_category_acceptance)
     "product_launch" -> stringResource(R.string.speech_category_product_launch)
+    "in_flight" -> stringResource(R.string.speech_category_in_flight)
+    "podcast" -> stringResource(R.string.speech_category_podcast)
+    "short_talk" -> stringResource(R.string.speech_category_short_talk)
     else -> null
 }
 

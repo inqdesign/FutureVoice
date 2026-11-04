@@ -535,4 +535,7 @@
     </plurals>
     <string name="paywall_unlimited_every_plan">In jedem Tarif unbegrenzt</string>
     <string name="watch_the_original">Original ansehen</string>
+    <string name="speech_category_in_flight">Bordansage</string>
+    <string name="speech_category_podcast">Podcast</string>
+    <string name="speech_category_short_talk">Kurzvortrag</string>
 </resources>
