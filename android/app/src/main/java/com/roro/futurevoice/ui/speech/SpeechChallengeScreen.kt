@@ -385,7 +385,7 @@ internal fun SpeechChallengeScreen(
         // floating over the board so it shows through as it scrolls under
         // (iOS 2026-10-17, glass).
         if (script != null) {
-            ChallengeActionBar(script, isPast = isPast, hasBest = standing?.myBest != null,
+            ChallengeActionBar(script, intro = standing?.introFor(appLanguageCode()), isPast = isPast, hasBest = standing?.myBest != null,
                 takeCount = takeCount,
                 onTakes = { showingTakes = true },
                 onRead = { showingScript = true }, onStart = { start() },
@@ -439,7 +439,7 @@ internal fun SpeechChallengeScreen(
  *  keeps the takes and Read the script. iOS draws it in Liquid Glass; here a
  *  translucent card, so the board still shows through as it scrolls under. */
 @Composable
-private fun ChallengeActionBar(script: SpeechScript, isPast: Boolean, hasBest: Boolean,
+private fun ChallengeActionBar(script: SpeechScript, intro: String?, isPast: Boolean, hasBest: Boolean,
                                takeCount: Int, onTakes: () -> Unit,
                                onRead: () -> Unit, onStart: () -> Unit,
                                modifier: Modifier = Modifier) {
@@ -455,7 +455,11 @@ private fun ChallengeActionBar(script: SpeechScript, isPast: Boolean, hasBest: B
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            if (script.summary.isNotEmpty()) {
+            // What the challenge is and what to keep in mind (iOS actionBar, 2026-11-04).
+            if (intro != null) {
+                Text(intro, style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 4.dp))
+            } else if (script.summary.isNotEmpty()) {
                 Text(script.summary, style = MaterialTheme.typography.bodyMedium,
                     maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
@@ -832,4 +836,12 @@ private fun challengeCategoryLabel(key: String?): String? = when (key) {
     "acceptance" -> stringResource(R.string.speech_category_acceptance)
     "product_launch" -> stringResource(R.string.speech_category_product_launch)
     else -> null
+}
+
+/** The app language as the intro map keys it ("ko", "zh-Hant", "zh-Hans", …). */
+@Composable
+private fun appLanguageCode(): String {
+    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
+    if (locale.language != "zh") return locale.language
+    return if (locale.script == "Hant" || locale.country in setOf("TW", "HK", "MO")) "zh-Hant" else "zh-Hans"
 }
