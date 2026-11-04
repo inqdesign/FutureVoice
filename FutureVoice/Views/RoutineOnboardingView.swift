@@ -146,7 +146,9 @@ struct RoutineOnboardingView: View {
             .opacity(fade ? 0 : 1)
             .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { ownFrame = $0 }
             .allowsHitTesting(shrink == 0)
+            .onDisappear { StudyPlanStore.shared.buildingOnboardingRoutine = false }
             .onAppear {
+                StudyPlanStore.shared.buildingOnboardingRoutine = true
                 // A beat for the grid to be seen on its own first.
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     withAnimation(.easeOut(duration: 0.3)) { sheetUp = true }

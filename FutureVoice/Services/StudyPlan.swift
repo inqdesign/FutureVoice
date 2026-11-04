@@ -653,6 +653,13 @@ struct StudyPlan: Codable, Equatable {
 final class StudyPlanStore: ObservableObject {
     static let shared = StudyPlanStore()
 
+    /// True while onboarding's routine builder is on screen. What it writes
+    /// stays a SEED (`StudyPlan.later`): a second device that lands in the
+    /// builder must never replace the routine the learner kept on another
+    /// one (2026-11-04, founder: connecting the Mac wiped the phone's
+    /// routine). A hand edit after onboarding is a real edit again.
+    var buildingOnboardingRoutine = false
+
     @Published private(set) var plan: StudyPlan
 
     private let url: URL
@@ -721,7 +728,7 @@ final class StudyPlanStore: ObservableObject {
         // shadowing blocks are shadowing.
         var new = new
         new.shadowIsOwn = true
-        new.isSeed = nil
+        new.isSeed = buildingOnboardingRoutine ? true : nil
         new.editedAt = Date()
         new = new.foldingIntoReview()
         if new.blocks.isEmpty {
@@ -775,7 +782,7 @@ final class StudyPlanStore: ObservableObject {
         var new = plan
         new.adoptCallTimes(times, defaultMinutes: Self.goalMinutes)
         guard new != plan else { return }
-        new.isSeed = nil
+        new.isSeed = buildingOnboardingRoutine ? true : nil
         new.editedAt = Date()
         plan = new
         write(new)

@@ -98,6 +98,15 @@ struct SyncContinuePromptView: View {
         if PersonaStore.shared.exists() {
             // Setup asked for exactly what just arrived.
             appState.setupComplete = true
+            // And this account was onboarded on its other device: the
+            // routine came down with everything else, so the routine
+            // builder (and the "stays on your phone" page before it) must
+            // not open over it. It did, on the founder's Mac, and whatever
+            // was tapped there replaced the phone's routine (2026-11-04).
+            let defaults = UserDefaults.standard
+            defaults.set(true, forKey: "futurevoice.dailyCall.onboarded")
+            defaults.set(true, forKey: "futurevoice.weeklyRhythm.onboarded")
+            defaults.set(true, forKey: "futurevoice.localData.onboarded")
         }
         finish()
     }
