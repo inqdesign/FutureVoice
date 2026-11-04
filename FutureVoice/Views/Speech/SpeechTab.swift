@@ -27,12 +27,6 @@ struct SpeechTab: View {
     @State private var choosingKind = false
 
     private var canWrite: Bool { gate.account?.canWriteSpeechScripts ?? false }
-    static let challengesOnTab = 10
-    /// The inset-grouped list's side margin, where its cards start.
-    static let listMargin: CGFloat = 16
-    static let challengeSpacing: CGFloat = 10
-    /// How much of the third card shows at the right edge.
-    static let challengePeek: CGFloat = 20
 
     private var ownScripts: [SpeechScript] {
         store.scripts.filter { challenges.script(id: $0.id) == nil }
@@ -50,27 +44,18 @@ struct SpeechTab: View {
         }
     }
 
-    /// The list's width and its header's: half the difference is how far
-    /// the header sits in from each edge, so the challenge row can bleed
-    /// back out to both. WIDTHS, never a position: a push, a pop and a
-    /// swipe back all slide the list, and every position read (global or
-    /// the list's own space, measured the same) moved with it — the cards
-    /// shrank 173 → 141 pt and came back small on a swipe back.
-    @State private var listWidth: CGFloat = 0
-    @State private var headerWidth: CGFloat = 0
-    private var challengeBleed: CGFloat {
-        listWidth > headerWidth && headerWidth > 0 ? (listWidth - headerWidth) / 2 : 32
-    }
+    /// Challenges and the learner's own scripts are two tabs, each a grid
+    /// of cards two across (founder, 2026-11-04). A sideways row of
+    /// challenges above a list of scripts came before.
+    enum Page: String { case challenges, mine }
+    @AppStorage("speech.page") private var page: Page = .challenges
+    private let columns = [GridItem(.flexible(), spacing: 12, alignment: .top),
+                           GridItem(.flexible(), spacing: 12, alignment: .top)]
 
-    /// One row that scrolls sideways (2026-10-17, founder: three stacked
-    /// cards took most of the screen). Two cards across and the third cut at
-    /// the screen's edge, so it reads as a row that scrolls; the row runs to
-    /// both screen edges rather than stopping at the list's margins.
-    private var challengeRow: some View {
-        let bleed = challengeBleed
-        return ScrollView(.horizontal, showsIndicators: false) {
-            HStack(alignment: .top, spacing: Self.challengeSpacing) {
-                ForEach(challenges.live.prefix(Self.challengesOnTab)) { script in
+    private var challengesPage: some View {
+        LazyVStack(alignment: .leading, spacing: 14) {
+            LazyVGrid(columns: columns, spacing: 12) {
+                ForEach(challenges.live) { script in
                     NavigationLink {
                         SpeechChallengeView(script: script)
                             .environmentObject(appState)
@@ -79,33 +64,86 @@ struct SpeechTab: View {
                             .frame(maxHeight: .infinity, alignment: .top)
                     }
                     .buttonStyle(.plain)
-                    .containerRelativeFrame(.horizontal) { width, _ in
-                        // `width` is already inside BOTH content margins, but
-                        // the trailing one is where the third card peeks, so
-                        // it is given back: screen = leading margin + two
-                        // cards + two gaps + the peek. Leaving it out showed
-                        // ~60 pt of the third card instead of the peek.
-                        (width + Self.listMargin - 2 * Self.challengeSpacing - Self.challengePeek) / 2
+                }
+            }
+            Text("Everyone reads the same script. Your best take goes on the board.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 4)
+            if !challenges.past.isEmpty {
+                NavigationLink {
+                    SpeechChallengeListView()
+                        .environmentObject(appState)
+                } label: {
+                    HStack {
+                        Text("Past challenges")
+                        Spacer()
+                        Text(verbatim: "\(challenges.past.count)").monospacedDigit()
+                            .foregroundStyle(.secondary)
+                        Image(systemName: "chevron.right")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(16)
+                    .background(RoundedRectangle(cornerRadius: 14).fill(Color(.secondarySystemGroupedBackground)))
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private var minePage: some View {
+        LazyVStack(alignment: .leading, spacing: 14) {
+            // A script that is also a challenge (the bundled sample is the
+            // first one) lives on the other tab, so for most learners this
+            // starts empty and says what goes here.
+            if ownScripts.isEmpty {
+                SpeechScriptsEmptyState(onWrite: { startNew(.write) },
+                                        onOwn: { startNew(.own) })
+                    .padding(16)
+                    .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemGroupedBackground)))
+            } else {
+                LazyVGrid(columns: columns, spacing: 12) {
+                    ForEach(ownScripts) { script in
+                        Button {
+                            practicing = script
+                        } label: {
+                            SpeechScriptCard(script: script, best: store.best(for: script.id))
+                                .frame(maxHeight: .infinity, alignment: .top)
+                        }
+                        .buttonStyle(.plain)
+                        // A card has no swipe: its actions are a long press
+                        // on the phone and a right-click on the Mac.
+                        .contextMenu {
+                            if script.genre == .own {
+                                Button { editing = script } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                            }
+                            if gate.account?.unlimited == true, !script.isBuiltIn {
+                                Button { publishing = script } label: {
+                                    Label("Publish as challenge", systemImage: "trophy")
+                                }
+                            }
+                            if !script.isBuiltIn {
+                                Button(role: .destructive) {
+                                    store.deleteScript(id: script.id)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                        }
                     }
                 }
             }
-            .scrollTargetLayout()
-        }
-        // The first card lines up with the list's own cards below.
-        .contentMargins(.horizontal, Self.listMargin, for: .scrollContent)
-        .scrollTargetBehavior(.viewAligned)
-        .macCarousel()
-        .padding(.horizontal, -bleed)
-        .background {
-            // The header's own slot, before the bleed (padding is applied
-            // inside this background's frame).
-            Color.clear.onGeometryChange(for: CGFloat.self) { $0.size.width } action: {
-                headerWidth = $0
+            if !canWrite {
+                Text("Write scripts on any topic, or add your own, with a plan.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 4)
             }
         }
-        .padding(.top, 4)
-        // A header greys its content; the cards are not header text.
-        .foregroundStyle(Color.primary)
     }
 
     /// The push's challenge, once the list holds it. A list loaded for this
@@ -123,93 +161,22 @@ struct SpeechTab: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                if !challenges.scripts.isEmpty {
-                    Section {
-                    } header: {
-                        // The newest ten on the tab; everything else, past
-                        // ones included, one tap away from the title. The
-                        // cards live in the HEADER (2026-10-17): a List row
-                        // is masked to the section's margins, so a row that
-                        // should run to both screen edges was cut short.
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Text("Challenges")
-                                Spacer()
-                                if challenges.live.count > Self.challengesOnTab || !challenges.past.isEmpty {
-                                    NavigationLink {
-                                        SpeechChallengeListView()
-                                            .environmentObject(appState)
-                                    } label: {
-                                        HStack(spacing: 4) {
-                                            Text("All challenges")
-                                            Text(verbatim: "\(challenges.scripts.count)").monospacedDigit()
-                                        }
-                                        .font(.subheadline)
-                                    }
-                                    .textCase(nil)
-                                }
-                            }
-                            challengeRow
-                        }
-                        .textCase(nil)
-                    } footer: {
-                        Text("Everyone reads the same script. Your best take goes on the board.")
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Picker("Speech", selection: $page) {
+                        Text("Challenges").tag(Page.challenges)
+                        Text("My scripts").tag(Page.mine)
+                    }
+                    .pickerStyle(.segmented)
+                    switch page {
+                    case .challenges: challengesPage
+                    case .mine: minePage
                     }
                 }
-
-                Section {
-                    // A script that is also a challenge (the bundled sample
-                    // is the first one) is listed once, up there — so for
-                    // most learners this section is THEIR scripts, and it
-                    // starts empty. Empty, it says what goes here and offers
-                    // both ways to make one, rather than a bare header.
-                    if ownScripts.isEmpty {
-                        SpeechScriptsEmptyState(onWrite: { startNew(.write) },
-                                                onOwn: { startNew(.own) })
-                    }
-                    ForEach(ownScripts) { script in
-                        Button {
-                            practicing = script
-                        } label: {
-                            SpeechScriptRow(script: script, best: store.best(for: script.id))
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .rowActions(leading: {
-                            // Admin accounts put one of their own scripts on
-                            // every learner's tab as a challenge.
-                            if gate.account?.unlimited == true, !script.isBuiltIn {
-                                Button { publishing = script } label: {
-                                    Label("Publish as challenge", systemImage: "trophy")
-                                }
-                                .tint(.orange)
-                            }
-                        }, trailing: {
-                            if !script.isBuiltIn {
-                                Button(role: .destructive) {
-                                    store.deleteScript(id: script.id)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                            }
-                            if script.genre == .own {
-                                Button { editing = script } label: {
-                                    Label("Edit", systemImage: "pencil")
-                                }
-                                .tint(Color.themeAccent)
-                            }
-                        })
-                    }
-                } header: {
-                    Text("My scripts")
-                } footer: {
-                    if !canWrite {
-                        Text("Write scripts on any topic, or add your own, with a plan.")
-                    }
-                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 24)
             }
-            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { listWidth = $0 }
+            .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("Speech")
             .navigationDestination(item: $linkedChallenge) { script in
                 SpeechChallengeView(script: script)
@@ -400,6 +367,50 @@ struct SpeechScriptRow: View {
             }
         }
         .padding(.vertical, 2)
+    }
+}
+
+/// One of the learner's own scripts as a card, the challenge card's anatomy:
+/// the genre in a tinted disc, the best score top-right, the title, and one
+/// quiet line at the foot.
+struct SpeechScriptCard: View {
+    let script: SpeechScript
+    let best: Int?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top) {
+                BookIconDisc {
+                    Image(systemName: script.genre.symbol).font(.title3).foregroundStyle(.tint)
+                }
+                Spacer()
+                if let best {
+                    Text("\(best)")
+                        .font(.headline.monospacedDigit())
+                        .foregroundStyle(SpeechScoreColor.color(best))
+                }
+            }
+            Text(script.title)
+                .font(.headline)
+                .foregroundStyle(.primary)
+                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 14)
+            Spacer(minLength: 16)
+            HStack(spacing: 6) {
+                Text(SpeechFormat.length(SpeechLibrary.estimatedSeconds(script.body, language: script.language)))
+                Text("·")
+                if script.isBuiltIn { Text("Sample") } else { Text(verbatim: script.genre.title) }
+            }
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, minHeight: 170, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemGroupedBackground)))
+        .contentShape(Rectangle())
     }
 }
 
