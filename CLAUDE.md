@@ -1364,6 +1364,14 @@ has its own board. A learner's own scripts stay private and have no board.
   (`importLocalBests`) — its transcript is re-scored against today's script
   and must agree with its stored accuracy, so a take of an older text under
   the same id never goes up.
+- **One overall board per language** (2026-11-05, founder,
+  `speech_overall_board`): each learner's BEST score per challenge, added
+  up, past challenges included and old-scoring entries as they stand, so
+  two 100s on one challenge are one 100 and the way up is taking more
+  challenges. A banner at the top of the Challenges page draws 2 · 1 · 3
+  large (`SpeechOverallBanner`), a tap opens the top 50 + your own row;
+  drawn only from 5 people (`overallMinEntrants`). The total is not a
+  0–100 score, so it never takes the score colours.
 - **Publishing is the admin flag** (`user_credits.unlimited`): a leading swipe
   on one of your own scripts → "Publish as challenge"; the board's ⋯ has
   "Retire challenge". Free for everyone to take, like the bundled script.
