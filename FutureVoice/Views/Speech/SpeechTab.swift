@@ -569,22 +569,18 @@ struct SpeechScriptSheet: View {
 
                 // A tutor reading (news, a goal's) is read-only but still
                 // heard in the learner's own voice.
+                // A tutor reading's Speech sits beside Play and Shadow; its
+                // own row only when there is no voiceover section to join.
                 if !shipped || studyHere {
-                    ScriptVoiceoverSection(script: script, player: voiceoverPlayer)
+                    ScriptVoiceoverSection(script: script, player: voiceoverPlayer,
+                                           onSpeech: canPractice ? { startPractice() } : nil)
                 }
 
-                if canPractice {
+                if canPractice, appState.voiceCloneId == nil || (shipped && !studyHere) {
                     Section {
-                        Button {
-                            if !SpeechStore.shared.scripts.contains(where: { $0.id == script.id }) {
-                                SpeechStore.shared.add(script)
-                            }
-                            practicing = true
-                        } label: {
-                            Label("Say it out loud", systemImage: "music.mic")
+                        Button { startPractice() } label: {
+                            Label("Speech", systemImage: "music.mic")
                         }
-                    } footer: {
-                        Text("Under the prompter, with a score. It's kept in My scripts.")
                     }
                 }
 
@@ -655,6 +651,14 @@ struct SpeechScriptSheet: View {
             }
             .onDisappear { voiceoverPlayer.stop() }
         }
+    }
+
+    /// Files the reading under My scripts (where its takes live), then the prompter.
+    private func startPractice() {
+        if !SpeechStore.shared.scripts.contains(where: { $0.id == script.id }) {
+            SpeechStore.shared.add(script)
+        }
+        practicing = true
     }
 
     private var studyTaskId: String { "\(studying)|\(script.body.hashValue)" }

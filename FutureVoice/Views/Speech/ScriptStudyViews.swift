@@ -355,6 +355,9 @@ struct ScriptVoiceoverSection: View {
     @ObservedObject private var gate = BillingGate.shared
     /// Owned by the sheet, so scrolling this row away doesn't stop it.
     @ObservedObject var player: AudioPlayer
+    /// Say it under the prompter (a tutor reading): a third button in the
+    /// same row, so the sheet has one place for everything done with it.
+    var onSpeech: (() -> Void)? = nil
     @State private var wall: TalkWall?
     @State private var error: String?
     @State private var shadowing: ScriptVoiceoverStore.Stored?
@@ -415,7 +418,7 @@ struct ScriptVoiceoverSection: View {
                 Button {
                     togglePlay(stored)
                 } label: {
-                    Label(player.isPlaying ? "Pause" : "Play in my voice",
+                    Label(player.isPlaying ? "Pause" : "Play",
                           systemImage: player.isPlaying ? "pause.fill" : "play.fill")
                         .frame(maxWidth: .infinity)
                 }
@@ -427,10 +430,11 @@ struct ScriptVoiceoverSection: View {
                     player.stop()
                     shadowing = stored
                 } label: {
-                    Label("Shadow it", systemImage: "waveform")
+                    Label("Shadow", systemImage: "waveform")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
+                speechButton
             }
             .buttonRowFitsOneLine()
             .controlSize(.large)
@@ -441,19 +445,39 @@ struct ScriptVoiceoverSection: View {
                 Spacer()
                 Text("\(done)/\(total)").monospacedDigit().foregroundStyle(.secondary)
             }
+            if onSpeech != nil {
+                speechButton.controlSize(.large)
+            }
         } else {
             // The minutes are in the line above; on the button beside the
             // title they read as the recording's length.
+            HStack(spacing: 10) {
+                Button {
+                    start(voiceId)
+                } label: {
+                    Label("Make it in my voice", systemImage: "person.wave.2")
+                        .frame(maxWidth: .infinity)
+                }
+                .accentProminent()
+                .labelStyle(.titleAndIcon)
+                .disabled(quote > ScriptVoiceover.maxMinutes)
+                speechButton
+            }
+            .buttonRowFitsOneLine()
+            .controlSize(.large)
+        }
+    }
+
+    @ViewBuilder private var speechButton: some View {
+        if let onSpeech {
             Button {
-                start(voiceId)
+                player.stop()
+                onSpeech()
             } label: {
-                Label("Make it in my voice", systemImage: "person.wave.2")
+                Label("Speech", systemImage: "music.mic")
                     .frame(maxWidth: .infinity)
             }
-            .accentProminent()
-            .labelStyle(.titleAndIcon)
-            .controlSize(.large)
-            .disabled(quote > ScriptVoiceover.maxMinutes)
+            .buttonStyle(.bordered)
         }
     }
 
