@@ -25,6 +25,14 @@ protocol SyncKindHandler {
 
 extension SyncKindHandler {
     func cascade(deletedKey: String, lang: String?, previous: Data?) -> [SyncCascade] { [] }
+
+    /// A remote payload in the bytes THIS device would read back for the
+    /// same value. Used on Google Drive, where the Android app writes the
+    /// same values in other bytes (`85.0` for `85`, `"sceneReps":0`, an
+    /// empty `learnedNotes`): without it every such item looked edited here
+    /// after the write and went back up, and the two devices echoed each
+    /// other forever. Identity by default and on anything that won't decode.
+    func normalize(_ payload: Data) -> Data { payload }
 }
 
 struct SyncItem {
@@ -191,6 +199,12 @@ struct ArrayKind<T: Codable & Identifiable>: SyncKindHandler where T.ID == UUID 
 
     func merge(local: SyncSide?, remote: SyncSide) -> Data? { mergeRule(local, remote) }
 
+    func normalize(_ payload: Data) -> Data {
+        guard let item = try? SyncCanonical.decode(T.self, from: payload),
+              let data = try? SyncCanonical.encode(outbound(item)) else { return payload }
+        return data
+    }
+
     @MainActor
     func write(_ items: [String: SyncItem], lang: String?) throws {
         var list: [T] = []
@@ -230,6 +244,12 @@ struct DictKind<V: Codable>: SyncKindHandler {
     }
 
     func merge(local: SyncSide?, remote: SyncSide) -> Data? { mergeRule(local, remote) }
+
+    func normalize(_ payload: Data) -> Data {
+        guard let value = try? SyncCanonical.decode(V.self, from: payload),
+              let data = try? SyncCanonical.encode(value) else { return payload }
+        return data
+    }
 
     @MainActor
     func write(_ items: [String: SyncItem], lang: String?) throws {

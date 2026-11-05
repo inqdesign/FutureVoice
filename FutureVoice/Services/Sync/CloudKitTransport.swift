@@ -8,7 +8,7 @@ import Foundation
 /// each other's practice). The container comes from `FVICloudContainer` in
 /// Info.plist, which the build substitutes per config so a dev build syncs
 /// into its own container.
-final class CloudKitTransport: SyncTransport {
+final class CloudKitTransport: SyncTransport, BlobCellularControl {
 
     /// Keys a change fetch asks for — everything BUT the assets. A zone
     /// change fetch downloads every `CKAsset` on every changed record before

@@ -23,7 +23,9 @@ struct SyncContinuePromptView: View {
                 Text("Continue where you left off?")
                     .font(.title2.weight(.semibold))
                     .multilineTextAlignment(.center)
-                Text(explain("Your practice from your other device is in your iCloud — talks, cards, words, recordings. Bring it here and keep both in step from now on."))
+                Text(engine.backend == .googleDrive
+                     ? explain("Your practice from your Android phone is in your Google Drive: talks, words, expressions and scenes. Bring it here and keep both in step from now on.")
+                     : explain("Your practice from your other device is in your iCloud — talks, cards, words, recordings. Bring it here and keep both in step from now on."))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)
                     .padding(.horizontal)

@@ -2701,6 +2701,52 @@
         }
       }
     },
+    "Allow nawana to use its own folder in your Google Drive, then try again." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google Drive에서 nawana 전용 폴더를 쓸 수 있게 허용한 뒤 다시 해 보세요."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Googleドライブでnawana専用フォルダの使用を許可してから、もう一度お試しください。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請允許 nawana 使用你 Google 雲端硬碟中的專屬資料夾，然後再試一次。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请允许 nawana 使用你 Google 云端硬盘中的专属文件夹，然后再试一次。"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permite que nawana use su propia carpeta en tu Google Drive y vuelve a intentarlo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Autorise nawana à utiliser son propre dossier dans ton Google Drive, puis réessaie."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erlaube nawana, seinen eigenen Ordner in deinem Google Drive zu nutzen, und versuch es dann noch mal."
+          }
+        }
+      }
+    },
     "Already there" : {
       "localizations" : {
         "de" : {
@@ -5580,6 +5626,52 @@
         }
       }
     },
+    "Google Drive sync isn't available in this build." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 버전에서는 Google Drive 동기화를 쓸 수 없어요."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このバージョンではGoogleドライブ同期を使えません。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這個版本無法使用 Google 雲端硬碟同步。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这个版本无法使用 Google 云端硬盘同步。"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La sincronización con Google Drive no está disponible en esta versión."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La synchronisation avec Google Drive n’est pas disponible dans cette version."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Synchronisierung mit Google Drive ist in dieser Version nicht verfügbar."
+          }
+        }
+      }
+    },
     "Health" : {
       "localizations" : {
         "de" : {
@@ -7203,6 +7295,52 @@
         }
       }
     },
+    "Keep it in" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "저장 위치"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存先"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "存放位置"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "存放位置"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardar en"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stocker dans"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speichern in"
+          }
+        }
+      }
+    },
     "Keep this seat until “%@” comes true!" : {
       "localizations" : {
         "ko" : {
@@ -8029,6 +8167,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "我的台詞"
+          }
+        }
+      }
+    },
+    "My other device is an Android phone" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다른 기기는 Android 폰이에요"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "もう一台はAndroidスマホです"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我的另一台裝置是 Android 手機"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我的另一台设备是 Android 手机"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mi otro dispositivo es un Android"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mon autre appareil est un Android"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mein anderes Gerät ist ein Android-Handy"
           }
         }
       }
@@ -13898,6 +14082,98 @@
         }
       }
     },
+    "Sign in to Google again to sync" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "동기화하려면 Google에 다시 로그인하세요"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同期するにはGoogleにもう一度ログインしてください"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要同步，請重新登入 Google"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要同步，请重新登录 Google"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vuelve a iniciar sesión en Google para sincronizar"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reconnecte-toi à Google pour synchroniser"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Melde dich erneut bei Google an, um zu synchronisieren"
+          }
+        }
+      }
+    },
+    "Sign in to Google again, then try once more." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google에 다시 로그인한 뒤 한 번 더 해 보세요."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Googleにもう一度ログインしてから、再度お試しください。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請重新登入 Google，然後再試一次。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请重新登录 Google，然后再试一次。"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vuelve a iniciar sesión en Google e inténtalo otra vez."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reconnecte-toi à Google, puis réessaie."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Melde dich erneut bei Google an und versuch es dann noch mal."
+          }
+        }
+      }
+    },
     "Situations" : {
       "localizations" : {
         "ko" : {
@@ -18422,6 +18698,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "對話、卡片、單字和錄音（連同音訊）會在登入這個帳號和同一個 Google 帳號的每台裝置上保持一致。關掉只會停止同步，不會刪除任何東西。"
+          }
+        }
+      }
+    },
+    "Your talks, words, expressions and scenes stay the same on every device that syncs with this Google Drive, Android phones included. Turning this off stops syncing and deletes nothing." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "통화, 단어, 표현, 장면이 이 Google Drive로 동기화하는 모든 기기에서 똑같이 유지돼요. Android 폰도 마찬가지예요. 끄면 동기화만 멈추고 아무것도 지워지지 않아요."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通話、単語、表現、シーンは、このGoogleドライブと同期するすべてのデバイスで同じに保たれます。Androidスマホも同じです。オフにすると同期が止まるだけで、何も削除されません。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通話、單字、用語和情境會在所有與這個 Google 雲端硬碟同步的裝置上保持一致，Android 手機也一樣。關閉後只會停止同步，不會刪除任何東西。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通话、单词、用语和情境会在所有与这个 Google 云端硬盘同步的设备上保持一致，Android 手机也一样。关闭后只会停止同步，不会删除任何内容。"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tus llamadas, palabras, expresiones y escenas son las mismas en todos los dispositivos que se sincronizan con este Google Drive, Android incluido. Si lo desactivas, solo se detiene la sincronización y no se borra nada."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tes appels, mots, expressions et scènes restent identiques sur tous les appareils synchronisés avec ce Google Drive, Android compris. Désactiver arrête la synchronisation et ne supprime rien."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Gespräche, Wörter, Wendungen und Szenen bleiben auf jedem Gerät gleich, das mit diesem Google Drive synchronisiert, Android-Handys eingeschlossen. Ausschalten stoppt nur die Synchronisierung und löscht nichts."
           }
         }
       }
@@ -50418,6 +50740,52 @@
         }
       }
     },
+    "Couldn't sign in to Google" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google에 로그인하지 못했어요"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Googleにログインできませんでした"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法登入 Google"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法登录 Google"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo iniciar sesión en Google"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de se connecter à Google"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anmeldung bei Google fehlgeschlagen"
+          }
+        }
+      }
+    },
     "Couldn't sync — %@" : {
       "localizations" : {
         "de" : {
@@ -69991,6 +70359,98 @@
         }
       }
     },
+    "Google didn't finish signing in. Try again." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google 로그인이 끝나지 않았어요. 다시 해 보세요."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Googleのログインが完了しませんでした。もう一度お試しください。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google 登入沒有完成，請再試一次。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google 登录没有完成，请再试一次。"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google no terminó de iniciar sesión. Inténtalo de nuevo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La connexion à Google n’a pas abouti. Réessaie."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Google-Anmeldung wurde nicht abgeschlossen. Versuch es noch mal."
+          }
+        }
+      }
+    },
+    "Google Drive" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google Drive"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Googleドライブ"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google 雲端硬碟"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google 云端硬盘"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google Drive"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google Drive"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google Drive"
+          }
+        }
+      }
+    },
     "Got it" : {
       "localizations" : {
         "de" : {
@@ -77214,6 +77674,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "我在nawana用自己的AI聲音練習口說。用我的邀請碼%1$@加入，我們兩個都能拿到%2$lld分鐘通話時間。"
+          }
+        }
+      }
+    },
+    "iCloud" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iCloud"
           }
         }
       }
@@ -98953,6 +99459,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "沒有進行中的項目"
+          }
+        }
+      }
+    },
+    "Nothing in this Google account yet. On the phone, open Me and turn on “Continue on your other devices”, using the same Google account." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 Google 계정에는 아직 아무것도 없어요. 폰에서 ‘나’를 열고, 같은 Google 계정으로 “다른 기기에서 이어서 하기”를 켜 주세요."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このGoogleアカウントにはまだ何もありません。スマホで「マイページ」を開き、同じGoogleアカウントで「ほかのデバイスで続ける」をオンにしてください。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這個 Google 帳號裡還沒有資料。請在手機上打開「我的」，用同一個 Google 帳號開啟「在其他裝置上繼續」。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这个 Google 账号里还没有数据。请在手机上打开“我的”，用同一个 Google 账号开启“在其他设备上继续”。"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todavía no hay nada en esta cuenta de Google. En el teléfono, abre Mi perfil y activa «Continuar en tus otros dispositivos» con la misma cuenta de Google."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rien dans ce compte Google pour l’instant. Sur le téléphone, ouvre Mon profil et active « Continuer sur tes autres appareils » avec le même compte Google."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In diesem Google-Konto ist noch nichts. Öffne auf dem Handy „Ich“ und schalte „Auf deinen anderen Geräten weitermachen“ mit demselben Google-Konto ein."
           }
         }
       }
@@ -134105,6 +134657,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "越了解你的生活，對話就越真實。"
+          }
+        }
+      }
+    },
+    "Talks, words, expressions, scenes, tests and your profile move between them. Sentence cards, shadowing, audio and settings stay on each device for now." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "통화, 단어, 표현, 장면, 테스트, 프로필이 오가요. 문장 카드, 섀도잉, 오디오, 설정은 아직 기기마다 따로 있어요."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通話、単語、表現、シーン、テスト、プロフィールが行き来します。文カード、シャドーイング、音声、設定は今のところデバイスごとに別々です。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通話、單字、用語、情境、測驗和個人檔案會互相同步。句子卡、跟讀、音訊和設定目前仍各自留在每台裝置上。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通话、单词、用语、情境、测验和个人资料会互相同步。句子卡、跟读、音频和设置目前仍各自留在每台设备上。"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se sincronizan las llamadas, palabras, expresiones, escenas, tests y tu perfil. Las tarjetas de frases, el shadowing, el audio y los ajustes se quedan por ahora en cada dispositivo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les appels, mots, expressions, scènes, tests et ton profil passent de l’un à l’autre. Les cartes de phrases, le shadowing, l’audio et les réglages restent pour l’instant sur chaque appareil."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gespräche, Wörter, Wendungen, Szenen, Tests und dein Profil werden abgeglichen. Satzkarten, Nachsprechen, Audio und Einstellungen bleiben vorerst auf dem jeweiligen Gerät."
           }
         }
       }
@@ -173184,6 +173782,52 @@
         }
       }
     },
+    "Your practice from your Android phone is in your Google Drive: talks, words, expressions and scenes. Bring it here and keep both in step from now on." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Android 폰에서 한 연습이 내 Google Drive에 있어요. 통화, 단어, 표현, 장면이요. 여기로 가져오고, 앞으로 두 기기를 똑같이 맞춰 둘게요."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Androidスマホでの練習がGoogleドライブにあります。通話、単語、表現、シーンです。ここに取り込んで、これからは両方をそろえておきます。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你在 Android 手機上的練習存放在 Google 雲端硬碟：通話、單字、用語和情境。把它帶到這裡，之後兩台裝置會保持一致。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你在 Android 手机上的练习存放在 Google 云端硬盘：通话、单词、用语和情境。把它带到这里，之后两台设备会保持一致。"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu práctica del Android está en tu Google Drive: llamadas, palabras, expresiones y escenas. Tráela aquí y mantén los dos al día a partir de ahora."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta pratique sur ton Android est dans ton Google Drive : appels, mots, expressions et scènes. Ramène-la ici et garde les deux à jour désormais."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Üben vom Android-Handy liegt in deinem Google Drive: Gespräche, Wörter, Wendungen und Szenen. Hol es hierher und halte ab jetzt beide auf demselben Stand."
+          }
+        }
+      }
+    },
     "Your practice from your other device is in your iCloud — talks, cards, words, recordings. Bring it here and keep both in step from now on." : {
       "localizations" : {
         "de" : {
@@ -179987,6 +180631,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "취업·이직 준비"
+          }
+        }
+      }
+    },
+    "For an Android phone and this device. Sign in with the same Google account as on the phone, and turn sync on there too. Everything stays in a private folder of your Google Drive that only nawana can see." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Android 폰과 이 기기를 함께 쓸 때 골라요. 폰과 같은 Google 계정으로 로그인하고, 폰에서도 동기화를 켜 주세요. 모든 기록은 내 Google Drive 안, nawana만 볼 수 있는 비공개 폴더에 저장돼요."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Androidスマホとこのデバイスを一緒に使うときに選びます。スマホと同じGoogleアカウントでログインし、スマホでも同期をオンにしてください。データはすべて、Googleドライブ内のnawanaだけが見られる非公開フォルダに保存されます。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同時使用 Android 手機和這台裝置時選這個。請登入和手機相同的 Google 帳號，並在手機上也開啟同步。所有資料都存放在你 Google 雲端硬碟中、只有 nawana 看得到的私人資料夾。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同时使用 Android 手机和这台设备时选这个。请登录和手机相同的 Google 账号，并在手机上也开启同步。所有数据都存放在你 Google 云端硬盘中、只有 nawana 能看到的私人文件夹里。"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Para usar un Android junto con este dispositivo. Inicia sesión con la misma cuenta de Google que en el teléfono y activa allí también la sincronización. Todo se guarda en una carpeta privada de tu Google Drive que solo nawana puede ver."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pour utiliser un Android avec cet appareil. Connecte-toi avec le même compte Google que sur le téléphone, et active aussi la synchronisation là-bas. Tout reste dans un dossier privé de ton Google Drive que seul nawana peut voir."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für ein Android-Handy zusammen mit diesem Gerät. Melde dich mit demselben Google-Konto an wie auf dem Handy und schalte die Synchronisierung dort auch ein. Alles liegt in einem privaten Ordner in deinem Google Drive, den nur nawana sehen kann."
           }
         }
       }

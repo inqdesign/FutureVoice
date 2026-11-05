@@ -95,6 +95,35 @@ reasons are the design:
   gigabyte per learner and it's their storage, not ours; nothing they said to
   their future self lands on our servers. iPhone people own Apple devices;
   Android gets its own transport later on the SAME merge rules.
+- **Google Drive is the second store, for a learner with an Android
+  phone** (2026-11-05, a learner pairs an Android phone with a Mac). Me →
+  Devices picks iCloud or Google Drive while sync is off
+  (`SyncStore.backend`, per device per account). `GoogleDriveTransport`
+  writes Android's layout byte for byte (`DriveTransport.kt`: one file per
+  record in `appDataFolder/nawana-<uid>`, `appProperties` k/l/s/m/d/z with
+  the clocks in epoch ms, the Drive file id as the change tag), signed in by
+  `GoogleDriveAuth` (PKCE through `ASWebAuthenticationSession`, no SDK, the
+  refresh token in the Keychain per app account). Its OAuth clients are
+  iOS-type clients in Android's GCP project `nawana-507414`, because
+  `appDataFolder` belongs to the PROJECT; ids per config in project.yml.
+  The second-device hint has "My other device is an Android phone".
+  Switching stores is an environment change (`currentEnvironment` =
+  `GoogleDrive`): the index forgets the server and re-pushes. **Not every
+  kind crosses yet** (`GoogleDriveTransport.excludedKinds`, audited the
+  same day): `drill` (Android writes a retired card's date as
+  `Long.MAX_VALUE`, iOS can't decode it, skips, tombstones: every Got-it
+  card deleted everywhere), `shadow` (`phraseRange` vs
+  `phraseFirst`/`phraseLast`), `savedLine` (scoped differently),
+  `defaults` (two payload shapes; Android tombstones every iOS-only
+  setting), `blobTurn`/`blobVoiceSample`/`blobRecording` (Android downloads
+  files its reader filters out and tombstones them: the iOS audio is
+  deleted). A kind leaves the list only once Android is fixed AND the fix is
+  on every Android build in use. On Drive the engine normalizes a remote
+  payload into this device's own bytes before merging
+  (`SyncKindHandler.normalize`): Android writes `85.0`, `"sceneReps":0`, an
+  empty `learnedNotes`, and without it the two devices echo each other on
+  every pass. Drive has no push and no conditional write (never
+  `.conflict`). Not yet tried end to end with a real Google account.
 - **Opt-in, default OFF**, Me → Devices (`SyncSection`). It spends their
   iCloud and a sync bug can damage data, so single-device learners are
   untouched. `SyncStore.isEnabled` is keyed per APP ACCOUNT (a family iPad

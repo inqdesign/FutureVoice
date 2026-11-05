@@ -58,6 +58,11 @@ extension SyncTransport {
     func subscribeToZoneChanges(_ zone: String, subscriptionID: String) async throws {}
     func unsubscribeFromZoneChanges(subscriptionID: String) async throws {}
 
+    /// The change tags the engine already holds, handed over before a fetch
+    /// by name. Drive needs a file id per record; CloudKit names records
+    /// itself and ignores this.
+    func noteServerTags(_ tags: [String: Data]) {}
+
     func fetch(recordNames: [String], in zone: String) async throws -> [String: SyncRecord] {
         var out: [String: SyncRecord] = [:]
         for name in recordNames {
@@ -65,6 +70,20 @@ extension SyncTransport {
         }
         return out
     }
+}
+
+/// A transport whose audio moves over Wi-Fi only unless the learner says
+/// otherwise (Me → Devices). Items always may use cellular: kilobytes.
+protocol BlobCellularControl: AnyObject {
+    var allowsCellularForBlobs: Bool { get set }
+}
+
+/// Where this account's practice is kept. iCloud for the learner whose
+/// devices are all Apple; Google Drive for one who also has an Android
+/// phone, which can only reach Drive (2026-11-05).
+enum SyncBackend: String, Codable, CaseIterable {
+    case iCloud
+    case googleDrive
 }
 
 enum SyncAccountState: Equatable {

@@ -515,6 +515,12 @@ struct PersonaKind: SyncKindHandler {
         return [Self.key: data]
     }
 
+    func normalize(_ payload: Data) -> Data {
+        guard var p = try? SyncCanonical.decode(UserPersona.self, from: payload) else { return payload }
+        p.learnedNotes = []
+        return (try? SyncCanonical.encode(p)) ?? payload
+    }
+
     func merge(local: SyncSide?, remote: SyncSide) -> Data? {
         SyncMerge.combineOrNewerDelete(local, remote, combine: SyncMerge.typed { (a: UserPersona, b: UserPersona) in
             a.updatedAt >= b.updatedAt ? a : b

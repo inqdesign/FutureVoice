@@ -14,6 +14,18 @@ enum SyncStore {
         defaults.set(on, forKey: "futurevoice.sync.enabled.\(userId)")
     }
 
+    /// Where this account's practice is kept on THIS device. iCloud unless
+    /// the learner picked Google Drive (to share with an Android phone).
+    /// Per device on purpose: a Mac may sync over Drive with the learner's
+    /// Android phone while their old iPad is simply off.
+    static func backend(userId: String) -> SyncBackend {
+        defaults.string(forKey: "futurevoice.sync.backend.\(userId)").flatMap(SyncBackend.init) ?? .iCloud
+    }
+
+    static func setBackend(_ backend: SyncBackend, userId: String) {
+        defaults.set(backend.rawValue, forKey: "futurevoice.sync.backend.\(userId)")
+    }
+
     /// Whether the "continue from your other device?" offer has been made
     /// on this install for this account — asked once, whatever the answer.
     static func wasOffered(userId: String) -> Bool {

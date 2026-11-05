@@ -216,8 +216,39 @@ final class SyncEngine: ObservableObject {
     /// See the note at the capture in `push`.
     static let reportPushFrom = 20
 
-    init(transport: SyncTransport = CloudKitTransport()) {
-        self.transport = transport
+    /// The tests hand in their own transport; the app's is chosen per
+    /// account from `SyncStore.backend` (`setUser`, `useBackend`).
+    private let fixedTransport: Bool
+
+    init(transport: SyncTransport? = nil) {
+        self.transport = transport ?? CloudKitTransport()
+        fixedTransport = transport != nil
+    }
+
+    /// Which store the current transport talks to.
+    var backend: SyncBackend { transport is GoogleDriveTransport ? .googleDrive : .iCloud }
+
+    private func makeTransport(for userId: String) {
+        guard !fixedTransport else { return }
+        switch SyncStore.backend(userId: userId) {
+        case .iCloud where !(transport is CloudKitTransport):
+            transport = CloudKitTransport()
+        case .googleDrive:
+            if (transport as? GoogleDriveTransport)?.isFor(userId) != true {
+                transport = GoogleDriveTransport(userId: userId)
+            }
+        default: break
+        }
+    }
+
+    /// Picks where this account's practice is kept, before `enable`. Only
+    /// while sync is off: switching a running sync would mix two stores in
+    /// one index (the environment check would catch it, at the cost of a
+    /// full re-push, but there is no reason to get there).
+    func useBackend(_ backend: SyncBackend) {
+        guard let userId, !isEnabled else { return }
+        SyncStore.setBackend(backend, userId: userId)
+        makeTransport(for: userId)
     }
 
     // MARK: - Account
@@ -239,6 +270,7 @@ final class SyncEngine: ObservableObject {
         userId = id
         index = nil
         dirty = []
+        if let id { makeTransport(for: id) }
         guard let id, SyncStore.isEnabled(userId: id) else {
             status = .off
             return
@@ -250,7 +282,7 @@ final class SyncEngine: ObservableObject {
         // Re-registers this install with APNs every launch (the token can be
         // reissued) and re-asks for the zone subscription if it was never
         // confirmed. Both are cheap and neither blocks the pass below.
-        if let zone = zoneName {
+        if let zone = zoneName, backend == .iCloud {
             SyncPush.activate(zone: zone, userId: id, transport: transport)
         }
         requestSync(kinds: nil)
@@ -279,6 +311,7 @@ final class SyncEngine: ObservableObject {
 
     enum EnableError: LocalizedError {
         case noAccount
+        case noGoogleAccount
         case restricted
         case notSignedIn
         case transport(SyncTransportError)
@@ -286,6 +319,7 @@ final class SyncEngine: ObservableObject {
         var errorDescription: String? {
             switch self {
             case .noAccount: return explain("Sign in to iCloud in Settings first, then try again.")
+            case .noGoogleAccount: return explain("Sign in to Google again, then try once more.")
             case .restricted: return explain("iCloud isn't available on this device.")
             case .notSignedIn: return explain("You're signed out. Sign in again, then try once more.")
             case .transport(let e): return SyncEngine.describe(e)
@@ -301,7 +335,8 @@ final class SyncEngine: ObservableObject {
         guard let userId, let zone = zoneName else { throw EnableError.notSignedIn }
         switch await transport.accountAvailable() {
         case .available: break
-        case .noAccount, .unknown: throw EnableError.noAccount
+        case .noAccount, .unknown:
+            throw backend == .googleDrive ? EnableError.noGoogleAccount : EnableError.noAccount
         case .restricted: throw EnableError.restricted
         }
         do {
@@ -314,9 +349,12 @@ final class SyncEngine: ObservableObject {
         status = .idle
         loadQuota()
         // The zone exists as of the line above, which is the earliest a
-        // subscription can be attached to it.
-        SyncPush.activate(zone: zone, userId: userId, transport: transport)
-        Analytics.capture("sync_enabled")
+        // subscription can be attached to it. Drive has no push: its devices
+        // pull on foreground and on the background tasks.
+        if backend == .iCloud {
+            SyncPush.activate(zone: zone, userId: userId, transport: transport)
+        }
+        Analytics.capture("sync_enabled", ["backend": backend.rawValue])
         // Through the one-pass-at-a-time door: calling `runSync` straight
         // let a foreground pass start beside this one on the same index.
         // Items only — the caller's screen is waiting, and a second device
@@ -527,6 +565,15 @@ final class SyncEngine: ObservableObject {
         }
     }
 
+    /// The store this index's change tags belong to. Google Drive is one
+    /// more "environment": an index that moves between iCloud and Drive has
+    /// tags the other store has never seen, so the same check that guards
+    /// Development/Production forgets the server and pushes the library to
+    /// the new one.
+    var currentEnvironment: String {
+        backend == .googleDrive ? "GoogleDrive" : Self.cloudEnvironment
+    }
+
     /// The CloudKit environment this build talks to. Pinned by the
     /// `com.apple.developer.icloud-container-environment` entitlement
     /// (`ICLOUD_ENVIRONMENT` in project.yml), so it can't depend on how the
@@ -547,7 +594,7 @@ final class SyncEngine: ObservableObject {
     /// with no environment on file, written by a developer-signed build, is
     /// taken to be Development's. Returns false when the pass must stop.
     private func adoptCloudEnvironment(index: SyncIndex, zone: String) async -> Bool {
-        let current = Self.cloudEnvironment
+        let current = currentEnvironment
         let recorded = index.state.cloudEnvironment
             ?? (PushTokens.apsEnvironment() == "sandbox" ? "Development" : "Production")
         guard recorded != current else {
@@ -708,6 +755,9 @@ final class SyncEngine: ObservableObject {
                 guard let full = try await transport.fetch(recordName: record.recordName, in: zoneName ?? "")
                 else { continue }
                 record = full
+            }
+            if backend == .googleDrive, let payload = record.payload {
+                record.payload = handler.normalize(payload)
             }
             let key = record.key
             let previous = local[key]
@@ -1030,10 +1080,13 @@ final class SyncEngine: ObservableObject {
             cursor += slice.count
             // A file the learner tapped for is theirs to fetch on whatever
             // network they're on; the Wi-Fi rule is for what moves by itself.
-            let cloudKit = transport as? CloudKitTransport
+            let cellularControl = transport as? BlobCellularControl
             let asked = slice.contains { requested.contains($0.recordName) }
-            if asked { cloudKit?.allowsCellularForBlobs = true }
-            defer { if asked { cloudKit?.allowsCellularForBlobs = SyncStore.cellularForAudio } }
+            if asked { cellularControl?.allowsCellularForBlobs = true }
+            defer { if asked { cellularControl?.allowsCellularForBlobs = SyncStore.cellularForAudio } }
+            var tags: [String: Data] = [:]
+            for entry in slice { if let fields = entry.systemFields { tags[entry.recordName] = fields } }
+            transport.noteServerTags(tags)
             let fetched: [String: SyncRecord]
             do {
                 fetched = try await transport.fetch(recordNames: slice.map(\.recordName), in: zone)

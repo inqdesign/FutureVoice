@@ -22,10 +22,12 @@ struct SyncOtherDeviceHintView: View {
 
     /// What a re-check found. `cannotAsk` is THIS device's problem (no
     /// iCloud account, offline), not the other one's.
-    private enum CheckResult { case notYet, cannotAsk }
+    private enum CheckResult { case notYet, cannotAsk, notOnDrive }
 
+    @EnvironmentObject private var auth: AuthService
     @State private var checking = false
     @State private var lastCheck: CheckResult?
+    @State private var driveError: String?
 
     var body: some View {
         NavigationStack {
@@ -61,6 +63,18 @@ struct SyncOtherDeviceHintView: View {
                     .accentProminent()
                     .controlSize(.large)
                     .disabled(checking)
+                    // The other device may be an Android phone, which keeps
+                    // its practice in Google Drive, not iCloud.
+                    if GoogleDriveAuth.isConfigured {
+                        Button {
+                            Task { await checkDrive() }
+                        } label: {
+                            Text("My other device is an Android phone")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .controlSize(.large)
+                        .disabled(checking)
+                    }
                     Button {
                         onSkip()
                     } label: {
@@ -74,6 +88,12 @@ struct SyncOtherDeviceHintView: View {
                 .padding(.bottom, 24)
             }
             .navigationTitle("")
+            .alert("Couldn't sign in to Google", isPresented: Binding(get: { driveError != nil },
+                                                                     set: { if !$0 { driveError = nil } })) {
+                Button("OK") { driveError = nil }
+            } message: {
+                Text(driveError ?? "")
+            }
         }
     }
 
@@ -83,7 +103,31 @@ struct SyncOtherDeviceHintView: View {
         // set up correctly and turns the same toggle on twice.
         case .cannotAsk: return explain("Sign in to iCloud in Settings first, then try again.")
         case .notYet:    return explain("Nothing here yet — check that it's on over there, then try again.")
+        case .notOnDrive:
+            return explain("Nothing in this Google account yet. On the phone, open Me and turn on “Continue on your other devices”, using the same Google account.")
         }
+    }
+
+    /// Signs into Google, points this account's sync at Drive and looks for
+    /// the phone's folder. Found → the same Continue offer iCloud gets.
+    private func checkDrive() async {
+        guard let userId = auth.session?.user.id.uuidString else { return }
+        checking = true
+        defer { checking = false }
+        do {
+            if !GoogleDriveAuth.isConnected(userId: userId) {
+                try await GoogleDriveAuth.signIn(userId: userId)
+            }
+        } catch GoogleDriveAuth.AuthError.cancelled {
+            return
+        } catch {
+            driveError = error.localizedDescription
+            return
+        }
+        SyncEngine.shared.useBackend(.googleDrive)
+        let answer = await SyncEngine.shared.cloudHasData()
+        if answer == true { onFound(); return }
+        lastCheck = answer == nil ? .cannotAsk : .notOnDrive
     }
 
     private func check() async {

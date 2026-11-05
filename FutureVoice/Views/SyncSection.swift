@@ -17,15 +17,39 @@ struct SyncSection: View {
     /// What this device's practice takes on disk — roughly what it needs in
     /// iCloud. Nil until measured.
     @State private var localBytes: Int64?
+    /// Where the practice is kept. Picked while sync is off; Google Drive is
+    /// for a learner whose other device is an Android phone.
+    @State private var backend = SyncEngine.shared.backend
+    @State private var googleEmail: String?
+
+    private var userId: String? { auth.session?.user.id.uuidString }
+    private var onDrive: Bool { backend == .googleDrive }
 
     var body: some View {
         Section {
             Toggle(isOn: $enabled) {
-                MeRow(icon: "icloud",
+                MeRow(icon: onDrive ? "externaldrive.badge.icloud" : "icloud",
                       title: explain("Continue on your other devices"),
-                      subtitle: explain("Uses your iCloud"))
+                      subtitle: onDrive ? explain("Uses your Google Drive") : explain("Uses your iCloud"))
             }
             .disabled(!auth.isSignedIn || enabling)
+            if !enabled, auth.isSignedIn, GoogleDriveAuth.isConfigured {
+                Picker(selection: $backend) {
+                    Text("iCloud").tag(SyncBackend.iCloud)
+                    Text("Google Drive").tag(SyncBackend.googleDrive)
+                } label: {
+                    Label("Keep it in", systemImage: "externaldrive")
+                }
+                .disabled(enabling)
+            }
+            if onDrive, let googleEmail {
+                Label {
+                    Text(verbatim: googleEmail)
+                } icon: {
+                    Image(systemName: "person.crop.circle")
+                }
+                .foregroundStyle(.secondary)
+            }
             if enabled {
                 if let scope = engine.quotaFull {
                     quotaRow(scope)
@@ -48,7 +72,11 @@ struct SyncSection: View {
                 Button(role: .destructive) {
                     confirmingCloudDelete = true
                 } label: {
-                    Label("Delete from iCloud", systemImage: "icloud.slash")
+                    if onDrive {
+                        Label("Delete from Google Drive", systemImage: "trash")
+                    } else {
+                        Label("Delete from iCloud", systemImage: "icloud.slash")
+                    }
                 }
             }
         } header: {
@@ -56,13 +84,20 @@ struct SyncSection: View {
         } footer: {
             Text(footer)
         }
-        .task { localBytes = await Self.measurePractice() }
+        .task {
+            backend = engine.backend
+            googleEmail = userId.flatMap(GoogleDriveAuth.email(userId:))
+            localBytes = await Self.measurePractice()
+        }
+        .onChange(of: backend) { _, picked in
+            engine.useBackend(picked)
+        }
         .onChange(of: enabled) { _, on in
             Task { await set(enabled: on) }
         }
         .onChange(of: cellular) { _, on in
             SyncStore.cellularForAudio = on
-            (engine.transport as? CloudKitTransport)?.allowsCellularForBlobs = on
+            (engine.transport as? BlobCellularControl)?.allowsCellularForBlobs = on
         }
         .onChange(of: engine.status) { _, status in
             // The engine can switch itself off (the zone was deleted from
@@ -75,13 +110,17 @@ struct SyncSection: View {
         } message: {
             Text(enableError ?? "")
         }
-        .confirmationDialog("Delete your practice from iCloud?",
+        .confirmationDialog(onDrive ? explain("Delete your practice from Google Drive?")
+                                    : explain("Delete your practice from iCloud?"),
                             isPresented: $confirmingCloudDelete, titleVisibility: .visible) {
-            Button("Delete from iCloud", role: .destructive) {
+            Button(onDrive ? explain("Delete from Google Drive") : explain("Delete from iCloud"),
+                   role: .destructive) {
                 Task { await deleteFromCloud() }
             }
         } message: {
-            Text(explain("Everything synced to iCloud is removed and syncing stops on every device. What's on this device stays."))
+            Text(onDrive
+                 ? explain("Everything synced to Google Drive is removed and syncing stops on every device. What's on this device stays.")
+                 : explain("Everything synced to iCloud is removed and syncing stops on every device. What's on this device stays."))
         }
         .alert("Couldn't delete", isPresented: Binding(get: { cloudDeleteError != nil },
                                                       set: { if !$0 { cloudDeleteError = nil } })) {
@@ -242,7 +281,9 @@ struct SyncSection: View {
 
     private func pauseText(_ pause: SyncEngine.Pause) -> String {
         switch pause {
-        case .noAccount: return explain("Sign in to iCloud in Settings to sync")
+        case .noAccount:
+            return onDrive ? explain("Sign in to Google again to sync")
+                           : explain("Sign in to iCloud in Settings to sync")
         case .restricted: return explain("iCloud isn't available on this device")
         case .quotaExceeded: return explain("iCloud storage is full — audio isn't syncing")
         case .zoneMissing: return explain("Sync was turned off from another device")
@@ -253,6 +294,15 @@ struct SyncSection: View {
     private var footer: String {
         if !auth.isSignedIn {
             return explain("Sign in to sync your practice between your iPhone and iPad.")
+        }
+        if onDrive {
+            let drive = enabled
+                ? explain("Your talks, words, expressions and scenes stay the same on every device that syncs with this Google Drive, Android phones included. Turning this off stops syncing and deletes nothing.")
+                : explain("For an Android phone and this device. Sign in with the same Google account as on the phone, and turn sync on there too. Everything stays in a private folder of your Google Drive that only nawana can see.")
+            // Said out loud: these kinds stay off Drive until both apps agree
+            // on them (`GoogleDriveTransport.excludedKinds`).
+            let notYet = explain("Talks, words, expressions, scenes, tests and your profile move between them. Sentence cards, shadowing, audio and settings stay on each device for now.")
+            return [drive, notYet].joined(separator: "\n\n")
         }
         let base = enabled
             ? explain("Your talks, cards, words and recordings — including the audio — are kept the same on every device signed into this account and your iCloud. Turning this off stops syncing and deletes nothing.")
@@ -275,8 +325,19 @@ struct SyncSection: View {
         enabling = true
         defer { enabling = false }
         do {
+            if onDrive, let userId {
+                // The grant first: without it there is no folder to look in.
+                // A learner who backs out of Google's sheet just sees the
+                // toggle go back off.
+                if !GoogleDriveAuth.isConnected(userId: userId) {
+                    googleEmail = try await GoogleDriveAuth.signIn(userId: userId)
+                }
+                engine.useBackend(.googleDrive)
+            }
             try await engine.enable()
             SpeechVideoSync.shared.ensureCopies()
+        } catch GoogleDriveAuth.AuthError.cancelled {
+            enabled = false
         } catch {
             enableError = error.localizedDescription
             enabled = false

@@ -129,12 +129,17 @@ targets:
           ICLOUD_CONTAINER: iCloud.com.roro.futurevoice.dev
           APS_ENVIRONMENT: development
           ICLOUD_ENVIRONMENT: Development
+          # iOS-type OAuth client in Android's GCP project (nawana-507414):
+          # appDataFolder belongs to the project, so this is what lets a Mac
+          # see the Android phone's synced practice (`GoogleDriveAuth`).
+          GOOGLE_DRIVE_CLIENT_ID: 489651582849-hfvssub4hha9ua2jhm9bq6ubk6bcjpc8.apps.googleusercontent.com
         Release:
           PRODUCT_BUNDLE_IDENTIFIER: com.roro.futurevoice
           APP_DISPLAY_NAME: nawana
           ICLOUD_CONTAINER: iCloud.com.roro.futurevoice
           APS_ENVIRONMENT: production
           ICLOUD_ENVIRONMENT: Production
+          GOOGLE_DRIVE_CLIENT_ID: 489651582849-bvencr0e0871aefub0bikj33a3ha0l1i.apps.googleusercontent.com
     configFiles:
       Debug: Config/FutureVoice.xcconfig
       Release: Config/FutureVoice.xcconfig
