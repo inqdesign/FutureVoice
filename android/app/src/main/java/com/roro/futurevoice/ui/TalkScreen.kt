@@ -66,6 +66,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -801,16 +803,30 @@ fun TalkScreen(
                                 kotlinx.coroutines.delay(1000)
                             }
                         }
-                        Text(
-                            listOfNotNull(
-                                // The chevron says the level opens something.
-                                level.code.uppercase() + " ›",
-                                elapsed.takeIf { it > 0 }?.let {
-                                    com.roro.futurevoice.data.TalkTime.clock(it.toInt())
-                                },
-                            ).joinToString(" · "),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                listOfNotNull(
+                                    // The chevron says the level opens something.
+                                    level.code.uppercase() + " ›",
+                                    elapsed.takeIf { it > 0 }?.let {
+                                        com.roro.futurevoice.data.TalkTime.clock(it.toInt())
+                                    },
+                                ).joinToString(" · "),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            // This call costs half its length (a pronunciation
+                            // call, iOS cb50cc3e): a green "½" after the clock,
+                            // so a clock that runs fast doesn't read as the
+                            // pool running out fast.
+                            if (state.pronOn && elapsed > 0) {
+                                val half = stringResource(R.string.uses_half_the_talk_time)
+                                Text("½", style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                    color = androidx.compose.ui.graphics.Color(0xFF34C759),
+                                    modifier = Modifier.padding(start = 4.dp)
+                                        .semantics { contentDescription = half })
+                            }
+                        }
                     }
                 },
                 navigationIcon = {

@@ -3,6 +3,7 @@
      FutureVoice/Resources/Localizable.xcstrings — do not edit; edit the
      catalog and re-run. Names are resource_name(<English key>). -->
 <resources>
+    <string name="a_10_minute_lesson_uses_5_minutes">"10分練習しても5分だけ。"</string>
     <!-- 'A 10-minute tutor call every weekday is about 200 minutes a month. Here, minutes count only while the conversation is going — pauses are free.' -->
     <string name="a_badge_next_to_your_name_where_you_meet_people">"人と出会う場所で、名前の横にバッジが付きます。"</string>
     <string name="a_barista">"バリスタ"</string>
@@ -112,6 +113,8 @@
     <string name="a_short_update_the_way_you_d_give_it_in_a_meeting">"会議のように、進み具合を短く話す"</string>
     <!-- 'A smaller copy, about 12 MB a minute. Send an original from its take.' -->
     <string name="a_smaller_copy_about_12_mb_a_minute_send_an_original_from_it_8cd5d8">"1分あたり約12MBの軽いコピーです。オリジナルはテイクの画面から送れます。"</string>
+    <!-- 'A Speech script, or what your tutor prepared for a goal, read in your voice. Made once, then replayed free.' -->
+    <string name="a_speech_script_or_what_your_tutor_prepared_for_a_goal_read_3ecda2">"スピーチ原稿や、チューターが目標に合わせて用意した文を自分の声で読みます。一度つくれば、あとは何度でも無料。"</string>
     <string name="a_standard_copy_and_the_original_are_in_your_icloud">"標準画質のコピーとオリジナルがiCloudにあります。"</string>
     <!-- 'A standard copy goes to your iCloud. The original stays on this device.' -->
     <string name="a_standard_copy_goes_to_your_icloud_the_original_stays_on_th_e68c3f">"標準画質のコピーがiCloudに送られます。オリジナルはこのデバイスに残ります。"</string>
@@ -430,6 +433,7 @@
     <string name="calling_the_landlord">"大家さんに連絡する"</string>
     <string name="calling_the_school_about_an_absence">"学校に欠席を伝える"</string>
     <string name="calling_your_landlord">"大家さんに電話する"</string>
+    <string name="calls">"通話"</string>
     <string name="calls_and_scenes_speak_this_way">"通話とシーンはこの話し方になります。"</string>
     <!-- "Calls and scenes speak this way. Someone who knows your life knows what you've told your future self, the way a close friend would." -->
     <string name="calls_and_scenes_speak_this_way_someone_who_knows_your_life_e341fe">"通話とシーンはこの話し方になります。暮らしを知っている相手は、流暢な自分に話したことを親しい友だちのように知っています。"</string>
@@ -437,6 +441,8 @@
     <string name="calls_at">"電話の時刻"</string>
     <!-- 'Calls draw on everything publicly known about them. Wrong person? Fix the name and look up again.' -->
     <string name="calls_draw_on_everything_publicly_known_about_them_wrong_per_ac77bc">"通話では、この人について公開されていることすべてをもとに話します。別の人なら、名前を直してもう一度検索してください。"</string>
+    <!-- 'Calls, new scenes and voiceovers spend your talk minutes. Everything you replay is free.' -->
+    <string name="calls_new_scenes_and_voiceovers_spend_your_talk_minutes_ever_9e25c5">"トーク時間を使うのは通話、新しいシーン、自分の声での読み上げだけ。聞き直しはすべて無料です。"</string>
     <!-- 'Calls, recordings and every word you study are saved right here.' -->
     <string name="calls_recordings_and_every_word_you_study_are_saved_right_he_35bbe7">"通話も録音も、覚えた単語や表現も、すべてここに保存されます。"</string>
     <string name="calm_and_cozy">"穏やかで心地いい"</string>
@@ -483,6 +489,8 @@
     <string name="changes_to_on">"%2$sから%1$sに変わります"</string>
     <string name="chapters">"チャプター"</string>
     <string name="characters">"架空の人物"</string>
+    <!-- "Chat, today's plan, and everything it prepares for your goals: likely questions, readings, model answers. Practicing a question with it is a call." -->
+    <string name="chat_today_s_plan_and_everything_it_prepares_for_your_goals_40fab4">"チャット、今日やること、目標に合わせて用意するもの全部（出そうな質問、読み物、模範解答）。質問をチューターと練習するのは通話です。"</string>
     <string name="chatting_is_one_thing_presenting_is_another">"会話はできても、\n人前で話すのはまた別です"</string>
     <string name="check">"確認"</string>
     <string name="check_again">"もう一度確認"</string>
@@ -758,6 +766,8 @@
     <string name="drills_appear_here_after_you_end_a_conversation">"会話を終えると、ここにドリルが出てきます。"</string>
     <!-- 'Drills, shadowing (including coach feedback), word and expression playback — every review surface is free.' -->
     <string name="drills_shadowing_including_coach_feedback_word_and_expressio_1d0899">"ドリル、シャドーイング（コーチのフィードバックも）、単語と表現の再生。復習する場所はすべて無料です。"</string>
+    <!-- 'Drills, shadowing with coach feedback and pronunciation scores, say it again, word and expression cards.' -->
+    <string name="drills_shadowing_with_coach_feedback_and_pronunciation_score_f31e0e">"ドリル、シャドーイング（コーチのフィードバックと発音スコア付き）、もう一度話す、単語・表現カード。"</string>
     <string name="drop_it_on_a_folder">"フォルダの上に置いてください"</string>
     <string name="drop_it_on_got_it_and_it_stops_coming_back">"「覚えた」に置くと、もう出てきません。"</string>
     <string name="drop_off">"送りのとき"</string>
@@ -1026,6 +1036,8 @@
     <string name="free_minutes">"無料の時間"</string>
     <string name="free_notes_quirks_recent_events_anything_that_helps">"自由メモ（癖、最近の出来事、役立つことなら何でも）"</string>
     <string name="free_talk">"フリートーク"</string>
+    <!-- 'Free talk, tutor lessons, the daily call and calls with people. A 10-minute call uses 10 minutes, thinking pauses included. After 30 seconds with nobody speaking, the clock stops.' -->
+    <string name="free_talk_tutor_lessons_the_daily_call_and_calls_with_people_ef5709">"フリートーク、チューターのレッスン、毎日の電話、人との通話。10分話せば10分。考えている間も数えます。30秒だれも話さなければ、時計は止まります。"</string>
     <string name="free_talk_with">"%sとフリートーク"</string>
     <!-- 'Free up space in Settings → your name → iCloud, and syncing picks up where it stopped.' -->
     <string name="free_up_space_in_settings_your_name_icloud_and_syncing_picks_29796d">"設定 → 自分の名前 → iCloud で空き容量を作ると、止まったところから再開します。"</string>
@@ -1685,6 +1697,7 @@
     <!-- 'Making voices is briefly unavailable right now. Your recording is saved, so open the app after then and your fluent self speaks in your voice. Until then, pick one of the voices below to practice with.' -->
     <string name="making_voices_is_briefly_unavailable_right_now_your_recordin_f306d0">"現在、声の作成に一時的な問題が起きています。録音は保存したので、その日以降にアプリを開くと、流暢な自分が自分の声で話します。それまでは、下の声から一つ選んで練習してください。"</string>
     <string name="making_your_test">"テストを作っています…"</string>
+    <string name="making_your_voice">"自分の声をつくる"</string>
     <string name="man">"男性"</string>
     <string name="manage_in_the_app_store">"App Storeで管理"</string>
     <string name="manage_subscription">"サブスクリプションの管理"</string>
@@ -2043,6 +2056,8 @@
     <string name="one_time_no_expiry">"1回のみ · 期限なし"</string>
     <string name="online">"ネットで"</string>
     <string name="online_shopping">"オンラインショッピング"</string>
+    <!-- 'Only calls and voiceovers spend your talk minutes. Watching a scene never takes a second off them.' -->
+    <string name="only_calls_and_voiceovers_spend_your_talk_minutes_watching_a_95912c">"トーク時間を使うのは通話と自分の声での読み上げだけ。シーンを見ても1秒も減りません。"</string>
     <string name="only_core_members_can_see_this">"コアメンバー同士でしか見られません。"</string>
     <!-- 'Only Core members can see your hope. Anyone can see your name.' -->
     <string name="only_core_members_can_see_your_hope_anyone_can_see_your_name">"願いはコアメンバー同士でしか見られません。名前は誰でも見られます。"</string>
@@ -2391,6 +2406,7 @@
     <string name="recording_a_take">"録画のしかた"</string>
     <string name="recording_file_missing">"録音ファイルがありません。"</string>
     <string name="recording_isn_t_available">"録音が見つかりません。"</string>
+    <string name="recording_it_and_making_it_again">"録音も、つくり直しも。"</string>
     <!-- 'Recording starts after 3, 2, 1. While you record, ✕ throws the take away and ↺ starts it over.' -->
     <string name="recording_starts_after_3_2_1_while_you_record_throws_the_tak_5d0549">"タップすると3、2、1のカウントのあとに録画が始まります。録画中は ✕ でこのテイクを破棄、↺ で最初からやり直せます。"</string>
     <string name="recreating_your_voice">"声を作り直しています"</string>
@@ -2501,6 +2517,7 @@
     <string name="s_1_expression">"表現1個"</string>
     <string name="s_1_hour">"1時間"</string>
     <string name="s_1_min">"約1分"</string>
+    <string name="s_1_min_per_100_characters">"100文字で1分"</string>
     <string name="s_1_minute_vary_your_pitch_a_little">"1分で十分です。少しずつ抑揚を変えて読んでください。"</string>
     <string name="s_1_more_day">"あと1日"</string>
     <string name="s_1_more_meaning">"ほかの意味 +1"</string>
@@ -2518,6 +2535,7 @@
     <!-- '30 days in a row without missing one. Leave a heart or a short cheer.' -->
     <string name="s_30_days_in_a_row_without_missing_one_leave_a_heart_or_a_sh_0d416d">"1日も休まず30日連続で達成しました。ハートや短い応援を送りましょう。"</string>
     <string name="s_3_days">"3日"</string>
+    <string name="s_50_off">"50%オフ"</string>
     <string name="said_lld">"言った回数 %d回"</string>
     <string name="same_as_before">"変化なし"</string>
     <!-- 'Same bands as “How this is assessed” — tap a skill for its measured numbers.' -->
@@ -2926,6 +2944,8 @@
     <string name="talk_more_often_and_a_little_longer_aim_past_your_daily_spea_96fd4a">"もっと頻繁に、少し長めに話してみましょう。1日の目標を超えると流れがつかめます。"</string>
     <string name="talk_now">"今すぐ話す"</string>
     <string name="talk_settings">"トーク設定"</string>
+    <!-- 'Talk summaries, weekly reports, the weekly test and quick quizzes.' -->
+    <string name="talk_summaries_weekly_reports_the_weekly_test_and_quick_quiz_0b9f07">"トークのまとめ、週のレポート、週テスト、クイッククイズ。"</string>
     <!-- "Talk the way you would on the phone. There's no button to hold down." -->
     <string name="talk_the_way_you_would_on_the_phone_there_s_no_button_to_hol_f6c495">"電話のように話すだけです。ボタンを押し続ける必要はありません。"</string>
     <string name="talk_then_pause">"話して、少し間をあける"</string>
@@ -3127,6 +3147,8 @@
     <string name="the_name_other_learners_will_see_first_name_or_nickname_is_p_4cde17">"ほかの学習者に見える名前です。名前かニックネームで十分です。"</string>
     <!-- 'The name your voice goes by in the app. Leave it empty to go back to the default.' -->
     <string name="the_name_your_voice_goes_by_in_the_app_leave_it_empty_to_go_f9c525">"アプリでの声の名前です。空にするとデフォルトの名前に戻ります。"</string>
+    <!-- "The nawana Podcast and the scenes you've watched, one after another." -->
+    <string name="the_nawana_podcast_and_the_scenes_you_ve_watched_one_after_a_f225ad">"nawana ポッドキャストと見たシーンを続けて。"</string>
     <!-- "The nawana Podcast and the situations you've watched, played one after another. Good for the commute." -->
     <string name="the_nawana_podcast_and_the_situations_you_ve_watched_played_8ed2dc">"nawana ポッドキャストと、見たシーンを続けて再生します。通勤中にぴったりです。"</string>
     <string name="the_news_chip_brings_this_week_s_stories_for_each_one">"ニュースチップで、興味ごとに今週の記事を届けます。"</string>
@@ -3424,6 +3446,7 @@
     <string name="used_it">"使えた"</string>
     <string name="used_lld_time">"%1$d回使用 · %3$s"</string>
     <string name="useful_information_clearly_told">"役立つ情報をわかりやすく"</string>
+    <string name="uses_half_the_talk_time">"トーク時間は半分だけ"</string>
     <string name="uses_lld_min_of_talk_time">"通話時間を%d分使います"</string>
     <string name="uses_talk_time">"通話時間を使います"</string>
     <string name="uses_your_google_drive">"自分のGoogleドライブを使います"</string>
@@ -3815,6 +3838,8 @@
     <string name="write_your_first_script">"最初の原稿を作ってみましょう"</string>
     <string name="write_your_own_situation">"自分の状況を書く"</string>
     <string name="writing">"書いています…"</string>
+    <!-- 'Writing and studying scripts, recording takes, scores and challenges.' -->
+    <string name="writing_and_studying_scripts_recording_takes_scores_and_chal_6f47b3">"原稿を書く・覚える、録画、スコア、チャレンジまで。"</string>
     <string name="writing_down_what_you_said">"いま話した内容を書き起こし中…"</string>
     <string name="writing_feedback">"フィードバックを書いています…"</string>
     <string name="writing_the_article_for_your_level">"今のレベルに合わせて記事を書いています…"</string>

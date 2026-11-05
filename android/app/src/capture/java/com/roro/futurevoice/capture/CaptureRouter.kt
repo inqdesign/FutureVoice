@@ -108,6 +108,7 @@ object CaptureRouter {
         "plan-block",
         "plan-editor",
         "plan-guide",
+        "plan-guide-free",
         "plan-spent",
         "plan-trial",
         "practice-due",

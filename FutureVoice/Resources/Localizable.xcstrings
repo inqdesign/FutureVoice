@@ -152213,6 +152213,742 @@
         }
       }
     },
+    "Uses half the talk time" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kostet nur die halbe Sprechzeit"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cuesta la mitad del tiempo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coûte la moitié du temps d’appel"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "トーク時間は半分だけ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "통화 시간이 절반만 들어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只扣一半通话时间"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只扣一半通話時間"
+          }
+        }
+      }
+    },
+    "50% off" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "50 % Rabatt"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "50 % de descuento"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "−50 %"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "50%オフ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "50% 할인"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "五折"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "五折"
+          }
+        }
+      }
+    },
+    "Calls" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gespräche"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Llamadas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appels"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通話"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "통화"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通话"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通話"
+          }
+        }
+      }
+    },
+    "Free talk, tutor lessons, the daily call and calls with people. A 10-minute call uses 10 minutes, thinking pauses included. After 30 seconds with nobody speaking, the clock stops." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Freies Gespräch, Tutor-Stunden, der tägliche Anruf und Gespräche mit Leuten. Ein 10-Minuten-Gespräch kostet 10 Minuten, Denkpausen eingeschlossen. Spricht 30 Sekunden lang niemand, bleibt die Uhr stehen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conversación libre, clases con el tutor, la llamada diaria y llamadas con personas. Una llamada de 10 minutos usa 10 minutos, pausas para pensar incluidas. Si nadie habla durante 30 segundos, el reloj se detiene."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conversation libre, leçons avec le tuteur, l’appel quotidien et appels avec des gens. Un appel de 10 minutes utilise 10 minutes, pauses de réflexion comprises. Si personne ne parle pendant 30 secondes, le compteur s’arrête."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フリートーク、チューターのレッスン、毎日の電話、人との通話。10分話せば10分。考えている間も数えます。30秒だれも話さなければ、時計は止まります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자유 대화, 튜터 수업, 매일 전화, 사람들과의 통화. 10분 통화하면 10분이 들어요. 생각하는 시간도 같이 세고, 30초 동안 아무도 말하지 않으면 시계가 멈춰요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自由聊天、家教课、每日来电和与人通话。通话10分钟就用10分钟，思考的停顿也算在内。30秒没人说话，计时就会停下。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自由聊天、家教課、每日來電和與人通話。通話10分鐘就用10分鐘，思考的停頓也算在內。30秒沒人說話，計時就會停下。"
+          }
+        }
+      }
+    },
+    "A Speech script, or what your tutor prepared for a goal, read in your voice. Made once, then replayed free." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Redetext oder was dein Tutor für ein Ziel vorbereitet hat, in deiner Stimme gelesen. Einmal erstellt, danach kostenlos anhören."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un discurso, o lo que tu tutor preparó para una meta, leído con tu voz. Se crea una vez y luego lo escuchas gratis."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un discours, ou ce que ton tuteur a préparé pour un objectif, lu avec ta voix. Créé une fois, puis réécoute gratuite."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スピーチ原稿や、チューターが目標に合わせて用意した文を自分の声で読みます。一度つくれば、あとは何度でも無料。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "스피치 대본이나 튜터가 목표에 맞춰 준비한 글을 내 목소리로 읽어 줘요. 한 번 만들면 다시 듣는 건 무료예요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用你的声音朗读演讲稿，或家教为你的目标准备的内容。做好一次，之后重听免费。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用你的聲音朗讀演講稿，或家教為你的目標準備的內容。做好一次，之後重聽免費。"
+          }
+        }
+      }
+    },
+    "Drills, shadowing with coach feedback and pronunciation scores, say it again, word and expression cards." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drills, Nachsprechen mit Coach-Feedback und Aussprachewertung, Nochmal sagen, Wort- und Wendungskarten."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ejercicios, shadowing con comentarios del coach y puntuación de pronunciación, Volver a decirlo, tarjetas de palabras y expresiones."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exercices, shadowing avec retours du coach et note de prononciation, Redire, cartes de mots et d’expressions."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ドリル、シャドーイング（コーチのフィードバックと発音スコア付き）、もう一度話す、単語・表現カード。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "드릴, 섀도잉(코치 피드백·발음 점수 포함), 다시 말하기, 단어·표현 카드."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "练习题、跟读（含教练反馈和发音评分）、重说一次、单词和表达卡片。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "練習題、跟讀（含教練回饋和發音評分）、重說一次、單字和表達卡片。"
+          }
+        }
+      }
+    },
+    "Chat, today's plan, and everything it prepares for your goals: likely questions, readings, model answers. Practicing a question with it is a call." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chat, der Plan für heute und alles, was er für deine Ziele vorbereitet: wahrscheinliche Fragen, Lesetexte, Musterantworten. Eine Frage mit ihm üben ist ein Gespräch."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El chat, el plan de hoy y todo lo que prepara para tus metas: preguntas probables, lecturas, respuestas modelo. Practicar una pregunta con él es una llamada."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le chat, le programme du jour et tout ce qu’il prépare pour tes objectifs : questions probables, lectures, réponses modèles. Travailler une question avec lui, c’est un appel."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "チャット、今日やること、目標に合わせて用意するもの全部（出そうな質問、読み物、模範解答）。質問をチューターと練習するのは通話です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "채팅, 오늘 할 일, 목표에 맞춰 준비하는 모든 것(나올 만한 질문, 읽을거리, 모범 답변). 질문을 튜터와 연습하는 건 통화예요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "聊天、今天的计划，以及为你的目标准备的一切：可能的问题、阅读材料、范例回答。和家教练习问题算通话。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "聊天、今天的計畫，以及為你的目標準備的一切：可能的問題、閱讀材料、範例回答。和家教練習問題算通話。"
+          }
+        }
+      }
+    },
+    "Writing and studying scripts, recording takes, scores and challenges." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Texte schreiben und lernen, Aufnahmen, Bewertungen und Challenges."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escribir y estudiar discursos, grabaciones, puntuaciones y retos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Écrire et étudier des discours, enregistrements, notes et défis."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原稿を書く・覚える、録画、スコア、チャレンジまで。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대본 쓰기와 공부, 녹화, 점수, 챌린지까지."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "写和学习演讲稿、录制、评分和挑战。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "寫和學習演講稿、錄製、評分和挑戰。"
+          }
+        }
+      }
+    },
+    "The nawana Podcast and the scenes you've watched, one after another." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der nawana Podcast und deine angesehenen Szenen, eins nach dem anderen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El Podcast de nawana y las escenas que has visto, una tras otra."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le Podcast nawana et les scènes que tu as regardées, à la suite."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nawana ポッドキャストと見たシーンを続けて。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nawana 팟캐스트와 내가 본 상황연습을 이어서."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nawana 播客和你看过的情景，一个接一个。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nawana Podcast和你看過的情境，一個接一個。"
+          }
+        }
+      }
+    },
+    "Talk summaries, weekly reports, the weekly test and quick quizzes." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gesprächszusammenfassungen, Wochenberichte, der Wochentest und schnelle Quiz."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resúmenes de conversaciones, informes semanales, el test semanal y quizzes rápidos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Résumés des conversations, bilans hebdo, test hebdo et quiz express."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "トークのまとめ、週のレポート、週テスト、クイッククイズ。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대화 요약, 주간 리포트, 주간 테스트, 퀵 퀴즈."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "对话总结、每周报告、每周测验和快速测验。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "對話總結、每週報告、每週測驗和小測驗。"
+          }
+        }
+      }
+    },
+    "A 10-minute lesson uses 5 minutes." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine 10-Minuten-Übung kostet 5 Minuten."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Una lección de 10 minutos usa 5 minutos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une leçon de 10 minutes n’utilise que 5 minutes."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "10分練習しても5分だけ。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "10분 연습하면 5분만 들어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "练习10分钟只用5分钟。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "練習10分鐘只用5分鐘。"
+          }
+        }
+      }
+    },
+    "1 min per 100 characters" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 Min. pro 100 Zeichen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 min por cada 100 caracteres"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 min par 100 caractères"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "100文字で1分"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "100자당 1분"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每100字1分钟"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每100字1分鐘"
+          }
+        }
+      }
+    },
+    "Calls, new scenes and voiceovers spend your talk minutes. Everything you replay is free." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gespräche, neue Szenen und Vorlesen in deiner Stimme kosten Sprechzeit. Alles erneut Anhören ist kostenlos."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las llamadas, las escenas nuevas y la lectura con tu voz usan tu tiempo. Volver a escuchar siempre es gratis."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les appels, les nouvelles scènes et la lecture avec ta voix utilisent ton temps. Tout ce que tu réécoutes est gratuit."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "トーク時間を使うのは通話、新しいシーン、自分の声での読み上げだけ。聞き直しはすべて無料です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "통화, 새 상황연습, 내 목소리로 듣기만 통화 시간을 써요. 다시 듣는 건 전부 무료예요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只有通话、新情景和用你的声音朗读会用通话时间。重听全部免费。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只有通話、新情境和用你的聲音朗讀會用通話時間。重聽全部免費。"
+          }
+        }
+      }
+    },
+    "Only calls and voiceovers spend your talk minutes. Watching a scene never takes a second off them." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur Gespräche und Vorlesen in deiner Stimme kosten Sprechzeit. Szenen ansehen kostet keine Sekunde davon."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solo las llamadas y la lectura con tu voz usan tu tiempo. Ver una escena nunca te quita ni un segundo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seuls les appels et la lecture avec ta voix utilisent ton temps. Regarder une scène ne t’en coûte pas une seconde."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "トーク時間を使うのは通話と自分の声での読み上げだけ。シーンを見ても1秒も減りません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "통화와 내 목소리로 듣기만 통화 시간을 써요. 상황연습은 통화 시간을 쓰지 않아요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只有通话和用你的声音朗读会用通话时间。看情景一秒也不扣。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只有通話和用你的聲音朗讀會用通話時間。看情境一秒也不扣。"
+          }
+        }
+      }
+    },
+    "Making your voice" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Stimme erstellen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Crear tu voz"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Créer ta voix"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分の声をつくる"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 목소리 만들기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "制作你的声音"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "製作你的聲音"
+          }
+        }
+      }
+    },
+    "Recording it, and making it again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aufnehmen und neu erstellen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grabarla y volver a crearla."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’enregistrer et la recréer."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "録音も、つくり直しも。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "녹음도, 다시 만들기도."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "录音，以及重新制作。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "錄音，以及重新製作。"
+          }
+        }
+      }
+    },
     "Uses your iCloud" : {
       "localizations" : {
         "de" : {

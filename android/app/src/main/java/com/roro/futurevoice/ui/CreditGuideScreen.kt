@@ -18,12 +18,16 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.MicExternalOn
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -56,10 +60,10 @@ import com.roro.futurevoice.ui.brand.AppSurfaces
  * sync with the server (talk-tick + tts routing): a mismatch
  * between what we show and what we meter is a trust-breaker.
  *
- * The model in one line: talk minutes are spent by the in-call clock and by
- * NOTHING else; Watch has its own separate pool of scenes; both are monthly
- * and neither has a daily limit. Everything else — review, browsing, tapping
- * around — is free.
+ * The model in one line: talk minutes are spent by calls (a pronunciation
+ * lesson at half), voiceovers and — for anyone subscribing from 2026-10-19 —
+ * new scenes; replays and everything else in the app are free (iOS
+ * c380df8b, 4418b601, 2c2c008f).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,6 +76,13 @@ fun CreditGuideScreen(onBack: () -> Unit) {
             ?: AccountStatus.load(AuthRepository())
     }
     val locale = LocalConfiguration.current.locales[0]
+    val scroll = rememberScrollState()
+    // Captures: `-capture plan-guide-free` shoots the free list (iOS 4418b601).
+    LaunchedEffect(Unit) {
+        if (!com.roro.futurevoice.capture.flags.MeCaptureFlags.guideScrollToFree) return@LaunchedEffect
+        kotlinx.coroutines.delay(400)
+        scroll.scrollTo(scroll.maxValue)
+    }
 
     Scaffold(
         topBar = {
@@ -84,81 +95,56 @@ fun CreditGuideScreen(onBack: () -> Unit) {
     ) { padding ->
         Column(
             Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scroll)
                 .padding(horizontal = 16.dp).padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
+            // This account's scenes (or a purchase's) are paid in talk minutes.
+            val sceneTalk = account?.scenesCostTalk == true
             // The pool sits FIRST: it is the shape of the whole plan, and the
             // question that actually brings people here is "what am I allowed
             // to do?" before "what does it cost me?".
             //
-            // Gated on the SCENE cap, not the talk one: Plus has no talk cap,
-            // and gating on it made this whole section vanish for the tier
-            // whose shape most needs explaining.
-            val sceneTalk = account?.scenesCostTalk == true
-            account?.takeIf { it.monthlyScenesCap != null || (it.isEntitled && it.scenesCostTalk) }?.let { a ->
+            // The plan holds talk minutes and nothing else (iOS 2c2c008f,
+            // founder 2026-11-05: a scene is paid from the minutes, so no
+            // scene count belongs here — the accounts still on a count see it
+            // on Usage and in the Watch section below, like the paywall).
+            account?.takeIf { it.isEntitled }?.let { a ->
                 GroupedSectionHeader(stringResource(R.string.what_your_plan_holds))
                 GroupedCard {
-                    // Uncapped reads off the TIER, never off the cap the
-                    // server reports. `talk_allowance` without its unlimited
-                    // branch hands every plan its `monthly_seconds`, and that
-                    // figure on Plus is the FAIR-USE line — a number nothing
-                    // enforces and the one sentence a tier sold as "no limit"
-                    // must never be shown as its allowance.
-                    val uncapped = a.isUncappedTalk
+                    val cap = a.monthlyCapSeconds
                     PlainRow(
                         icon = Icons.Filled.CalendarMonth,
-                        title = if (uncapped) stringResource(R.string.talk_as_much_as_you_want)
-                        else a.monthlyCapSeconds?.let {
-                            stringResource(R.string.lld_minutes_a_month, it / 60)
-                        } ?: stringResource(R.string.talk_as_much_as_you_want),
-                        // States the rule POSITIVELY and stops. Talking is
-                        // genuinely uncapped on Plus, and the honest reason is
-                        // worth saying out loud — speaking is its own limit,
-                        // which is exactly what watching is not.
-                        detail = if (uncapped)
+                        title = cap?.let { stringResource(R.string.lld_minutes_a_month, it / 60) }
+                            ?: stringResource(R.string.talk_as_much_as_you_want),
+                        detail = if (cap == null)
                             stringResource(R.string.no_limit_and_no_rationing_talking_takes_real_effort_so_there_9058ba)
                         else stringResource(R.string.use_them_however_you_like_all_in_one_call_today_or_spread_ov_1df811),
                     )
-                    val scenes = a.monthlyScenesCap
-                    if (scenes != null) {
-                        GroupedRowDivider()
-                        PlainRow(
-                            icon = Icons.Filled.PlayCircle,
-                            title = stringResource(R.string.lld_watch_scenes_a_month, scenes),
-                            detail = stringResource(R.string.a_separate_pool_watching_a_scene_never_takes_a_minute_off_yo_ed6523),
-                        )
-                    } else if (a.scenesCostTalk) {
-                        GroupedRowDivider()
-                        PlainRow(
-                            icon = Icons.Filled.PlayCircle,
-                            title = stringResource(R.string.watch_scenes_lld_min_each, a.sceneTalkMinutes),
-                            detail = stringResource(R.string.a_new_scene_is_paid_for_out_of_the_same_minutes_watching_it_238960),
-                        )
-                    }
                 }
                 // A cancelled plan refills nothing — the same date, the
                 // opposite promise.
                 val renews = a.renewalLabel(locale)
                 GroupedFooter(when {
-                    renews.isEmpty() && a.scenesCostTalk -> stringResource(R.string.your_minutes_refill_at_the_start_of_each_billing_period)
-                    renews.isEmpty() -> stringResource(R.string.scenes_refill_at_the_start_of_each_billing_period)
+                    renews.isEmpty() -> stringResource(R.string.your_minutes_refill_at_the_start_of_each_billing_period)
                     a.cancelAtPeriodEnd -> stringResource(R.string.your_plan_ends_on_lld, renews)
-                    a.scenesCostTalk -> stringResource(R.string.your_minutes_refill_on, renews)
-                    else -> stringResource(R.string.scenes_refill_on, renews)
+                    else -> stringResource(R.string.your_minutes_refill_on, renews)
                 })
             }
 
             GroupedSectionHeader(stringResource(R.string.uses_talk_time))
             GroupedCard {
-                CostRow(Icons.Filled.Phone, stringResource(R.string.talking),
+                // The rules as metered (iOS c380df8b, 2026-11-05): a call is
+                // billed by its clock while someone is speaking, stopping
+                // after 30 s of quiet; a pronunciation call at half; a
+                // voiceover by its characters.
+                CostRow(Icons.Filled.Phone, stringResource(R.string.calls),
                     stringResource(R.string.clock_time),
-                    stringResource(R.string.the_call_clock_is_the_meter_a_10_minute_call_uses_10_minutes_6bb450))
+                    stringResource(R.string.free_talk_tutor_lessons_the_daily_call_and_calls_with_people_ef5709))
                 GroupedRowDivider()
-                CostRow(Icons.Filled.RecordVoiceOver,
-                    stringResource(R.string.re_cloning_your_voice),
-                    stringResource(R.string.s_1_min),
-                    stringResource(R.string.setup_is_free_including_re_records_in_the_first_day_later_re_d175df))
+                CostRow(Icons.Filled.RecordVoiceOver, stringResource(R.string.pronunciation),
+                    stringResource(R.string.s_50_off),
+                    stringResource(R.string.a_10_minute_lesson_uses_5_minutes))
                 // Since 2026-10-19 a scene is paid for out of the same
                 // minutes, for anyone subscribing from then on.
                 if (sceneTalk) {
@@ -167,10 +153,14 @@ fun CreditGuideScreen(onBack: () -> Unit) {
                         stringResource(R.string.lld_min_b61908, account?.sceneTalkMinutes ?: 5),
                         stringResource(R.string.the_same_price_whichever_way_it_runs_a_long_scene_or_a_short_94d481))
                 }
+                GroupedRowDivider()
+                CostRow(Icons.Filled.RecordVoiceOver, stringResource(R.string.hear_it_in_my_voice),
+                    stringResource(R.string.s_1_min_per_100_characters),
+                    stringResource(R.string.a_speech_script_or_what_your_tutor_prepared_for_a_goal_read_3ecda2))
             }
             GroupedFooter(if (sceneTalk)
-                stringResource(R.string.the_call_clock_and_new_scenes_spend_your_talk_minutes_everyt_1d05bf)
-            else stringResource(R.string.only_the_call_clock_spends_your_talk_minutes_watching_a_scen_d6c32d))
+                stringResource(R.string.calls_new_scenes_and_voiceovers_spend_your_talk_minutes_ever_9e25c5)
+            else stringResource(R.string.only_calls_and_voiceovers_spend_your_talk_minutes_watching_a_95912c))
 
             if (!sceneTalk) {
                 GroupedSectionHeader(stringResource(R.string.watch_scenes))
@@ -182,16 +172,27 @@ fun CreditGuideScreen(onBack: () -> Unit) {
                 GroupedFooter(stringResource(R.string.scenes_you_ve_already_watched_replay_free_forever_and_never_d6d2d2))
             }
 
+            // Every feature that spends nothing, one row each (iOS 4418b601,
+            // founder 2026-11-05: the page covers the whole app).
             GroupedSectionHeader(stringResource(R.string.always_free))
             GroupedCard {
                 FreeRow(Icons.Filled.Layers, stringResource(R.string.all_reviewing),
-                    stringResource(R.string.drills_shadowing_including_coach_feedback_word_and_expressio_1d0899))
+                    stringResource(R.string.drills_shadowing_with_coach_feedback_and_pronunciation_score_f31e0e))
                 GroupedRowDivider()
                 FreeRow(Icons.Filled.Repeat, stringResource(R.string.replays),
                     stringResource(R.string.anything_already_synthesized_is_cached_loop_it_slow_it_down_fed756))
                 GroupedRowDivider()
+                FreeRow(Icons.Filled.School, stringResource(R.string.tutor),
+                    stringResource(R.string.chat_today_s_plan_and_everything_it_prepares_for_your_goals_40fab4))
+                GroupedRowDivider()
+                FreeRow(Icons.Filled.MicExternalOn, stringResource(R.string.speech_d00d85),
+                    stringResource(R.string.writing_and_studying_scripts_recording_takes_scores_and_chal_6f47b3))
+                GroupedRowDivider()
+                FreeRow(Icons.Filled.Headphones, stringResource(R.string.listening_dc3534),
+                    stringResource(R.string.the_nawana_podcast_and_the_scenes_you_ve_watched_one_after_a_f225ad))
+                GroupedRowDivider()
                 FreeRow(Icons.Filled.AutoAwesome, stringResource(R.string.summaries_reports),
-                    stringResource(R.string.session_scorecards_weekly_reports_and_the_daily_call_are_on_1c6cf8))
+                    stringResource(R.string.talk_summaries_weekly_reports_the_weekly_test_and_quick_quiz_0b9f07))
                 GroupedRowDivider()
                 FreeRow(Icons.Filled.GridView, stringResource(R.string.exploring),
                     stringResource(R.string.building_situations_browsing_topics_translations_dictionarie_456d7f))
@@ -199,6 +200,9 @@ fun CreditGuideScreen(onBack: () -> Unit) {
                 FreeRow(Icons.AutoMirrored.Filled.MenuBook,
                     stringResource(R.string.vocabulary_progress),
                     stringResource(R.string.the_word_cloud_cefr_estimate_and_stats_never_cost_anything))
+                GroupedRowDivider()
+                FreeRow(Icons.Filled.GraphicEq, stringResource(R.string.making_your_voice),
+                    stringResource(R.string.recording_it_and_making_it_again))
             }
             GroupedFooter(stringResource(R.string.in_short_minutes_buy_speaking_time_with_your_fluent_self_pra_828cac))
         }

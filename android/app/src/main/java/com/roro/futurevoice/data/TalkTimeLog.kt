@@ -225,7 +225,13 @@ object TalkTimeLog {
         val metadata: Meta? = null,
     ) {
         @kotlinx.serialization.Serializable
-        data class Meta(val seconds: Int? = null, val language: String? = null, val preflight: Boolean? = null)
+        data class Meta(
+            val seconds: Int? = null, val language: String? = null, val preflight: Boolean? = null,
+            /** The call time a tick paid for, where it was charged less (a
+             *  pronunciation call costs half, iOS cb50cc3e). The ring counts
+             *  this, like `talk_seconds_by_local_day`. */
+            val call_seconds: Int? = null,
+        )
 
         /** The second charged as a call OPENS, before anyone speaks — a wall
          *  check, never talk (see `TalkMeter.tick`). The gateway flags it; the
@@ -358,7 +364,7 @@ object TalkTimeLog {
             val at = runCatching { java.time.OffsetDateTime.parse(r.created_at.replace(" ", "T")).toInstant().toEpochMilli() }
                 .getOrNull() ?: continue
             val k = key(at, r.metadata.language)
-            out[k] = (out[k] ?: 0) + sec
+            out[k] = (out[k] ?: 0) + (r.metadata.call_seconds ?: sec)
         }
         return out
     }
