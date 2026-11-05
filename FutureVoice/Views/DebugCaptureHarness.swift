@@ -1027,6 +1027,11 @@ enum DebugCapture {
             return AnyView(NavigationStack {
                 CreditGuideView(account: Self.sampleLightAccount)
             })
+        case "plan-guide-free":
+            // The same page from its bottom: the "Always free" list.
+            return AnyView(NavigationStack {
+                CreditGuideView(account: Self.sampleLightAccount)
+            })
         case "level-header":
             // The two-line conversation title in a real inline bar.
             return AnyView(NavigationStack {

@@ -24,6 +24,7 @@ struct CreditGuideView: View {
     private var sceneTalk: Bool { account?.scenesCostTalk == true }
 
     var body: some View {
+        ScrollViewReader { proxy in
         List {
             // The pool sits FIRST: it is the shape of the whole plan, and
             // the question that actually brings people here is "what am I
@@ -81,8 +82,8 @@ struct CreditGuideView: View {
                 // half (`TalkBilling.rateFor`); a voiceover by its
                 // characters (`script_voiceover_charge_seconds`).
                 costRow(icon: "phone.fill",
-                        title: explain("Free talk & tutor"), cost: explain("clock time"),
-                        detail: explain("A 10-minute call uses 10 minutes, thinking pauses included, like a phone call. After 30 seconds with nobody speaking, the clock stops."))
+                        title: explain("Calls"), cost: explain("clock time"),
+                        detail: explain("Free talk, tutor lessons, the daily call and calls with people. A 10-minute call uses 10 minutes, thinking pauses included. After 30 seconds with nobody speaking, the clock stops."))
                 costRow(icon: "mouth.fill",
                         title: explain("Pronunciation"), cost: explain("50% off"),
                         detail: explain("A 10-minute lesson uses 5 minutes."))
@@ -96,7 +97,7 @@ struct CreditGuideView: View {
                 }
                 costRow(icon: "person.wave.2.fill",
                         title: explain("Hear it in my voice"), cost: explain("1 min per 100 characters"),
-                        detail: explain("Your Speech script, read in your voice. Made once, then replayed free."))
+                        detail: explain("A Speech script, or what your tutor prepared for a goal, read in your voice. Made once, then replayed free."))
             } header: {
                 Text("Uses talk time")
             } footer: {
@@ -118,27 +119,42 @@ struct CreditGuideView: View {
             }
 
             Section {
+                // Every feature that spends nothing, one row each
+                // (2026-11-05, founder: the page covers the whole app).
                 freeRow(icon: "rectangle.stack.fill", title: explain("All reviewing"),
-                        detail: explain("Drills, shadowing with coach feedback and pronunciation scores, word and expression playback: every review surface."))
+                        detail: explain("Drills, shadowing with coach feedback and pronunciation scores, say it again, word and expression cards."))
                 freeRow(icon: "repeat", title: explain("Replays"),
                         detail: explain("Anything already synthesized is cached — loop it, slow it down, replay whole talks."))
+                freeRow(icon: "graduationcap.fill", title: explain("Tutor"),
+                        detail: explain("Chat, today's plan, and everything it prepares for your goals: likely questions, readings, model answers. Practicing a question with it is a call."))
+                freeRow(icon: "music.mic", title: explain("Speech"),
+                        detail: explain("Writing and studying scripts, recording takes, scores and challenges."))
+                freeRow(icon: "headphones", title: explain("Listening"),
+                        detail: explain("The nawana Podcast and the scenes you've watched, one after another."))
                 freeRow(icon: "wand.and.stars", title: explain("Summaries & reports"),
-                        detail: explain("Talk summaries, weekly reports and the weekly test."))
-                freeRow(icon: "video.fill", title: explain("Speech practice"),
-                        detail: explain("Recording takes, scores and challenges."))
-                freeRow(icon: "waveform", title: explain("Making your voice"),
-                        detail: explain("Recording it, and making it again."))
+                        detail: explain("Talk summaries, weekly reports, the weekly test and quick quizzes."))
                 freeRow(icon: "square.grid.2x2", title: explain("Exploring"),
                         detail: explain("Building situations, browsing topics, translations, dictionaries — tap freely, nothing here is metered."))
                 freeRow(icon: "text.book.closed.fill", title: explain("Vocabulary & progress"),
                         detail: explain("The word cloud, CEFR estimate, and stats never cost anything."))
+                freeRow(icon: "waveform", title: explain("Making your voice"),
+                        detail: explain("Recording it, and making it again."))
             } header: {
-                Text("Always free")
+                Text("Always free").id("always-free")
             } footer: {
                 Text(explain("In short: minutes buy speaking time with your fluent self. Practicing with what already exists is always free."))
             }
         }
         .listStyle(.insetGrouped)
+        #if DEBUG
+        // Captures: `-capture plan-guide-free` shoots the free list.
+        .task {
+            guard UserDefaults.standard.bool(forKey: "guideFree") else { return }
+            try? await Task.sleep(for: .milliseconds(400))
+            proxy.scrollTo("always-free", anchor: .top)
+        }
+        #endif
+        }
         .navigationTitle("What uses talk time?")
         .navigationBarTitleDisplayMode(.inline)
     }
