@@ -101,6 +101,10 @@ data class TalkConfig(
     /** iOS `forceTutor = tutor && resumeSession == nil`. */
     val forceTutor: Boolean get() = tutor && resume == null
 
+    /** Who the call is with, if anyone (iOS `resumeSession?.counterpartId ??
+     *  initialCounterpart?.id`, the session's `sessionCounterpartId`). */
+    val withPerson: String? get() = resume?.counterpartId ?: counterpartId ?: cast?.person?.id
+
     /** iOS `systemPrompt()`'s `composedTopic`. */
     val composedTopic: String get() = if (topicBlurb.isEmpty()) topic else "$topic. $topicBlurb"
 }
@@ -420,7 +424,12 @@ class TalkViewModel(context: Context) : ViewModel() {
             config.topic.isBlank() && config.cast == null && config.scenarioId == null &&
             config.newsFacts.isEmpty() && !config.learnerPicksTopic && PronunciationCall.isOn(appContext)
         if (pronThisCall) coachOn = false
-        tutorThisCall = (TutorMode.isOn(appContext) || config.forceTutor) && !pronThisCall
+        // A call WITH someone (a person on the map, a stranger, someone
+        // bumped into) is that person talking, never the tutor: tutor mode is
+        // the fluent self's (iOS 59680063, founder — a call with a stranger
+        // came up as a lesson). Turning it on mid-call still works.
+        tutorThisCall = ((TutorMode.isOn(appContext) && config.withPerson == null) || config.forceTutor) &&
+            !pronThisCall
         tutorWasOn = tutorThisCall
         pronUnheard = 0; pronWindowOpen = false; pronHeardSince = null; pronSendJob?.cancel()
         lastRealtimeState = RealtimeTalkClient.State.IDLE
@@ -3149,6 +3158,8 @@ object TalkEntry {
     /** The empty Review page's "Start a talk". */
     const val PRACTICE_EMPTY = "practice_empty"
     const val WATCH_PERSON = "watch_person"
+    /** Watch's walking figure: someone bumped into ([com.roro.futurevoice.ui.ChanceEncounter]). */
+    const val WATCH_ENCOUNTER = "watch_encounter"
     /** "Your turn" on the news of a new Core member. */
     const val CORE_NEWS = "core_news"
     const val RESUME = "resume"

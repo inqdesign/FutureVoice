@@ -117,6 +117,8 @@ object Symbols {
         "person.crop.rectangle" to Icons.Filled.Badge,
         "text.bubble" to Icons.Filled.Forum,
         "figure.2.and.child.holdinghands" to Icons.Filled.FamilyRestroom,
+        // Watch's "Bump into someone" and the encounter books (iOS 59680063).
+        "figure.2.arms.open" to Icons.Filled.People,
     )
 
     /**

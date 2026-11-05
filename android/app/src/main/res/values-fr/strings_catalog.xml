@@ -804,6 +804,20 @@
     <string name="email">"E-mail"</string>
     <string name="emerald">"Émeraude"</string>
     <string name="en">"EN"</string>
+    <string name="encounter_another">"Quelqu’un d’autre"</string>
+    <string name="encounter_bakery">"Dans la file de la boulangerie, la personne devant toi se retourne"</string>
+    <string name="encounter_barista">"Le barista s’est trompé de commande"</string>
+    <string name="encounter_bench">"Sur le même banc, au parc"</string>
+    <string name="encounter_bookshop">"À la librairie, quelqu’un tend la main vers le même livre que toi"</string>
+    <string name="encounter_cafetable">"Le café est plein, quelqu’un te demande s’il peut partager ta table"</string>
+    <string name="encounter_gate">"À la porte d’embarquement, le même vol est retardé"</string>
+    <string name="encounter_hotel">"L’hôtel ne trouve pas ta réservation"</string>
+    <string name="encounter_laundromat">"À la laverie, en attendant les sèche-linge"</string>
+    <string name="encounter_neighbor">"Un nouveau voisin frappe à ta porte"</string>
+    <string name="encounter_party">"À la soirée d’un ami, près du buffet"</string>
+    <string name="encounter_rain">"Sous le même auvent, à attendre que la pluie passe"</string>
+    <string name="encounter_taxi">"Un chauffeur de taxi bavard"</string>
+    <string name="encounter_train">"Dans le train, sur le siège d’à côté"</string>
     <string name="encouraging">"Encourageant"</string>
     <string name="end">"Terminer"</string>
     <string name="end_the_call">"Terminer l’appel"</string>
@@ -3473,6 +3487,7 @@
     <string name="watch_again">"Revoir"</string>
     <string name="watch_again_or_study_it">"Revoir la scène, ou l’étudier"</string>
     <string name="watch_book">"Carnet de la scène"</string>
+    <string name="watch_bump">"Une rencontre au hasard"</string>
     <!-- 'Watch has its own pool, separate from your talk minutes. A scene costs one whichever way it runs — a long one and a short one cost the same.' -->
     <string name="watch_has_its_own_pool_separate_from_your_talk_minutes_a_sce_98932d">"Les scènes ont leur propre réserve, à part de tes minutes de conversation. Une scène en coûte une, quelle que soit sa longueur — courte ou longue, c’est pareil."</string>
     <string name="watch_scene">"Scène"</string>

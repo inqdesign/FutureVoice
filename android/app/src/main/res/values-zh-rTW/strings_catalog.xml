@@ -807,6 +807,20 @@
     <string name="email">"電子郵件"</string>
     <string name="emerald">"翡翠綠"</string>
     <string name="en">"EN"</string>
+    <string name="encounter_another">"換一個人"</string>
+    <string name="encounter_bakery">"麵包店排隊時，前面的人轉過頭來"</string>
+    <string name="encounter_barista">"咖啡師把你的點單弄錯了"</string>
+    <string name="encounter_bench">"在公園長椅上坐在一起"</string>
+    <string name="encounter_bookshop">"在書店裡，同時伸手拿同一本書"</string>
+    <string name="encounter_cafetable">"咖啡店客滿，有人問能不能併桌"</string>
+    <string name="encounter_gate">"在登機口，同一班飛機誤點了"</string>
+    <string name="encounter_hotel">"飯店說找不到你的訂房"</string>
+    <string name="encounter_laundromat">"在自助洗衣店等烘衣機"</string>
+    <string name="encounter_neighbor">"剛搬來的鄰居來敲門"</string>
+    <string name="encounter_party">"朋友的派對上，在點心桌旁"</string>
+    <string name="encounter_rain">"在同一個屋簷下躲雨"</string>
+    <string name="encounter_taxi">"愛聊天的計程車司機"</string>
+    <string name="encounter_train">"火車上坐在你旁邊的人"</string>
     <string name="encouraging">"很會鼓勵人"</string>
     <string name="end">"結束"</string>
     <string name="end_the_call">"結束通話"</string>
@@ -3477,6 +3491,7 @@
     <string name="watch_again">"再看一次"</string>
     <string name="watch_again_or_study_it">"再看一次，或用教材學"</string>
     <string name="watch_book">"情境複習本"</string>
+    <string name="watch_bump">"不期而遇"</string>
     <!-- 'Watch has its own pool, separate from your talk minutes. A scene costs one whichever way it runs — a long one and a short one cost the same.' -->
     <string name="watch_has_its_own_pool_separate_from_your_talk_minutes_a_sce_98932d">"情境練習有自己的額度，和通話時間分開。不管長短，一場算一場。"</string>
     <string name="watch_scene">"情境練習"</string>

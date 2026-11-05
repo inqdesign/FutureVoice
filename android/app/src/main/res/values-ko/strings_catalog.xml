@@ -807,6 +807,20 @@
     <string name="email">"이메일"</string>
     <string name="emerald">"에메랄드"</string>
     <string name="en">"EN"</string>
+    <string name="encounter_another">"다른 사람"</string>
+    <string name="encounter_bakery">"빵집 줄, 앞사람이 뒤를 돌아봐요"</string>
+    <string name="encounter_barista">"바리스타가 주문을 헷갈렸어요"</string>
+    <string name="encounter_bench">"공원 벤치에 나란히 앉았어요"</string>
+    <string name="encounter_bookshop">"서점에서 같은 책에 손을 뻗었어요"</string>
+    <string name="encounter_cafetable">"카페가 꽉 차서 누가 합석해도 되냐고 물어요"</string>
+    <string name="encounter_gate">"공항 게이트, 같은 비행기가 지연됐어요"</string>
+    <string name="encounter_hotel">"호텔에서 예약을 못 찾는대요"</string>
+    <string name="encounter_laundromat">"빨래방에서 건조기를 기다리는 중"</string>
+    <string name="encounter_neighbor">"새로 이사 온 이웃이 문을 두드려요"</string>
+    <string name="encounter_party">"친구네 파티, 간식 테이블 앞"</string>
+    <string name="encounter_rain">"같은 처마 밑에서 비를 피하는 중"</string>
+    <string name="encounter_taxi">"말이 많은 택시 기사님"</string>
+    <string name="encounter_train">"기차에서 옆자리에 앉은 사람"</string>
     <string name="encouraging">"격려를 잘함"</string>
     <string name="end">"종료"</string>
     <string name="end_the_call">"통화 끝내기"</string>
@@ -3477,6 +3491,7 @@
     <string name="watch_again">"다시 보기"</string>
     <string name="watch_again_or_study_it">"다시 보거나, 교재로 공부하기"</string>
     <string name="watch_book">"상황연습 책"</string>
+    <string name="watch_bump">"우연히 마주치기"</string>
     <!-- 'Watch has its own pool, separate from your talk minutes. A scene costs one whichever way it runs — a long one and a short one cost the same.' -->
     <string name="watch_has_its_own_pool_separate_from_your_talk_minutes_a_sce_98932d">"상황연습은 통화 시간과 별개인 자기 몫이 있어요. 길든 짧든 한 편은 한 개로 세요."</string>
     <string name="watch_scene">"상황연습 장면"</string>

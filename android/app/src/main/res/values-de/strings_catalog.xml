@@ -804,6 +804,20 @@
     <string name="email">"E-Mail"</string>
     <string name="emerald">"Smaragd"</string>
     <string name="en">"EN"</string>
+    <string name="encounter_another">"Jemand anderes"</string>
+    <string name="encounter_bakery">"In der Schlange beim Bäcker dreht sich jemand zu dir um"</string>
+    <string name="encounter_barista">"Der Barista hat deine Bestellung verwechselt"</string>
+    <string name="encounter_bench">"Auf derselben Parkbank"</string>
+    <string name="encounter_bookshop">"In der Buchhandlung greift jemand nach demselben Buch wie du"</string>
+    <string name="encounter_cafetable">"Das Café ist voll, jemand fragt, ob an deinem Tisch noch Platz ist"</string>
+    <string name="encounter_gate">"Am Gate, derselbe Flug hat Verspätung"</string>
+    <string name="encounter_hotel">"Das Hotel findet deine Buchung nicht"</string>
+    <string name="encounter_laundromat">"Im Waschsalon, beim Warten auf den Trockner"</string>
+    <string name="encounter_neighbor">"Ein neuer Nachbar klopft an deine Tür"</string>
+    <string name="encounter_party">"Auf einer Party bei Freunden, am Buffet"</string>
+    <string name="encounter_rain">"Unter demselben Vordach, bis der Regen aufhört"</string>
+    <string name="encounter_taxi">"Ein gesprächiger Taxifahrer"</string>
+    <string name="encounter_train">"Im Zug, auf dem Platz neben dir"</string>
     <string name="encouraging">"Ermutigend"</string>
     <string name="end">"Beenden"</string>
     <string name="end_the_call">"Anruf beenden"</string>
@@ -3473,6 +3487,7 @@
     <string name="watch_again">"Nochmal ansehen"</string>
     <string name="watch_again_or_study_it">"Noch mal ansehen oder lernen"</string>
     <string name="watch_book">"Ansehen-Buch"</string>
+    <string name="watch_bump">"Zufällige Begegnung"</string>
     <!-- 'Watch has its own pool, separate from your talk minutes. A scene costs one whichever way it runs — a long one and a short one cost the same.' -->
     <string name="watch_has_its_own_pool_separate_from_your_talk_minutes_a_sce_98932d">"Szenen haben ein eigenes Kontingent, getrennt von deinen Sprechminuten. Eine Szene zählt als eine, egal wie lang sie ist."</string>
     <string name="watch_scene">"Szene"</string>
