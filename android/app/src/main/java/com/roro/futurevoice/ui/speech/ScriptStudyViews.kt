@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.RecordVoiceOver
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.MicExternalOn
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
@@ -362,7 +363,8 @@ internal fun voiceoverPriceLine(minutes: Int, account: AccountStatus?): String =
  *  a progress line while it is made, then Play and Shadow — free forever
  *  (iOS `ScriptVoiceoverSection`). */
 @Composable
-internal fun ScriptVoiceoverSection(script: SpeechScript, voiceId: String) {
+internal fun ScriptVoiceoverSection(script: SpeechScript, voiceId: String,
+                                    onSpeech: (() -> Unit)? = null) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val jobs by ScriptVoiceoverCenter.jobs.collectAsStateWithLifecycle()
@@ -435,25 +437,46 @@ internal fun ScriptVoiceoverSection(script: SpeechScript, voiceId: String) {
                             }
                         }, modifier = Modifier.weight(1f)) {
                             VoiceoverLabel(if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                                stringResource(if (playing) R.string.pause else R.string.play_in_my_voice))
+                                stringResource(if (playing) R.string.pause else R.string.play))
                         }
                         IosOutlinedButton(onClick = {
                             player.stop(); playing = false; resumeAt = 0; shadowing = stored
                         }, modifier = Modifier.weight(1f)) {
-                            VoiceoverLabel(Icons.Filled.GraphicEq, stringResource(R.string.shadow_it))
+                            VoiceoverLabel(Icons.Filled.GraphicEq, stringResource(R.string.shadow))
+                        }
+                        // A tutor reading's Speech, beside Play and Shadow (iOS).
+                        onSpeech?.let { go ->
+                            IosOutlinedButton(onClick = {
+                                player.stop(); playing = false; go()
+                            }, modifier = Modifier.weight(1f)) {
+                                VoiceoverLabel(Icons.Filled.MicExternalOn, stringResource(R.string.speech_d00d85))
+                            }
                         }
                     }
-                    job is ScriptVoiceoverCenter.Job.Making -> Row(Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                        Spacer(Modifier.width(12.dp))
-                        Text(stringResource(R.string.making_it_in_your_voice), Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodyLarge)
-                        Text("${job.done}/${job.total}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    job is ScriptVoiceoverCenter.Job.Making -> Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                            Spacer(Modifier.width(12.dp))
+                            Text(stringResource(R.string.making_it_in_your_voice), Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodyLarge)
+                            Text("${job.done}/${job.total}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        onSpeech?.let { go ->
+                            IosOutlinedButton(onClick = go, modifier = Modifier.fillMaxWidth()) {
+                                VoiceoverLabel(Icons.Filled.MicExternalOn, stringResource(R.string.speech_d00d85))
+                            }
+                        }
                     }
-                    else -> IosButton(onClick = { start() }, modifier = Modifier.fillMaxWidth(),
-                        enabled = quote <= ScriptVoiceover.MAX_MINUTES) {
-                        VoiceoverLabel(Icons.Outlined.RecordVoiceOver, stringResource(R.string.make_it_in_my_voice))
+                    else -> Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        IosButton(onClick = { start() }, modifier = Modifier.weight(1f),
+                            enabled = quote <= ScriptVoiceover.MAX_MINUTES) {
+                            VoiceoverLabel(Icons.Outlined.RecordVoiceOver, stringResource(R.string.make_it_in_my_voice))
+                        }
+                        onSpeech?.let { go ->
+                            IosOutlinedButton(onClick = go, modifier = Modifier.weight(1f)) {
+                                VoiceoverLabel(Icons.Filled.MicExternalOn, stringResource(R.string.speech_d00d85))
+                            }
+                        }
                     }
                 }
             }

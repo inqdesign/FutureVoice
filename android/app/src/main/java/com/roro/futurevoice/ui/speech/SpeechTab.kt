@@ -1051,19 +1051,24 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
             modifier = Modifier.padding(start = 16.dp, top = 7.dp))
         // A tutor reading (news, a goal's) is read-only but still heard in
         // the learner's own voice (iOS 70bb10f4).
-        if (!shipped || studyHere) voiceId?.let { ScriptVoiceoverSection(shown, it) }
-        if (canPractice) {
-            FormSection(null, footer = stringResource(R.string.under_the_prompter_with_a_score_it_s_kept_in_my_scripts)) {
-                Row(Modifier.fillMaxWidth().clickable {
-                    val store = SpeechStore.shared(context)
-                    if (store.scripts.value.none { it.id == shown.id }) store.add(shown)
-                    practicing = true
-                }.padding(horizontal = 16.dp, vertical = 12.dp),
+        // A tutor reading's Speech sits beside Play and Shadow (iOS); its own
+        // row only when there is no voiceover section to join.
+        val startPractice = {
+            val store = SpeechStore.shared(context)
+            if (store.scripts.value.none { it.id == shown.id }) store.add(shown)
+            practicing = true
+        }
+        val voiceSection = (!shipped || studyHere) && voiceId != null
+        if (voiceSection) ScriptVoiceoverSection(shown, voiceId, onSpeech = if (canPractice) startPractice else null)
+        if (canPractice && !voiceSection) {
+            FormSection(null) {
+                Row(Modifier.fillMaxWidth().clickable { startPractice() }
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(Icons.Filled.MicExternalOn, contentDescription = null, modifier = Modifier.size(20.dp),
                         tint = MaterialTheme.colorScheme.primary)
-                    Text(stringResource(R.string.say_it_out_loud), style = MaterialTheme.typography.bodyLarge,
+                    Text(stringResource(R.string.speech_d00d85), style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.primary)
                 }
             }
