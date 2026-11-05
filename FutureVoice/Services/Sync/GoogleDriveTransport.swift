@@ -45,6 +45,16 @@ final class GoogleDriveTransport: SyncTransport, BlobCellularControl {
     /// A kind leaves this list once both apps are fixed and the fix is on
     /// every Android build in use. Excluded kinds are reported as saved
     /// without a request (so they never queue) and never read from Drive.
+    ///
+    /// Where that stands: Android `fc7953ab` (2026-11-05) writes the retired
+    /// date as 4001-01-01, writes `phraseRange` beside its own fields with no
+    /// cap, never fetches a file it doesn't read, and freezes an item its
+    /// store can't decode instead of writing it. So `drill`, `shadow` and
+    /// `blobRecording` wait only on that build reaching every Android
+    /// device. `blobTurn` and `blobVoiceSample` are SAFE then but useless:
+    /// the two apps still don't play each other's turn audio (`.wav` there,
+    /// `.mp3`/`.m4a` here) or read each other's voice-sample name. `defaults`
+    /// and `savedLine` still disagree in shape and scope.
     static let excludedKinds: Set<SyncKind> = [
         .drill, .shadow, .savedLine, .defaults, .blobTurn, .blobVoiceSample, .blobRecording,
     ]
