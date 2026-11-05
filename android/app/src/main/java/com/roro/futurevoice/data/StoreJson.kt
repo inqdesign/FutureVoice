@@ -24,9 +24,18 @@ object StoreJson {
         prettyPrint = true
         prettyPrintIndent = "  "
         ignoreUnknownKeys = true
+        // A value this build doesn't know (an enum case a newer iOS or Android
+        // build added, a null where a default stands) falls back to the
+        // field's default instead of failing the whole file.
+        coerceInputValues = true
         explicitNulls = false
         encodeDefaults = true
     }
+
+    /** Swift's `Date.distantFuture`: the farthest date iOS writes, and the
+     *  farthest it can READ back with `.iso8601` (`+292278994-…` fails). */
+    const val DISTANT_FUTURE_MS = 64_092_211_200_000L
+    const val DISTANT_FUTURE_ISO = "4001-01-01T00:00:00Z"
 
     /** iOS writes UUIDs uppercase; matching it keeps ids byte-identical across a backup. */
     fun newId(): String = UUID.randomUUID().toString().uppercase()
@@ -38,8 +47,10 @@ object IsoDateMillisSerializer : KSerializer<Long> {
         PrimitiveSerialDescriptor("IsoDateMillis", PrimitiveKind.STRING)
 
     override fun serialize(encoder: Encoder, value: Long) {
+        // Nothing past Swift's distantFuture is ever written: iOS can't read it.
+        val ms = minOf(value, StoreJson.DISTANT_FUTURE_MS)
         encoder.encodeString(
-            DateTimeFormatter.ISO_INSTANT.format(Instant.ofEpochMilli(value).truncatedTo(ChronoUnit.SECONDS))
+            DateTimeFormatter.ISO_INSTANT.format(Instant.ofEpochMilli(ms).truncatedTo(ChronoUnit.SECONDS))
         )
     }
 

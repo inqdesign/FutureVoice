@@ -33,6 +33,12 @@ interface SyncKindHandler {
     fun merge(local: SyncSide?, remote: SyncSide): String?
     fun write(items: Map<String, SyncItem>, lang: String?)
     fun cascade(deletedKey: String, lang: String?, previous: String?): List<SyncCascade> = emptyList()
+    /** Can this device's store read [payload]? One it can't is set aside
+     *  (frozen in the index, never written, never tombstoned) — written into
+     *  the file, a single undecodable item makes the store read the WHOLE
+     *  file as empty, and its next save tombstones everything on every
+     *  device. iOS freezes a newer build's records the same way. */
+    fun accepts(payload: String): Boolean = true
 }
 
 sealed interface SyncCascade {
@@ -138,7 +144,15 @@ class ArrayKind(
     private val collapse: (List<JsonObject>) -> List<JsonObject> = { it },
     private val cascadeRule: (String, String?, JsonObject?) -> List<SyncCascade> = { _, _, _ -> emptyList() },
     private val afterWrite: (String?) -> Unit = {},
+    /** Decodes one item with the store's own class; throws when it can't. */
+    private val validate: ((JsonObject) -> Unit)? = null,
 ) : SyncKindHandler {
+    override fun accepts(payload: String): Boolean {
+        val check = validate ?: return true
+        val o = SyncJson.obj(payload) ?: return false
+        return runCatching { check(o) }.isSuccess
+    }
+
     override fun read(lang: String?): Map<String, String>? {
         val f = paths.file(filename, lang)
         if (!f.exists()) return emptyMap()
@@ -247,7 +261,11 @@ class PrefsCountKind(
 class BlobKind(
     override val kind: SyncKind,
     private val directory: () -> File,
-    private val accepts: (String) -> Boolean = { true },
+    /** File names this device reads. The engine never downloads or indexes
+     *  any other: a file fetched and then filtered out of [read] looks
+     *  deleted to the next diff, and the tombstone deletes it on the device
+     *  that made it (iOS's `.mp3` turn audio, its `sample-*.wav`). */
+    val acceptsFile: (String) -> Boolean = { true },
 ) : SyncKindHandler {
     fun file(key: String) = File(directory(), key)
 
@@ -256,7 +274,7 @@ class BlobKind(
         val names = dir.list() ?: return emptyMap()
         val out = HashMap<String, String>()
         for (name in names) {
-            if (name.startsWith(".") || !accepts(name)) continue
+            if (name.startsWith(".") || !acceptsFile(name)) continue
             val f = File(dir, name)
             if (!f.isFile) continue
             out[name] = SyncCanonical.blobFingerprint(f.length(), f.lastModified())

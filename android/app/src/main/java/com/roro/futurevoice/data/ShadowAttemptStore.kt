@@ -42,6 +42,10 @@ data class ShadowAttempt(
      */
     val phraseFirst: Int? = null,
     val phraseLast: Int? = null,
+    /** The same words as iOS writes them (`ClosedRange<Int>` → `[a, b]`).
+     *  Both shapes are written so iOS and older Android builds each read a
+     *  phrase take as a phrase take. */
+    val phraseRange: List<Int>? = phraseFirst?.let { f -> phraseLast?.let { l -> listOf(f, l) } },
     /** 0–100 word-onset timing; null = not measurable. */
     val rhythmScore: Int? = null,
     val pronunciation: String = "",
@@ -57,7 +61,11 @@ data class ShadowAttempt(
     val assessment: com.roro.futurevoice.talk.PronunciationResult? = null,
 ) {
     /** A take of PART of the line — never a verdict on the line itself. */
-    val isPartial: Boolean get() = phraseFirst != null && phraseLast != null
+    val isPartial: Boolean get() = phrase != null
+
+    /** The phrase's word indices, inclusive, from whichever shape is on file. */
+    val phrase: IntRange? get() = phraseRange?.takeIf { it.size == 2 }?.let { it[0]..it[1] }
+        ?: phraseFirst?.let { f -> phraseLast?.let { l -> f..l } }
 
     /**
      * The ONE number a take is judged by — history, mastery, retry picks
@@ -77,8 +85,6 @@ class ShadowAttemptStore private constructor(private val context: Context) {
             instance ?: synchronized(this) {
                 instance ?: ShadowAttemptStore(context.applicationContext).also { instance = it }
             }
-        /** Enough to know what has been tried without growing without bound. */
-        private const val MAX = 500
     }
 
     private val mutex = Mutex()
@@ -98,7 +104,10 @@ class ShadowAttemptStore private constructor(private val context: Context) {
 
     suspend fun add(attempt: ShadowAttempt, language: String) = withContext(Dispatchers.IO) {
         mutex.withLock {
-            val all = (read(language) + attempt).takeLast(MAX)
+            // No cap, like iOS: a cap here dropped takes (and, once synced, on
+            // every device) — and on a file the sync writes newest-first it
+            // dropped the NEWEST.
+            val all = read(language) + attempt
             file(language).writeText(
                 StoreJson.json.encodeToString(ListSerializer(ShadowAttempt.serializer()), all))
         }

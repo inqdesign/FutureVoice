@@ -10,6 +10,8 @@ import com.roro.futurevoice.sync.SyncJson.num
 import com.roro.futurevoice.sync.SyncJson.str
 import com.roro.futurevoice.sync.SyncJson.time
 import com.roro.futurevoice.sync.SyncJson.with
+import com.roro.futurevoice.data.StoreJson
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -72,14 +74,17 @@ class SyncKindRegistry(private val context: Context) : SyncRegistry {
         DictKind(SyncKind.SCHEDULE, "study-schedule.json", paths, SyncMerge::lww, ::touched),
         shadowKind(),
         ArrayKind(SyncKind.SAVED_LINE, "saved_lines.json", paths, mergeRule = SyncMerge::lww,
-            afterWrite = ::touched),
+            afterWrite = ::touched, validate = decodes(com.roro.futurevoice.data.SavedLine.serializer())),
         ArrayKind(SyncKind.WEEKLY, "weekly-reports.json", paths, mergeRule = SyncMerge::lww,
-            sortForFile = newestFirst("generatedAt"), afterWrite = ::touched),
+            sortForFile = newestFirst("generatedAt"), afterWrite = ::touched,
+            validate = decodes(com.roro.futurevoice.data.WeeklyReport.serializer())),
         ArrayKind(SyncKind.WEEKLY_TEST, "weekly-tests.json", paths, mergeRule = SyncMerge::lww,
-            sortForFile = newestFirst("createdAt"), afterWrite = ::touched),
+            sortForFile = newestFirst("createdAt"), afterWrite = ::touched,
+            validate = decodes(com.roro.futurevoice.data.WeeklyTest.serializer())),
         scenarioKind(),
         ArrayKind(SyncKind.SPEECH_SCRIPT, "speech_scripts.json", paths, mergeRule = SyncMerge::lww,
-            sortForFile = newestFirst("createdAt"), afterWrite = ::reloadSpeech),
+            sortForFile = newestFirst("createdAt"), afterWrite = ::reloadSpeech,
+            validate = decodes(com.roro.futurevoice.data.SpeechScript.serializer())),
         speechTakeKind(),
         DictKind(SyncKind.PRACTICE_DAY, "practice-log.json", paths, { l, r ->
             SyncMerge.union(l, r, SyncMerge.typed { a, b -> maxFields(a as JsonObject, b as JsonObject) })
@@ -92,6 +97,7 @@ class SyncKindRegistry(private val context: Context) : SyncRegistry {
         PersonaNoteKind(paths, ::touched),
         ArrayKind(SyncKind.UPCOMING_GOAL, com.roro.futurevoice.data.UpcomingGoalStore.FILENAME, paths,
             mergeRule = SyncMerge::lww,
+            validate = decodes(com.roro.futurevoice.data.UpcomingGoal.serializer()),
             afterWrite = { com.roro.futurevoice.data.UpcomingGoalStore.reload(context); touched(it) }),
         ProfileKind(paths, ::touched),
         LearningPurposeKind(
@@ -128,7 +134,8 @@ class SyncKindRegistry(private val context: Context) : SyncRegistry {
         afterWrite = { lang ->
             if (isActive(lang)) SessionStore.shared(context).invalidateCache()
             touched(lang)
-        })
+        },
+        validate = decodes(com.roro.futurevoice.talk.Session.serializer()))
 
     /** The sentence card a deleted talk's cards are matched by. */
     override fun cardSessionId(payload: String): String? = SyncJson.obj(payload)?.str("sourceSessionId")?.uppercase()
@@ -144,9 +151,12 @@ class SyncKindRegistry(private val context: Context) : SyncRegistry {
 
     private fun drillKind() = ArrayKind(
         SyncKind.DRILL, "drills.json", paths,
+        outbound = CrossPlatform::retiredDate,
         mergeRule = { l, r -> SyncMerge.tombstoneWins(l, r, SyncMerge.typed { a, b ->
             mergeCards(a as JsonObject, b as JsonObject) }) },
-        afterWrite = ::touched)
+        afterWrite = ::touched,
+        validate = decodes(com.roro.futurevoice.talk.DrillCard.serializer()))
+
 
     /** Two copies of one card: progress is monotone, and the schedule follows
      *  the box that won (a box-5 card's date is already the retired one). */
@@ -195,7 +205,8 @@ class SyncKindRegistry(private val context: Context) : SyncRegistry {
         SyncKind.SHADOW, "shadow_attempts.json", paths,
         // The recording's path is absolute and this install's; the payload
         // carries the file NAME, and the file rides as `blobRecording`.
-        outbound = { o -> o.str("recordingFilename")?.let { o.with("recordingFilename" to JsonPrimitive(File(it).name)) } ?: o },
+        outbound = { o -> CrossPlatform.phraseBothWays(
+            o.str("recordingFilename")?.let { o.with("recordingFilename" to JsonPrimitive(File(it).name)) } ?: o) },
         mergeRule = SyncMerge::lww,
         sortForFile = { list ->
             newestFirst("createdAt")(list.map { o ->
@@ -208,7 +219,9 @@ class SyncKindRegistry(private val context: Context) : SyncRegistry {
             previous?.str("recordingFilename")?.let { listOf(SyncCascade.DeleteFile(SyncKind.BLOB_RECORDING, File(it).name)) }
                 .orEmpty()
         },
-        afterWrite = ::touched)
+        afterWrite = ::touched,
+        validate = decodes(com.roro.futurevoice.data.ShadowAttempt.serializer()))
+
 
     // ── Speech ──────────────────────────────────────────────────────────
 
@@ -225,7 +238,8 @@ class SyncKindRegistry(private val context: Context) : SyncRegistry {
             listOfNotNull(previous?.str("audioFilename"), previous?.str("videoFilename"))
                 .map { SyncCascade.DeleteFile(SyncKind.BLOB_SPEECH_AUDIO, it) }
         },
-        afterWrite = ::reloadSpeech)
+        afterWrite = ::reloadSpeech,
+        validate = decodes(com.roro.futurevoice.data.SpeechTake.serializer()))
 
     // ── Scenarios ───────────────────────────────────────────────────────
 
@@ -246,7 +260,8 @@ class SyncKindRegistry(private val context: Context) : SyncRegistry {
                     "lastUsedAt" to SyncJson.later(a, b, "lastUsedAt")))
             }
         },
-        afterWrite = ::touched)
+        afterWrite = ::touched,
+        validate = decodes(com.roro.futurevoice.talk.Scenario.serializer()))
 
     private fun mergeCurricula(a: JsonObject?, b: JsonObject?): JsonElement? {
         if (a == null) return b
@@ -277,9 +292,14 @@ class SyncKindRegistry(private val context: Context) : SyncRegistry {
             val seen = HashSet<String>()
             newestFirst("updatedAt")(list).filter { c -> c.str("remoteId")?.let(seen::add) ?: true }
         },
-        afterWrite = ::touched)
+        afterWrite = ::touched,
+        validate = decodes(com.roro.futurevoice.data.Counterpart.serializer()))
 
     // ── Helpers ─────────────────────────────────────────────────────────
+
+    /** "This store can read the item": decode it with the store's own class. */
+    private fun <T> decodes(serializer: KSerializer<T>): (JsonObject) -> Unit =
+        { StoreJson.json.decodeFromJsonElement(serializer, it) }
 
     private fun newestFirst(field: String): (List<JsonObject>) -> List<JsonObject> =
         { list -> list.sortedByDescending { it.time(field) ?: 0.0 } }
@@ -532,5 +552,38 @@ private class DefaultsKind(private val context: Context) : SyncKindHandler {
         }
         e.apply()
         StoreEvents.bump(fromSync = true)
+    }
+}
+
+/** Where an Android payload and an iOS one disagree on the SHAPE of the same
+ *  fact, and a device on either side would read the other's as something
+ *  else. Applied on the way out (`outbound`), so files from older builds
+ *  still go up in the shape both read. */
+object CrossPlatform {
+    /** A retired card's date as iOS writes it. Builds before 2026-11-05
+     *  stored `Long.MAX_VALUE` (year +292278994), which iOS can't decode: it
+     *  skipped the card, then tombstoned it, deleting every "Got it" card on
+     *  every device. A file synced from such a build can still hold it. */
+    fun retiredDate(card: JsonObject): JsonObject {
+        val next = card.str("nextReviewAt") ?: return card
+        val year = next.trimStart('+').substringBefore('-').toLongOrNull() ?: return card
+        return if (next.startsWith("+") || year > 4001) card.with("nextReviewAt" to JsonPrimitive(StoreJson.DISTANT_FUTURE_ISO)) else card
+    }
+
+    /** A phrase take's words in both shapes: iOS reads `phraseRange: [a, b]`,
+     *  builds before 2026-11-05 read `phraseFirst`/`phraseLast`. With only
+     *  one of them a phrase take reads as the whole line on the other side
+     *  and checks the sentence off. */
+    fun phraseBothWays(o: JsonObject): JsonObject {
+        val range = (o["phraseRange"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.content?.toIntOrNull() }
+            ?.takeIf { it.size == 2 }
+        val first = o.num("phraseFirst")?.toInt(); val last = o.num("phraseLast")?.toInt()
+        return when {
+            range != null && (first == null || last == null) ->
+                o.with("phraseFirst" to JsonPrimitive(range[0]), "phraseLast" to JsonPrimitive(range[1]))
+            range == null && first != null && last != null ->
+                o.with("phraseRange" to JsonArray(listOf(JsonPrimitive(first), JsonPrimitive(last))))
+            else -> o
+        }
     }
 }

@@ -426,6 +426,20 @@ class SyncEngine(
             val localSide = previous?.let { SyncSide(it, localAt, false) }
                 ?: existing?.takeIf { it.isDeleted }?.let { SyncSide(null, it.deletedAt ?: 0L, true) }
             val remoteSide = SyncSide(record.payload, record.deletedAt ?: record.modifiedAt, record.isTombstone)
+            // An item this device's store can't decode (iOS writes a field in
+            // a shape this build doesn't know) never goes into the file. With
+            // a copy of our own, ours stands and the index is left alone;
+            // without, the record is frozen: kept on the server, never pushed
+            // back, never tombstoned. A later edit is pulled and judged again.
+            val unreadable = !record.isTombstone && record.payload?.let { !handler.accepts(it) } == true
+            if (unreadable) {
+                if (previous == null) index.put(SyncIndex.Entry(
+                    kind = handler.kind.raw, lang = lang, key = key,
+                    hash = SyncCanonical.sha256(record.payload!!), observedAt = remoteSide.at,
+                    pushedAt = now, needsPush = false, serverId = record.serverId ?: existing?.serverId,
+                    frozen = true, size = record.size))
+                continue
+            }
             val frozen = record.schema > SyncSchema.VERSION
             val result = handler.merge(localSide, remoteSide)
             val matchesServer = if (record.isTombstone) result == null else result == record.payload
@@ -461,6 +475,10 @@ class SyncEngine(
         val local = blob.read(null) ?: emptyMap()
         for (record in records) {
             val key = record.key
+            // A file this device doesn't read is never fetched or indexed:
+            // downloaded, it would vanish from the next read, and the diff
+            // would tombstone it on the device that made it.
+            if (!blob.acceptsFile(key)) continue
             val entry = index.entry(blob.kind, null, key)
                 ?: SyncIndex.Entry(kind = blob.kind.raw, key = key, hash = "", observedAt = now)
             entry.serverId = record.serverId ?: entry.serverId
@@ -600,7 +618,9 @@ class SyncEngine(
                     observedAt = now, needsPush = true))
             }
         }
+        val unread = (handler as? BlobKind)?.acceptsFile
         for (entry in index.entries(handler.kind, lang)) {
+            if (unread != null && !unread(entry.key)) continue
             if (snapshot[entry.key] == null && !entry.isDeleted && !entry.frozen && !entry.wanted) {
                 entry.deletedAt = now; entry.observedAt = now; entry.hash = ""; entry.needsPush = true
                 index.put(entry)

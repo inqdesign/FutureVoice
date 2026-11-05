@@ -32,8 +32,13 @@ object DrillIngest {
      * left the store. A retired card is still LISTED under Known, and
      * re-filing it from that folder is what brings it back — the learner's
      * call, not the ladder's (iOS `1ab175d`).
+     *
+     * The date is iOS's `Date.distantFuture` (4001-01-01). It was
+     * `Long.MAX_VALUE` until 2026-11-05, which iOS can't decode — a synced
+     * retired card was skipped there, then tombstoned, and every "Got it"
+     * card deleted on every device. [retired] repairs the old value on read.
      */
-    const val RETIRED_REVIEW_AT = Long.MAX_VALUE
+    const val RETIRED_REVIEW_AT = StoreJson.DISTANT_FUTURE_MS
 
     fun isRetired(card: DrillCard) = card.box >= MAX_BOX
 
