@@ -713,6 +713,7 @@ struct VoiceCloneOnboardingView: View {
                        explain("You didn't finish signing up, so we deleted the voice you made to keep it safe."))
             supportLine(explain("Everything else is still here."))
                 .padding(.horizontal, 32)
+            tutorDoor
         }
         .transition(.opacity)
     }
@@ -723,8 +724,26 @@ struct VoiceCloneOnboardingView: View {
                        explain("Don't imitate a stranger — practice with the fluent you."))
             supportLine(explain("Time to meet the you who speaks perfect \(LanguageCatalog.learnerName(appState.targetLanguage)) — in your own voice. One minute of reading is all it takes."))
                 .padding(.horizontal, 32)
+            tutorDoor
         }
         .transition(.opacity)
+    }
+
+    /// The second door, in the body under the pitch (founder, 2026-11-05:
+    /// under the big button it sat awkwardly). A re-record from Me has no
+    /// second door to offer.
+    @ViewBuilder
+    private var tutorDoor: some View {
+        if !fromSettings {
+            Button(action: useTutorVoice) {
+                Text("Use the AI tutor's voice instead")
+                    .font(.subheadline.weight(.medium))
+                    .underline()
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color.accentColor)
+            .padding(.top, 6)
+        }
     }
 
     // Step 2 — age + biometric consent, on one screen, gating the CTA.
@@ -1412,7 +1431,8 @@ struct VoiceCloneOnboardingView: View {
             case .intro:
                 // Two doors (founder, 2026-11-04): the learner's own voice is
                 // THE recommendation and the big button; the AI tutor's voice
-                // is the quiet alternative under it, for whoever won't record.
+                // is the quiet alternative in the body above (`tutorDoor`),
+                // for whoever won't record.
                 // Cross-stage back: reopen the persona cards. The published
                 // persona is only nil-ed — the store keeps the data, and the
                 // intake reopens pre-filled from it. A re-record from Me has
@@ -1424,13 +1444,6 @@ struct VoiceCloneOnboardingView: View {
                         Analytics.capture("voice_door_chosen", ["door": "own"])
                     }
                     status = stepAfterIntro
-                }
-                if !fromSettings {
-                    Button(action: useTutorVoice) {
-                        Text("Use the AI tutor's voice instead")
-                            .font(.subheadline)
-                    }
-                    .padding(.top, 2)
                 }
 
             case .consent:
