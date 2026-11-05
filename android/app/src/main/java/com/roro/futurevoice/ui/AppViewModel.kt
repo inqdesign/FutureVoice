@@ -70,6 +70,17 @@ data class AppState(
      * because null means "no voice" everywhere and routes into onboarding.
      */
     val voiceIsStandIn: Boolean = false,
+    /**
+     * The learner chose the AI tutor's voice INSTEAD of recording their own
+     * (iOS `voiceIsTutorOnly`, 2026-11-04, founder: "your own voice is
+     * recommended, but you can use the AI tutor's voice instead"). Rides on
+     * the stand-in: a preset holds [voiceId], so every "is there a real
+     * clone" check (`!voiceIsStandIn`) already skips it, and recording later
+     * in Me ends it ([endStandIn]). What differs from a QUEUED voice: nothing
+     * is waiting to be built, no recording exists, and no age or voice
+     * consent was asked (nothing biometric was collected).
+     */
+    val voiceIsTutorOnly: Boolean = false,
     /** When the server said voices can be made again (epoch ms); null = it
      *  didn't say, so the next foreground tries. */
     val voiceQueuedUntil: Long? = null,
@@ -119,6 +130,7 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         enrolledLanguages = LanguageScope.enrolled(appContext),
         voiceAccentId = prefs.getString(ACCENT_KEY, null),
         voiceIsStandIn = prefs.getBoolean(STAND_IN_KEY, false),
+        voiceIsTutorOnly = prefs.getBoolean(TUTOR_ONLY_KEY, false),
         voiceQueuedUntil = prefs.getLong(QUEUED_UNTIL_KEY, 0L).takeIf { it > 0 },
         fluentSelfPresetId = com.roro.futurevoice.data.FluentSelfVoice.presetId(appContext),
     ))
@@ -785,6 +797,69 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
     private fun endStandIn() {
         prefs.edit().remove(STAND_IN_KEY).remove(QUEUED_UNTIL_KEY).remove(STAND_IN_ID_KEY).apply()
         _state.update { it.copy(voiceIsStandIn = false, voiceQueuedUntil = null) }
+        // They recorded after all: the fluent self is their own voice now,
+        // which is what recording is for.
+        if (_state.value.voiceIsTutorOnly) {
+            prefs.edit().remove(TUTOR_ONLY_KEY).apply()
+            com.roro.futurevoice.data.FluentSelfVoice.set(appContext, null)
+            _state.update { it.copy(voiceIsTutorOnly = false, fluentSelfPresetId = null) }
+        }
+    }
+
+    // MARK: - The AI tutor's voice, no recording
+
+    /** Onboarding's second door: speak in a preset, record nothing (iOS
+     *  `adoptTutorVoice`). */
+    fun adoptTutorVoice(presetId: String) {
+        if (!com.roro.futurevoice.talk.VoicePreset.isPreset(presetId)) return
+        prefs.edit()
+            .putBoolean(STAND_IN_KEY, true)
+            .putBoolean(TUTOR_ONLY_KEY, true)
+            .remove(QUEUED_UNTIL_KEY)
+            .putString(STAND_IN_ID_KEY, presetId)
+            .remove(ACCENT_KEY)
+            .apply()
+        com.roro.futurevoice.data.FluentSelfVoice.set(appContext, presetId)
+        // A preset is nobody's to reclaim: the anonymous sweep's clock is
+        // about clones (see `VoiceReclaim`).
+        com.roro.futurevoice.data.VoiceReclaim.clear(appContext)
+        _state.update {
+            it.copy(voiceIsStandIn = true, voiceIsTutorOnly = true, voiceQueuedUntil = null,
+                voiceAccentId = null, fluentSelfPresetId = presetId, voiceId = presetId)
+        }
+    }
+
+    /** Which preset the tutor-only learner hears (onboarding, Me → Voice;
+     *  iOS `chooseTutorVoice`). */
+    fun chooseTutorVoice(presetId: String, source: String) {
+        val st = _state.value
+        if (!st.voiceIsTutorOnly || !com.roro.futurevoice.talk.VoicePreset.isPreset(presetId) ||
+            presetId == st.voiceId) return
+        prefs.edit().putString(STAND_IN_ID_KEY, presetId).apply()
+        com.roro.futurevoice.data.FluentSelfVoice.set(appContext, presetId)
+        _state.update { it.copy(fluentSelfPresetId = presetId, voiceId = presetId) }
+        if (source != "meet") {
+            com.roro.futurevoice.core.Analytics.capture("fluent_self_voice_chosen", mapOf(
+                "choice" to "tutor_only", "source" to source,
+                "preset" to com.roro.futurevoice.talk.StockPerson.by(presetId).name,
+                "language" to st.targetLanguage))
+            // Openers are keyed to the voice. (iOS also rewrites the next
+            // voicemail; Android's is a script the call speaks, keyed to no
+            // voice — see [chooseFluentSelfVoice].)
+            warmFreeTalkOpeners()
+        }
+    }
+
+    /** Back out of the tutor door in onboarding, before it was kept (iOS
+     *  `leaveTutorVoice`). */
+    fun leaveTutorVoice() {
+        if (!_state.value.voiceIsTutorOnly) return
+        prefs.edit().remove(STAND_IN_KEY).remove(TUTOR_ONLY_KEY).remove(STAND_IN_ID_KEY).apply()
+        com.roro.futurevoice.data.FluentSelfVoice.set(appContext, null)
+        _state.update {
+            it.copy(voiceIsTutorOnly = false, voiceIsStandIn = false,
+                fluentSelfPresetId = null, voiceId = null)
+        }
     }
 
     private fun setQueuedUntil(until: Long) {
@@ -805,7 +880,7 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
      */
     fun makeQueuedVoiceIfReady() {
         val st = _state.value
-        if (!st.voiceIsStandIn || makingQueuedVoice || st.holdVoiceOnboarding) return
+        if (!st.voiceIsStandIn || st.voiceIsTutorOnly || makingQueuedVoice || st.holdVoiceOnboarding) return
         if (auth.userId == null) return
         val sample = VoiceComparison.sampleFile(appContext.filesDir)
         if (!sample.exists() || sample.length() == 0L) return
@@ -1157,6 +1232,7 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         /** Same key names as iOS's defaults keys. */
         const val STAND_IN_KEY = "futurevoice.voiceIsStandIn"
         const val QUEUED_UNTIL_KEY = "futurevoice.voiceQueuedUntil"
+        const val TUTOR_ONLY_KEY = "futurevoice.voiceIsTutorOnly"
         /** iOS keeps the stand-in in `voiceCloneId`'s own defaults key; this
          *  app restores the voice id from the server, which has no row for it. */
         const val STAND_IN_ID_KEY = "futurevoice.standInVoiceId"

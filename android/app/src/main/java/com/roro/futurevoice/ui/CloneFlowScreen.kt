@@ -214,6 +214,14 @@ fun CloneFlowScreen(
      *  `chooseFluentSelfVoice(source: "meet")`). */
     onFluentSelfVoiceChosen: (presetId: String?, recommended: String?, ownPitchHz: Double?,
                               switches: Int) -> Unit = { _, _, _, _ -> },
+    /** The learner chose the AI tutor's voice instead of recording (iOS
+     *  `voiceIsTutorOnly`, 2026-11-04), and the three moves on it: the
+     *  intro's second door, the meet act's pick of the four tutors, and its
+     *  Back (iOS `adoptTutorVoice` / `chooseTutorVoice` / `leaveTutorVoice`). */
+    voiceIsTutorOnly: Boolean = false,
+    onUseTutorVoice: (presetId: String) -> Unit = {},
+    onChooseTutorVoice: (presetId: String) -> Unit = {},
+    onLeaveTutorVoice: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -231,7 +239,11 @@ fun CloneFlowScreen(
             "meet" -> CloneAct.MEET
             "account" -> CloneAct.ACCOUNT
             "queued" -> CloneAct.QUEUED
-            else -> if (fromSettings) CloneAct.SPOT else CloneAct.INTRO
+            // The AI tutor door's meet act, with no session to synthesize on.
+            "tutor" -> CloneAct.MEET
+            // A tutor-only learner recording from Me has never seen the
+            // pitch or given the voice consent: start where onboarding does.
+            else -> if (fromSettings && !voiceIsTutorOnly) CloneAct.SPOT else CloneAct.INTRO
         })
     }
     // Came back after the unclaimed voice was collected (see [VoiceReclaim]).
@@ -303,6 +315,11 @@ fun CloneFlowScreen(
      *  used to be synthesized afresh. */
     val sounds = remember { MeetSounds() }
     var clonedVoiceId by remember { mutableStateOf<String?>(null) }
+    /** The AI tutor's voice is the one on stage (iOS `voiceIsTutorOnly`):
+     *  set here the moment the door is taken, so the meet act never waits on
+     *  the app state to catch up. [clonedVoiceId] then holds the tutor. */
+    var tutorDoor by remember { mutableStateOf(voiceIsTutorOnly) }
+    LaunchedEffect(voiceIsTutorOnly) { tutorDoor = voiceIsTutorOnly }
     /** The preset offered beside the clone (iOS 2026-10-24): same gender as
      *  the recording, nearest in pitch (`VoicePitch`). Null until measured,
      *  and the segment waits for it rather than offering a guess first. */
@@ -313,11 +330,11 @@ fun CloneFlowScreen(
     var voiceSwitches by remember { mutableIntStateOf(0) }
     var measuringPitch by remember { mutableStateOf(false) }
     val currentPreset by androidx.compose.runtime.rememberUpdatedState(fluentSelfPresetId)
-    val usingPreset = fluentSelfPresetId != null
+    val usingPreset = fluentSelfPresetId != null || tutorDoor
     /** The voice the meet act speaks in (iOS `meetVoiceKey` =
      *  `speakingVoiceId`): the chosen preset, else the clone. Read at call
      *  time — a take that lands late checks it against the voice NOW. */
-    fun meetVoiceId(): String? = clonedVoiceId?.let { currentPreset ?: it }
+    fun meetVoiceId(): String? = clonedVoiceId?.let { if (tutorDoor) it else currentPreset ?: it }
     var accentId by remember { mutableStateOf<String?>(null) }
     var accentToPick by remember { mutableStateOf<com.roro.futurevoice.data.VoiceAccent?>(null) }
     var removingAccent by remember { mutableStateOf(false) }
@@ -449,7 +466,7 @@ fun CloneFlowScreen(
     /** Measure the recording once and pick the preset to offer. Off the main
      *  thread: it reads up to 12 s of audio plus two bundled previews. */
     fun measureOfferedPreset(sample: File? = sampleFile) {
-        if (offeredPreset != null || measuringPitch) return
+        if (offeredPreset != null || measuringPitch || tutorDoor) return
         measuringPitch = true
         val language = targetLanguage
         scope.launch {
@@ -481,6 +498,16 @@ fun CloneFlowScreen(
         sounds.ask = MeetSounds.greetingKey(voiceId)
         val g = sounds.greetings[voiceId]
         if (g != null) scope.launch { mp3.play(g) } else fetchGreeting(voiceId)
+    }
+
+    fun selectTutorVoice(presetId: String) {
+        if (presetId == clonedVoiceId) return
+        HapticEngine.light(context)
+        voiceSwitches += 1
+        onChooseTutorVoice(presetId)
+        clonedVoiceId = presetId
+        mp3.stop()
+        refreshGreetingForNewVoice()
     }
 
     fun stopAndReview() {
@@ -798,9 +825,53 @@ fun CloneFlowScreen(
         performClone()
     }
 
+    /**
+     * The second door: the AI tutor's voice, nothing recorded (iOS
+     * `useTutorVoice`). Straight to the meet act (pick the tutor, the speed,
+     * the colour), then the sign-up. The session is opened the same way the
+     * clone opens it, because the meet act's lines are synthesized; if it
+     * can't open, the act is silent and the sign-up comes first, as on the
+     * recording door.
+     */
+    fun useTutorVoice() {
+        mp3.stop(); runCatching { listenPlayer.reset() }
+        error = null
+        com.roro.futurevoice.core.Analytics.capture("voice_door_chosen", mapOf("door" to "tutor"))
+        onHold(true)
+        val presetId = com.roro.futurevoice.talk.StockPerson.catalog[0].voiceId
+        tutorDoor = true
+        onUseTutorVoice(presetId)
+        clonedVoiceId = presetId
+        accentId = null
+        act = CloneAct.MEET
+        val start = onStartSession
+        if (!signedIn && !sessionAnonymous && start != null) {
+            scope.launch {
+                runCatching { start() }
+                openMeet()
+            }
+        } else {
+            openMeet()
+        }
+    }
+
+    /** The tutor door can still be walked back: nothing was made, so Back
+     *  is the intro with both doors again (iOS `leaveTutorVoice`). */
+    fun leaveTutorVoice() {
+        mp3.stop()
+        meetBurst = false
+        tutorDoor = false
+        onLeaveTutorVoice()
+        clonedVoiceId = null
+        onHold(false)
+        act = CloneAct.INTRO
+    }
+
     fun finishMeet() {
         mp3.stop()
-        onFluentSelfVoiceChosen(currentPreset, offeredPreset?.voiceId, ownPitchHz, voiceSwitches)
+        // On the tutor door the tutor on stage IS the pick.
+        onFluentSelfVoiceChosen(if (tutorDoor) clonedVoiceId else currentPreset,
+            offeredPreset?.voiceId, ownPitchHz, voiceSwitches)
         // The accent goes with the voice (same key as iOS); the app reads it
         // when the voice lands.
         prefs.edit().apply {
@@ -810,6 +881,16 @@ fun CloneFlowScreen(
         clonedVoiceId?.let(onCloned)
     }
 
+    // DEBUG `tutor` stage: the AI tutor door's meet act (iOS `debugSeed`).
+    LaunchedEffect(Unit) {
+        if (debugStage == "tutor") {
+            onHold(true)
+            val presetId = com.roro.futurevoice.talk.StockPerson.catalog[0].voiceId
+            tutorDoor = true
+            onUseTutorVoice(presetId)
+            clonedVoiceId = presetId
+        }
+    }
     // The app died between "keep this voice" and the sign-up: reopen on the
     // account act instead of walking a finished voice through the wizard
     // again (iOS `resumeUnclaimedVoice`).
@@ -846,15 +927,19 @@ fun CloneFlowScreen(
     BackHandler {
         error = null
         when (act) {
-            CloneAct.INTRO -> onBack?.invoke()
+            // A re-record from Me has no persona to go back to: it closes.
+            CloneAct.INTRO -> if (fromSettings) cancelReRecord() else onBack?.invoke()
             CloneAct.CONSENT -> act = CloneAct.INTRO
             CloneAct.MIC -> act = stepAfterIntro()
             CloneAct.SPOT -> if (fromSettings) cancelReRecord() else act = CloneAct.MIC
             CloneAct.SCRIPT -> if (fromSettings) act = CloneAct.SPOT
                 else if (reRecording) cancelReRecord() else act = CloneAct.SPOT
             CloneAct.ACCOUNT -> act = if (clonedVoiceId == null) CloneAct.REVIEW
-                else if (voiceIsStandIn) CloneAct.QUEUED else CloneAct.MEET
-            // Mid-take, mid-clone and the meet act have no Back on iOS either.
+                else if (voiceIsStandIn && !tutorDoor) CloneAct.QUEUED else CloneAct.MEET
+            // The tutor door's meet act has a Back (to the intro's two doors).
+            CloneAct.MEET -> if (tutorDoor) leaveTutorVoice()
+            // Mid-take, mid-clone and the recorded voice's meet act have no
+            // Back on iOS either.
             else -> {}
         }
     }
@@ -914,7 +999,7 @@ fun CloneFlowScreen(
                     Row(Modifier.clip(RoundedCornerShape(8.dp)).clickable {
                             error = null
                             act = if (clonedVoiceId == null) CloneAct.REVIEW
-                                else if (voiceIsStandIn) CloneAct.QUEUED else CloneAct.MEET
+                                else if (voiceIsStandIn && !tutorDoor) CloneAct.QUEUED else CloneAct.MEET
                         }.padding(horizontal = 4.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBackIos, null, Modifier.size(18.dp),
@@ -935,7 +1020,19 @@ fun CloneFlowScreen(
             // so it goes on top). The clone is selected on arrival.
             if (act == CloneAct.MEET) {
                 val preset = offeredPreset
-                if (preset != null) {
+                if (tutorDoor) {
+                    // No recording, so no "My voice" side: the four tutors,
+                    // by name (iOS `voiceSegment`, 2026-11-04).
+                    val tutors = com.roro.futurevoice.talk.StockPerson.catalog
+                    com.roro.futurevoice.ui.brand.IosSegmented(
+                        options = tutors.map {
+                            com.roro.futurevoice.talk.VoicePreset.name(it.voiceId, it.name, targetLanguage)
+                        },
+                        selected = tutors.indexOfFirst { it.voiceId == clonedVoiceId }.coerceAtLeast(0),
+                        onSelect = { i -> selectTutorVoice(tutors[i].voiceId) },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                    )
+                } else if (preset != null) {
                     val locked = applyingAccentId != null || removingAccent
                     com.roro.futurevoice.ui.brand.IosSegmented(
                         options = listOf(stringResource(R.string.fs_voice_mine),
@@ -1107,6 +1204,21 @@ fun CloneFlowScreen(
                                 stringResource(R.string.don_t_imitate_a_stranger_practice_with_the_fluent_you))
                             SupportLine(stringResource(R.string.time_to_meet_the_you_who_speaks_perfect_in_your_own_voice_on_e62699,
                                 LanguageCatalog.ownName(targetLanguage, nativeLanguage)))
+                        }
+                        // The second door, in the body under the pitch (iOS
+                        // `tutorDoor`, 2026-11-05: under the big button it sat
+                        // awkwardly). A re-record from Me has no second door.
+                        if (!fromSettings) {
+                            Text(stringResource(R.string.use_the_ai_tutor_s_voice_instead),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.primary,
+                                textDecoration = TextDecoration.Underline,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(top = 6.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { useTutorVoice() }
+                                    .padding(horizontal = 6.dp, vertical = 4.dp))
                         }
                     }
 
@@ -1388,7 +1500,10 @@ fun CloneFlowScreen(
                     // Nothing here CREATES the voice — it only keeps it.
                     CloneAct.ACCOUNT -> Column(horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(26.dp)) {
-                        if (voiceIsStandIn) {
+                        if (tutorDoor) {
+                            StepHeader(stringResource(R.string.save_your_practice_to_your_account),
+                                stringResource(R.string.sign_in_and_everything_you_practice_stays_on_any_phone))
+                        } else if (voiceIsStandIn) {
                             StepHeader(stringResource(R.string.save_your_recording_to_your_account),
                                 stringResource(R.string.sign_in_and_your_voice_lands_in_this_account_the_day_it_s_ma_e2e5d2))
                         } else {
@@ -1468,8 +1583,16 @@ fun CloneFlowScreen(
             }
             when (act) {
                 // Cross-stage back: reopen the persona cards.
-                CloneAct.INTRO -> wizardBar(stringResource(R.string.next), onBackTap = onBack) {
+                // Two doors (iOS 2026-11-04): the learner's own voice is THE
+                // recommendation and the big button; the AI tutor's voice is
+                // the quiet alternative in the body above. A re-record from
+                // Me has no persona to go back to.
+                CloneAct.INTRO -> wizardBar(stringResource(R.string.use_my_voice_recommended),
+                    onBackTap = if (fromSettings) null else onBack) {
                     agreed = false
+                    if (!fromSettings) {
+                        com.roro.futurevoice.core.Analytics.capture("voice_door_chosen", mapOf("door" to "own"))
+                    }
                     act = stepAfterIntro()
                 }
                 // Next is dead until the toggle is on.
@@ -1560,10 +1683,25 @@ fun CloneFlowScreen(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                    Button(onClick = {
-                        if (signedIn) finishMeet() else { mp3.stop(); act = CloneAct.ACCOUNT }
-                    }, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(if (signedIn) R.string.start_talking else R.string.save_this_voice))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        // The tutor door can still be walked back: nothing
+                        // was made, so Back is the intro with both doors.
+                        if (tutorDoor) {
+                            OutlinedButton(onClick = { leaveTutorVoice() }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBackIos, null, Modifier.size(14.dp))
+                                Spacer(Modifier.size(4.dp))
+                                Text(stringResource(R.string.back))
+                            }
+                        }
+                        Button(onClick = {
+                            if (signedIn) finishMeet() else { mp3.stop(); act = CloneAct.ACCOUNT }
+                        }, modifier = Modifier.weight(1f)) {
+                            com.roro.futurevoice.ui.brand.FitButtonLabel(stringResource(when {
+                                signedIn -> R.string.start_talking
+                                tutorDoor -> R.string.continue_
+                                else -> R.string.save_this_voice
+                            }), androidx.compose.material3.LocalTextStyle.current)
+                        }
                     }
                 }
                 CloneAct.QUEUED -> Button(onClick = {
@@ -1593,7 +1731,8 @@ fun CloneFlowScreen(
     }
     // A re-record from Settings can be called off before the take goes up
     // (iOS overlay, top trailing): the voice they have stays.
-    if (fromSettings && (act == CloneAct.SPOT || act == CloneAct.SCRIPT || act == CloneAct.REVIEW)) {
+    if (fromSettings && (act == CloneAct.INTRO || act == CloneAct.CONSENT || act == CloneAct.MIC ||
+            act == CloneAct.SPOT || act == CloneAct.SCRIPT || act == CloneAct.REVIEW)) {
         Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.primary, fontSize = 17.sp,
             modifier = Modifier.align(Alignment.TopEnd).systemBarsPadding()
                 .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -1868,6 +2007,8 @@ internal fun SpeedAudition(
 fun VoiceRerecordCover(
     targetLanguage: String,
     nativeLanguage: String,
+    /** Never recorded (the AI tutor's voice): opens on the intro. */
+    voiceIsTutorOnly: Boolean = false,
     onCloned: (voiceId: String) -> Unit,
     onClose: () -> Unit,
 ) {
@@ -1884,6 +2025,7 @@ fun VoiceRerecordCover(
             signedIn = true,
             fromSettings = true,
             onClose = onClose,
+            voiceIsTutorOnly = voiceIsTutorOnly,
         )
     }
 }

@@ -1647,6 +1647,7 @@
     <string name="make_it_my_book">"加入我的教材"</string>
     <string name="make_it_yours">"变成自己的"</string>
     <string name="make_me_sound_more_like_you">"让我听起来更像你"</string>
+    <string name="make_my_own_voice">"制作我自己的声音"</string>
     <string name="make_my_routine">"安排作息"</string>
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"正在念几个版本，大约需要30秒。请不要关闭这个界面。"</string>
     <string name="making_it_in_your_voice">"正在用你的声音生成…"</string>
@@ -2510,6 +2511,7 @@
     <string name="save_to_expressions">"存到用语"</string>
     <string name="save_to_photos">"存储到照片"</string>
     <string name="save_to_sentences">"存到句子"</string>
+    <string name="save_your_practice_to_your_account">"把你的练习记录保存到账号。"</string>
     <string name="save_your_recording_to_your_account">"把录音保存到你的账号。"</string>
     <string name="saved">"已保存"</string>
     <!-- "Saved here, but the voice service didn't take the new name yet: %@ It'll be applied the next time your voice is made." -->
@@ -3360,6 +3362,8 @@
     <string name="usage">"使用状况"</string>
     <string name="use_it_in_a_sentence_of_your_own">"用它造自己的句子"</string>
     <string name="use_more_level_words_in_your_talks">"在通话里多用一些%s等级的单词吧。"</string>
+    <string name="use_my_voice_recommended">"用我自己的声音（推荐）"</string>
+    <string name="use_the_ai_tutor_s_voice_instead">"改用 AI 导师的声音"</string>
     <string name="use_the_iphone_s_mic_or_a_better_one">"用iPhone的麦克风，或更好的麦克风来录音。"</string>
     <!-- 'Use them however you like — all in one call today, or spread over the month.' -->
     <string name="use_them_however_you_like_all_in_one_call_today_or_spread_ov_1df811">"怎么用都行。今天一通电话全用掉，或分散在一整个月都可以。"</string>

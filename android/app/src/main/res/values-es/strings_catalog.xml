@@ -1643,6 +1643,7 @@
     <string name="make_it_my_book">"Añadir a mis cuadernos"</string>
     <string name="make_it_yours">"Hazlo tuyo"</string>
     <string name="make_me_sound_more_like_you">"Hazme sonar más como tú"</string>
+    <string name="make_my_own_voice">"Crear mi propia voz"</string>
     <string name="make_my_routine">"Crear mi rutina"</string>
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"Preparando varias tomas. Tarda unos 30 segundos, así que no cierres esta pantalla."</string>
     <string name="making_it_in_your_voice">"Creándolo con tu voz…"</string>
@@ -2506,6 +2507,7 @@
     <string name="save_to_expressions">"Guardar en expresiones"</string>
     <string name="save_to_photos">"Guardar en Fotos"</string>
     <string name="save_to_sentences">"Guardar en frases"</string>
+    <string name="save_your_practice_to_your_account">"Guarda tu práctica en tu cuenta."</string>
     <string name="save_your_recording_to_your_account">"Guarda tu grabación en tu cuenta."</string>
     <string name="saved">"Guardado"</string>
     <!-- "Saved here, but the voice service didn't take the new name yet: %@ It'll be applied the next time your voice is made." -->
@@ -3356,6 +3358,8 @@
     <string name="usage">"Uso"</string>
     <string name="use_it_in_a_sentence_of_your_own">"Úsala en una frase tuya"</string>
     <string name="use_more_level_words_in_your_talks">"Usa más palabras de nivel %s en tus llamadas."</string>
+    <string name="use_my_voice_recommended">"Usar mi voz · Recomendado"</string>
+    <string name="use_the_ai_tutor_s_voice_instead">"Usar la voz del tutor IA en su lugar"</string>
     <string name="use_the_iphone_s_mic_or_a_better_one">"Graba con el micrófono del iPhone, o con uno mejor."</string>
     <!-- 'Use them however you like — all in one call today, or spread over the month.' -->
     <string name="use_them_however_you_like_all_in_one_call_today_or_spread_ov_1df811">"Úsalos como quieras: todos en una llamada hoy o repartidos por el mes."</string>

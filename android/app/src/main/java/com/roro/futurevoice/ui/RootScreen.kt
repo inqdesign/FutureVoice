@@ -618,7 +618,9 @@ fun RootScreen() {
     var checkWelcome by remember { mutableStateOf(false) }
     fun offerFirstRunSheets() {
         when (TabArrival.decide(
-            hasVoice = state.voiceId != null,
+            // The age floor comes with the voice clone; the AI tutor's voice
+            // asks for no age (iOS `offerFirstRunSheets`, 2026-11-04).
+            hasVoice = state.voiceId != null && !state.voiceIsTutorOnly,
             ageOnRecord = com.roro.futurevoice.data.ConsentStore.ageConfirmedAt(context) != null,
             onTalk = tab == HomeTab.TALK,
             talkGuideDue = BuildConfig.BUILD_TYPE != "capture" &&
@@ -1105,8 +1107,13 @@ fun RootScreen() {
             onPickFluentSelfPreset = app::setFluentSelfPreset,
             onFluentSelfVoiceChosen = { preset, recommended, pitch, switches ->
                 app.chooseFluentSelfVoice(preset, source = "meet", recommended = recommended,
-                    ownPitchHz = pitch, extra = mapOf("switches" to switches))
+                    ownPitchHz = pitch, extra = mapOf("switches" to switches,
+                        "door" to if (app.state.value.voiceIsTutorOnly) "tutor" else "own"))
             },
+            voiceIsTutorOnly = state.voiceIsTutorOnly,
+            onUseTutorVoice = app::adoptTutorVoice,
+            onChooseTutorVoice = { app.chooseTutorVoice(it, source = "meet") },
+            onLeaveTutorVoice = app::leaveTutorVoice,
         )
         // Where everything they are about to say will live, said before the
         // first call, ahead of the routine builder (iOS
@@ -1654,6 +1661,7 @@ fun RootScreen() {
 
         RootRoute.Privacy -> PrivacyScreen(
             voiceId = state.voiceId,
+            voiceIsTutorOnly = state.voiceIsTutorOnly,
             // Withdrawing deletes the model, so the app has no voice to hold
             // a call with — the flow has to ask for a new one, which is what
             // reopening setup does.
@@ -1688,6 +1696,8 @@ fun RootScreen() {
             voiceIsStandIn = state.voiceIsStandIn,
             voiceQueuedUntil = state.voiceQueuedUntil,
             onChooseStandIn = app::chooseStandInVoice,
+            voiceIsTutorOnly = state.voiceIsTutorOnly,
+            onChooseTutorVoice = { app.chooseTutorVoice(it, source = "settings") },
             fluentSelfPresetId = state.fluentSelfPresetId,
             onChooseFluentSelfVoice = { app.chooseFluentSelfVoice(it, source = "settings") },
             onOpenProfile = { showMyProfile = true },

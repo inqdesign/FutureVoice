@@ -570,4 +570,6 @@
     <string name="speech_category_in_flight">In-flight announcement</string>
     <string name="speech_category_podcast">Podcast</string>
     <string name="speech_category_short_talk">Short talk</string>
+    <!-- iOS "Sign in, and everything you practice stays with you on whichever iPhone you use.", with "phone" for "iPhone". -->
+    <string name="sign_in_and_everything_you_practice_stays_on_any_phone">Sign in, and everything you practice stays with you on whichever phone you use.</string>
 </resources>

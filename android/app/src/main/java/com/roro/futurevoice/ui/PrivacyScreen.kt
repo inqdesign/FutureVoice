@@ -40,7 +40,8 @@ import java.util.Date
  * exactly that, upstream at the voice provider included.
  */
 @Composable
-fun PrivacyScreen(voiceId: String?, onVoiceDeleted: () -> Unit, onBack: () -> Unit) {
+fun PrivacyScreen(voiceId: String?, voiceIsTutorOnly: Boolean = false,
+                  onVoiceDeleted: () -> Unit, onBack: () -> Unit) {
     NavPageBackHandler(onBack = onBack)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -75,7 +76,8 @@ fun PrivacyScreen(voiceId: String?, onVoiceDeleted: () -> Unit, onBack: () -> Un
         }
         GroupedFooter(stringResource(R.string.your_voice_model_is_biometric_data_it_s_used_only_to_speak_y_b3256f))
 
-        if (voiceAt != null || voiceId != null) {
+        // A tutor-only learner has no voice model to delete.
+        if (voiceAt != null || (voiceId != null && !voiceIsTutorOnly)) {
             GroupedSectionSpacer()
             GroupedCard {
                 MeRow(Icons.Outlined.VoiceOverOff,

@@ -1643,6 +1643,7 @@
     <string name="make_it_my_book">"Zu meinen Büchern"</string>
     <string name="make_it_yours">"Mach es zu deinem"</string>
     <string name="make_me_sound_more_like_you">"Lass mich mehr wie du klingen"</string>
+    <string name="make_my_own_voice">"Meine eigene Stimme erstellen"</string>
     <string name="make_my_routine">"Routine erstellen"</string>
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"Ich mache ein paar Aufnahmen, das dauert etwa eine halbe Minute. Lass diesen Bildschirm offen."</string>
     <string name="making_it_in_your_voice">"Wird in deiner Stimme erstellt…"</string>
@@ -2506,6 +2507,7 @@
     <string name="save_to_expressions">"Zu Wendungen sichern"</string>
     <string name="save_to_photos">"In Fotos sichern"</string>
     <string name="save_to_sentences">"Zu Sätzen sichern"</string>
+    <string name="save_your_practice_to_your_account">"Sichere deinen Fortschritt in deinem Konto."</string>
     <string name="save_your_recording_to_your_account">"Speichere deine Aufnahme in deinem Konto."</string>
     <string name="saved">"Gesichert"</string>
     <!-- "Saved here, but the voice service didn't take the new name yet: %@ It'll be applied the next time your voice is made." -->
@@ -3356,6 +3358,8 @@
     <string name="usage">"Nutzung"</string>
     <string name="use_it_in_a_sentence_of_your_own">"Bau es in einen eigenen Satz ein"</string>
     <string name="use_more_level_words_in_your_talks">"Nutze in deinen Gesprächen mehr Wörter auf %s-Niveau."</string>
+    <string name="use_my_voice_recommended">"Meine Stimme nutzen · Empfohlen"</string>
+    <string name="use_the_ai_tutor_s_voice_instead">"Stattdessen die Stimme des KI-Tutors nutzen"</string>
     <string name="use_the_iphone_s_mic_or_a_better_one">"Nimm mit dem iPhone-Mikrofon auf — oder einem besseren."</string>
     <!-- 'Use them however you like — all in one call today, or spread over the month.' -->
     <string name="use_them_however_you_like_all_in_one_call_today_or_spread_ov_1df811">"Teil sie dir ein, wie du willst: alles heute in einem Anruf oder über den Monat verteilt."</string>

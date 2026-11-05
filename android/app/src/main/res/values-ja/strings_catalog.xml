@@ -1647,6 +1647,7 @@
     <string name="make_it_my_book">"自分の教材にする"</string>
     <string name="make_it_yours">"自分のものにする"</string>
     <string name="make_me_sound_more_like_you">"もっと自分らしく話せるようにして"</string>
+    <string name="make_my_own_voice">"自分の声をつくる"</string>
     <string name="make_my_routine">"ルーティンを作る"</string>
     <string name="making_a_few_takes_about_half_a_minute_keep_this_open">"何度か読み上げています。30秒ほどかかるので、この画面を閉じずにお待ちください。"</string>
     <string name="making_it_in_your_voice">"自分の声で作っています…"</string>
@@ -2510,6 +2511,7 @@
     <string name="save_to_expressions">"表現に保存"</string>
     <string name="save_to_photos">"写真に保存"</string>
     <string name="save_to_sentences">"文に保存"</string>
+    <string name="save_your_practice_to_your_account">"練習の記録をアカウントに保存してください。"</string>
     <string name="save_your_recording_to_your_account">"録音をアカウントに保存しましょう。"</string>
     <string name="saved">"保存済み"</string>
     <!-- "Saved here, but the voice service didn't take the new name yet: %@ It'll be applied the next time your voice is made." -->
@@ -3360,6 +3362,8 @@
     <string name="usage">"利用状況"</string>
     <string name="use_it_in_a_sentence_of_your_own">"自分の文で使ってみる"</string>
     <string name="use_more_level_words_in_your_talks">"通話で%sレベルの単語をもっと使ってみましょう。"</string>
+    <string name="use_my_voice_recommended">"自分の声でつくる（おすすめ）"</string>
+    <string name="use_the_ai_tutor_s_voice_instead">"自分の声のかわりにAIチューターの声を使う"</string>
     <string name="use_the_iphone_s_mic_or_a_better_one">"iPhoneのマイクか、もっと良いマイクで録音してください。"</string>
     <!-- 'Use them however you like — all in one call today, or spread over the month.' -->
     <string name="use_them_however_you_like_all_in_one_call_today_or_spread_ov_1df811">"好きなように使えます。今日の1回の通話でまとめて使っても、1か月かけて分けて使っても。"</string>

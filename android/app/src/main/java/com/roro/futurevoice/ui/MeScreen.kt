@@ -141,6 +141,10 @@ fun MeScreen(
     voiceIsStandIn: Boolean = false,
     voiceQueuedUntil: Long? = null,
     onChooseStandIn: (String) -> Unit = {},
+    /** The AI tutor's voice, chosen instead of recording (iOS
+     *  `voiceIsTutorOnly`), and the pick of which tutor speaks. */
+    voiceIsTutorOnly: Boolean = false,
+    onChooseTutorVoice: (String) -> Unit = {},
     /** iOS `fluentSelfPresetId` / `chooseFluentSelfVoice(source: "settings")`. */
     fluentSelfPresetId: String? = null,
     onChooseFluentSelfVoice: (String?) -> Unit = {},
@@ -288,19 +292,22 @@ fun MeScreen(
             voiceIsStandIn = voiceIsStandIn,
             voiceQueuedUntil = voiceQueuedUntil,
             onPickStandIn = { page = MePage.STAND_IN_VOICE },
+            voiceIsTutorOnly = voiceIsTutorOnly,
             fluentSelfPresetId = fluentSelfPresetId,
             onChooseFluentSelfVoice = onChooseFluentSelfVoice,
             onBack = { page = null },
         )
         // The voice that speaks while theirs is queued (iOS pushes
-        // `VoicePresetPickerView` bound to `chooseStandInVoice`).
+        // `VoicePresetPickerView` bound to `chooseStandInVoice`), or which
+        // tutor speaks for a learner who chose the AI tutor's voice
+        // (`chooseTutorVoice`).
         MePage.STAND_IN_VOICE -> {
             Box(Modifier.fillMaxSize().background(AppSurfaces.ground)
                 .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.statusBars)) {
                 VoicePresetPicker(
                     selection = voiceId ?: "",
                     targetLanguage = targetLanguage,
-                    onSelect = onChooseStandIn,
+                    onSelect = if (voiceIsTutorOnly) onChooseTutorVoice else onChooseStandIn,
                     onBack = { page = MePage.VOICE },
                 )
             }
@@ -751,6 +758,7 @@ fun MeScreen(
         VoiceRerecordCover(
             targetLanguage = targetLanguage,
             nativeLanguage = nativeLanguage,
+            voiceIsTutorOnly = voiceIsTutorOnly,
             onCloned = { id -> madeNew = true; onVoiceRecorded(id) },
             onClose = {
                 rerecording = false

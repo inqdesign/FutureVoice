@@ -545,4 +545,5 @@
     <string name="speech_category_in_flight">機内アナウンス</string>
     <string name="speech_category_podcast">ポッドキャスト</string>
     <string name="speech_category_short_talk">ミニ講演</string>
+    <string name="sign_in_and_everything_you_practice_stays_on_any_phone">ログインすれば練習したことがすべてアカウントに残り、スマホを替えてもそのままです。</string>
 </resources>
