@@ -1,9 +1,9 @@
 Neu
-• Deine 20 Gratisminuten sind aufgebraucht? Du kannst einmalig 20 weitere gratis aufladen.
-• Die Aussprache wird jetzt Laut für Laut gemessen. Beim Nachsprechen und bei Reden siehst du, welche Laute du üben solltest.
-• Mit iCloud-Sync sind Routine, Tutor, Fotos und Einstellungen auf all deinen Geräten dabei.
-• Reden schreiben geht jetzt in jedem Tarif.
+• Aussprache-Anrufe: die dritte Seite des Sprechen-Rings. Lies einen Satz vor, und deine eigene Stimme sagt dir, welchen Laut du verbessern kannst. Sie zählen nur die Hälfte der Sprechzeit.
+• Tipp auf deinen Aussprache-Wert, um zu sehen, wie jedes Wort und jeder Laut klang.
+• Triff auf der Ansehen-Karte zufällig jemanden, und die Situation beginnt sofort.
+• Du kannst auch mit der Stimme des KI-Tutors starten, ohne deine aufzunehmen.
 
 Verbesserungen
-• Jeder Tarif ist jetzt eine einzige Zahl: deine Sprechminuten. Auch Szenen laufen darüber. Bestehende Tarife bleiben, wie sie sind.
-• Max hat jetzt 600 Minuten zu einem niedrigeren Preis.
+• Die Aussprache zählt jetzt zu deinem Rede-Wert.
+• Dein zweiter Anruf am Tag knüpft an das an, worüber ihr vorhin gesprochen habt.

@@ -1,9 +1,9 @@
 Novedades
-• ¿Se te acabaron los 20 minutos gratis? Puedes recargar otros 20 gratis, una sola vez.
-• La pronunciación ahora se mide sonido por sonido. En Shadowing y en Discurso ves qué sonidos te conviene practicar.
-• Con la sincronización de iCloud activada, tu rutina, el tutor, tus fotos y tus ajustes te acompañan en todos tus dispositivos.
-• Escribir discursos está abierto en todos los planes.
+• Llamadas de pronunciación: la tercera página del anillo de Hablar. Lee una frase y tu propia voz te dice qué sonido corregir. Usan solo la mitad del tiempo de conversación.
+• Toca tu puntuación de pronunciación para ver cómo salió cada palabra y cada sonido.
+• Encuéntrate con alguien en el mapa de Escenas y la situación empieza ahí mismo.
+• También puedes empezar con la voz del tutor IA, sin grabar la tuya.
 
 Mejoras
-• Cada plan es ahora un solo número: tus minutos de conversación. Las escenas también salen de ahí. Los planes que ya tienes siguen igual.
-• Max ahora tiene 600 minutos a un precio más bajo.
+• La pronunciación ahora cuenta en tu puntuación de Discurso.
+• Tu segunda llamada del día retoma lo que hablaste antes.

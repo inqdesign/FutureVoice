@@ -1,9 +1,9 @@
 Nouveau
-• Tes 20 minutes gratuites sont épuisées ? Tu peux en recharger 20 de plus gratuitement, une seule fois.
-• La prononciation est désormais mesurée son par son. En Shadowing et en Discours, tu vois quels sons travailler.
-• Avec la synchronisation iCloud, ta routine, ton tuteur, tes photos et tes réglages te suivent sur tous tes appareils.
-• L’écriture de discours est ouverte dans tous les abonnements.
+• Les appels de prononciation : la troisième page de l’anneau Parler. Lis une phrase, et ta propre voix te dit quel son corriger. Ils ne comptent que la moitié du temps de conversation.
+• Touche ton score de prononciation pour voir comment chaque mot et chaque son est sorti.
+• Croise quelqu’un sur la carte des Scènes, et la situation commence sur-le-champ.
+• Tu peux aussi commencer avec la voix du tuteur IA, sans enregistrer la tienne.
 
 Améliorations
-• Chaque abonnement se lit maintenant en un seul chiffre : tes minutes de conversation. Les scènes en font partie. Les abonnements en cours ne changent pas.
-• Max passe à 600 minutes, à un prix plus bas.
+• La prononciation compte désormais dans ton score de Discours.
+• Ton deuxième appel de la journée reprend ce que tu as raconté plus tôt.

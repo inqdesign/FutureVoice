@@ -1,9 +1,9 @@
 New
-• Used up your free 20 minutes? You can recharge 20 more for free, once.
-• Pronunciation is now measured sound by sound. Shadowing and Speech show which sounds to work on.
-• With iCloud sync on, your routine, tutor, photos and settings carry across your devices.
-• Speech scripts are open on every plan.
+• Pronunciation calls: the third page of the Talk ring. Read a sentence and your own voice tells you which sound to fix. It uses half the talk time.
+• Tap your pronunciation score to see how each word and sound came out.
+• Bump into someone on the Watch map and a situation starts right there.
+• You can also start with the AI tutor's voice, without recording yours.
 
 Improved
-• Every plan is now one number: talk minutes. Scenes come out of them too. Plans you already have stay as they are.
-• Max is now 600 minutes at a lower price.
+• Pronunciation now counts toward your Speech score.
+• Your second call of the day picks up what you talked about earlier.
