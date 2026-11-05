@@ -29,49 +29,28 @@ struct CreditGuideView: View {
             // The pool sits FIRST: it is the shape of the whole plan, and
             // the question that actually brings people here is "what am I
             // allowed to do?" before "what does it cost me?".
-            // Gated on the SCENE cap, not the talk one: Plus has no talk cap
-            // any more, and gating on it made this whole section vanish for
-            // the tier whose shape most needs explaining.
-            if let account, account.monthlyScenesCap != nil
-                || (account.isEntitled && account.scenesCostTalk) {
+            // The plan holds talk minutes and nothing else (founder,
+            // 2026-11-05: a scene is paid from the minutes, so no scene
+            // count belongs here — the accounts still on a count see it on
+            // Usage and in the Watch section below, like the paywall).
+            if let account, account.isEntitled {
                 Section {
                     plainRow(icon: "calendar",
                              title: account.monthlyCapSeconds.map {
                                  explain("\($0 / 60) minutes a month")
                              } ?? explain("Talk as much as you want"),
-                             // States the rule POSITIVELY and stops. The
-                             // trailing "there is no daily limit" said the
-                             // same thing again as a denial, and a denial
-                             // needs the reader to have expected the limit.
-                             // No fair-use figure to state any more: talking
-                             // is genuinely uncapped, and the honest reason is
-                             // worth saying out loud — speaking is its own
-                             // limit, which is exactly what watching is not.
                              detail: account.monthlyCapSeconds == nil
                                  ? explain("No limit and no rationing. Talking takes real effort, so there is nothing here to ration.")
                                  : explain("Use them however you like — all in one call today, or spread over the month."))
-                    if let scenes = account.monthlyScenesCap {
-                        plainRow(icon: "play.circle.fill",
-                                 title: explain("\(scenes) Watch scenes a month"),
-                                 detail: explain("A separate pool. Watching a scene never takes a minute off your talk time."))
-                    } else if account.scenesCostTalk {
-                        plainRow(icon: "play.circle.fill",
-                                 title: explain("Watch scenes, \(account.sceneTalkMinutes) min each"),
-                                 detail: explain("A new scene is paid for out of the same minutes. Watching it again is free."))
-                    }
                 } header: {
                     Text("What your plan holds")
                 } footer: {
                     // A cancelled plan refills nothing — see PlanPageView.
                     Text(account.renewalLabel.isEmpty
-                         ? (account.scenesCostTalk
-                            ? explain("Your minutes refill at the start of each billing period.")
-                            : explain("Scenes refill at the start of each billing period."))
+                         ? explain("Your minutes refill at the start of each billing period.")
                          : account.cancelAtPeriodEnd
                            ? explain("Your plan ends on \(account.renewalLabel).")
-                           : (account.scenesCostTalk
-                              ? explain("Your minutes refill on \(account.renewalLabel).")
-                              : explain("Scenes refill on \(account.renewalLabel).")))
+                           : explain("Your minutes refill on \(account.renewalLabel)."))
                 }
             }
 
