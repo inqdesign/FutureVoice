@@ -7,6 +7,7 @@
     <string name="a_badge_next_to_your_name_where_you_meet_people">"Una insignia junto a tu nombre, ahí donde conoces gente."</string>
     <string name="a_barista">"un barista"</string>
     <string name="a_better_word">"Una palabra mejor"</string>
+    <string name="a_bit_off">"Algo flojo"</string>
     <string name="a_book">"Un cuaderno"</string>
     <!-- 'A book lands here once every word and line in it is mastered. Nothing you file away counts — only what you finished.' -->
     <string name="a_book_lands_here_once_every_word_and_line_in_it_is_mastered_d3fa9a">"Un cuaderno llega aquí cuando dominas todas sus palabras y frases. Lo que dejas para después no cuenta: solo lo que terminaste."</string>
@@ -116,6 +117,7 @@
     <string name="a_standard_copy_goes_to_your_icloud_the_original_stays_on_th_e68c3f">"Una copia en calidad estándar va a tu iCloud. El original se queda en este dispositivo."</string>
     <!-- 'A stock voice that plays "you" — your cloned voice is never used, and nobody\'s talks with your persona are ever shown to you or anyone else.' -->
     <string name="a_stock_voice_that_plays_you_your_cloned_voice_is_never_used_920f41">"Una voz estándar que interpreta a \"ti\" — tu voz clonada no se usa nunca, y las llamadas que alguien tenga con tu personaje no se le muestran a nadie, ni a ti."</string>
+    <string name="a_stop_before_it">"Pausa antes"</string>
     <string name="a_strong_start">"Un gran comienzo"</string>
     <string name="a_strong_week">"Una gran semana"</string>
     <!-- 'A talk block rings as your daily call when the call is on (Me › Call). Up to 4 call times.' -->
@@ -537,6 +539,7 @@
     <string name="comparing">"Comparando…"</string>
     <string name="comparing_life_in_two_countries">"Comparar la vida en dos países"</string>
     <string name="comparing_two_options">"Comparar dos opciones"</string>
+    <string name="completeness">"Completitud"</string>
     <string name="complimenting_the_food">"Elogiar la comida"</string>
     <string name="composer_customsituation">"Situación propia"</string>
     <string name="confirm_with_apple">"Confirmar con Apple"</string>
@@ -965,6 +968,7 @@
     <string name="finding_stories">"Buscando noticias…"</string>
     <string name="finding_your_flow">"Encontrando tu ritmo"</string>
     <string name="finding_your_tone">"Buscando el tono de tu voz…"</string>
+    <string name="fine">"Bien"</string>
     <!-- 'Finish a talk and it lands here as a book — replay it, pick up its words, shadow the smoother versions of your own lines.' -->
     <string name="finish_a_talk_and_it_lands_here_as_a_book_replay_it_pick_up_f70da1">"Termina una llamada y llegará aquí como cuaderno: vuelve a escucharla, quédate con sus palabras y haz shadowing con versiones más fluidas de tus propias frases."</string>
     <string name="finished">"Terminado"</string>
@@ -975,6 +979,7 @@
     <string name="first_test_done">"Primer test terminado"</string>
     <string name="first_time">"Primera vez"</string>
     <string name="fix_the_sentence">"Corrige la frase"</string>
+    <string name="flat">"Entonación plana"</string>
     <string name="flow">"Fluidez"</string>
     <string name="fluency">"Fluidez"</string>
     <string name="fluency_pace">"Fluidez y ritmo"</string>
@@ -1162,6 +1167,9 @@
     <string name="hope">"Deseo"</string>
     <string name="how_a_card_works">"Cómo funciona una tarjeta"</string>
     <string name="how_are_your_families_connected">"¿Cómo se conocen sus familias?"</string>
+    <string name="how_closely_your_sounds_matched_a_native_speaker_s">"Lo cerca que estuvieron tus sonidos de los de un nativo."</string>
+    <!-- "How closely your sounds matched a native speaker's, over the last 30 days." -->
+    <string name="how_closely_your_sounds_matched_a_native_speaker_s_over_the_9ad53d">"Lo cerca que estuvieron tus sonidos de los de un nativo en los últimos 30 días."</string>
     <string name="how_comfortable_are_you_right_now">"¿Con cuánta soltura puedes hablar ahora?"</string>
     <string name="how_did_today_go">"Buen trabajo hoy también."</string>
     <string name="how_did_you_become_neighbors">"¿Cómo llegaron a ser vecinos?"</string>
@@ -1298,6 +1306,7 @@
     <string name="interview">"Entrevista"</string>
     <string name="interview_chip_about_yourself_why_this_job">"Chip Entrevista · hablar de ti, por qué este puesto"</string>
     <string name="interviews_the_field_i_m_applying_to">"Entrevistas, el sector al que me presento"</string>
+    <string name="intonation">"Entonación"</string>
     <string name="intonation_lld">"entonación %d"</string>
     <string name="introduce_someone_worth_knowing">"Presenta a alguien que vale la pena conocer"</string>
     <string name="introducing_yourself">"Presentarte"</string>
@@ -1346,6 +1355,7 @@
     <string name="joined_with_a_code">"Código usado al registrarte"</string>
     <string name="joined_with_your_code">"%s se registró con tu código"</string>
     <string name="joined_with_your_code_lld_minutes_are_yours">"%1$s se registró con tu código. Te llegaron %2$d minutos."</string>
+    <string name="judged_against">"Comparado con"</string>
     <string name="just_moved">"Recién mudado"</string>
     <string name="just_right">"Justo bien"</string>
     <string name="just_starting_a_few_words_and_set_phrases">"Principiante — unas palabras y frases hechas"</string>
@@ -1396,6 +1406,7 @@
     <string name="language_learning">"aprender idiomas"</string>
     <string name="language_teacher">"Profe de idiomas"</string>
     <string name="large">"Grande"</string>
+    <string name="last_30_days">"Últimos 30 días"</string>
     <string name="last_charge">"Último cargo %s"</string>
     <string name="last_talk">"Última llamada"</string>
     <!-- 'Last test %lld/%lld. The ^[%lld you missed](inflect: true) come back this week.' -->
@@ -1579,6 +1590,7 @@
     <string name="lld_shadowing_take_inflect_true">"^[%d toma](inflect: true) de shadowing"</string>
     <string name="lld_syllables_min">"%d sílabas/min"</string>
     <string name="lld_takes">"%d grabaciones"</string>
+    <string name="lld_takes_average_lld">"%1$d grabaciones · media %2$d"</string>
     <string name="lld_taking_part">"%d participantes"</string>
     <string name="lld_talks_tap_for_calendar">"%d llamadas · toca para el calendario"</string>
     <string name="lld_thing_inflect_true_you_studied_said_out_loud">"Dijiste en voz alta ^[%d cosa](inflect: true) que estudiaste"</string>
@@ -1632,6 +1644,8 @@
     <string name="loop">"repetir %1$s–%2$s"</string>
     <string name="lost_luggage">"Equipaje perdido"</string>
     <string name="lots_of_inside_jokes">"Muchas bromas internas"</string>
+    <string name="low">"Bajo"</string>
+    <string name="low_in_several_takes">"Bajas en varias tomas: "</string>
     <string name="lunch_together">"Comemos juntos"</string>
     <string name="made_for_you">"Hecho para ti"</string>
     <!-- 'Made from the recording on this phone. A stand-in voice speaks until then.' -->
@@ -1865,6 +1879,7 @@
     <string name="no_one_here_yet_for_this_language_check_back_soon">"Todavía no hay nadie en este idioma. Vuelve a mirar en un rato."</string>
     <string name="no_one_matches_yet_try_an_interest_a_job_or_a_city">"No hay coincidencias. Prueba con un interés, un trabajo o una ciudad."</string>
     <string name="no_pause">"Sin pausa"</string>
+    <string name="no_pause_before_it">"Sin pausa antes"</string>
     <string name="no_plan">"Sin plan"</string>
     <!-- 'No prompt, no card on screen — you reached for these yourself. Cards you produce live jump ahead in the review queue.' -->
     <string name="no_prompt_no_card_on_screen_you_reached_for_these_yourself_c_747561">"Sin pistas ni tarjetas en pantalla: estas las sacaste por tu cuenta. Las tarjetas que usas en una llamada real se adelantan en la cola de repaso."</string>
@@ -1873,6 +1888,7 @@
     <string name="no_seat_right_now">"Ahora no hay plaza"</string>
     <string name="no_sessions_yet">"Todavía no hay sesiones"</string>
     <string name="no_situations_to_hear_yet">"Aún no hay situaciones para escuchar"</string>
+    <string name="no_sound_stays_low_across_your_takes">"Ningún sonido se queda bajo de una toma a otra."</string>
     <string name="no_streak_yet">"Todavía sin racha"</string>
     <string name="no_takes_came_back_please_try_again">"No llegó ninguna toma. Inténtalo de nuevo."</string>
     <string name="no_takes_yet">"Aún no hay tomas"</string>
@@ -1899,6 +1915,7 @@
     <string name="not_enough_from_this_week_yet_for_a_test_a_talk_or_two_and_i_64c62a">"Todavía no hay material para un test. Con una o dos conversaciones estará listo."</string>
     <string name="not_found">"No encontrado"</string>
     <string name="not_happy_with_a_take_you_can_re_record">"¿No te gusta la toma? Puedes grabarla otra vez."</string>
+    <string name="not_heard">"No se oyó"</string>
     <string name="not_me_record_again">"No es mi voz, grabar otra vez"</string>
     <string name="not_much_listening_this_week_one_episode_today">"Has escuchado poco esta semana. Hoy, un episodio."</string>
     <string name="not_much_to_quiz_yet">"Aún hay poco para preguntarte"</string>
@@ -1942,6 +1959,8 @@
     <string name="nothing_recorded_this_time_shadowing_only_counts_once_you_sa_4e95c7">"Esta vez no se grabó nada: el shadowing solo cuenta cuando dices la frase."</string>
     <string name="nothing_said">"Nada dicho"</string>
     <string name="nothing_said_out_loud">"No dijiste nada en voz alta"</string>
+    <string name="nothing_stays_low_across_takes">"Nada se queda bajo de una toma a otra."</string>
+    <string name="nothing_stood_out_in_this_take">"Nada salió bajo en esta toma."</string>
     <string name="nothing_to_read_attach_a_link_or_a_file_first">"Nada que leer: adjunta primero un enlace o un archivo."</string>
     <string name="nothing_to_read_in_this_talk">"No hay nada que leer en esta conversación"</string>
     <string name="nothing_to_shadow_yet">"Todavía no hay nada para hacer shadowing"</string>
@@ -2358,6 +2377,8 @@
     <string name="recreating_your_voice">"Recreando tu voz"</string>
     <string name="recurring_topics">"Temas recurrentes"</string>
     <string name="recycling_and_house_rules">"Reciclaje y normas de la casa"</string>
+    <!-- 'Red: clearly off. Orange: a bit off. Grey: not heard. Tap a word to see its sounds.' -->
+    <string name="red_clearly_off_orange_a_bit_off_grey_not_heard_tap_a_word_t_9a893d">"Rojo: claramente mal. Naranja: algo flojo. Gris: no se oyó. Toca una palabra para ver sus sonidos."</string>
     <!-- 'Red: skipped or read differently. The small red words are what the mic heard.' -->
     <string name="red_skipped_or_read_differently_the_small_red_words_are_what_c3dcaa">"En rojo: lo que te saltaste o leíste distinto. Las palabras rojas pequeñas son lo que oyó el micrófono."</string>
     <string name="redeem">"Canjear"</string>
@@ -2568,6 +2589,8 @@
     <string name="scored_against_your_level_setting_how_this_talk_went_not_a_l_4b7213">"Puntuada según tu nivel %s. No es una evaluación de nivel: muestra cómo fue esta llamada."</string>
     <!-- 'Scored against your %@ level setting — this talk itself read as ≈%@.' -->
     <string name="scored_against_your_level_setting_this_talk_itself_read_as">"Puntuada según tu nivel %1$s. Esta llamada en sí se leyó como ≈%2$s."</string>
+    <!-- "Scores come from Azure's pronunciation assessment against a native model of the language. Sound names are given for English only. Flow is the pauses between words, completeness how much of the line was said, intonation stress and rhythm. A word is red under 50 or with a sound under 35, orange under 70 or with a sound under 45; a native speaker's slip reads orange at most. One take's marks move with where the recording was cut, so what matters is a sound that stays low across takes." -->
+    <string name="scores_come_from_azure_s_pronunciation_assessment_against_a_535c64">"Las puntuaciones vienen de la evaluación de pronunciación de Azure, frente a un modelo nativo del idioma. Los nombres de los sonidos solo aparecen en inglés. La fluidez son las pausas entre palabras; la completitud, cuánto de la frase dijiste; la entonación, el acento y el ritmo. Una palabra sale en rojo por debajo de 50 o con un sonido por debajo de 35, y en naranja por debajo de 70 o con un sonido por debajo de 45; un despiste de un nativo sale en naranja como mucho. Las marcas de una toma cambian según dónde se cortó la grabación, así que lo que cuenta es un sonido que sigue bajo de una toma a otra."</string>
     <!-- 'Scoring %lld/100 across recent talks — each talk graded from the verified grammar slips in what you said.' -->
     <string name="scoring_lld_100_across_recent_talks_each_talk_graded_from_th_0e37da">"%d/100 en tus últimas charlas: cada una se puntúa por los fallos de gramática confirmados en lo que dijiste."</string>
     <string name="screen">"Pantalla"</string>
@@ -2618,6 +2641,8 @@
     <!-- 'Setup is free, including re-records in the first day. Later re-records cost a little.' -->
     <string name="setup_is_free_including_re_records_in_the_first_day_later_re_d175df">"Crear la voz es gratis, y también volver a grabarla el primer día. Después, volver a crearla cuesta un poco."</string>
     <string name="shadow">"Shadowing"</string>
+    <!-- 'Shadow a line or read a speech and your sounds are measured here.' -->
+    <string name="shadow_a_line_or_read_a_speech_and_your_sounds_are_measured_22863e">"Haz shadowing de una frase o lee un discurso y aquí se medirán tus sonidos."</string>
     <string name="shadow_any_line_get_a_real_score_watch_the_weekly_trend">"Haz shadowing de cualquier frase, recibe una puntuación real y mira la tendencia semanal."</string>
     <string name="shadow_avg_lld_this_week">"Media de shadowing %d esta semana"</string>
     <string name="shadow_it">"Hacer shadowing"</string>
@@ -2712,8 +2737,12 @@
     <string name="sorting_it_out">"Ordenando…"</string>
     <string name="sound_mic">"Sonido y micrófono"</string>
     <string name="sounded_like">"Sonó como «%2$s», no «%1$s»"</string>
+    <!-- '(sounded like %@)' -->
+    <string name="sounded_like_14b851">"(sonó como %s)"</string>
     <string name="sounds">"Sonidos"</string>
     <string name="sounds_to_practice">"Sonidos para practicar"</string>
+    <!-- 'Sounds to work on' -->
+    <string name="sounds_to_work_on_0bf630">"Sonidos para practicar"</string>
     <string name="source">"Fuente"</string>
     <string name="sources">"Fuentes"</string>
     <string name="speak_every_day_and_keep_everything_it_teaches_you">"Habla cada día y quédate con todo lo que aprendas."</string>
@@ -2784,6 +2813,7 @@
     <string name="steady_voice">"Voz estable"</string>
     <string name="step_up">"Un paso más"</string>
     <string name="still_getting_to_know_each_other">"Aún nos estamos conociendo"</string>
+    <string name="still_low">"Siguen bajos: "</string>
     <string name="still_missed">"Aún fallados"</string>
     <string name="still_up">"¿Todavía despierto?"</string>
     <string name="stop">"Detener"</string>
@@ -2916,6 +2946,9 @@
     <!-- "Tap a word for its card — meaning, pronunciation, your sentences. It's mastered once you use it in a talk or mark it known." -->
     <string name="tap_a_word_for_its_card_meaning_pronunciation_your_sentences_caa97b">"Toca una palabra para ver su tarjeta: significado, pronunciación, tus frases. Queda dominada cuando la usas en una llamada o la marcas como sabida."</string>
     <string name="tap_a_word_in_the_cloud_to_start_your_notebook">"Toca una palabra de la nube para empezar tu libreta"</string>
+    <string name="tap_a_word_to_hear_it_in_your_fluent_voice">"Toca una palabra para oírla con tu voz fluida."</string>
+    <!-- 'Tap a word to hear it in your fluent voice. A sound is listed when it averaged under %lld in this take.' -->
+    <string name="tap_a_word_to_hear_it_in_your_fluent_voice_a_sound_is_listed_aa96ef">"Toca una palabra para oírla con tu voz fluida. Aquí aparece un sonido si su media en esta toma quedó por debajo de %d."</string>
     <string name="tap_an_empty_spot_to_add">"Toca un espacio vacío para añadir"</string>
     <!-- "Tap an expression for its card. It's mastered once you actually use it in a talk." -->
     <string name="tap_an_expression_for_its_card_it_s_mastered_once_you_actual_f34695">"Toca una expresión para ver su tarjeta. Queda dominada cuando de verdad la usas en una llamada."</string>
@@ -3557,6 +3590,7 @@
     <string name="what_situation_should_we_build_the_more_detail_the_better">"¿Qué situación montamos? Cuanto más detalle, mejor."</string>
     <string name="what_strangers_can_see">"Lo que ven los demás"</string>
     <string name="what_the_mic_heard">"Lo que oyó el micrófono"</string>
+    <string name="what_the_model_heard">"Lo que oyó el modelo"</string>
     <string name="what_the_tutor_does">"Qué hace el tutor"</string>
     <string name="what_they_call_you">"Cómo te llama"</string>
     <string name="what_they_call_you_optional">"Cómo te llama (opcional)"</string>
@@ -3582,6 +3616,7 @@
     <string name="what_you_learn_today_is_gone_in_a_few_days">"Lo que aprendes hoy se olvida en pocos días"</string>
     <string name="what_you_ll_do_there_who_you_ll_meet_where_you_ll_need_to_ta_a8d05e">"Lo que vas a hacer allí, a quién vas a ver, dónde tendrás que hablar…"</string>
     <string name="what_you_pick_becomes_your_goal_practice_aims_at_it">"Lo que elijas aquí será tu objetivo, y la práctica apunta ahí."</string>
+    <string name="what_you_read">"Lo que leíste"</string>
     <!-- "What you say depends on who you say it to. Asking for a day off is a different conversation with your boss than with a coworker, and a generic stranger can't show you that difference. With a specific person, every scene sounds like the real thing." -->
     <string name="what_you_say_depends_on_who_you_say_it_to_asking_for_a_day_o_63228d">"Lo que dices depende de a quién se lo dices. Pedir un día libre es una conversación distinta con tu jefe que con un compañero, y un desconocido cualquiera no puede enseñarte esa diferencia. Con una persona concreta, cada escena suena real."</string>
     <string name="what_you_say_when_someone_meets_you">"Lo que dices cuando alguien te conoce"</string>
@@ -3708,6 +3743,7 @@
     <string name="words_phrases_and_sentence_cards">"Palabras, expresiones y tarjetas de frases"</string>
     <string name="words_to_level_up">"Palabras para subir de nivel"</string>
     <string name="words_to_use">"Expresiones para usar"</string>
+    <string name="words_to_work_on">"Palabras para practicar"</string>
     <!-- "Words you kept from a talk, plus the ones your watched scenes still ask for. Mark the ones you've got down as known." -->
     <string name="words_you_kept_from_a_talk_plus_the_ones_your_watched_scenes_c0f27c">"Palabras que guardaste de una llamada, más las que aún te piden las escenas que viste. Marca como sabidas las que ya domines."</string>
     <string name="words_you_leaned_on_and_one_to_reach_for_next">"Las palabras en las que te apoyaste, y una para dar el siguiente paso."</string>

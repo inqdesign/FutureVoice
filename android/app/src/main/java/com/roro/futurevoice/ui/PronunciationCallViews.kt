@@ -45,6 +45,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -141,7 +142,19 @@ fun PronunciationCard(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.fillMaxWidth().semantics { contentDescription = line.text })
                 }
-                line.feedback?.let { PronunciationFeedbackPill(it) }
+                line.feedback?.let { fb ->
+                    // The last take's whole assessment, behind the verdict pill (iOS 53ec4f49).
+                    val result = line.lastResult
+                    if (result != null) {
+                        var showingDetail by remember { mutableStateOf(false) }
+                        Box(Modifier.clip(RoundedCornerShape(50)).clickable { showingDetail = true }) { PronunciationFeedbackPill(fb) }
+                        if (showingDetail) {
+                            PronunciationDetailSheet(listOf(result)) { showingDetail = false }
+                        }
+                    } else {
+                        PronunciationFeedbackPill(fb)
+                    }
+                }
                 val heardWord = line.heardWord; val heardAs = line.heardAs
                 if (heardWord != null && heardAs != null) {
                     Text(stringResource(R.string.sounded_like, heardWord, heardAs),

@@ -393,6 +393,7 @@ class SpeechTakeSession(
             durationSeconds = duration, audioFilename = audioName, videoFilename = null,
             transcript = transcript, metrics = metrics, coaching = null,
             pronunciationWords = pronunciation?.second,
+            assessments = prons.ifEmpty { null },
         )
         store.save(take)
         PronunciationLedger.shared(context).record(prons, id, "speech", script.language)

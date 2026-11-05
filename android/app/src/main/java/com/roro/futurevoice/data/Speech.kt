@@ -118,6 +118,10 @@ data class SpeechTake(
      *  worst first, over the whole take. Null on takes made before it, or
      *  when the server could not assess the take (iOS 0971c05d). */
     val pronunciationWords: List<com.roro.futurevoice.talk.PronunciationResult.Word>? = null,
+    /** The assessment itself, piece by piece in order, so the detail sheet
+     *  can show every word and sound of the take. Null on takes made before
+     *  it or not assessed (iOS 53ec4f49). */
+    val assessments: List<com.roro.futurevoice.talk.PronunciationResult>? = null,
 )
 
 /**

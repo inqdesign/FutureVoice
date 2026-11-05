@@ -1029,7 +1029,14 @@ private fun PronunciationAxisRow(stored: AxisScore?) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val measured = stored ?: remember { com.roro.futurevoice.talk.PronunciationRead.recentAxis(context) }
     val secondary = MaterialTheme.colorScheme.onSurfaceVariant
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    // A tap opens the pronunciation standing — every sound over the month
+    // (iOS 53ec4f49); nothing measured, nothing to open.
+    var showPronunciation by remember { mutableStateOf(false) }
+    if (showPronunciation) {
+        com.roro.futurevoice.ui.PronunciationDetailSheet(emptyList()) { showPronunciation = false }
+    }
+    Column(Modifier.fillMaxWidth().clickable(enabled = measured != null) { showPronunciation = true },
+        verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Icon(Icons.Filled.GraphicEq, contentDescription = null, modifier = Modifier.size(18.dp),

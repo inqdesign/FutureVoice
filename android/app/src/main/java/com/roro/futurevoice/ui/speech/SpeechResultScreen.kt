@@ -36,6 +36,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
@@ -197,7 +198,28 @@ internal fun SpeechResultScreen(takeId: String, live: SpeechTake?, onBack: () ->
                 // (iOS 0971c05d, 14706881).
                 m.pronunciation?.let { pron ->
                     val detail = remember(take.id, pron) { pronunciationDetail(context, take, script.language) }
-                    MetricRow(stringResource(R.string.pronunciation), Icons.Filled.GraphicEq, "$pron", detail, pron)
+                    // The whole assessment is a tap away when the take kept
+                    // it (iOS 53ec4f49).
+                    val all = take.assessments
+                    if (!all.isNullOrEmpty()) {
+                        var showingPronunciation by remember { mutableStateOf(false) }
+                        Row(Modifier.fillMaxWidth().clickable { showingPronunciation = true },
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.weight(1f)) {
+                                MetricRow(stringResource(R.string.pronunciation), Icons.Filled.GraphicEq, "$pron", detail, pron)
+                            }
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null,
+                                Modifier.padding(end = 12.dp).size(18.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
+                        }
+                        if (showingPronunciation) {
+                            com.roro.futurevoice.ui.PronunciationDetailSheet(all, script.language) {
+                                showingPronunciation = false
+                            }
+                        }
+                    } else {
+                        MetricRow(stringResource(R.string.pronunciation), Icons.Filled.GraphicEq, "$pron", detail, pron)
+                    }
                     FormDivider(inset = 52.dp)
                 }
                 MetricRow(stringResource(R.string.pace), Icons.Filled.Speed, rateLabel(m.rate, script.language),

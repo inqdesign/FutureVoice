@@ -35,6 +35,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.AvTimer
@@ -886,7 +887,7 @@ private fun ShadowLineScreen(
 
                 // ---- your take
                 feedback?.let { fb ->
-                    TakeSection(fb, steps, said, assessment, takeRecording != null, coachPending,
+                    TakeSection(fb, steps, said, assessment, targetLanguage, takeRecording != null, coachPending,
                         onHearTarget = ::previewTarget,
                         onHearTake = { takeRecording?.let { playTake(it) } },
                         onTogether = ::playTogether)
@@ -1338,7 +1339,7 @@ private fun TargetLineSection(
 @Composable
 private fun TakeSection(
     fb: ShadowFeedback, steps: List<ShadowScore.DiffStep>, said: String,
-    assessment: com.roro.futurevoice.talk.PronunciationResult?, hasTake: Boolean, coachPending: Boolean,
+    assessment: com.roro.futurevoice.talk.PronunciationResult?, language: String, hasTake: Boolean, coachPending: Boolean,
     onHearTarget: () -> Unit, onHearTake: () -> Unit, onTogether: () -> Unit,
 ) {
     val secondary = MaterialTheme.colorScheme.onSurfaceVariant
@@ -1373,7 +1374,7 @@ private fun TakeSection(
                 }
             }
         }
-        assessment?.let { PronunciationSection(it) }
+        assessment?.let { PronunciationSection(it, language) }
         if (hasTake) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1453,9 +1454,15 @@ internal fun pronunciationLine(a: com.roro.futurevoice.talk.PronunciationResult)
  * above is still complete.
  */
 @Composable
-private fun PronunciationSection(a: com.roro.futurevoice.talk.PronunciationResult) {
+private fun PronunciationSection(a: com.roro.futurevoice.talk.PronunciationResult, language: String) {
     val secondary = MaterialTheme.colorScheme.onSurfaceVariant
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    // A tap opens the whole assessment — every word and sound (iOS 53ec4f49).
+    var showingPronunciation by remember { mutableStateOf(false) }
+    if (showingPronunciation) {
+        com.roro.futurevoice.ui.PronunciationDetailSheet(listOf(a), language) { showingPronunciation = false }
+    }
+    Column(Modifier.fillMaxWidth().clickable { showingPronunciation = true },
+        verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Icon(Icons.Filled.GraphicEq, null, Modifier.size(14.dp), tint = secondary)
@@ -1468,6 +1475,8 @@ private fun PronunciationSection(a: com.roro.futurevoice.talk.PronunciationResul
             }
             Text("${a.soundScore}", style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.SemiBold, color = scoreColor(a.soundScore))
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, Modifier.size(14.dp),
+                tint = secondary.copy(alpha = 0.6f))
         }
         // The sounds first (en-US names them), the words otherwise.
         pronunciationLine(a)?.let { line ->
