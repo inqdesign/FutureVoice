@@ -170,12 +170,14 @@ internal fun SpeechHeaderAction() {
 @Composable
 internal fun SpeechTabBody(language: String, native: String, level: CefrLevel,
                            onOpenChallenge: (SpeechScript) -> Unit = {},
-                           onOpenAllChallenges: () -> Unit = {}) {
+                           onOpenAllChallenges: () -> Unit = {},
+                           onOpenOverall: () -> Unit = {}) {
     val context = LocalContext.current
     val store = remember { SpeechStore.shared(context) }
     val challenges = remember { com.roro.futurevoice.data.SpeechChallenges.shared(context) }
     val challengeScripts by challenges.scripts.collectAsStateWithLifecycle()
     val standings by challenges.standings.collectAsStateWithLifecycle()
+    val overall by challenges.overall.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var publishing by remember { mutableStateOf<SpeechScript?>(null) }
     var publishError by remember { mutableStateOf<String?>(null) }
@@ -238,6 +240,10 @@ internal fun SpeechTabBody(language: String, native: String, level: CefrLevel,
             val live = challengeScripts.filter { standings[it.id]?.retiredAt == null }
             val pastCount = challengeScripts.size - live.size
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                // Every challenge on one board (iOS `SpeechOverallBanner`).
+                overall?.takeIf { it.size >= com.roro.futurevoice.data.SpeechChallenges.OVERALL_MIN_ENTRANTS }?.let { rows ->
+                    SpeechOverallBanner(rows, onClick = onOpenOverall)
+                }
                 // The card carries 6 dp above and below, so 0 here is a 12 dp gap.
                 TwoAcross(live, spacing = 12.dp, rowSpacing = 0.dp) { script, mod ->
                     SpeechChallengeRow(script, standings[script.id], modifier = mod,

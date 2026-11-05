@@ -93,6 +93,9 @@ class SpeechChallenges private constructor(private val context: Context) {
         /** Their cube's colour (theme index) when seated in the Core of this
          *  challenge's language today; null otherwise (iOS `core_theme`). */
         val core_theme: Int? = null,
+        /** On the overall board: how many challenges the total is made of
+         *  (iOS `challenges`); null on a challenge's own board. */
+        val challenges: Int? = null,
     ) {
         val face: Face get() = Face(display_name, avatar)
     }
@@ -146,6 +149,10 @@ class SpeechChallenges private constructor(private val context: Context) {
     val scripts: StateFlow<List<SpeechScript>> = _scripts
     private val _standings = MutableStateFlow<Map<String, Standing>>(emptyMap())
     val standings: StateFlow<Map<String, Standing>> = _standings
+    /** The overall board's top of the loaded language (and the learner's own
+     *  row), for the Speech tab's banner — iOS `overall`. Null until it loads. */
+    private val _overall = MutableStateFlow<List<BoardRow>?>(null)
+    val overall: StateFlow<List<BoardRow>?> = _overall
     /** By take id. In memory: the page that matters is the one the take
      *  opens on; later visits read the standing instead. */
     private val _entries = MutableStateFlow<Map<String, Entry>>(emptyMap())
@@ -177,6 +184,7 @@ class SpeechChallenges private constructor(private val context: Context) {
     fun loadCache(language: String) {
         if (loadedLanguage == language) return
         loadedLanguage = language
+        _overall.value = null
         val cache = runCatching {
             StoreJson.json.decodeFromString(Cache.serializer(), cacheFile(language).readText())
         }.getOrNull()
@@ -212,6 +220,7 @@ class SpeechChallenges private constructor(private val context: Context) {
 
     suspend fun refresh(language: String) {
         loadCache(language)
+        overallBoard(language)?.let { if (loadedLanguage == language) _overall.value = it }
         val rows = runCatching {
             Edge.json.decodeFromString(ListSerializer(ListRow.serializer()),
                 rpc("speech_challenge_list", buildJsonObject { put("p_language", language) }))
@@ -293,6 +302,16 @@ class SpeechChallenges private constructor(private val context: Context) {
         Edge.json.decodeFromString(ListSerializer(BoardRow.serializer()),
             rpc("speech_challenge_board", buildJsonObject {
                 put("p_challenge", challengeId); put("p_limit", limit)
+            }))
+    }.getOrNull()
+
+    /** Every challenge of a language on one board (iOS 2026-11-05): each
+     *  learner's best score per challenge, added up, so the way to the top is
+     *  to take more of them. Past challenges count. */
+    suspend fun overallBoard(language: String, limit: Int = 10): List<BoardRow>? = runCatching {
+        Edge.json.decodeFromString(ListSerializer(BoardRow.serializer()),
+            rpc("speech_overall_board", buildJsonObject {
+                put("p_language", language); put("p_limit", limit)
             }))
     }.getOrNull()
 
@@ -436,6 +455,9 @@ class SpeechChallenges private constructor(private val context: Context) {
         const val MAX_NAME_LENGTH = 24
         /** The lowest score that goes on a board — iOS `boardBar`. */
         const val BOARD_BAR = 80
+        /** Below this many people the overall board is not drawn: a board of
+         *  two reads as empty, not as a race (iOS `overallMinEntrants`). */
+        const val OVERALL_MIN_ENTRANTS = 5
 
         /** The one name a learner goes by on every board. Null until they
          *  have seen and confirmed it — nothing goes on a public board unasked. */

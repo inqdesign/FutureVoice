@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The overall speech ranking (iOS 2026-11-05). -->
+<resources>
+    <string name="speech_overall_ranking">Gesamtrangliste</string>
+    <string name="speech_overall_footer">Deine Bestwerte aus allen Challenges, zusammengezählt. Jede Challenge, die du machst, bringt dich weiter nach oben.</string>
+    <plurals name="speech_overall_challenges">
+        <item quantity="one">%d Challenge</item>
+        <item quantity="other">%d Challenges</item>
+    </plurals>
+</resources>

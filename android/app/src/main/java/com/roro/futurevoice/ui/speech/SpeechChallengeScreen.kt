@@ -24,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ArrowCircleUp
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Flag
@@ -530,7 +531,7 @@ private fun LabeledRow(label: String, modifier: Modifier = Modifier, value: @Com
 }
 
 @Composable
-private fun BoardRow(row: SpeechChallenges.BoardRow) {
+internal fun BoardRow(row: SpeechChallenges.BoardRow) {
     if (row.rank <= 3) { PodiumRow(row); return }
     val accent = MaterialTheme.colorScheme.primary
     Row(
@@ -545,18 +546,21 @@ private fun BoardRow(row: SpeechChallenges.BoardRow) {
         // Name and "You" take the leading space; the score sits at the trailing
         // edge (iOS `Spacer()`). Two weights split the row in half, so the score
         // stopped wherever the name's unused half ended.
-        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(row.display_name, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                fontWeight = if (row.is_me) FontWeight.SemiBold else FontWeight.Normal,
-                modifier = Modifier.weight(1f, fill = false))
-            row.core_theme?.let { CoreCubeBadge(it) }
-            if (row.is_me) {
-                Text(stringResource(R.string.you), style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold, color = accent)
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(row.display_name, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    fontWeight = if (row.is_me) FontWeight.SemiBold else FontWeight.Normal,
+                    modifier = Modifier.weight(1f, fill = false))
+                row.core_theme?.let { CoreCubeBadge(it) }
+                if (row.is_me) {
+                    Text(stringResource(R.string.you), style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold, color = accent)
+                }
             }
+            row.challenges?.let { ChallengeCount(it) }
         }
-        Text("${row.score}", fontWeight = FontWeight.SemiBold, color = scoreColor(row.score))
+        Text("${row.score}", fontWeight = FontWeight.SemiBold, color = boardScoreColor(row))
     }
 }
 
@@ -591,13 +595,159 @@ private fun PodiumRow(row: SpeechChallenges.BoardRow) {
                     fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f, fill = false))
                 row.core_theme?.let { CoreCubeBadge(it, 18.dp) }
             }
-            if (row.is_me) {
-                Text(stringResource(R.string.you), style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold, color = accent)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (row.is_me) {
+                    Text(stringResource(R.string.you), style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold, color = accent)
+                }
+                row.challenges?.let { ChallengeCount(it) }
             }
         }
-        Text("${row.score}", fontWeight = FontWeight.Bold, color = scoreColor(row.score),
+        Text("${row.score}", fontWeight = FontWeight.Bold, color = boardScoreColor(row),
             style = if (row.rank == 1) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.headlineSmall)
+    }
+}
+
+/** A board line's score: a challenge's 0–100 take in the scale, an overall
+ *  total (a sum) in plain text — iOS `SpeechScoreColor.board`. */
+@Composable
+private fun boardScoreColor(row: SpeechChallenges.BoardRow): Color =
+    if (row.challenges == null) scoreColor(row.score) else MaterialTheme.colorScheme.onSurface
+
+@Composable
+private fun ChallengeCount(count: Int) {
+    Text(pluralStringResource(R.plurals.speech_overall_challenges, count, count),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+// MARK: - Every challenge on one board
+
+/** The overall ranking on the Speech tab (iOS `SpeechOverallBanner`): the top
+ *  three drawn large, second · first · third like a podium; a tap opens the
+ *  whole board. */
+@Composable
+internal fun SpeechOverallBanner(rows: List<SpeechChallenges.BoardRow>, onClick: () -> Unit) {
+    val top = rows.take(3)
+    val me = rows.firstOrNull { it.is_me }
+    Column(
+        Modifier.fillMaxWidth().clip(ContinuousShape(18.dp)).background(AppSurfaces.card)
+            .clickable(onClick = onClick).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Filled.EmojiEvents, contentDescription = null, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(stringResource(R.string.speech_overall_ranking), style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(20.dp))
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(1, 0, 2).forEach { i ->
+                Box(Modifier.weight(1f), contentAlignment = Alignment.BottomCenter) {
+                    top.getOrNull(i)?.let { OverallPlace(it) }
+                }
+            }
+        }
+        if (me != null && me.rank > 3) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(stringResource(R.string.you), style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                Text("#${me.rank}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                Text("·", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("${me.score}", style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun OverallPlace(row: SpeechChallenges.BoardRow) {
+    val first = row.rank == 1
+    val medal = when (row.rank) { 1 -> Color(0xFFFFCC00); 2 -> Color(0xFF8E8E93); else -> Color(0xFFA2845E) }
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box {
+            SpeechChallengeFace(row.face, if (first) 76.dp else 60.dp)
+            Text("#${row.rank}", fontWeight = FontWeight.ExtraBold,
+                style = TightText.copy(fontSize = 12.sp, lineHeight = 14.sp),
+                color = if (first) Color.Black else Color.White,
+                modifier = Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = (-4).dp)
+                    .border(2.dp, AppSurfaces.card, RoundedCornerShape(50))
+                    .background(medal, RoundedCornerShape(50))
+                    .padding(horizontal = 6.dp, vertical = 2.dp))
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(row.display_name, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                style = if (first) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f, fill = false))
+            row.core_theme?.let { CoreCubeBadge(it) }
+        }
+        Text("${row.score}", fontWeight = FontWeight.Bold,
+            style = if (first) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.titleLarge)
+    }
+}
+
+/** The whole overall board: the top fifty and the learner's own row — iOS
+ *  `SpeechOverallBoardView`. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun SpeechOverallScreen(language: String, onBack: () -> Unit) {
+    NavPageBackHandler(onBack = onBack)
+    val context = LocalContext.current
+    val challenges = remember { SpeechChallenges.shared(context) }
+    val cached by challenges.overall.collectAsStateWithLifecycle()
+    var rows by remember { mutableStateOf<List<SpeechChallenges.BoardRow>?>(null) }
+    var refreshing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    suspend fun load() { challenges.overallBoard(language, limit = 50)?.let { rows = it } }
+    LaunchedEffect(language) { load() }
+    Scaffold(
+        containerColor = AppSurfaces.ground,
+        topBar = {
+            TopAppBar(
+                colors = AppSurfaces.topBarColors(),
+                title = { Text(stringResource(R.string.speech_overall_ranking)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null) }
+                },
+            )
+        },
+    ) { padding ->
+        PullToRefreshBox(
+            isRefreshing = refreshing,
+            onRefresh = { scope.launch { refreshing = true; load(); refreshing = false } },
+            modifier = Modifier.padding(padding).fillMaxSize(),
+        ) {
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
+                FormSection(null, footer = stringResource(R.string.speech_overall_footer)) {
+                    val shown = rows ?: cached
+                    if (shown == null) {
+                        Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(Modifier.size(24.dp))
+                        }
+                    } else {
+                        var previous: Int? = null
+                        shown.forEachIndexed { i, row ->
+                            if (i > 0) FormDivider()
+                            val prev = previous
+                            if (prev != null && row.rank > prev + 1 && row.is_me) {
+                                Box(Modifier.fillMaxWidth().padding(vertical = 6.dp), contentAlignment = Alignment.Center) {
+                                    Text("…", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                FormDivider()
+                            }
+                            BoardRow(row)
+                            previous = row.rank
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

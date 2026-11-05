@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The overall speech ranking (iOS 2026-11-05). -->
+<resources>
+    <string name="speech_overall_ranking">總排名</string>
+    <string name="speech_overall_footer">每個挑戰取你的最高分，加起來就是總分。挑戰做得越多，排名越高。</string>
+    <plurals name="speech_overall_challenges">
+        <item quantity="other">%d 個挑戰</item>
+    </plurals>
+</resources>

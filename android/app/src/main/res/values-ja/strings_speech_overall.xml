@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The overall speech ranking (iOS 2026-11-05). -->
+<resources>
+    <string name="speech_overall_ranking">総合ランキング</string>
+    <string name="speech_overall_footer">チャレンジごとのベストスコアを合計した点数です。挑戦するチャレンジが多いほど上がります。</string>
+    <plurals name="speech_overall_challenges">
+        <item quantity="other">チャレンジ%d件</item>
+    </plurals>
+</resources>

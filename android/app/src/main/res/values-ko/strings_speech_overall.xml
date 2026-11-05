@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The overall speech ranking (iOS 2026-11-05). -->
+<resources>
+    <string name="speech_overall_ranking">전체 순위</string>
+    <string name="speech_overall_footer">챌린지마다 내 최고 점수 하나씩을 더한 점수예요. 챌린지를 많이 할수록 올라가요.</string>
+    <plurals name="speech_overall_challenges">
+        <item quantity="other">챌린지 %d개</item>
+    </plurals>
+</resources>

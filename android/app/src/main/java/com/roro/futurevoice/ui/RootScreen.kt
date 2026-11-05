@@ -282,6 +282,7 @@ fun RootScreen() {
     var speechChallengeId by remember { mutableStateOf<String?>(null) }
     /** Every challenge, live and past — pushed from the Speech tab. */
     var showSpeechChallenges by remember { mutableStateOf(false) }
+    var showSpeechOverall by remember { mutableStateOf(false) }
     var showDueReview by remember { mutableStateOf(false) }
     /** Progress's effort page (iOS `EffortDetailView`, pushed from the card). */
     var showEffort by remember { mutableStateOf(false) }
@@ -1166,6 +1167,7 @@ fun RootScreen() {
         if (showShadowBrowser) add(RootRoute.ShadowBrowser)
         speechChallengeId?.let { add(RootRoute.SpeechChallenge(it)) }
         if (showSpeechChallenges) add(RootRoute.SpeechChallenges)
+        if (showSpeechOverall) add(RootRoute.SpeechOverall)
         if (!showMe) {
             if (showPublicIntro) add(RootRoute.PublicIntro)
             if (showPrivacy) add(RootRoute.Privacy)
@@ -1201,6 +1203,7 @@ fun RootScreen() {
                 RootRoute.ShadowBrowser -> showShadowBrowser = false
                 is RootRoute.SpeechChallenge -> speechChallengeId = null
                 RootRoute.SpeechChallenges -> showSpeechChallenges = false
+                RootRoute.SpeechOverall -> showSpeechOverall = false
                 RootRoute.PublicIntro -> {
                     showPublicIntro = false
                     if (introEditFromPreview && app.needsIntroDecision()) showIntroPreview = true
@@ -1613,6 +1616,11 @@ fun RootScreen() {
             onBack = { showSpeechChallenges = false },
         )
 
+        RootRoute.SpeechOverall -> com.roro.futurevoice.ui.speech.SpeechOverallScreen(
+            language = state.targetLanguage,
+            onBack = { showSpeechOverall = false },
+        )
+
         RootRoute.ShadowBrowser -> ShadowBrowserScreen(
             language = state.targetLanguage,
             // iOS presents the drill as a sheet OVER the list: closing it
@@ -1834,6 +1842,7 @@ fun RootScreen() {
             onShadowAll = { showShadowBrowser = true },
             onOpenSpeechChallenge = { speechChallengeId = it.id },
             onOpenAllSpeechChallenges = { showSpeechChallenges = true },
+            onOpenSpeechOverall = { showSpeechOverall = true },
             // The dictionaries. Until now the library had no in-app entrance
             // at all — only the widget's deep link reached it.
             onOpenWordsAll = { library = LibraryKind.WORDS },
@@ -2095,6 +2104,7 @@ internal fun HomeScreen(
     onShadowAll: () -> Unit = {},
     onOpenSpeechChallenge: (com.roro.futurevoice.data.SpeechScript) -> Unit = {},
     onOpenAllSpeechChallenges: () -> Unit = {},
+    onOpenSpeechOverall: () -> Unit = {},
     onOpenWordsAll: () -> Unit = {},
     onOpenExpressionsAll: () -> Unit = {},
     onOpenSentencesAll: () -> Unit = {},
@@ -2401,6 +2411,7 @@ internal fun HomeScreen(
                         level = state.level,
                         onOpenChallenge = onOpenSpeechChallenge,
                         onOpenAllChallenges = onOpenAllSpeechChallenges,
+                        onOpenOverall = onOpenSpeechOverall,
                     )
 
                     // Watch: simulate the situation BEFORE it happens. Scenarios
@@ -3732,6 +3743,7 @@ internal sealed interface RootRoute {
     data object ShadowBrowser : RootRoute { override val key = "shadowBrowser" }
     data class SpeechChallenge(val id: String) : RootRoute { override val key = "speechChallenge:$id" }
     data object SpeechChallenges : RootRoute { override val key = "speechChallenges" }
+    data object SpeechOverall : RootRoute { override val key = "speechOverall" }
     data object PublicIntro : RootRoute { override val key = "publicIntro" }
     data object Privacy : RootRoute { override val key = "privacy" }
     data class MyProfile(val sheet: Boolean) : RootRoute {
@@ -3778,6 +3790,8 @@ internal fun rootPushes(from: RootRoute, to: RootRoute, deckPushed: Boolean): Bo
         // The Speech tab's challenge rows push the board.
         is RootRoute.SpeechChallenge -> from is RootRoute.Tabs || from is RootRoute.SpeechChallenges
         RootRoute.SpeechChallenges -> from is RootRoute.Tabs
+        // The Speech tab's overall banner pushes the overall board.
+        RootRoute.SpeechOverall -> from is RootRoute.Tabs
         // Find people's own-people rows push the person.
         is RootRoute.Person -> from is RootRoute.People
         // Inside the Me sheet: Usage, Privacy, the public intro; inside
