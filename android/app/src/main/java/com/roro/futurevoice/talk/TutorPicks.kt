@@ -347,7 +347,11 @@ object NewsArticle {
                 runCatching { file.writeText(StoreJson.json.encodeToString(Article.serializer(), fetched)) }
                 fetched
             }
-            SpeechScript(id = UUID.randomUUID().toString(), title = article.title, genre = SpeechGenre.NEWS,
+            // A stable id per article (iOS's rule), so a second "Say it out loud"
+            // lands on the script already in My scripts.
+            val h = MessageDigest.getInstance("SHA-256").digest(key.toByteArray())
+            val bb = java.nio.ByteBuffer.wrap(h, 0, 16)
+            SpeechScript(id = UUID(bb.long, bb.long).toString().uppercase(), title = article.title, genre = SpeechGenre.NEWS,
                 topic = story.category ?: "", body = article.body, summary = article.summary,
                 language = language, targetSeconds = 0, createdAt = System.currentTimeMillis())
         }

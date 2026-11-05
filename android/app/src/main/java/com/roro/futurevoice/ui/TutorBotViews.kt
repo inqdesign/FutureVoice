@@ -806,7 +806,9 @@ fun TutorReadingSheet(reading: TutorReading, state: AppState, onDismiss: () -> U
         com.roro.futurevoice.ui.speech.SpeechScriptSheet(shown, state.nativeLanguage, onEdited = {},
             onDismiss = close, initialStudy = reading.study, shipped = true,
             studyHere = reading.script == null || reading.goal != null,
-            canPractice = reading.part == com.roro.futurevoice.talk.GoalPrep.Part.SPEECH)
+            // Everything the tutor wrote (a goal's reading and answer, a news
+            // article) can be said under the prompter; a podcast episode is two hosts.
+            canPractice = reading.goal != null || reading.story != null)
         return
     }
     com.roro.futurevoice.ui.speech.SpeechSheet(onDismiss = close) {
