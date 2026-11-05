@@ -552,4 +552,5 @@
     <string name="speech_category_in_flight">Annonce à bord</string>
     <string name="speech_category_podcast">Podcast</string>
     <string name="speech_category_short_talk">Mini-conférence</string>
+    <string name="sign_in_and_everything_you_practice_stays_on_any_phone">Connecte-toi et tout ce que tu pratiques reste dans ton compte, même si tu changes de téléphone.</string>
 </resources>

@@ -227,6 +227,9 @@ fun VoicePage(
     voiceIsStandIn: Boolean = false,
     voiceQueuedUntil: Long? = null,
     onPickStandIn: () -> Unit = {},
+    /** The AI tutor's voice, chosen instead of recording (iOS
+     *  `voiceIsTutorOnly`): which tutor speaks, and recording their own. */
+    voiceIsTutorOnly: Boolean = false,
     /** The preset the learner chose for their fluent self over the clone
      *  (iOS `fluentSelfPresetId`, 2026-10-24), and the pick (null = theirs). */
     fluentSelfPresetId: String? = null,
@@ -261,7 +264,15 @@ fun VoicePage(
             @Composable fun divider() { if (!first) GroupedRowDivider(inset = false); first = false }
             // The month's voices were spent when they signed up: say when
             // theirs arrives, and hide what would act on a stand-in preset.
-            if (voiceIsStandIn) {
+            if (voiceIsTutorOnly) {
+                // The AI tutor's voice, chosen instead of recording: which
+                // tutor speaks. Recording their own is the button below.
+                divider()
+                VoiceValueRow(stringResource(R.string.voice),
+                    com.roro.futurevoice.talk.StockPerson.by(voiceId).let {
+                        com.roro.futurevoice.talk.VoicePreset.name(it.voiceId, it.name, targetLanguage)
+                    }, onClick = onPickStandIn)
+            } else if (voiceIsStandIn) {
                 divider()
                 Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 11.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -336,8 +347,10 @@ fun VoicePage(
                 VoiceValueRow(stringResource(R.string.doesn_t_sound_like_you), null, onClick = onCompare)
                 GroupedRowDivider(inset = false)
             }
-            VoiceValueRow(stringResource(R.string.re_record_voice), null, chevron = false,
-                enabled = canChange && !voiceIsStandIn, onClick = onRerecord)
+            // Never recorded: the recommendation, still open.
+            VoiceValueRow(stringResource(if (voiceIsTutorOnly) R.string.make_my_own_voice
+                    else R.string.re_record_voice), null, chevron = false,
+                enabled = canChange && (!voiceIsStandIn || voiceIsTutorOnly), onClick = onRerecord)
             if (hasSample && !voiceIsStandIn) {
                 GroupedRowDivider(inset = false)
                 VoiceValueRow(stringResource(R.string.regenerate_from_saved_recording), null, chevron = false,

@@ -545,4 +545,5 @@
     <string name="speech_category_in_flight">機上廣播</string>
     <string name="speech_category_podcast">Podcast</string>
     <string name="speech_category_short_talk">短篇演講</string>
+    <string name="sign_in_and_everything_you_practice_stays_on_any_phone">登入後，你練習過的一切都會留在帳號裡，換了手機也不會不見。</string>
 </resources>
