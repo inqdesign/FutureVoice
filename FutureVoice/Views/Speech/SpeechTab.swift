@@ -54,6 +54,16 @@ struct SpeechTab: View {
 
     private var challengesPage: some View {
         LazyVStack(alignment: .leading, spacing: 14) {
+            if let overall = challenges.overall,
+               overall.count >= SpeechChallenges.overallMinEntrants {
+                NavigationLink {
+                    SpeechOverallBoardView()
+                        .environmentObject(appState)
+                } label: {
+                    SpeechOverallBanner(rows: overall)
+                }
+                .buttonStyle(.plain)
+            }
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(challenges.live) { script in
                     NavigationLink {
@@ -417,6 +427,12 @@ struct SpeechScriptCard: View {
 enum SpeechScoreColor {
     static func color(_ score: Int) -> Color {
         score >= 85 ? .green : score >= 65 ? .orange : .red
+    }
+
+    /// A board line's score: a challenge's 0–100 take in the scale, an
+    /// overall total (a sum) in plain text.
+    static func board(_ row: SpeechChallenges.BoardRow) -> Color {
+        row.challenges == nil ? color(row.score) : .primary
     }
 }
 

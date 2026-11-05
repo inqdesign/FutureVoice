@@ -557,16 +557,23 @@ struct SpeechPodiumRow: View {
                         .lineLimit(1)
                     if let theme = row.core_theme { CoreCubeBadge(theme: theme, size: 18) }
                 }
-                if row.is_me {
-                    Text("You")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.tint)
+                HStack(spacing: 6) {
+                    if row.is_me {
+                        Text("You")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tint)
+                    }
+                    if let count = row.challenges {
+                        Text("\(count) challenges")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
             Spacer()
             Text("\(row.score)")
                 .font((row.rank == 1 ? Font.title : .title2).monospacedDigit().weight(.bold))
-                .foregroundStyle(SpeechScoreColor.color(row.score))
+                .foregroundStyle(SpeechScoreColor.board(row))
         }
         .padding(.vertical, row.rank == 1 ? 8 : 4)
     }
@@ -919,6 +926,192 @@ struct SpeechBoardRowView: View {
             Text("\(row.score)")
                 .font(.body.monospacedDigit().weight(.semibold))
                 .foregroundStyle(SpeechScoreColor.color(row.score))
+        }
+    }
+}
+
+// MARK: - Every challenge on one board
+
+/// The overall ranking on the Speech tab (2026-11-05, founder): a banner with
+/// the top three drawn large, second · first · third like a podium, and a tap
+/// opens the whole board. Each learner's best score per challenge, added up.
+struct SpeechOverallBanner: View {
+    let rows: [SpeechChallenges.BoardRow]
+
+    private var top: [SpeechChallenges.BoardRow] { Array(rows.prefix(3)) }
+    private var me: SpeechChallenges.BoardRow? { rows.first { $0.is_me } }
+
+    var body: some View {
+        VStack(spacing: 14) {
+            HStack {
+                Label("Overall ranking", systemImage: "trophy.fill")
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            HStack(alignment: .bottom, spacing: 8) {
+                ForEach([1, 0, 2], id: \.self) { index in
+                    if index < top.count {
+                        place(top[index])
+                    } else {
+                        Color.clear.frame(maxWidth: .infinity)
+                    }
+                }
+            }
+            if let me, me.rank > 3 {
+                HStack(spacing: 6) {
+                    Text("You")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.tint)
+                    Text(verbatim: "#\(me.rank)")
+                        .font(.subheadline.monospacedDigit().weight(.semibold))
+                    Text("·").foregroundStyle(.secondary)
+                    Text(verbatim: "\(me.score)")
+                        .font(.subheadline.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemGroupedBackground)))
+        .contentShape(Rectangle())
+    }
+
+    private func place(_ row: SpeechChallenges.BoardRow) -> some View {
+        let first = row.rank == 1
+        return VStack(spacing: 6) {
+            SpeechChallengeFace(face: row.face, size: first ? 76 : 60)
+                .overlay(alignment: .topTrailing) {
+                    Text(verbatim: "#\(row.rank)")
+                        .font(.caption.weight(.heavy).monospacedDigit())
+                        .foregroundStyle(row.rank == 1 ? Color.black : Color.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(SpeechOverallBanner.medal(row.rank), in: Capsule())
+                        .overlay(Capsule().stroke(Color(.secondarySystemGroupedBackground), lineWidth: 2))
+                        .offset(x: 6, y: -4)
+                }
+            HStack(spacing: 3) {
+                Text(row.display_name)
+                    .font(first ? .headline : .subheadline.weight(.semibold))
+                    .lineLimit(1)
+                if let theme = row.core_theme { CoreCubeBadge(theme: theme) }
+            }
+            Text(verbatim: "\(row.score)")
+                .font((first ? Font.title2 : .title3).monospacedDigit().weight(.bold))
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+    }
+
+    static func medal(_ rank: Int) -> Color {
+        switch rank {
+        case 1: return .yellow
+        case 2: return .gray
+        default: return .brown
+        }
+    }
+}
+
+/// The whole overall board: the top fifty and the learner's own row.
+struct SpeechOverallBoardView: View {
+    @EnvironmentObject private var appState: AppState
+    @ObservedObject private var challenges = SpeechChallenges.shared
+    @State private var rows: [SpeechChallenges.BoardRow]?
+
+    var body: some View {
+        List {
+            Section {
+                if let rows = rows ?? challenges.overall {
+                    ForEach(items(rows), id: \.id) { item in
+                        switch item {
+                        case .row(let row):
+                            if row.rank <= 3 { SpeechPodiumRow(row: row) } else { SpeechOverallRow(row: row) }
+                        case .gap:
+                            Text("…").foregroundStyle(.secondary).frame(maxWidth: .infinity)
+                        }
+                    }
+                } else {
+                    HStack { Spacer(); ProgressView(); Spacer() }
+                }
+            } footer: {
+                Text("Your best score on each challenge, added up. Every challenge you take moves you up.")
+            }
+        }
+        .navigationTitle("Overall ranking")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(MacLayout.tabBarOnPhoneOnly, for: .tabBar)
+        .refreshable { await load() }
+        .task { await load() }
+    }
+
+    private func load() async {
+        if let fresh = await challenges.overallBoard(language: appState.targetLanguage, limit: 50) {
+            rows = fresh
+        }
+    }
+
+    private enum Item {
+        case row(SpeechChallenges.BoardRow)
+        case gap
+        var id: String {
+            switch self {
+            case .row(let r): return r.id
+            case .gap: return "gap"
+            }
+        }
+    }
+
+    /// "…" before the learner's own row when it sits below the top fifty.
+    private func items(_ rows: [SpeechChallenges.BoardRow]) -> [Item] {
+        var out: [Item] = []
+        var previous: Int?
+        for row in rows {
+            if let previous, row.rank > previous + 1, row.is_me { out.append(.gap) }
+            out.append(.row(row))
+            previous = row.rank
+        }
+        return out
+    }
+}
+
+/// A line of the overall board from 4th down: rank, face, name, how many
+/// challenges, the total. The total is a sum, not a 0–100 score, so it is
+/// never coloured by the score scale.
+struct SpeechOverallRow: View {
+    let row: SpeechChallenges.BoardRow
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text("\(row.rank)")
+                .font(.body.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .frame(minWidth: 28, alignment: .leading)
+            SpeechChallengeFace(face: row.face, size: 28)
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 4) {
+                    Text(row.display_name)
+                        .fontWeight(row.is_me ? .semibold : .regular)
+                        .lineLimit(1)
+                    if let theme = row.core_theme { CoreCubeBadge(theme: theme) }
+                    if row.is_me {
+                        Text("You")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tint)
+                    }
+                }
+                if let count = row.challenges {
+                    Text("\(count) challenges")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+            Text("\(row.score)")
+                .font(.body.monospacedDigit().weight(.semibold))
         }
     }
 }

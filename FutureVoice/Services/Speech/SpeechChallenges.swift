@@ -67,6 +67,9 @@ final class SpeechChallenges: ObservableObject {
         /// this challenge's language today; nil otherwise, or from a server
         /// that doesn't send it yet.
         var core_theme: Int? = nil
+        /// On the overall board: how many challenges the total is made of.
+        /// nil on a challenge's own board.
+        var challenges: Int? = nil
         var id: String { "\(rank)-\(display_name)-\(is_me)" }
         var face: Face { Face(display_name: display_name, avatar: avatar) }
     }
@@ -84,6 +87,9 @@ final class SpeechChallenges: ObservableObject {
 
     @Published private(set) var scripts: [SpeechScript] = []
     @Published private(set) var standings: [UUID: Standing] = [:]
+    /// The overall board's top of the loaded language (and the learner's own
+    /// row), for the Speech tab's banner. nil until it loads.
+    @Published private(set) var overall: [BoardRow]?
     /// By take id. In memory: the page that matters is the one the take
     /// opens on; later visits read the standing instead.
     @Published private(set) var entries: [UUID: Entry] = [:]
@@ -126,6 +132,7 @@ final class SpeechChallenges: ObservableObject {
     func loadCache(language: String) {
         guard loadedLanguage != language else { return }
         loadedLanguage = language
+        overall = nil
         let cache = (try? Data(contentsOf: cacheURL(language)))
             .flatMap { try? decoder.decode(Cache.self, from: $0) }
         scripts = cache?.scripts ?? []
@@ -163,6 +170,7 @@ final class SpeechChallenges: ObservableObject {
         if !previewBoards.isEmpty { return }
         #endif
         loadCache(language: language)
+        async let overallRows = overallBoard(language: language)
         let rows: [ListRow]
         do {
             rows = try await SupabaseProvider.shared
@@ -172,7 +180,9 @@ final class SpeechChallenges: ObservableObject {
         } catch {
             return
         }
+        let board = await overallRows
         guard loadedLanguage == language else { return }
+        if let board { overall = board }
         scripts = rows.map { row in
             SpeechScript(id: row.id, title: row.title,
                          genre: SpeechGenre(rawValue: row.genre) ?? .explainer,
@@ -203,6 +213,24 @@ final class SpeechChallenges: ObservableObject {
             .execute()
             .value
     }
+
+    /// Every challenge of a language on one board (2026-11-05, founder):
+    /// each learner's best score per challenge, added up, so the way to the
+    /// top is to take more of them. Past challenges count.
+    func overallBoard(language: String, limit: Int = 10) async -> [BoardRow]? {
+        #if DEBUG
+        if let rows = previewOverall { return rows }
+        #endif
+        struct Params: Encodable { let p_language: String; let p_limit: Int }
+        return try? await SupabaseProvider.shared
+            .rpc("speech_overall_board", params: Params(p_language: language, p_limit: limit))
+            .execute()
+            .value
+    }
+
+    /// Below this many people the overall board is not drawn: a board of
+    /// two reads as empty, not as a race.
+    static let overallMinEntrants = 5
 
     // MARK: - Entering a take
 
@@ -464,10 +492,14 @@ final class SpeechChallenges: ObservableObject {
     #if DEBUG
     /// Capture runs: a board drawn from samples, no server.
     private var previewBoards: [UUID: [BoardRow]] = [:]
+    private var previewOverall: [BoardRow]?
 
     func seedPreview(language: String, scripts: [SpeechScript], standings: [UUID: Standing],
-                     boards: [UUID: [BoardRow]], entries: [UUID: Entry] = [:]) {
+                     boards: [UUID: [BoardRow]], entries: [UUID: Entry] = [:],
+                     overall: [BoardRow]? = nil) {
         loadedLanguage = language
+        previewOverall = overall
+        self.overall = overall
         self.scripts = scripts
         self.standings = standings
         previewBoards = boards

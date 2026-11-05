@@ -333,8 +333,23 @@ enum DebugCapture {
                         second: .init(entrants: 12, topScore: 93,
                                       topThree: Self.sampleFaces(["Wei", "Sofía", "Joon"]))],
             boards: [first: board, second: second_board],
-            entries: [take.id: .entered(rank: 14, previousRank: 19, entrants: 41, best: 81, improved: true)])
+            entries: [take.id: .entered(rank: 14, previousRank: 19, entrants: 41, best: 81, improved: true)],
+            overall: Self.sampleOverall(names: names, faces: faces))
         return scripts[0]
+    }
+
+    /// The overall board: best per challenge, added up.
+    static func sampleOverall(names: [String], faces: [SpeechChallenges.Face]) -> [SpeechChallenges.BoardRow] {
+        let totals = [592, 589, 556, 486, 368, 262, 184, 163, 95, 93]
+        let counts = [6, 6, 6, 5, 4, 3, 2, 2, 1, 1]
+        var rows = names.indices.map { i in
+            SpeechChallenges.BoardRow(rank: i + 1, display_name: names[i], score: totals[i], is_me: false,
+                                      avatar: faces[i].avatar, core_theme: i == 1 ? 1 : nil,
+                                      challenges: counts[i])
+        }
+        rows.append(SpeechChallenges.BoardRow(rank: 12, display_name: "Eunggyu", score: 81, is_me: true,
+                                              challenges: 1))
+        return rows
     }
 
     /// `-skyPhotoDir <host dir>`: <name>.jpg there is that sample person's
@@ -876,6 +891,10 @@ enum DebugCapture {
                                                 scripts: SpeechChallenges.shared.scripts + extra,
                                                 standings: standings, boards: [first.id: []])
             return AnyView(SpeechTab().environmentObject(appState))
+        case "speech-overall":
+            once("speech") { seedSpeech(appState) }
+            _ = seedSpeechChallenges(appState)
+            return AnyView(NavigationStack { SpeechOverallBoardView() }.environmentObject(appState))
         case "speech-challenges-all":
             // The all-challenges page: live, then past.
             _ = Self.view(for: "speech-challenges-many", appState: appState)
