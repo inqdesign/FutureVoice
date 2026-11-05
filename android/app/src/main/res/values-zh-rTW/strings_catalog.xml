@@ -3,6 +3,7 @@
      FutureVoice/Resources/Localizable.xcstrings — do not edit; edit the
      catalog and re-run. Names are resource_name(<English key>). -->
 <resources>
+    <string name="a_10_minute_lesson_uses_5_minutes">"練習10分鐘只用5分鐘。"</string>
     <!-- 'A 10-minute tutor call every weekday is about 200 minutes a month. Here, minutes count only while the conversation is going — pauses are free.' -->
     <string name="a_badge_next_to_your_name_where_you_meet_people">"在認識人的地方，名字旁邊會多一個徽章。"</string>
     <string name="a_barista">"咖啡師"</string>
@@ -111,6 +112,8 @@
     <string name="a_short_update_the_way_you_d_give_it_in_a_meeting">"像在會議上那樣，簡短報告進度"</string>
     <!-- 'A smaller copy, about 12 MB a minute. Send an original from its take.' -->
     <string name="a_smaller_copy_about_12_mb_a_minute_send_an_original_from_it_8cd5d8">"較小的副本，每分鐘約 12 MB。原始影片可以在錄製頁面另外上傳。"</string>
+    <!-- 'A Speech script, or what your tutor prepared for a goal, read in your voice. Made once, then replayed free.' -->
+    <string name="a_speech_script_or_what_your_tutor_prepared_for_a_goal_read_3ecda2">"用你的聲音朗讀演講稿，或家教為你的目標準備的內容。做好一次，之後重聽免費。"</string>
     <string name="a_standard_copy_and_the_original_are_in_your_icloud">"標準畫質的副本和原始影片都在你的 iCloud。"</string>
     <!-- 'A standard copy goes to your iCloud. The original stays on this device.' -->
     <string name="a_standard_copy_goes_to_your_icloud_the_original_stays_on_th_e68c3f">"標準畫質的副本會傳到你的 iCloud，原始影片留在這個裝置上。"</string>
@@ -428,6 +431,7 @@
     <string name="calling_the_landlord">"打給房東"</string>
     <string name="calling_the_school_about_an_absence">"打給學校請假"</string>
     <string name="calling_your_landlord">"打電話給房東"</string>
+    <string name="calls">"通話"</string>
     <string name="calls_and_scenes_speak_this_way">"通話和情境會用這種語氣。"</string>
     <!-- "Calls and scenes speak this way. Someone who knows your life knows what you've told your future self, the way a close friend would." -->
     <string name="calls_and_scenes_speak_this_way_someone_who_knows_your_life_e341fe">"通話和情境會用這種語氣。了解你生活的人，會像好朋友一樣知道你跟未來的自己說過的事。"</string>
@@ -435,6 +439,8 @@
     <string name="calls_at">"來電時間"</string>
     <!-- 'Calls draw on everything publicly known about them. Wrong person? Fix the name and look up again.' -->
     <string name="calls_draw_on_everything_publicly_known_about_them_wrong_per_ac77bc">"通話會以這個人公開的一切為基礎。不是這個人？修改名字後再查一次。"</string>
+    <!-- 'Calls, new scenes and voiceovers spend your talk minutes. Everything you replay is free.' -->
+    <string name="calls_new_scenes_and_voiceovers_spend_your_talk_minutes_ever_9e25c5">"只有通話、新情境和用你的聲音朗讀會用通話時間。重聽全部免費。"</string>
     <!-- 'Calls, recordings and every word you study are saved right here.' -->
     <string name="calls_recordings_and_every_word_you_study_are_saved_right_he_35bbe7">"通話、錄音，還有你學的每個單字和說法，全都存在這裡。"</string>
     <string name="calm_and_cozy">"平靜溫馨"</string>
@@ -481,6 +487,8 @@
     <string name="changes_to_on">"%2$s起改為%1$s"</string>
     <string name="chapters">"章節"</string>
     <string name="characters">"虛擬人物"</string>
+    <!-- "Chat, today's plan, and everything it prepares for your goals: likely questions, readings, model answers. Practicing a question with it is a call." -->
+    <string name="chat_today_s_plan_and_everything_it_prepares_for_your_goals_40fab4">"聊天、今天的計畫，以及為你的目標準備的一切：可能的問題、閱讀材料、範例回答。和家教練習問題算通話。"</string>
     <string name="chatting_is_one_thing_presenting_is_another">"聊天沒問題，\n上台講話卻是另一回事"</string>
     <string name="check">"檢查"</string>
     <string name="check_again">"再確認一次"</string>
@@ -755,6 +763,8 @@
     <string name="drills_appear_here_after_you_end_a_conversation">"結束對話後，訓練會出現在這裡。"</string>
     <!-- 'Drills, shadowing (including coach feedback), word and expression playback — every review surface is free.' -->
     <string name="drills_shadowing_including_coach_feedback_word_and_expressio_1d0899">"訓練、跟讀（包括教練回饋）、單字和用語播放。所有複習的地方都免費。"</string>
+    <!-- 'Drills, shadowing with coach feedback and pronunciation scores, say it again, word and expression cards.' -->
+    <string name="drills_shadowing_with_coach_feedback_and_pronunciation_score_f31e0e">"練習題、跟讀（含教練回饋和發音評分）、重說一次、單字和表達卡片。"</string>
     <string name="drop_it_on_a_folder">"放到資料夾上"</string>
     <string name="drop_it_on_got_it_and_it_stops_coming_back">"放到「記住了」就不會再出現。"</string>
     <string name="drop_off">"送小孩時"</string>
@@ -1007,6 +1017,8 @@
     <string name="free_minutes">"免費時間"</string>
     <string name="free_notes_quirks_recent_events_anything_that_helps">"自由備註：習慣、最近發生的事，任何有幫助的都行"</string>
     <string name="free_talk">"自由聊天"</string>
+    <!-- 'Free talk, tutor lessons, the daily call and calls with people. A 10-minute call uses 10 minutes, thinking pauses included. After 30 seconds with nobody speaking, the clock stops.' -->
+    <string name="free_talk_tutor_lessons_the_daily_call_and_calls_with_people_ef5709">"自由聊天、家教課、每日來電和與人通話。通話10分鐘就用10分鐘，思考的停頓也算在內。30秒沒人說話，計時就會停下。"</string>
     <string name="free_talk_with">"和%s自由聊天"</string>
     <!-- 'Free up space in Settings → your name → iCloud, and syncing picks up where it stopped.' -->
     <string name="free_up_space_in_settings_your_name_icloud_and_syncing_picks_29796d">"到「設定」→ 你的名字 → iCloud 釋出空間，同步就會從中斷的地方繼續。"</string>
@@ -1656,6 +1668,7 @@
     <!-- 'Making voices is briefly unavailable right now. Your recording is saved, so open the app after then and your fluent self speaks in your voice. Until then, pick one of the voices below to practice with.' -->
     <string name="making_voices_is_briefly_unavailable_right_now_your_recordin_f306d0">"目前建立聲音暫時出了點問題。錄音已經存好了，那之後打開 App，流利的自己就會用你的聲音說話。在那之前，請從下面選一個聲音來練習。"</string>
     <string name="making_your_test">"正在準備測驗…"</string>
+    <string name="making_your_voice">"製作你的聲音"</string>
     <string name="man">"男性"</string>
     <string name="manage_in_the_app_store">"在App Store管理"</string>
     <string name="manage_subscription">"管理訂閱"</string>
@@ -2009,6 +2022,8 @@
     <string name="one_time_no_expiry">"單次購買 · 無期限"</string>
     <string name="online">"網路上"</string>
     <string name="online_shopping">"網路購物"</string>
+    <!-- 'Only calls and voiceovers spend your talk minutes. Watching a scene never takes a second off them.' -->
+    <string name="only_calls_and_voiceovers_spend_your_talk_minutes_watching_a_95912c">"只有通話和用你的聲音朗讀會用通話時間。看情境一秒也不扣。"</string>
     <string name="only_core_members_can_see_this">"只有核心成員看得到。"</string>
     <!-- 'Only Core members can see your hope. Anyone can see your name.' -->
     <string name="only_core_members_can_see_your_hope_anyone_can_see_your_name">"心願只有核心成員看得到。名字所有人都看得到。"</string>
@@ -2357,6 +2372,7 @@
     <string name="recording_a_take">"錄製怎麼進行"</string>
     <string name="recording_file_missing">"錄音檔案不見了。"</string>
     <string name="recording_isn_t_available">"找不到錄音。"</string>
+    <string name="recording_it_and_making_it_again">"錄音，以及重新製作。"</string>
     <!-- 'Recording starts after 3, 2, 1. While you record, ✕ throws the take away and ↺ starts it over.' -->
     <string name="recording_starts_after_3_2_1_while_you_record_throws_the_tak_5d0549">"點一下，倒數 3、2、1 就開始錄製。錄到一半點 ✕ 會捨棄這次錄製，點 ↺ 則從頭再來。"</string>
     <string name="recreating_your_voice">"正在重新製作你的聲音"</string>
@@ -2465,6 +2481,7 @@
     <string name="s_1_expression">"用語1個"</string>
     <string name="s_1_hour">"1 小時"</string>
     <string name="s_1_min">"約1分鐘"</string>
+    <string name="s_1_min_per_100_characters">"每100字1分鐘"</string>
     <string name="s_1_minute_vary_your_pitch_a_little">"1分鐘就夠。讀的時候語調稍微變化一下。"</string>
     <string name="s_1_more_day">"再 1 天"</string>
     <string name="s_1_more_meaning">"+還有1個意思"</string>
@@ -2482,6 +2499,7 @@
     <!-- '30 days in a row without missing one. Leave a heart or a short cheer.' -->
     <string name="s_30_days_in_a_row_without_missing_one_leave_a_heart_or_a_sh_0d416d">"連續 30 天，一天都沒漏掉。送個愛心或一句加油吧。"</string>
     <string name="s_3_days">"3天"</string>
+    <string name="s_50_off">"五折"</string>
     <string name="said_lld">"說過%d次"</string>
     <string name="same_as_before">"沒有變化"</string>
     <!-- 'Same bands as “How this is assessed” — tap a skill for its measured numbers.' -->
@@ -2880,6 +2898,8 @@
     <string name="talk_more_often_and_a_little_longer_aim_past_your_daily_spea_96fd4a">"多說幾次、每次說久一點。超過每天的目標，流暢感就會出來。"</string>
     <string name="talk_now">"現在就聊"</string>
     <string name="talk_settings">"對話設定"</string>
+    <!-- 'Talk summaries, weekly reports, the weekly test and quick quizzes.' -->
+    <string name="talk_summaries_weekly_reports_the_weekly_test_and_quick_quiz_0b9f07">"對話總結、每週報告、每週測驗和小測驗。"</string>
     <!-- "Talk the way you would on the phone. There's no button to hold down." -->
     <string name="talk_the_way_you_would_on_the_phone_there_s_no_button_to_hol_f6c495">"像講電話一樣說就好，不需要一直按著按鈕。"</string>
     <string name="talk_then_pause">"說完，停一下"</string>
@@ -3078,6 +3098,8 @@
     <string name="the_name_other_learners_will_see_first_name_or_nickname_is_p_4cde17">"其他學習者會看到的名字，寫名字或暱稱就夠了。"</string>
     <!-- 'The name your voice goes by in the app. Leave it empty to go back to the default.' -->
     <string name="the_name_your_voice_goes_by_in_the_app_leave_it_empty_to_go_f9c525">"這是你的聲音在 App 裡的名字。留空就會回到預設名稱。"</string>
+    <!-- "The nawana Podcast and the scenes you've watched, one after another." -->
+    <string name="the_nawana_podcast_and_the_scenes_you_ve_watched_one_after_a_f225ad">"nawana Podcast和你看過的情境，一個接一個。"</string>
     <!-- "The nawana Podcast and the situations you've watched, played one after another. Good for the commute." -->
     <string name="the_nawana_podcast_and_the_situations_you_ve_watched_played_8ed2dc">"連續播放 nawana Podcast 和你看過的情境，通勤時聽剛好。"</string>
     <string name="the_news_chip_brings_this_week_s_stories_for_each_one">"新聞標籤會依每個興趣帶來本週的報導。"</string>
@@ -3373,6 +3395,7 @@
     <string name="used_it">"用到了"</string>
     <string name="used_lld_time">"用過%1$d次 · %3$s"</string>
     <string name="useful_information_clearly_told">"把實用資訊講清楚"</string>
+    <string name="uses_half_the_talk_time">"只扣一半通話時間"</string>
     <string name="uses_lld_min_of_talk_time">"使用 %d 分鐘通話時間"</string>
     <string name="uses_talk_time">"會用到通話時間"</string>
     <string name="uses_your_google_drive">"使用你的 Google 雲端硬碟"</string>
@@ -3760,6 +3783,8 @@
     <string name="write_your_first_script">"寫下你的第一篇講稿"</string>
     <string name="write_your_own_situation">"自己寫情境"</string>
     <string name="writing">"正在寫…"</string>
+    <!-- 'Writing and studying scripts, recording takes, scores and challenges.' -->
+    <string name="writing_and_studying_scripts_recording_takes_scores_and_chal_6f47b3">"寫和學習演講稿、錄製、評分和挑戰。"</string>
     <string name="writing_down_what_you_said">"正在記下剛才說的內容…"</string>
     <string name="writing_feedback">"正在寫回饋…"</string>
     <string name="writing_the_article_for_your_level">"正在依你的程度寫文章…"</string>

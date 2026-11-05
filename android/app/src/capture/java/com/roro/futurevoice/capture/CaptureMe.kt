@@ -92,6 +92,13 @@ object CaptureMe {
         "plan" to { _ ->
             MeCaptureFlags.previewAccount = CaptureSeed.sampleLightAccount
             MeCaptureFlags.previewReceipt = CaptureSeed.sampleLightReceipt
+            // iOS sample: the split by kind, the pronunciation row at half.
+            MeCaptureFlags.previewTalkModes = listOf(
+                com.roro.futurevoice.data.TalkModeSplit.Part("free", 1500),
+                com.roro.futurevoice.data.TalkModeSplit.Part("tutor", 900),
+                com.roro.futurevoice.data.TalkModeSplit.Part("pron", 420, callSeconds = 840),
+                com.roro.futurevoice.data.TalkModeSplit.Part("earlier", 480),
+            )
             PlanPageScreen(onOpenCreditGuide = {}, onOpenInvite = {}, onBack = {})
         },
         "plan-trial" to { _ ->
@@ -110,6 +117,12 @@ object CaptureMe {
         },
         "plan-guide" to { _ ->
             MeCaptureFlags.previewAccount = CaptureSeed.sampleLightAccount
+            CreditGuideScreen(onBack = {})
+        },
+        // The same page from its bottom: the "Always free" list (iOS 4418b601).
+        "plan-guide-free" to { _ ->
+            MeCaptureFlags.previewAccount = CaptureSeed.sampleLightAccount
+            MeCaptureFlags.guideScrollToFree = true
             CreditGuideScreen(onBack = {})
         },
         "day-spent" to { _ -> DaySpent(SpentPool.TALK, onSale(CaptureSeed.sampleLightAccount)) },

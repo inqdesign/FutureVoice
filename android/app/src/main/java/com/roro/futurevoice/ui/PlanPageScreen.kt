@@ -109,6 +109,7 @@ fun PlanPageScreen(
             account = it
             receipt = com.roro.futurevoice.capture.flags.MeCaptureFlags.previewReceipt
             inviteOffer = com.roro.futurevoice.capture.flags.MeCaptureFlags.previewInvite
+            talkModes = com.roro.futurevoice.capture.flags.MeCaptureFlags.previewTalkModes.orEmpty()
             return@LaunchedEffect
         }
         val auth = AuthRepository()
@@ -479,10 +480,20 @@ private fun TalkModeRow(part: com.roro.futurevoice.data.TalkModeSplit.Part) {
         "free" -> R.string.free_talk to Icons.Filled.Forum
         "tutor" -> R.string.tutor to Icons.Filled.School
         "pron" -> R.string.pronunciation to Icons.Filled.RecordVoiceOver
+        // Everything else paid from the talk pool (iOS c380df8b).
+        "scene" -> R.string.watch_scenes to Icons.Filled.PlayCircle
+        "voiceover" -> R.string.hear_it_in_my_voice to Icons.Filled.RecordVoiceOver
         else -> R.string.earlier_calls to Icons.Filled.History
     }
-    val value = if (part.seconds >= 60) stringResource(R.string.lld_min_b61908, part.seconds / 60)
-        else stringResource(R.string.lld_sec, part.seconds)
+    @Composable fun duration(seconds: Int) =
+        if (seconds >= 60) stringResource(R.string.lld_min_b61908, seconds / 60)
+        else stringResource(R.string.lld_sec, seconds)
+    val value = duration(part.seconds)
+    // The time practiced, on a row that cost less than it ran (a
+    // pronunciation call costs half): drawn struck through beside the minutes
+    // charged, "50% off" under it (iOS `fullLabel`, 90ecd1cf). "11 min"
+    // struck beside "11 min" says nothing (iOS 15d3d851).
+    val full = part.callSeconds?.takeIf { it > part.seconds }?.let { duration(it) }?.takeIf { it != value }
     Row(
         Modifier.fillMaxWidth().padding(start = 38.dp, end = 14.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -492,7 +503,21 @@ private fun TalkModeRow(part: com.roro.futurevoice.data.TalkModeSplit.Part) {
             tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(stringResource(title), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (full == null) {
+            Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(full, style = MaterialTheme.typography.bodyMedium,
+                        textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough,
+                        color = tertiaryLabel())
+                    Text(value, style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Text(stringResource(R.string.s_50_off), style = MaterialTheme.typography.labelMedium,
+                    color = androidx.compose.ui.graphics.Color(0xFF34C759))
+            }
+        }
     }
 }
 

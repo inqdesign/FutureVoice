@@ -38,6 +38,14 @@ object MeCaptureFlags {
      *  paywall can draw it without Play (iOS seeds `Pack(… product: nil)`). */
     @JvmField var previewPack: BillingService.Pack? = null
 
+    /** Usage's split of the talk time by kind of call instead of the ledger
+     *  read (iOS `sampleLightAccount`'s `talkModes`). */
+    @JvmField var previewTalkModes: List<com.roro.futurevoice.data.TalkModeSplit.Part>? = null
+
+    /** The credit guide opens scrolled to its "Always free" list (iOS
+     *  `-capture plan-guide-free`, 4418b601). */
+    @JvmField var guideScrollToFree: Boolean = false
+
     /** Voice changes left (iOS `-voiceChangesLeft`): 0 draws every voice
      *  control locked, without asking the server. */
     @JvmField var voiceChangesLeft: Int? = null
