@@ -226,8 +226,16 @@ struct UsageBreakdown {
             let seconds = row.metadata?.seconds ?? 0
             let inPeriod = periodKey.map { day >= $0 } ?? true
 
-            if row.action == "talk_time", seconds > 0, inPeriod {
-                let (key, title, icon) = modeTitle(row.metadata?.mode)
+            if row.action == "talk_time" || row.action == "script_voiceover"
+                || row.action == "scene_play", seconds > 0, inPeriod {
+                // Everything paid from the talk pool is a part of its figure:
+                // calls by kind, plus voiceovers and talk-paid scenes, so the
+                // rows under "Talk time" add up to it (2026-11-05).
+                let (key, title, icon) = row.action == "script_voiceover"
+                    ? ("voiceover", explain("Hear it in my voice"), "person.wave.2.fill")
+                    : row.action == "scene_play"
+                    ? ("scene", explain("Watch scenes"), "play.circle.fill")
+                    : modeTitle(row.metadata?.mode)
                 var m = modes[key] ?? Meter(key: key, title: title, icon: icon, seconds: 0, count: 0)
                 m.seconds += seconds
                 m.count += 1
@@ -280,7 +288,7 @@ struct UsageBreakdown {
         let order = ["talk_time", "tts_scene", "scene_play"]
         out.today = order.compactMap { todayMeters[$0] }
         out.period = order.compactMap { periodMeters[$0] }
-        out.talkModes = ["free", "tutor", "pron", "earlier"].compactMap { modes[$0] }
+        out.talkModes = ["free", "tutor", "pron", "scene", "voiceover", "earlier"].compactMap { modes[$0] }
         out.freeToday = free.values.sorted { $0.count > $1.count }
         out.days = dayTotals.values.sorted { $0.date > $1.date }
         return out

@@ -75,12 +75,17 @@ struct CreditGuideView: View {
             }
 
             Section {
+                // The rules as metered (2026-11-05): a call is billed by its
+                // clock while someone is speaking, stopping after 30 s of
+                // quiet (`CallSession.idleBillMs`); a pronunciation call at
+                // half (`TalkBilling.rateFor`); a voiceover by its
+                // characters (`script_voiceover_charge_seconds`).
                 costRow(icon: "phone.fill",
-                        title: explain("Talking"), cost: explain("clock time"),
-                        detail: explain("The call clock is the meter — a 10-minute call uses 10 minutes. Thinking pauses cost the same as talking, just like a phone call."))
-                costRow(icon: "person.wave.2.fill",
-                        title: explain("Re-cloning your voice"), cost: explain("~1 min"),
-                        detail: explain("Setup is free, including re-records in the first day. Later re-records cost a little."))
+                        title: explain("Free talk & tutor"), cost: explain("clock time"),
+                        detail: explain("A 10-minute call uses 10 minutes, thinking pauses included, like a phone call. After 30 seconds with nobody speaking, the clock stops."))
+                costRow(icon: "mouth.fill",
+                        title: explain("Pronunciation"), cost: explain("50% off"),
+                        detail: explain("A 10-minute lesson uses 5 minutes."))
                 // Since 2026-10-19 a scene is paid for out of the same
                 // minutes, for anyone subscribing from then on.
                 if sceneTalk {
@@ -89,12 +94,15 @@ struct CreditGuideView: View {
                             cost: explain("\(account?.sceneTalkMinutes ?? 5) min"),
                             detail: explain("The same price whichever way it runs, a long scene or a short one. Watching it again is free."))
                 }
+                costRow(icon: "person.wave.2.fill",
+                        title: explain("Hear it in my voice"), cost: explain("1 min per 100 characters"),
+                        detail: explain("Your Speech script, read in your voice. Made once, then replayed free."))
             } header: {
                 Text("Uses talk time")
             } footer: {
                 Text(sceneTalk
-                     ? explain("The call clock and new scenes spend your talk minutes. Everything you replay is free.")
-                     : explain("Only the call clock spends your talk minutes. Watching a scene never takes a second off them."))
+                     ? explain("Calls, new scenes and voiceovers spend your talk minutes. Everything you replay is free.")
+                     : explain("Only calls and voiceovers spend your talk minutes. Watching a scene never takes a second off them."))
             }
 
             if !sceneTalk {
@@ -111,11 +119,15 @@ struct CreditGuideView: View {
 
             Section {
                 freeRow(icon: "rectangle.stack.fill", title: explain("All reviewing"),
-                        detail: explain("Drills, shadowing (including coach feedback), word and expression playback — every review surface is free."))
+                        detail: explain("Drills, shadowing with coach feedback and pronunciation scores, word and expression playback: every review surface."))
                 freeRow(icon: "repeat", title: explain("Replays"),
                         detail: explain("Anything already synthesized is cached — loop it, slow it down, replay whole talks."))
                 freeRow(icon: "wand.and.stars", title: explain("Summaries & reports"),
-                        detail: explain("Session scorecards, weekly reports, and the daily call are on the house."))
+                        detail: explain("Talk summaries, weekly reports and the weekly test."))
+                freeRow(icon: "video.fill", title: explain("Speech practice"),
+                        detail: explain("Recording takes, scores and challenges."))
+                freeRow(icon: "waveform", title: explain("Making your voice"),
+                        detail: explain("Recording it, and making it again."))
                 freeRow(icon: "square.grid.2x2", title: explain("Exploring"),
                         detail: explain("Building situations, browsing topics, translations, dictionaries — tap freely, nothing here is metered."))
                 freeRow(icon: "text.book.closed.fill", title: explain("Vocabulary & progress"),

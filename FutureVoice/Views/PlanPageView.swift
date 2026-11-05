@@ -364,10 +364,6 @@ struct PlanPageView: View {
         .padding(.vertical, 4)
     }
 
-    /// The same shape as `MeTab`'s settings row, so a pushed page can't drift
-    /// visually from the list that pushed it. `subtitle` is optional: a row
-    /// whose title and trailing value already say everything must not be given
-    /// a line of prose to fill the slot.
     /// A kind of call charged at a discount (pronunciation, half): the time
     /// practiced struck through, then what it cost, "50% off" under it.
     private func discountedRow(_ m: UsageBreakdown.Meter, full: String) -> some View {
@@ -394,6 +390,10 @@ struct PlanPageView: View {
         }
     }
 
+    /// The same shape as `MeTab`'s settings row, so a pushed page can't drift
+    /// visually from the list that pushed it. `subtitle` is optional: a row
+    /// whose title and trailing value already say everything must not be given
+    /// a line of prose to fill the slot.
     private func row(icon: String, title: String, subtitle: String? = nil,
                      value: String? = nil) -> some View {
         HStack(spacing: 12) {
