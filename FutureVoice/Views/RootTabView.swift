@@ -639,7 +639,10 @@ struct RootTabView: View {
     }
 
     private func offerFirstRunSheets() {
-        if appState.voiceCloneId != nil && !ConsentStore.shared.isAgeVerified {
+        // The age floor comes with the voice clone; the AI tutor's voice
+        // asks for no age (founder, 2026-11-04).
+        if appState.voiceCloneId != nil && !appState.voiceIsTutorOnly
+            && !ConsentStore.shared.isAgeVerified {
             showingAgeCheck = true
         } else if selection == .home, PageIntroStore.isDue(.talk) {
             welcomeAfterIntro = true

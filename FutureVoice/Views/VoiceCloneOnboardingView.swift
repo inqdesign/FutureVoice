@@ -341,7 +341,7 @@ struct VoiceCloneOnboardingView: View {
                     // Back to whatever this step interrupted: the voice
                     // they just met, or the take waiting to become one.
                     status = appState.voiceCloneId == nil ? .reviewing
-                        : (appState.voiceIsStandIn ? .queued : .meet)
+                        : (appState.voiceIsStandIn && !appState.voiceIsTutorOnly ? .queued : .meet)
                 } label: {
                     Label("Back", systemImage: "chevron.left")
                 }
@@ -410,6 +410,9 @@ struct VoiceCloneOnboardingView: View {
             player.stop()
         }
         .onAppear {
+            // A tutor-only learner recording from Me has never seen the
+            // pitch or given the voice consent: start where onboarding does.
+            if fromSettings, appState.voiceIsTutorOnly { status = .intro }
             debugSeed()
             resumeUnclaimedVoice()
             restorePendingTake()
@@ -635,7 +638,10 @@ struct VoiceCloneOnboardingView: View {
     // anonymous session; nothing here creates the voice, it only keeps it.
     private var accountContent: some View {
         VStack(spacing: 26) {
-            if appState.voiceIsStandIn {
+            if appState.voiceIsTutorOnly {
+                stepHeader(explain("Save your practice to your account."),
+                           explain("Sign in, and everything you practice stays with you on whichever iPhone you use."))
+            } else if appState.voiceIsStandIn {
                 stepHeader(explain("Save your recording to your account."),
                            explain("Sign in, and your voice lands in this account the day it's made."))
             } else {
@@ -1404,12 +1410,27 @@ struct VoiceCloneOnboardingView: View {
         VStack(spacing: 8) {
             switch status {
             case .intro:
+                // Two doors (founder, 2026-11-04): the learner's own voice is
+                // THE recommendation and the big button; the AI tutor's voice
+                // is the quiet alternative under it, for whoever won't record.
                 // Cross-stage back: reopen the persona cards. The published
                 // persona is only nil-ed — the store keeps the data, and the
-                // intake reopens pre-filled from it.
-                wizardBar(next: chrome("Next"), onBack: { appState.persona = nil }) {
+                // intake reopens pre-filled from it. A re-record from Me has
+                // no persona to go back to and no second door to offer.
+                wizardBar(next: chrome("Use my voice · Recommended"),
+                          onBack: fromSettings ? nil : { appState.persona = nil }) {
                     agreedToVoiceCloning = false
+                    if !fromSettings {
+                        Analytics.capture("voice_door_chosen", ["door": "own"])
+                    }
                     status = stepAfterIntro
+                }
+                if !fromSettings {
+                    Button(action: useTutorVoice) {
+                        Text("Use the AI tutor's voice instead")
+                            .font(.subheadline)
+                    }
+                    .padding(.top, 2)
                 }
 
             case .consent:
@@ -1561,24 +1582,36 @@ struct VoiceCloneOnboardingView: View {
                 // this is onboarding's last tap, straight into the first call;
                 // on the anonymous session it hands over to the sign-up, which
                 // now asks about a voice they've heard rather than a promise.
-                if auth.isSignedIn || authBypassed {
-                    Button(action: finishMeet) {
-                        Text("Start talking")
-                            .frame(maxWidth: .infinity)
+                HStack(spacing: 12) {
+                    // The tutor door can still be walked back: nothing was
+                    // made, so Back is the intro with both doors again.
+                    if appState.voiceIsTutorOnly {
+                        Button(action: leaveTutorVoice) {
+                            Label("Back", systemImage: "chevron.left")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.large)
                     }
-                    .accentProminent()
-                    .controlSize(.large)
-                } else {
-                    Button {
-                        player.stop()
-                        status = .account
-                    } label: {
-                        Text("Save this voice")
-                            .frame(maxWidth: .infinity)
+                    if auth.isSignedIn || authBypassed {
+                        Button(action: finishMeet) {
+                            Text("Start talking")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .accentProminent()
+                        .controlSize(.large)
+                    } else {
+                        Button {
+                            player.stop()
+                            status = .account
+                        } label: {
+                            Text(appState.voiceIsTutorOnly ? chrome("Continue") : chrome("Save this voice"))
+                                .frame(maxWidth: .infinity)
+                        }
+                        .accentProminent()
+                        .controlSize(.large)
                     }
-                    .accentProminent()
-                    .controlSize(.large)
                 }
+                .buttonRowFitsOneLine()
             }
         }
         .padding(.horizontal, 16)
@@ -1868,7 +1901,19 @@ struct VoiceCloneOnboardingView: View {
     /// speak the greeting when picked; the clone is selected on arrival.
     @ViewBuilder
     private var voiceSegment: some View {
-        if let preset = offeredPreset {
+        if appState.voiceIsTutorOnly {
+            // No recording, so no "My voice" side: the four tutors, by name.
+            Picker("Voice", selection: Binding(
+                get: { appState.voiceCloneId ?? "" },
+                set: { selectTutorVoice($0) })) {
+                ForEach(VoicePreset.catalog) { preset in
+                    Text(preset.displayName).tag(preset.id)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 24)
+            .transition(.opacity)
+        } else if let preset = offeredPreset {
             Picker("Voice", selection: Binding(
                 get: { appState.fluentSelfPresetId == nil ? "" : preset.id },
                 set: { selectVoice($0.isEmpty ? nil : $0) })) {
@@ -1890,6 +1935,45 @@ struct VoiceCloneOnboardingView: View {
         }
     }
 
+    private func selectTutorVoice(_ presetId: String) {
+        guard presetId != appState.voiceCloneId else { return }
+        HapticEngine.light()
+        voiceSwitches += 1
+        appState.chooseTutorVoice(presetId, source: "meet")
+        player.stop()
+        refreshGreetingForNewVoice()
+    }
+
+    /// The second door: the AI tutor's voice, nothing recorded. Straight to
+    /// the meet act (pick the tutor, the speed, the colour), then the
+    /// sign-up. The session is opened the same way the clone opens it,
+    /// because the meet act's lines are synthesized; if it can't open, the
+    /// act is silent and the sign-up comes first, as on the recording door.
+    private func useTutorVoice() {
+        player.stop()
+        error = nil
+        Analytics.capture("voice_door_chosen", ["door": "tutor"])
+        appState.holdVoiceOnboarding = true
+        appState.adoptTutorVoice(VoicePreset.catalog[0].id)
+        status = .meet
+        if auth.session == nil && !authBypassed {
+            Task {
+                try? await auth.startAnonymousSession()
+                openMeet()
+            }
+        } else {
+            openMeet()
+        }
+    }
+
+    private func leaveTutorVoice() {
+        player.stop()
+        meetBurst = false
+        appState.leaveTutorVoice()
+        appState.holdVoiceOnboarding = false
+        status = .intro
+    }
+
     private func selectVoice(_ presetId: String?) {
         guard presetId != appState.fluentSelfPresetId else { return }
         HapticEngine.light()
@@ -1902,7 +1986,7 @@ struct VoiceCloneOnboardingView: View {
     /// Measure the recording once and pick the preset to offer. Off the main
     /// thread: it reads up to 12 s of audio plus two bundled previews.
     private func measureOfferedPreset() {
-        guard offeredPreset == nil, !measuringPitch else { return }
+        guard offeredPreset == nil, !measuringPitch, !appState.voiceIsTutorOnly else { return }
         measuringPitch = true
         let language = appState.targetLanguage
         let sample = VoiceSampleStore.shared.url
@@ -2083,7 +2167,8 @@ struct VoiceCloneOnboardingView: View {
         appState.chooseFluentSelfVoice(appState.fluentSelfPresetId, source: "meet",
                                        recommended: offeredPreset?.id,
                                        ownPitchHz: ownPitchHz,
-                                       extra: ["switches": voiceSwitches])
+                                       extra: ["switches": voiceSwitches,
+                                               "door": appState.voiceIsTutorOnly ? "tutor" : "own"])
         appState.holdVoiceOnboarding = false   // RootView moves on to the tabs
         // Now that the rung is settled, bake the first call's opener at it —
         // once, instead of once at the default and again after the pick.
@@ -2244,6 +2329,11 @@ struct VoiceCloneOnboardingView: View {
         case "account":   status = .account
         case "queued":    status = .queued
         case "uploading": status = .uploading
+        case "tutor":
+            // The AI tutor door's meet act, with no session to synthesize on.
+            appState.holdVoiceOnboarding = true
+            appState.adoptTutorVoice(VoicePreset.catalog[0].id)
+            status = .meet
         case "meet":
             status = .meet
             loadDebugMeetAudio()

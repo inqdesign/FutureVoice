@@ -76,6 +76,7 @@ struct MeTab: View {
     @State private var confirmingOnboardingReset = false
     @State private var confirmingAudioCacheClear = false
     @State private var previewFeedback: FeedbackSheet.Context?
+    @State private var lookingAtOnboarding = false
     @AppStorage(PeopleSky.defaultsKey) private var peopleSkyOn = true
     #endif
     var body: some View {
@@ -280,6 +281,15 @@ struct MeTab: View {
                             title: explain(key: "dev.peopleSky.title", default: "Watch as a people map"),
                             subtitle: explain(key: "dev.peopleSky.subtitle", default: "Off brings back the previous Watch page"))
                     }
+                    // Looks only: each step opens as it is today, nothing is
+                    // reset. Replay below is the destructive way through.
+                    Button {
+                        lookingAtOnboarding = true
+                    } label: {
+                        row(icon: "rectangle.stack.badge.play",
+                            title: explain(key: "dev.onboardingLook.title", default: "Look at onboarding"),
+                            subtitle: explain(key: "dev.onboardingLook.subtitle", default: "Open any step as a new learner sees it. Nothing is reset"))
+                    }
                     Button {
                         confirmingOnboardingReset = true
                     } label: {
@@ -468,6 +478,9 @@ struct MeTab: View {
             }
             #if DEBUG
             .sheet(item: $previewFeedback) { FeedbackSheet(context: $0) }
+            .sheet(isPresented: $lookingAtOnboarding) {
+                OnboardingLookSheet().environmentObject(appState).environmentObject(auth)
+            }
             // Extracted into a modifier: inline, these two tipped `body` past
             // what the type-checker will solve in reasonable time.
             .modifier(DeveloperAlerts(
@@ -875,7 +888,19 @@ struct MeTab: View {
     /// every row on this page was tinted, and the page read as a row of links.
     private var voiceRowsTop: AnyView {
         AnyView(Group {
-            if appState.voiceIsStandIn {
+            if appState.voiceIsTutorOnly {
+                // The AI tutor's voice, chosen instead of recording: which
+                // tutor speaks. Recording their own is the button below.
+                NavigationLink {
+                    VoicePresetPickerView(selection: Binding(
+                        get: { appState.voiceCloneId ?? "" },
+                        set: { appState.chooseTutorVoice($0, source: "settings") }))
+                        .environmentObject(appState)
+                } label: {
+                    LabeledContent(explain("Voice"),
+                                   value: VoicePreset.by(id: appState.voiceCloneId ?? "").displayName)
+                }
+            } else if appState.voiceIsStandIn {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(VoiceQuota.readyLine(appState.voiceQueuedUntil))
                     Text(explain("Made from the recording on this phone. A stand-in voice speaks until then."))
@@ -950,10 +975,16 @@ struct MeTab: View {
                 voiceBeforeRerecord = appState.voiceCloneId
                 rerecording = true
             } label: {
-                Text("Re-record voice")
+                // Never recorded: the recommendation, still open.
+                if appState.voiceIsTutorOnly {
+                    Text("Make my own voice")
+                } else {
+                    Text("Re-record voice")
+                }
             }
             .tint(.primary)
-            .disabled(!appState.canChangeVoice || appState.voiceIsStandIn)
+            .disabled(!appState.canChangeVoice
+                      || (appState.voiceIsStandIn && !appState.voiceIsTutorOnly))
             if VoiceSampleStore.shared.exists, !appState.voiceIsStandIn {
                 Button {
                     confirmingVoiceRegenerate = true
@@ -1309,7 +1340,8 @@ struct MeTab: View {
                 Text(explain("Your voice model is biometric data. It's used only to speak your practice lines back in your own voice — never sold, never shared, never used to train anyone else's model."))
             }
 
-            if consent.hasVoiceConsent || appState.voiceCloneId != nil {
+            // A tutor-only learner has no voice model to delete.
+            if consent.hasVoiceConsent || (appState.voiceCloneId != nil && !appState.voiceIsTutorOnly) {
                 Section {
                     Button(role: .destructive) {
                         confirmingConsentWithdrawal = true
@@ -1485,6 +1517,82 @@ private struct AppLanguagePage: View {
 }
 
 #if DEBUG
+/// Developer → Look at onboarding: every first-run step, opened on its own
+/// the way `-onboardingPreview` opens it, over the app as it is. Nothing is
+/// reset, so looking is free; carrying a step through to its end still does
+/// what that step does (the voice step's tutor door switches the voice).
+struct OnboardingLookSheet: View {
+    @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var auth: AuthService
+    @Environment(\.dismiss) private var dismiss
+    @State private var open: Step?
+
+    enum Step: String, CaseIterable, Identifiable {
+        case welcome, setup, persona, voice, localData, routine
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .welcome:   return explain(key: "dev.onboardingLook.welcome", default: "1. Welcome")
+            case .setup:     return explain(key: "dev.onboardingLook.setup", default: "2. Setup")
+            case .persona:   return explain(key: "dev.onboardingLook.persona", default: "3. Persona cards")
+            case .voice:     return explain(key: "dev.onboardingLook.voice", default: "4. The voice")
+            case .localData: return explain(key: "dev.onboardingLook.localData", default: "5. Stays on your phone")
+            case .routine:   return explain(key: "dev.onboardingLook.routine", default: "6. The routine")
+            }
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(Step.allCases) { step in
+                        Button(step.title) { open = step }
+                    }
+                } footer: {
+                    Text(explain(key: "dev.onboardingLook.footer", default: "Close a step with ✕. Finishing a step saves what it saves, like picking the AI tutor's voice."))
+                }
+            }
+            .navigationTitle(explain(key: "dev.onboardingLook.title", default: "Look at onboarding"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+            .fullScreenCover(item: $open) { step in
+                screen(step)
+                    .environmentObject(appState)
+                    .environmentObject(auth)
+                    .overlay(alignment: .topTrailing) {
+                        Button { open = nil } label: {
+                            Image(systemName: "xmark")
+                                .font(.body.weight(.semibold))
+                                .frame(width: 36, height: 36)
+                        }
+                        .buttonStyle(.bordered)
+                        .buttonBorderShape(.circle)
+                        .padding(.trailing, 16)
+                        .padding(.top, 4)
+                        .accessibilityLabel(Text("Close"))
+                    }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func screen(_ step: Step) -> some View {
+        switch step {
+        case .welcome:   WelcomeView()
+        case .setup:     SetupFlowView()
+        case .persona:   PersonaIntakeView()
+        case .voice:     VoiceCloneOnboardingView()
+        case .localData: LocalDataOnboardingView()
+        case .routine:   RoutinePreview()
+        }
+    }
+}
+
 /// The Developer section's confirmations, kept out of `MeTab.body` — that
 /// chain is long enough that adding two more `.alert`s to it made the
 /// expression un-type-checkable.

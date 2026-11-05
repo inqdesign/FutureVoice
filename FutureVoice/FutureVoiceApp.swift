@@ -326,6 +326,18 @@ final class AppState: ObservableObject {
     @Published private(set) var voiceIsStandIn: Bool {
         didSet { UserDefaults.standard.set(voiceIsStandIn, forKey: Self.voiceIsStandInKey) }
     }
+    /// The learner chose the AI tutor's voice INSTEAD of recording their own
+    /// (2026-11-04, founder: "your own voice is recommended, but you can use
+    /// the AI tutor's voice instead"). Rides on the stand-in machinery: a
+    /// preset holds `voiceCloneId`, so every "is there a real clone" check
+    /// (`!voiceIsStandIn`) already skips it, and recording later in Me runs
+    /// `regenerateVoiceClone`, whose `endStandIn` makes it their own voice.
+    /// What differs from a QUEUED voice: nothing is waiting to be built, no
+    /// recording exists, and no age or voice consent was asked (nothing
+    /// biometric was collected).
+    @Published private(set) var voiceIsTutorOnly: Bool {
+        didSet { UserDefaults.standard.set(voiceIsTutorOnly, forKey: Self.voiceIsTutorOnlyKey) }
+    }
     /// When the server said voices can be made again; nil = it didn't say,
     /// so the next foreground tries.
     @Published private(set) var voiceQueuedUntil: Date? {
@@ -344,7 +356,8 @@ final class AppState: ObservableObject {
             if !voiceIsStandIn { PhraseAudioStore.shared.registerOwnVoice(voiceCloneId) }
             // Which kind of user now owns this voice. An anonymous owner is on
             // the server's reclaim clock from the moment it was created.
-            if voiceCloneId != nil, let owner = SupabaseProvider.shared.auth.currentSession?.user {
+            if voiceCloneId != nil, !voiceIsTutorOnly,
+               let owner = SupabaseProvider.shared.auth.currentSession?.user {
                 unclaimedVoiceSince = owner.isAnonymous ? owner.createdAt : nil
             }
         }
@@ -670,6 +683,7 @@ final class AppState: ObservableObject {
     private static let cloneScriptLanguageKey = "futurevoice.cloneScriptLanguage"
     private static let pendingDeleteVoiceIdKey = "futurevoice.pendingDeleteVoiceId"
     private static let voiceIsStandInKey = "futurevoice.voiceIsStandIn"
+    private static let voiceIsTutorOnlyKey = "futurevoice.voiceIsTutorOnly"
     private static let voiceQueuedUntilKey = "futurevoice.voiceQueuedUntil"
     private static let nativeLanguageKey = LanguageCatalog.nativeLanguageDefaultsKey
     private static let targetLanguageKey = LanguageCatalog.targetLanguageDefaultsKey
@@ -699,6 +713,7 @@ final class AppState: ObservableObject {
         appearance = UserDefaults.standard.string(forKey: Self.appearanceKey)
             .flatMap(AppAppearance.init(rawValue:)) ?? .system
         voiceIsStandIn = UserDefaults.standard.bool(forKey: Self.voiceIsStandInKey)
+        voiceIsTutorOnly = UserDefaults.standard.bool(forKey: Self.voiceIsTutorOnlyKey)
         voiceQueuedUntil = UserDefaults.standard.object(forKey: Self.voiceQueuedUntilKey) as? Date
         voiceCloneId = UserDefaults.standard.string(forKey: Self.voiceCloneIdKey)
         fluentSelfPresetId = UserDefaults.standard.string(forKey: Self.fluentSelfPresetKey)
@@ -761,7 +776,7 @@ final class AppState: ObservableObject {
     /// within minutes whatever this phone does. Runs at launch and on every
     /// foreground (a backgrounded app can outlive the grace without a relaunch).
     func checkForReclaimedVoice() {
-        guard voiceCloneId != nil, let since = unclaimedVoiceSince,
+        guard voiceCloneId != nil, !voiceIsTutorOnly, let since = unclaimedVoiceSince,
               Date().timeIntervalSince(since) > Self.reclaimGraceMinutes * 60 else { return }
         voiceWasDeleted(reason: "unclaimed_grace")
     }
@@ -888,6 +903,53 @@ final class AppState: ObservableObject {
     private func endStandIn() {
         voiceIsStandIn = false
         voiceQueuedUntil = nil
+        // They recorded after all: the fluent self is their own voice now,
+        // which is what recording is for.
+        if voiceIsTutorOnly {
+            voiceIsTutorOnly = false
+            fluentSelfPresetId = nil
+        }
+    }
+
+    // MARK: - The AI tutor's voice, no recording
+
+    /// Onboarding's second door: speak in a preset, record nothing.
+    func adoptTutorVoice(_ presetId: String) {
+        guard let id = VoicePreset.known(id: presetId)?.id else { return }
+        voiceIsStandIn = true            // before the id, so the didSet sees it
+        voiceIsTutorOnly = true
+        voiceQueuedUntil = nil
+        voiceAccentId = nil
+        fluentSelfPresetId = id
+        voiceCloneId = id
+        // A preset is nobody's to reclaim: the anonymous sweep's clock is
+        // about clones (see `checkForReclaimedVoice`).
+        unclaimedVoiceSince = nil
+    }
+
+    /// Which preset the tutor-only learner hears (onboarding, Me → Voice).
+    func chooseTutorVoice(_ presetId: String, source: String) {
+        guard voiceIsTutorOnly, let id = VoicePreset.known(id: presetId)?.id,
+              id != voiceCloneId else { return }
+        fluentSelfPresetId = id
+        voiceCloneId = id
+        if source != "meet" {
+            Analytics.capture("fluent_self_voice_chosen",
+                              ["choice": "tutor_only", "source": source,
+                               "preset": VoicePreset.by(id: id).englishName,
+                               "language": targetLanguage])
+            warmFreeTalkOpeners()
+            refreshDailyCall(force: true)
+        }
+    }
+
+    /// Back out of the tutor door in onboarding, before it was kept.
+    func leaveTutorVoice() {
+        guard voiceIsTutorOnly else { return }
+        voiceIsTutorOnly = false
+        voiceIsStandIn = false
+        fluentSelfPresetId = nil
+        voiceCloneId = nil
     }
 
     private var makingQueuedVoice = false
@@ -897,7 +959,7 @@ final class AppState: ObservableObject {
     /// passed and the recording is on this phone. Refused again (the reset
     /// moved, or the month filled up again) → wait for the new date.
     func makeQueuedVoiceIfReady() async {
-        guard voiceIsStandIn, !makingQueuedVoice, !holdVoiceOnboarding,
+        guard voiceIsStandIn, !voiceIsTutorOnly, !makingQueuedVoice, !holdVoiceOnboarding,
               SupabaseProvider.shared.auth.currentSession != nil,
               let sample = VoiceSampleStore.shared.url else { return }
         if let until = voiceQueuedUntil, until > Date() { return }
@@ -1643,6 +1705,10 @@ final class AppState: ObservableObject {
         enrolledLanguages = [targetLanguage]
         // Published state — the didSet observers re-persist the fresh values,
         // which is exactly what a first-run install would look like.
+        voiceIsTutorOnly = false
+        voiceIsStandIn = false
+        voiceQueuedUntil = nil
+        fluentSelfPresetId = nil
         voiceCloneId = nil
         voiceName = ""
         voiceAccentId = nil

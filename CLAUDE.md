@@ -47,7 +47,20 @@ skips every step it has a flag for.
    block; empty = byte-identical). Never shown to strangers.
 2. Persona cards (`PersonaIntakeView`)
 3. The voice (`VoiceCloneOnboardingView`: record, hear it, pick the pace;
-   the account is made here). The meet act opens on a choice: **My voice |
+   the account is made here). **The intro has two doors** (2026-11-04,
+   founder): "Use my voice · Recommended" (the big button, the recording
+   below) and, under it, "Use the AI tutor's voice instead", which records
+   nothing: straight to the meet act with the four presets by name, speed
+   and colour, then the account. It asks NO age and no voice consent
+   (founder: the age floor comes with the clone). Stored as a stand-in
+   (`AppState.voiceIsTutorOnly`, preset in `voiceCloneId` and
+   `fluentSelfPresetId`), so every real-clone check skips it; Me → Voice
+   picks the tutor and "Make my own voice" opens the recording at the
+   intro, and the clone that lands ends tutor-only (`endStandIn`).
+   `voice_door_chosen` (door) says which. Not done: the first call still
+   introduces itself as "the future you" in the tutor's voice, and nothing
+   suggests recording after the first call. After recording, the meet act
+   opens on a choice: **My voice |
    AI tutor** (2026-10-24, founder; "similar voice" until 2026-10-25 — pitch
    alone didn't sound like him, so the label claims nothing) — the preset is
    the one nearest the recording's pitch, same gender (`VoicePitch`, on the phone).
