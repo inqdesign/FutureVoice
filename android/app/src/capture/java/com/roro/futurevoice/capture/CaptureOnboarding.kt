@@ -85,7 +85,7 @@ object CaptureOnboarding {
             com.roro.futurevoice.ui.RoutineOnboardingOverlay(onFinished = {}, debugStep = "finish") },
         // The voice act, one stage each (the debug app's `--es cloneStage`,
         // which only answers on an install that isn't set up yet).
-    ) + listOf("intro", "consent", "mic", "spot", "script", "recording", "reviewing", "uploading", "meet")
+    ) + listOf("intro", "consent", "mic", "spot", "script", "recording", "reviewing", "uploading", "meet", "tutor")
         .associate<String, String, @Composable (Context) -> Unit> { st ->
             "clone-$st" to @Composable { _: Context ->
                 com.roro.futurevoice.ui.CloneFlowScreen(
