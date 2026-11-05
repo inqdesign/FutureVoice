@@ -1,0 +1,9 @@
+Nouveau
+• Appels de prononciation (3e page de Parler) : lis une phrase, ta voix te dit quel son corriger. Ils comptent pour moitié.
+• Touche ton score de prononciation pour le détail de chaque mot et de chaque son.
+• Croise quelqu’un sur la carte des Scènes : la situation commence là.
+• Tu peux aussi démarrer avec la voix du tuteur IA, sans enregistrer.
+
+Améliorations
+• La prononciation compte dans ton score de Discours.
+• Ton deuxième appel du jour reprend la conversation d’avant.

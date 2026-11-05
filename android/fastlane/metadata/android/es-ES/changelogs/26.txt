@@ -1,0 +1,9 @@
+Novedades
+• Llamadas de pronunciación, en la tercera página de Hablar: lee una frase y tu voz te dice qué sonido corregir. Gastan la mitad del tiempo.
+• Toca tu puntuación de pronunciación para ver cómo salió cada palabra y sonido.
+• Encuéntrate con alguien en el mapa de Escenas y la situación empieza ahí.
+• También puedes empezar con la voz del tutor IA, sin grabar la tuya.
+
+Mejoras
+• La pronunciación ya cuenta en tu puntuación de Discurso.
+• Tu segunda llamada del día sigue donde lo dejaste.

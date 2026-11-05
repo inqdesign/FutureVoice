@@ -1,0 +1,9 @@
+New
+• Pronunciation calls, on the third page of the Talk ring: read a sentence and your own voice tells you which sound to fix. Half the talk time.
+• Tap your pronunciation score to see how each word and sound came out.
+• Bump into someone on the Watch map and a situation starts right there.
+• You can also start with the AI tutor's voice, without recording yours.
+
+Improved
+• Pronunciation now counts toward your Speech score.
+• Your second call of the day picks up what you talked about earlier.
