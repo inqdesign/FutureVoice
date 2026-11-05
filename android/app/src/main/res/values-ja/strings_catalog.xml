@@ -804,6 +804,20 @@
     <string name="email">"メール"</string>
     <string name="emerald">"エメラルド"</string>
     <string name="en">"EN"</string>
+    <string name="encounter_another">"別の人"</string>
+    <string name="encounter_bakery">"パン屋の列で、前の人が振り返る"</string>
+    <string name="encounter_barista">"バリスタが注文を間違えた"</string>
+    <string name="encounter_bench">"公園のベンチで隣り合わせ"</string>
+    <string name="encounter_bookshop">"本屋で同じ本に手を伸ばした"</string>
+    <string name="encounter_cafetable">"満席のカフェで相席をお願いされる"</string>
+    <string name="encounter_gate">"空港のゲートで、同じ便が遅れている"</string>
+    <string name="encounter_hotel">"ホテルで予約が見つからないと言われる"</string>
+    <string name="encounter_laundromat">"コインランドリーで乾燥機待ち"</string>
+    <string name="encounter_neighbor">"引っ越してきたばかりの隣人がドアをノックする"</string>
+    <string name="encounter_party">"友達のパーティーで、料理のテーブルの前"</string>
+    <string name="encounter_rain">"同じ軒下で雨宿り"</string>
+    <string name="encounter_taxi">"おしゃべりなタクシーの運転手"</string>
+    <string name="encounter_train">"電車で隣の席に座った人"</string>
     <string name="encouraging">"励ましてくれる"</string>
     <string name="end">"終了"</string>
     <string name="end_the_call">"通話を終える"</string>
@@ -3444,6 +3458,7 @@
     <string name="watch_again">"もう一度見る"</string>
     <string name="watch_again_or_study_it">"もう一度見るか、教材で勉強する"</string>
     <string name="watch_book">"シーン練習のブック"</string>
+    <string name="watch_bump">"偶然の出会い"</string>
     <!-- 'Watch has its own pool, separate from your talk minutes. A scene costs one whichever way it runs — a long one and a short one cost the same.' -->
     <string name="watch_has_its_own_pool_separate_from_your_talk_minutes_a_sce_98932d">"シーン練習には通話時間とは別の枠があります。長くても短くても、1回は1回と数えます。"</string>
     <string name="watch_scene">"シーン練習"</string>

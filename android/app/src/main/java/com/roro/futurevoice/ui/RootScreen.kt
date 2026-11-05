@@ -1817,6 +1817,28 @@ fun RootScreen() {
                     watchReplay = false; watchScenarioId = sc.id
                 }
             } },
+            // Someone bumped into on the Watch map (iOS 59680063): Watch is a
+            // scene of that moment, saved once per person and place; Talk is
+            // a call with them, the place as its topic.
+            onWatchEncounter = { mint -> gateScene {
+                gateScope.launch {
+                    val id = mint()
+                    watchReplay = false; watchScenarioId = id
+                }
+            } },
+            onTalkEncounter = { resolve -> gate {
+                gateScope.launch {
+                    val e = resolve()
+                    val c = e.person
+                    callCast = com.roro.futurevoice.talk.ConversationEngine.Cast.of(c)
+                    callCastVoice = c.voicePresetId.takeIf { it.isNotBlank() }
+                    callCounterpartId = c.id
+                    callTopic = e.moment.place(context); callFacts = emptyList(); callBlurb = e.blurb
+                    callScenarioId = null
+                    callEntry = com.roro.futurevoice.talk.TalkEntry.WATCH_ENCOUNTER
+                    inCall = true
+                }
+            } },
             onOpenFinished = { finishedBooks = it },
             onOpenActivity = { showActivity = true },
             onOpenEffort = { showEffort = true },
@@ -2086,6 +2108,10 @@ internal fun HomeScreen(
     onPickUpWithPerson: (com.roro.futurevoice.data.Counterpart) -> Unit = {},
     /** The Watch map's person card: a scene of the two of them (gated here). */
     onWatchWithPerson: (com.roro.futurevoice.data.Counterpart) -> Unit = {},
+    /** The Watch map's encounter card: its scene (gated here, then minted). */
+    onWatchEncounter: (suspend () -> String) -> Unit = {},
+    /** The encounter card's call with them there (gated here). */
+    onTalkEncounter: (suspend () -> ChanceEncounter) -> Unit = {},
     /** Practice's header seal → the finished-books page, with the books it counted. */
     onOpenFinished: (List<FinishedBook>) -> Unit = {},
     onOpenActivity: () -> Unit = {},
@@ -2427,6 +2453,8 @@ internal fun HomeScreen(
                         onPickUpWith = onPickUpWithPerson,
                         onWatchWith = onWatchWithPerson,
                         onOpenTalk = onOpenTalk,
+                        onWatchEncounter = onWatchEncounter,
+                        onTalkEncounter = onTalkEncounter,
                     )
 
                     HomeTab.PRACTICE -> PracticeBody(

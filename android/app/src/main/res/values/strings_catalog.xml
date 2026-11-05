@@ -809,6 +809,20 @@
     <string name="email">"Email"</string>
     <string name="emerald">"Emerald"</string>
     <string name="en">"EN"</string>
+    <string name="encounter_another">"Someone else"</string>
+    <string name="encounter_bakery">"In line at the bakery, the person ahead turns around"</string>
+    <string name="encounter_barista">"The barista mixed up your order"</string>
+    <string name="encounter_bench">"Sharing a bench in the park"</string>
+    <string name="encounter_bookshop">"At the bookshop, reaching for the same book"</string>
+    <string name="encounter_cafetable">"The café is full, and someone asks to share your table"</string>
+    <string name="encounter_gate">"At the gate, the same flight is delayed"</string>
+    <string name="encounter_hotel">"The hotel can't find your booking"</string>
+    <string name="encounter_laundromat">"At the laundromat, waiting for the dryers"</string>
+    <string name="encounter_neighbor">"A new neighbor knocks on your door"</string>
+    <string name="encounter_party">"At a friend's party, by the snacks"</string>
+    <string name="encounter_rain">"Sheltering from the rain under the same awning"</string>
+    <string name="encounter_taxi">"A chatty taxi driver"</string>
+    <string name="encounter_train">"On the train, in the seat next to you"</string>
     <string name="encouraging">"Encouraging"</string>
     <string name="end">"End"</string>
     <string name="end_the_call">"End the call"</string>
@@ -3465,6 +3479,7 @@
     <string name="watch_again_or_study_it">"Watch again, or study it"</string>
     <string name="watch_as_a_people_map">"Watch as a people map"</string>
     <string name="watch_book">"Watch book"</string>
+    <string name="watch_bump">"Bump into someone"</string>
     <!-- 'Watch has its own pool, separate from your talk minutes. A scene costs one whichever way it runs — a long one and a short one cost the same.' -->
     <string name="watch_has_its_own_pool_separate_from_your_talk_minutes_a_sce_98932d">"Watch has its own pool, separate from your talk minutes. A scene costs one whichever way it runs — a long one and a short one cost the same."</string>
     <string name="watch_scene">"Watch scene"</string>

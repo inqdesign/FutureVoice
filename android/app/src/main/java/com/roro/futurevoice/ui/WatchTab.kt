@@ -2,6 +2,7 @@ package com.roro.futurevoice.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.input.pointer.pointerInput
@@ -81,6 +83,7 @@ import com.roro.futurevoice.R
 import com.roro.futurevoice.data.Counterpart
 import com.roro.futurevoice.net.PublicPersonaClient
 import com.roro.futurevoice.data.CounterpartStore
+import com.roro.futurevoice.data.cast
 import com.roro.futurevoice.data.ScenarioStore
 import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.talk.Scenario
@@ -159,6 +162,12 @@ internal fun WatchTabBody(
     onWatchWith: (Counterpart) -> Unit = {},
     /** A talk on the card's "Your talks together". */
     onOpenTalk: (String) -> Unit = {},
+    /** The encounter card's Watch: gated by the caller, which then runs the
+     *  mint (save the person and the scenario) and plays the scenario it returns. */
+    onWatchEncounter: (mint: suspend () -> String) -> Unit = {},
+    /** The encounter card's Talk: gated by the caller, which then resolves
+     *  the encounter (the person saved) and starts the call with them there. */
+    onTalkEncounter: (resolve: suspend () -> ChanceEncounter) -> Unit = {},
 ) {
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
@@ -193,6 +202,8 @@ internal fun WatchTabBody(
     var dockNoChips by remember { mutableStateOf(false) }
     /** The person whose card floats over the map (a tap on them). */
     var skyCard by remember { mutableStateOf<Counterpart?>(null) }
+    /** Someone just bumped into (the walking figure). */
+    var encounter by remember { mutableStateOf<ChanceEncounter?>(null) }
     /** Panned away from me: "Back to me" shows (drawn here, over the fade). */
     var skyAway by remember { mutableStateOf(false) }
     var backToMeTick by remember { mutableStateOf(0) }
@@ -342,7 +353,9 @@ internal fun WatchTabBody(
         previewJob?.cancel(); previewPlayer.stop()
         val person = id?.let { personFor(it) }
         skyCentred = person
-        if (person == null) return
+        // Bumped into: the place on the card is what's happening, and their
+        // saved hello ("are you a parent here too?") would contradict it.
+        if (person == null || encounter != null) return
         bubbleJob = scope.launch {
             kotlinx.coroutines.delay(450)
             sayGreeting(person)
@@ -384,7 +397,25 @@ internal fun WatchTabBody(
             return true
         }
         if (skyCard != null) { skyCard = null; return true }
+        if (encounter != null) { encounter = null; return true }
         return false
+    }
+
+    /** The walking figure: deal someone to bump into. A stranger from the
+     *  pool comes to the middle of the map and says their hello, the way a
+     *  person turns around; a role (barista, neighbour) is a built-in
+     *  character, who isn't on the map. */
+    fun bumpIntoSomeone() {
+        // Everyone the map can show from the pool, met or not (iOS `skyPool`).
+        val pool = poolRows.map { row -> people.firstOrNull { it.remoteId == row.id } ?: row.asCounterpart(metLabel) }
+        val strangers = (if (pool.isEmpty()) people.filter { it.remoteId != null } else pool)
+            .filter { it.cast == com.roro.futurevoice.data.CounterpartCast.STRANGER &&
+                !(it.remoteId ?: "").startsWith("builtin:") }
+        val met = talksByPerson.filter { it.value > 0 }.keys
+        val next = ChanceEncounter.deal(strangers, people, met, encounter) ?: return
+        encounter = next
+        val id = next.person.id
+        if (nodes.any { it.id == id }) panTo(id) else centre(null, force = true)
     }
 
     /** The card's "Make a situation": the card goes down as the box comes up,
@@ -443,7 +474,7 @@ internal fun WatchTabBody(
         afterKeyboard { setCreating(false); dockFill = "" }
     }
     // Android's back steps out of the box or the card, as the tap on the map does.
-    androidx.activity.compose.BackHandler(enabled = creating || skyCard != null) { putAway() }
+    androidx.activity.compose.BackHandler(enabled = creating || skyCard != null || encounter != null) { putAway() }
 
     Box(Modifier.fillMaxSize()) {
         val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
@@ -550,8 +581,50 @@ internal fun WatchTabBody(
                 )
             }
         }
+        // Someone just bumped into: who, and where. A new deal ("Someone
+        // else") slides the card out and the next one in (iOS `.id(e.id)`).
+        androidx.compose.animation.AnimatedContent(
+            targetState = if (!creating && card == null) encounter else null,
+            contentKey = { it?.id },
+            transitionSpec = {
+                (androidx.compose.animation.slideInVertically(tween(300)) { it } +
+                    androidx.compose.animation.fadeIn(tween(300))) togetherWith
+                    (androidx.compose.animation.slideOutVertically(tween(300)) { it } +
+                        androidx.compose.animation.fadeOut(tween(300)))
+            },
+            modifier = Modifier.align(Alignment.BottomCenter)
+                .padding(start = 12.dp, end = 12.dp, bottom = tabBarTop + 8.dp),
+            label = "encounter",
+        ) { e ->
+            if (e != null) {
+                EncounterCard(
+                    encounter = e,
+                    onClose = { encounter = null },
+                    onAnother = { bumpIntoSomeone() },
+                    onWatch = {
+                        onWatchEncounter {
+                            val p = savedFromCard(e.person)
+                            val met = e.savedAs(p)
+                            val (s, isNew) = met.scenario(context, store.load(language))
+                            if (isNew) { store.save(s, language); StoreEvents.bump() }
+                            encounter = null
+                            s.id
+                        }
+                    },
+                    onTalk = {
+                        onTalkEncounter {
+                            val p = savedFromCard(e.person)
+                            encounter = null
+                            e.savedAs(p)
+                        }
+                    },
+                )
+            } else {
+                Spacer(Modifier.fillMaxWidth())
+            }
+        }
         androidx.compose.animation.AnimatedVisibility(
-            visible = !creating && card == null,
+            visible = !creating && card == null && encounter == null,
             enter = androidx.compose.animation.fadeIn(tween(300)),
             exit = androidx.compose.animation.fadeOut(tween(300)),
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = floatBottom),
@@ -577,8 +650,25 @@ internal fun WatchTabBody(
         // faded bottom edge and showed at a third of its strength. Level with
         // "New situation"; above the box while writing; out of the way of a
         // person's card.
+        // Bumping into someone: on the "New situation" row, at its left, a
+        // glyph alone (founder: no label).
         androidx.compose.animation.AnimatedVisibility(
-            visible = skyAway && card == null,
+            visible = !creating && card == null && encounter == null,
+            enter = androidx.compose.animation.fadeIn(tween(300)),
+            exit = androidx.compose.animation.fadeOut(tween(300)),
+            modifier = Modifier.align(Alignment.BottomStart)
+                .padding(start = 16.dp, bottom = floatBottom),
+        ) {
+            val label = stringResource(R.string.watch_bump)
+            com.roro.futurevoice.ui.brand.IosGlassButton(onClick = { bumpIntoSomeone() }, circle = true,
+                modifier = Modifier.size(50.dp).semantics { contentDescription = label }) {
+                Icon(com.roro.futurevoice.ui.brand.Symbols.icon("figure.2.arms.open"), contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+            }
+        }
+
+        androidx.compose.animation.AnimatedVisibility(
+            visible = skyAway && card == null && encounter == null,
             enter = androidx.compose.animation.fadeIn(tween(300)),
             exit = androidx.compose.animation.fadeOut(tween(300)),
             modifier = Modifier.align(Alignment.BottomEnd)
@@ -890,6 +980,95 @@ private fun CardToggle(open: Boolean, onClick: () -> Unit) {
         Icon(if (open) Icons.Filled.KeyboardArrowDown else Icons.Filled.KeyboardArrowUp,
             contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(16.dp))
+    }
+}
+
+/**
+ * Someone just bumped into: who, and where (iOS `EncounterCard`, 59680063).
+ * Talk starts the call with them there; "Someone else" deals again. It goes
+ * like the person card — pulled down, or a tap on the map.
+ */
+@Composable
+internal fun EncounterCard(
+    encounter: ChanceEncounter,
+    onClose: () -> Unit,
+    onAnother: () -> Unit,
+    onWatch: () -> Unit,
+    onTalk: () -> Unit,
+) {
+    val context = LocalContext.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    /** How far the card is being pulled down; past 90 pt it goes. */
+    val pull = remember { androidx.compose.animation.core.Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    val dismissPx = with(density) { 90.dp.toPx() }
+    val person = encounter.person
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .graphicsLayer { translationY = pull.value }
+            .shadow(24.dp, ContinuousShape(34.dp), clip = false,
+                ambientColor = Color.Black.copy(alpha = 0.08f), spotColor = Color.Black.copy(alpha = 0.08f))
+            .background(MaterialTheme.colorScheme.surface, ContinuousShape(34.dp))
+            .pointerInput(Unit) {
+                val tracker = androidx.compose.ui.input.pointer.util.VelocityTracker()
+                detectVerticalDragGestures(
+                    onDragStart = { tracker.resetTracking() },
+                    onDragEnd = {
+                        val v = tracker.calculateVelocity().y
+                        // Predicted end: where the flick would carry it.
+                        if (pull.value > dismissPx || pull.value + v * 0.25f > dismissPx * 2) onClose()
+                        else scope.launch { pull.animateTo(0f, tween(250)) }
+                    },
+                    onDragCancel = { scope.launch { pull.animateTo(0f, tween(250)) } },
+                ) { change, dy ->
+                    tracker.addPosition(change.uptimeMillis, change.position)
+                    change.consume()
+                    scope.launch { pull.snapTo(max(0f, pull.value + dy)) }
+                }
+            }
+            .padding(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        // A sheet's grabber: it says the card can be pulled away.
+        Box(Modifier.fillMaxWidth().offset(y = (-6).dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(36.dp, 5.dp).clip(CircleShape)
+                .background(MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)))
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            PersonBubble(person.name, person.id, size = 44.dp)
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Text(person.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                val cap = partnerCaptionOf(person)
+                if (cap.isNotEmpty()) {
+                    Text(cap, style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+        }
+        Text(encounter.moment.place(context), style = PT.title3, fontWeight = FontWeight.SemiBold)
+        // A situation first (founder): Watch is the button; a call with them
+        // there and dealing again are its glyphs beside it, the person card's row.
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.weight(1f).height(50.dp).clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary).clickable(onClick = onWatch)
+                    .padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(R.string.watch), color = MaterialTheme.colorScheme.onPrimary,
+                    style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            CardIconButton(Icons.Filled.Phone, stringResource(R.string.talk), onTalk)
+            CardIconButton(Icons.Filled.Autorenew, stringResource(R.string.encounter_another), onAnother)
+        }
+        SceneCostNote(Modifier.fillMaxWidth())
     }
 }
 

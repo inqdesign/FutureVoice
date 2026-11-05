@@ -147,6 +147,9 @@ fun TalkScreen(
     onExit: () -> Unit,
 ) {
     val forceTutor = tutor && resume == null
+    // A call WITH someone is that person, never the tutor (iOS 59680063):
+    // tutor mode starts off for it whatever the setting says.
+    val withPerson = (resume?.counterpartId ?: counterpartId ?: cast?.person?.id) != null
     // "Go to Review" on the spent sheet (iOS `routeToPracticeOnClose`):
     // whichever way the call then leaves — the summary's Done, the plans, a
     // back swipe — it lands on Review.
@@ -410,7 +413,7 @@ fun TalkScreen(
             com.roro.futurevoice.talk.CoachMode.choice(context), level.code))
     }
     // Tutor mode: a flip mid-call reaches the live call (`TutorMode`).
-    var tutorMode by remember { mutableStateOf(com.roro.futurevoice.talk.TutorMode.isOn(context) || forceTutor) }
+    var tutorMode by remember { mutableStateOf((com.roro.futurevoice.talk.TutorMode.isOn(context) && !withPerson) || forceTutor) }
     // Send-to-answer: the learner's flip, else on for A1 (`SendToAnswer.resolve`).
     var sendToAnswer by remember {
         mutableStateOf(com.roro.futurevoice.talk.SendToAnswer.resolve(
@@ -494,7 +497,7 @@ fun TalkScreen(
                     com.roro.futurevoice.talk.SendToAnswer.choice(context), lvl.code)
                 // Tutor mode decides the opener (iOS f39a7f4b): `vm.start`
                 // reads it right after this.
-                tutorMode = com.roro.futurevoice.talk.TutorMode.isOn(context) || forceTutor
+                tutorMode = (com.roro.futurevoice.talk.TutorMode.isOn(context) && !withPerson) || forceTutor
             }
             firstCallSetupPending = false
         })

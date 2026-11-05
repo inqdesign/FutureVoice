@@ -801,6 +801,20 @@
     <string name="email">"Correo"</string>
     <string name="emerald">"Esmeralda"</string>
     <string name="en">"EN"</string>
+    <string name="encounter_another">"Otra persona"</string>
+    <string name="encounter_bakery">"En la fila de la panadería, la persona de adelante se da la vuelta"</string>
+    <string name="encounter_barista">"El barista se equivocó con tu pedido"</string>
+    <string name="encounter_bench">"Compartiendo un banco en el parque"</string>
+    <string name="encounter_bookshop">"En la librería, alguien va por el mismo libro que tú"</string>
+    <string name="encounter_cafetable">"La cafetería está llena y alguien te pregunta si puede sentarse contigo"</string>
+    <string name="encounter_gate">"En la puerta de embarque, el mismo vuelo con retraso"</string>
+    <string name="encounter_hotel">"En el hotel no encuentran tu reserva"</string>
+    <string name="encounter_laundromat">"En la lavandería, esperando la secadora"</string>
+    <string name="encounter_neighbor">"Un vecino nuevo toca a tu puerta"</string>
+    <string name="encounter_party">"En la fiesta de un amigo, junto a la comida"</string>
+    <string name="encounter_rain">"Bajo el mismo toldo, esperando a que pare la lluvia"</string>
+    <string name="encounter_taxi">"Un taxista con ganas de conversar"</string>
+    <string name="encounter_train">"En el tren, en el asiento de al lado"</string>
     <string name="encouraging">"Motivador"</string>
     <string name="end">"Finalizar"</string>
     <string name="end_the_call">"Finalizar la llamada"</string>
@@ -3440,6 +3454,7 @@
     <string name="watch_again">"Ver otra vez"</string>
     <string name="watch_again_or_study_it">"Vuelve a verla o estúdiala"</string>
     <string name="watch_book">"Cuaderno de la escena"</string>
+    <string name="watch_bump">"Un encuentro casual"</string>
     <!-- 'Watch has its own pool, separate from your talk minutes. A scene costs one whichever way it runs — a long one and a short one cost the same.' -->
     <string name="watch_has_its_own_pool_separate_from_your_talk_minutes_a_sce_98932d">"Las escenas tienen su propia bolsa, aparte de tus minutos de conversación. Cada escena cuenta una, larga o corta da igual."</string>
     <string name="watch_scene">"Escena"</string>

@@ -1784,7 +1784,7 @@ private fun PickerRow(
 
 /** A built-in character as an ordinary person — reusing the row already on
  *  disk when there is one, so picking the same character twice is one row. */
-private fun StockPerson.asCounterpart(existing: List<Counterpart>): Counterpart {
+internal fun StockPerson.asCounterpart(existing: List<Counterpart>): Counterpart {
     val rid = "builtin:$voiceId"
     // Named for the language being practised (시안 in Korean, Paige in
     // English) — one row serves every target language (iOS `b49e91b`).
