@@ -37,7 +37,9 @@ struct UsageBreakdown {
         /// "22 struck, 11, and a small note"); nil otherwise.
         var fullLabel: String? {
             guard let call = callSeconds, call > seconds else { return nil }
-            return call >= 60 ? explain("\(call / 60) min") : explain("\(call) sec")
+            let full = call >= 60 ? explain("\(call / 60) min") : explain("\(call) sec")
+            // "11 min" struck beside "11 min" says nothing.
+            return full == durationLabel ? nil : full
         }
     }
 
@@ -229,9 +231,11 @@ struct UsageBreakdown {
                 var m = modes[key] ?? Meter(key: key, title: title, icon: icon, seconds: 0, count: 0)
                 m.seconds += seconds
                 m.count += 1
-                if let call = row.metadata?.call_seconds {
-                    m.callSeconds = (m.callSeconds ?? 0) + call
-                }
+                // The time practiced: a row charged whole ran as long as it
+                // cost, so it adds its own seconds — otherwise a month that
+                // mixes calls from before the discount with calls after it
+                // reads LESS practiced than charged, and shows no discount.
+                m.callSeconds = (m.callSeconds ?? 0) + (row.metadata?.call_seconds ?? seconds)
                 modes[key] = m
             }
 
