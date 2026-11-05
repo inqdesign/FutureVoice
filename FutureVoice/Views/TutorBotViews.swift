@@ -720,7 +720,10 @@ struct TutorReadingSheet: View {
             if let s = script ?? reading.script {
                 SpeechScriptSheet(script: s, study: reading.study, shipped: true,
                                   studyHere: reading.script == nil || reading.goal != nil,
-                                  canPractice: reading.part == .speech)
+                                  // Everything the tutor wrote (a goal's reading and
+                                  // answer, a news article) can be said under the
+                                  // prompter; a podcast episode is two hosts talking.
+                                  canPractice: reading.goal != nil || reading.story != nil)
             } else {
                 NavigationStack {
                     Group {

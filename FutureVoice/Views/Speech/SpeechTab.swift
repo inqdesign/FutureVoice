@@ -479,8 +479,8 @@ struct SpeechScriptSheet: View {
     /// was studied when it was written.
     private let studyHere: Bool
     /// A read-only script the learner may still record under the prompter:
-    /// the tutor's model answer for an upcoming goal. Recording it files it
-    /// under My scripts, where its takes live.
+    /// anything the tutor wrote (a goal's reading and model answer, a news
+    /// article). Recording it files it under My scripts, where its takes live.
     private let canPractice: Bool
 
     init(script: SpeechScript, onEdited: @escaping (SpeechScript) -> Void = { _ in },

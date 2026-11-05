@@ -305,7 +305,12 @@ enum NewsArticle {
                                level: level.rawValue.lowercased())))
             if let file, let data = try? JSONEncoder().encode(article) { try? data.write(to: file) }
         }
-        return SpeechScript(id: UUID(), title: article.title, genre: .news, topic: story.category ?? "",
+        // A stable id per article, so a second "Say it out loud" lands on the
+        // script already in My scripts instead of adding another copy.
+        let h = Array(SHA256.hash(data: Data(key.utf8)))
+        let id = UUID(uuid: (h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7],
+                             h[8], h[9], h[10], h[11], h[12], h[13], h[14], h[15]))
+        return SpeechScript(id: id, title: article.title, genre: .news, topic: story.category ?? "",
                             body: article.body, summary: article.summary, keyTerms: [], sources: [],
                             language: language, targetSeconds: 0, createdAt: Date(), isBuiltIn: false)
     }
