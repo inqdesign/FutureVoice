@@ -19,8 +19,8 @@
 
 import { GeminiTranscriber, languageName } from "./transcriber"
 import { SpeechGate } from "./speech-gate"
-import { rereadUtterance } from "./reread"
-import { nativeTurnText } from "./native-turn"
+import { isRealNative, rereadUtterance } from "./reread"
+import { nativeTurnText, unclearTurnText } from "./native-turn"
 import { ReplyEngine } from "./reply"
 import { CartesiaTTS, withGermanDefault, type TTSCallbacks } from "./cartesia-tts"
 import { foreignVoice } from "./voice-copies"
@@ -1318,6 +1318,11 @@ export class CallSession implements DurableObject {
     if (reread !== null && native === null && reread.spoken === "other") {
       const named = CallSession.nativeFromScript(reread.text, this.language)
       if (named !== null) {
+        if (!(await this.nativeIsReal(reread.text, named))) {
+          if (!this.ended) this.askAgain(reread.text, ms)
+          return
+        }
+        if (this.ended) return
         this.warn("script_mismatch", `native, inferred ${named} (${ms}ms): ${text.slice(0, 40)} → ${reread.text.slice(0, 80)}`)
         this.inferredNative = named
         this.handleUtterance(reread.text, true)
@@ -1335,6 +1340,11 @@ export class CallSession implements DurableObject {
     // overruled by the script (2 of 88 in the probe).
     if (reread !== null && native !== null && (reread.spoken === "native"
         || (!CallSession.inTargetScript(reread.text, this.language) && this.hasNativeScript(reread.text, native)))) {
+      if (!(await this.nativeIsReal(reread.text, native))) {
+        if (!this.ended) this.askAgain(reread.text, ms)
+        return
+      }
+      if (this.ended) return
       this.warn("script_mismatch", `${tag}native (${ms}ms): ${text.slice(0, 40)} → ${reread.text.slice(0, 80)}`)
       if (this.native === null) this.inferredNative = native
       this.handleUtterance(reread.text, true)
@@ -1403,6 +1413,14 @@ export class CallSession implements DurableObject {
     }
     const nativeLine = reread.spoken !== "target"
       || (!CallSession.inTargetScript(heard, this.language) && this.hasNativeScript(heard, native))
+    // A "native" reading that is no real words of that language (see
+    // `nativeIsReal`): the line that looked right stays, as before.
+    const judgedAs = native ?? CallSession.nativeFromScript(heard, this.language)
+    if (nativeLine && judgedAs !== null && !(await this.nativeIsReal(heard, judgedAs))) {
+      if (!this.ended) this.handleUtterance(text, this.hasNativeScript(text))
+      return
+    }
+    if (this.ended) return
     if (nativeLine && native === null) {
       const named = CallSession.nativeFromScript(heard, this.language)
       if (named !== null) this.inferredNative = named
@@ -1627,8 +1645,40 @@ export class CallSession implements DurableObject {
     return true
   }
 
-  /** A turn is settled. Commit it and speak the reply. */
-  private commitTurn(text: string, native = false, reopened: string | null = null): void {
+  /** A line the re-read called the learner's own language, judged on its
+   *  text: is it real words of that language? (2026-11-06, `isRealNative`.)
+   *  Not in a pronunciation call (a reading is judged by its sound) or
+   *  while the app answers every turn itself (`holdReplies`, tutor mode —
+   *  its judge reads the line). A judge that can't be asked keeps it. */
+  private async nativeIsReal(text: string, native: string): Promise<boolean> {
+    if (this.callMode === "pron" || this.holdReplies) return true
+    const real = await isRealNative(
+      this.env.GEMINI_API_KEY,
+      this.env.GEMINI_REREAD_MODEL ?? "gemini-3.1-flash-lite",
+      text, native, this.language,
+    )
+    return real !== false
+  }
+
+  /** A line that didn't come through: sounds, no language. Never shown as
+   *  if said and never answered — the bubble reads "…" and the fluent self
+   *  asks them to say it again. Inside a held line, the piece is dropped and
+   *  the hold goes on, like a hesitation. */
+  private askAgain(heard: string, ms: number): void {
+    this.warn("script_mismatch", `unclear, asked again (${ms}ms): ${heard.slice(0, 40)}`)
+    if (this.pendingUtterance !== null) {
+      this.armPending(CallSession.pendingHoldMs)
+      return
+    }
+    this.commitTurn("…", true, null, unclearTurnText(languageName(this.language)))
+    // "…" is nothing the rest of a sentence could join.
+    this.lastCommitted = null
+  }
+
+  /** A turn is settled. Commit it and speak the reply. `modelText` is the
+   *  model's copy when it is not the shown text (`askAgain`). */
+  private commitTurn(text: string, native = false, reopened: string | null = null,
+                     modelText: string | null = null): void {
     console.log(`commit: "${text.slice(0, 80)}"${native ? " (native)" : ""}${reopened !== null ? " (continues)" : ""}`)
     this.lastCommitAt = Date.now()
     this.specFiresThisTurn = 0
@@ -1644,9 +1694,9 @@ export class CallSession implements DurableObject {
     })
     this.lastCommitted = { text, native, index: this.history.length }
     const nativeLanguage = this.native ?? this.inferredNative
-    this.history.push({ role: "user", text: native && nativeLanguage !== null
+    this.history.push({ role: "user", text: modelText ?? (native && nativeLanguage !== null
       ? nativeTurnText(text, languageName(this.language), languageName(nativeLanguage))
-      : text })
+      : text) })
     // A stale reply still going (e.g. utterance finalized right behind a
     // barge-in interim) must not race the new one.
     this.activeReplyAbort?.abort()

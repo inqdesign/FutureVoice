@@ -66,6 +66,15 @@ const CASES = [
   // Hesitation only.
   ["음…", "en", "none"],
   ["어… 어…", "de", "none"],
+  // Neither language: Hangul syllables that are no Korean and no English
+  // (2026-11-06 — a real final "바티다 등반이" was kept as a Korean line and
+  // answered). Appended so the cached audio above keeps its indices.
+  ["바티다 등반이.", "en", "unclear"],
+  ["모가 티르 수안다.", "en", "unclear"],
+  ["키루 바나 데토 미사.", "en", "unclear"],
+  ["시모 라칸 테비 오루.", "en", "unclear"],
+  ["파루 디 노메 카타 실.", "en", "unclear"],
+  ["티아 무사 레빈 고타.", "en", "unclear"],
 ]
 
 const name = { en: "English", de: "German", ko: "Korean", ja: "Japanese" }
@@ -103,6 +112,7 @@ export function newSystem(target, native) {
     `"native": they spoke ${nv} — real ${nv} words and grammar, the way they would talk to another ${nv} speaker. A learner who is stuck often does this. Write exactly what they said, in ${nv}'s own writing system. Never translate it into ${t}.`,
     `If most of it is ${t} with one or two ${nv} words inside, it is "target": write the ${t} words in ${t} and the ${nv} word in ${nv}.`,
     `"none": only hesitation sounds (uh, um, 어, 음) or no words at all; text is empty.`,
+    ...(process.env.UNCLEAR ? [`"unclear": you hear words, but they are neither ${t} nor ${nv} — not real words of either language, so you cannot tell what they meant. Write what it sounded like. Never choose this for ${t} said with a heavy accent or broken grammar: if you can tell which ${t} words they were reaching for, it is "target".`] : []),
     `Only write words you actually hear. Never invent a sentence to fill unclear audio.`,
   ].join("\n")
 }
@@ -116,7 +126,7 @@ function newBody(target, native, wavB64) {
       maxOutputTokens: 400, thinkingConfig: { thinkingLevel: "minimal" },
       responseMimeType: "application/json",
       responseSchema: { type: "OBJECT", properties: {
-        language: { type: "STRING", enum: ["target", "native", "none"] },
+        language: { type: "STRING", enum: process.env.UNCLEAR ? ["target", "native", "none", "unclear"] : ["target", "native", "none"] },
         text: { type: "STRING" } }, required: ["language", "text"], propertyOrdering: ["language", "text"] },
     },
   }

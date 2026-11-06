@@ -23,3 +23,20 @@ export function nativeTurnText(said: string, t: string, n: string): string {
     `Then carry on the conversation as usual.]`,
   ].join("\n")
 }
+
+/** The model's copy of a line that didn't come through (2026-11-06). The
+ *  re-read sometimes calls an accented line "native" and writes syllables
+ *  that are no language ("바티다든 원이", a real final), and the fluent self
+ *  then answered them as if they were Korean. `isRealNative` (reread.ts)
+ *  catches those; the learner's bubble shows "…" and the fluent self asks
+ *  them to say it again, like anyone on a bad phone line. `t` is a
+ *  language NAME, as for `nativeTurnText`. */
+export function unclearTurnText(t: string): string {
+  return [
+    "…",
+    "",
+    `[Note, not part of what they said: their line didn't come through — what reached you was sounds, not words. ` +
+    `Don't guess what they meant and don't answer it. Ask them to say it again, in ${t} only, in a few words, ` +
+    `the way a friend on a bad phone line would ("Sorry, what was that?"). Nothing else in this reply.]`,
+  ].join("\n")
+}

@@ -149,3 +149,64 @@ export async function rereadUtterance(
     clearTimeout(timer)
   }
 }
+
+/** The judge's prompt. Must stay byte-identical to the probe that measured
+ *  it (see `isRealNative`). */
+export function realNativeSystem(native: string, target: string): string {
+  const nv = languageName(native), t = languageName(target)
+  return [
+    `A ${nv} speaker learning ${t} said something mid-call, and a transcriber wrote it as the ${nv} line below.`,
+    `Is it something a person could really have said in ${nv} — real ${nv} words that mean something, even if short, casual, broken or a single word?`,
+    `"yes" for any real ${nv}: a word, a fragment, slang, a half sentence, a question about how to say something. Also "yes" when most of it is real ${nv} and only a word or two is unclear or foreign.`,
+    `"no" only when a ${nv} speaker could not tell what was meant: mostly syllables that are not ${nv} words, or ${t} words spelled out in ${nv} letters.`,
+  ].join("\n")
+}
+
+/** Is a line the re-read called NATIVE really that language? (2026-11-06)
+ *  An accented line the re-read can't place comes back labelled "native"
+ *  and written as syllables that are no language — a real final
+ *  "바티다 등반이" was kept as "바티다든 원이" and answered as Korean. Giving
+ *  the re-read an "unclear" class did nothing (0/24, it never picks it at
+ *  minimal thinking), so the TEXT is judged on its own, which is easy:
+ *  probe of 2026-11-06 — 86/88 on synthesized lines (12 nonsense lines × 4,
+ *  the misses one line with word-like pieces), and on 118 real native
+ *  finals from 21 days, no real Korean line refused; the 10 refused were
+ *  all nonsense or English spelled in Hangul. ~0.7 s, native lines only.
+ *  null when the judge can't be asked — the caller keeps the line. */
+export async function isRealNative(
+  apiKey: string,
+  model: string,
+  text: string,
+  native: string,
+  target: string,
+  timeoutMs = 3000,
+): Promise<boolean | null> {
+  const body = JSON.stringify({
+    systemInstruction: { parts: [{ text: realNativeSystem(native, target) }] },
+    contents: [{ role: "user", parts: [{ text }] }],
+    generationConfig: {
+      maxOutputTokens: 50, thinkingConfig: { thinkingLevel: "minimal" },
+      responseMimeType: "application/json",
+      responseSchema: { type: "OBJECT", properties: { real: { type: "STRING", enum: ["yes", "no"] } }, required: ["real"] },
+    },
+  })
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const res = await fetch(
+      `${API_HOST}/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      { method: "POST", headers: { "Content-Type": "application/json" }, body, signal: controller.signal },
+    )
+    if (!res.ok) return null
+    const json = await res.json() as {
+      candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] } }[]
+    }
+    const raw = (json.candidates?.[0]?.content?.parts ?? []).filter((p) => !p.thought).map((p) => p.text ?? "").join("").trim()
+    const real = (JSON.parse(raw) as { real?: string }).real
+    return real === "yes" ? true : real === "no" ? false : null
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timer)
+  }
+}
