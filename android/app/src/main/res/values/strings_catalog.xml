@@ -13,6 +13,8 @@
     <string name="a_book">"A book"</string>
     <!-- 'A book lands here once every word and line in it is mastered. Nothing you file away counts — only what you finished.' -->
     <string name="a_book_lands_here_once_every_word_and_line_in_it_is_mastered_d3fa9a">"A book lands here once every word and line in it is mastered. Nothing you file away counts — only what you finished."</string>
+    <!-- "A call answers the moment you pause. With this on, your future self waits until you press Send, like a message, so pausing to think won't cut you off." -->
+    <string name="a_call_answers_the_moment_you_pause_with_this_on_your_future_3f6834">"A call answers the moment you pause. With this on, your future self waits until you press Send, like a message, so pausing to think won't cut you off."</string>
     <string name="a_call_with_a_client">"A call with a client"</string>
     <string name="a_check_up">"A check-up"</string>
     <string name="a_clerk">"a clerk"</string>
@@ -263,7 +265,6 @@
     <string name="another_you_already_fluent">"Another you.\nAlready fluent."</string>
     <string name="answer">"Answer"</string>
     <string name="answer_in">"Answer in"</string>
-    <string name="answer_when_i_pause">"Answer when I pause"</string>
     <string name="answer_with_send">"Answer with Send"</string>
     <string name="answers">"Answers"</string>
     <!-- "Answers in your own words count toward your level, sentences built around a word you're studying included. Lines read straight from a suggestion count as practice." -->
@@ -1006,7 +1007,6 @@
     <string name="fine">"Fine"</string>
     <!-- 'Finish a talk and it lands here as a book — replay it, pick up its words, shadow the smoother versions of your own lines.' -->
     <string name="finish_a_talk_and_it_lands_here_as_a_book_replay_it_pick_up_f70da1">"Finish a talk and it lands here as a book — replay it, pick up its words, shadow the smoother versions of your own lines."</string>
-    <string name="finish_then_send">"Finish, then Send"</string>
     <string name="finished">"Finished"</string>
     <!-- 'Finished books. They keep their progress — unarchive anytime.' -->
     <string name="finished_books_they_keep_their_progress_unarchive_anytime">"Finished books. They keep their progress — unarchive anytime."</string>
@@ -1248,7 +1248,6 @@
     <string name="how_we_read_it">"How we read it"</string>
     <string name="how_were_your_first_20_minutes">"How were your first 20 minutes?"</string>
     <string name="how_would_a_fluent_speaker_say_it">"How would a fluent speaker say it?"</string>
-    <string name="how_you_answer">"How you answer"</string>
     <string name="how_you_met">"How you met"</string>
     <string name="how_you_met_and_how_long">"How you met (and how long)"</string>
     <string name="how_you_sound">"How you sound"</string>
@@ -2159,8 +2158,6 @@
     <string name="paused_tap_to_pick_it_back_up">"Paused — tap to pick it back up"</string>
     <string name="pauses">"Pauses"</string>
     <string name="pauses_min_lldm_per_talk_lld_words_turn">"%1$s pauses/min · %2$dm per talk · %3$d words/turn"</string>
-    <!-- "Pausing won't cut you off. Your future self answers when you press Send." -->
-    <string name="pausing_won_t_cut_you_off_your_future_self_answers_when_you_741091">"Pausing won't cut you off. Your future self answers when you press Send."</string>
     <string name="paying_and_splitting_the_bill">"Paying and splitting the bill"</string>
     <!-- 'Payment is charged to your Apple Account at purchase. The subscription renews automatically unless you cancel at least 24 hours before the period ends. Manage or cancel it in Settings › Apple Account › Subscriptions.' -->
     <string name="payment_is_charged_to_your_apple_account_at_purchase_the_sub_6660ae">"Payment is charged to your Apple Account at purchase. The subscription renews automatically unless you cancel at least 24 hours before the period ends. Manage or cancel it in Settings › Apple Account › Subscriptions."</string>
@@ -2417,7 +2414,6 @@
     <string name="recent_days">"Recent days"</string>
     <string name="recent_school_events">"Recent school events"</string>
     <string name="recently_moved">"Recently moved"</string>
-    <string name="recommended">"Recommended"</string>
     <string name="reconnect">"Reconnect"</string>
     <string name="record">"Record"</string>
     <string name="record_a_speech_and_get_a_score">"Record a speech and get a score"</string>
@@ -4065,8 +4061,6 @@
     <!-- "Your friend enters this code when they sign up, and you both get %lld minutes. You're rewarded for your first %lld friends." -->
     <string name="your_friend_enters_this_code_when_they_sign_up_and_you_both_e0ffad">"Your friend enters this code when they sign up, and you both get %1$d minutes. You're rewarded for your first %2$d friends."</string>
     <string name="your_future_self">"Your future self"</string>
-    <!-- 'Your future self answers as soon as you stop. Quick like a phone call, but a pause to think can cut you off.' -->
-    <string name="your_future_self_answers_as_soon_as_you_stop_quick_like_a_ph_748422">"Your future self answers as soon as you stop. Quick like a phone call, but a pause to think can cut you off."</string>
     <!-- 'Your future self may ask something that needs this. Just answer the way you normally would.' -->
     <string name="your_future_self_may_ask_something_that_needs_this_just_answ_9f3c92">"Your future self may ask something that needs this. Just answer the way you normally would."</string>
     <!-- 'Your future self speaks mostly at your level, and lets a word or turn of phrase from just above it slip in now and then — that small stretch is where you grow. Never two levels up.' -->

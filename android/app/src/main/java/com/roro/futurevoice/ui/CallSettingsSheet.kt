@@ -127,7 +127,7 @@ fun CallSettingsSheet(
                     onSendToAnswer(it)
                 }
             }
-            GroupedFooter(stringResource(R.string.take_your_time_your_future_self_waits_until_you_press_send))
+            GroupedFooter(stringResource(R.string.a_call_answers_the_moment_you_pause_with_this_on_your_future_3f6834))
 
             GroupedSectionHeader(stringResource(R.string.screen))
             GroupedCard {

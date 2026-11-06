@@ -13,6 +13,8 @@
     <string name="a_book">"Ein Buch"</string>
     <!-- 'A book lands here once every word and line in it is mastered. Nothing you file away counts — only what you finished.' -->
     <string name="a_book_lands_here_once_every_word_and_line_in_it_is_mastered_d3fa9a">"Ein Buch landet hier, sobald jedes Wort und jeder Satz darin sitzt. Weggelegtes zählt nicht – nur Abgeschlossenes."</string>
+    <!-- "A call answers the moment you pause. With this on, your future self waits until you press Send, like a message, so pausing to think won't cut you off." -->
+    <string name="a_call_answers_the_moment_you_pause_with_this_on_your_future_3f6834">"Im Anruf kommt die Antwort, sobald du eine Pause machst. Ist das an, wartet dein fließendes Ich wie bei einer Nachricht, bis du auf Senden tippst – eine Denkpause unterbricht dich nicht."</string>
     <string name="a_call_with_a_client">"Ein Anruf mit einem Kunden"</string>
     <string name="a_check_up">"Eine Vorsorgeuntersuchung"</string>
     <string name="a_clerk">"eine Sachbearbeiterin"</string>
@@ -263,7 +265,6 @@
     <string name="another_you_already_fluent">"Ein zweites Ich.\nSchon fließend."</string>
     <string name="answer">"Annehmen"</string>
     <string name="answer_in">"Antworten auf"</string>
-    <string name="answer_when_i_pause">"Antworten, sobald ich pausiere"</string>
     <string name="answer_with_send">"Mit Senden antworten"</string>
     <string name="answers">"Antworten"</string>
     <!-- "Answers in your own words count toward your level, sentences built around a word you're studying included. Lines read straight from a suggestion count as practice." -->
@@ -1003,7 +1004,6 @@
     <string name="fine">"Gut"</string>
     <!-- 'Finish a talk and it lands here as a book — replay it, pick up its words, shadow the smoother versions of your own lines.' -->
     <string name="finish_a_talk_and_it_lands_here_as_a_book_replay_it_pick_up_f70da1">"Beende ein Gespräch, dann landet es hier als Buch – hör es noch mal, nimm seine Wörter mit und sprich die flüssigeren Fassungen deiner eigenen Sätze nach."</string>
-    <string name="finish_then_send">"Erst fertig sprechen, dann Senden"</string>
     <string name="finished">"Abgeschlossen"</string>
     <!-- 'Finished books. They keep their progress — unarchive anytime.' -->
     <string name="finished_books_they_keep_their_progress_unarchive_anytime">"Abgeschlossene Bücher. Ihr Fortschritt bleibt – jederzeit wieder hervorholbar."</string>
@@ -1245,7 +1245,6 @@
     <string name="how_we_read_it">"So haben wir es eingeschätzt"</string>
     <string name="how_were_your_first_20_minutes">"Wie waren deine ersten 20 Minuten?"</string>
     <string name="how_would_a_fluent_speaker_say_it">"Wie würde es jemand sagen, der fließend spricht?"</string>
-    <string name="how_you_answer">"Wie du antwortest"</string>
     <string name="how_you_met">"Wie ihr euch kennengelernt habt"</string>
     <string name="how_you_met_and_how_long">"Wie ihr euch kennengelernt habt (und seit wann)"</string>
     <string name="how_you_sound">"So klingst du"</string>
@@ -2151,8 +2150,6 @@
     <string name="paused_tap_to_pick_it_back_up">"Pausiert · tippe, um weiterzumachen"</string>
     <string name="pauses">"Pausen"</string>
     <string name="pauses_min_lldm_per_talk_lld_words_turn">"%1$s Pausen/Min. · %2$d Min. pro Gespräch · %3$d Wörter/Redebeitrag"</string>
-    <!-- "Pausing won't cut you off. Your future self answers when you press Send." -->
-    <string name="pausing_won_t_cut_you_off_your_future_self_answers_when_you_741091">"Eine Pause unterbricht dich nicht. Dein fließendes Ich antwortet, wenn du auf Senden tippst."</string>
     <string name="paying_and_splitting_the_bill">"Bezahlen und die Rechnung teilen"</string>
     <!-- 'Payment is charged to your Apple Account at purchase. The subscription renews automatically unless you cancel at least 24 hours before the period ends. Manage or cancel it in Settings › Apple Account › Subscriptions.' -->
     <string name="payment_is_charged_to_your_apple_account_at_purchase_the_sub_6660ae">"Die Zahlung wird beim Kauf deinem Apple-Konto belastet. Das Abo verlängert sich automatisch, wenn du nicht mindestens 24 Stunden vor Ende des Zeitraums kündigst. Verwalten oder kündigen kannst du es unter Einstellungen › Apple-Konto › Abonnements."</string>
@@ -2409,7 +2406,6 @@
     <string name="recent_days">"Letzte Tage"</string>
     <string name="recent_school_events">"Aktuelles aus der Schule"</string>
     <string name="recently_moved">"Kürzlich umgezogen"</string>
-    <string name="recommended">"Empfohlen"</string>
     <string name="reconnect">"Neu verbinden"</string>
     <string name="record">"Aufnahmetaste"</string>
     <string name="record_a_speech_and_get_a_score">"Nimm eine Rede auf und bekomm eine Bewertung"</string>
@@ -4053,8 +4049,6 @@
     <!-- "Your friend enters this code when they sign up, and you both get %lld minutes. You're rewarded for your first %lld friends." -->
     <string name="your_friend_enters_this_code_when_they_sign_up_and_you_both_e0ffad">"Gibt jemand diesen Code bei der Anmeldung ein, bekommt ihr beide %1$d Minuten. Belohnt wirst du für deine ersten %2$d Freunde."</string>
     <string name="your_future_self">"Dein zukünftiges Ich"</string>
-    <!-- 'Your future self answers as soon as you stop. Quick like a phone call, but a pause to think can cut you off.' -->
-    <string name="your_future_self_answers_as_soon_as_you_stop_quick_like_a_ph_748422">"Dein fließendes Ich antwortet, sobald du aufhörst. Schnell wie ein Telefonat, aber eine Denkpause kann dich unterbrechen."</string>
     <!-- 'Your future self may ask something that needs this. Just answer the way you normally would.' -->
     <string name="your_future_self_may_ask_something_that_needs_this_just_answ_9f3c92">"Dein fließendes Ich stellt dir vielleicht eine Frage, bei der du das brauchst. Antworte einfach wie sonst auch."</string>
     <!-- 'Your future self speaks mostly at your level, and lets a word or turn of phrase from just above it slip in now and then — that small stretch is where you grow. Never two levels up.' -->

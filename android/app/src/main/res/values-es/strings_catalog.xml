@@ -13,6 +13,8 @@
     <string name="a_book">"Un cuaderno"</string>
     <!-- 'A book lands here once every word and line in it is mastered. Nothing you file away counts — only what you finished.' -->
     <string name="a_book_lands_here_once_every_word_and_line_in_it_is_mastered_d3fa9a">"Un cuaderno llega aquí cuando dominas todas sus palabras y frases. Lo que dejas para después no cuenta: solo lo que terminaste."</string>
+    <!-- "A call answers the moment you pause. With this on, your future self waits until you press Send, like a message, so pausing to think won't cut you off." -->
+    <string name="a_call_answers_the_moment_you_pause_with_this_on_your_future_3f6834">"En una llamada, la respuesta llega en cuanto haces una pausa. Si lo activas, tu yo fluido espera a que toques Enviar, como en un mensaje, así que parar a pensar no te corta."</string>
     <string name="a_call_with_a_client">"Una llamada con un cliente"</string>
     <string name="a_check_up">"Un chequeo médico"</string>
     <string name="a_clerk">"un empleado de ventanilla"</string>
@@ -263,7 +265,6 @@
     <string name="another_you_already_fluent">"Otro tú.\nYa fluido."</string>
     <string name="answer">"Contestar"</string>
     <string name="answer_in">"Idioma de respuesta"</string>
-    <string name="answer_when_i_pause">"Responder al hacer una pausa"</string>
     <string name="answer_with_send">"Responder con Enviar"</string>
     <string name="answers">"Respuestas"</string>
     <!-- "Answers in your own words count toward your level, sentences built around a word you're studying included. Lines read straight from a suggestion count as practice." -->
@@ -1003,7 +1004,6 @@
     <string name="fine">"Bien"</string>
     <!-- 'Finish a talk and it lands here as a book — replay it, pick up its words, shadow the smoother versions of your own lines.' -->
     <string name="finish_a_talk_and_it_lands_here_as_a_book_replay_it_pick_up_f70da1">"Termina una llamada y llegará aquí como cuaderno: vuelve a escucharla, quédate con sus palabras y haz shadowing con versiones más fluidas de tus propias frases."</string>
-    <string name="finish_then_send">"Termina y toca Enviar"</string>
     <string name="finished">"Terminado"</string>
     <!-- 'Finished books. They keep their progress — unarchive anytime.' -->
     <string name="finished_books_they_keep_their_progress_unarchive_anytime">"Cuadernos terminados. Conservan tu progreso — puedes recuperarlos cuando quieras."</string>
@@ -1245,7 +1245,6 @@
     <string name="how_we_read_it">"Cómo lo vimos"</string>
     <string name="how_were_your_first_20_minutes">"¿Qué tal tus primeros 20 minutos?"</string>
     <string name="how_would_a_fluent_speaker_say_it">"¿Cómo lo diría alguien con fluidez?"</string>
-    <string name="how_you_answer">"Cómo respondes"</string>
     <string name="how_you_met">"Cómo se conocieron"</string>
     <string name="how_you_met_and_how_long">"Cómo se conocieron (y cuánto hace)"</string>
     <string name="how_you_sound">"Escuchar mi voz"</string>
@@ -2151,8 +2150,6 @@
     <string name="paused_tap_to_pick_it_back_up">"En pausa · toca para continuar"</string>
     <string name="pauses">"Pausas"</string>
     <string name="pauses_min_lldm_per_talk_lld_words_turn">"%1$s pausas/min · %2$dm por conversación · %3$d palabras/turno"</string>
-    <!-- "Pausing won't cut you off. Your future self answers when you press Send." -->
-    <string name="pausing_won_t_cut_you_off_your_future_self_answers_when_you_741091">"Si haces una pausa, no te corta. Tu yo fluido responde cuando tocas Enviar."</string>
     <string name="paying_and_splitting_the_bill">"Pagar y dividir la cuenta"</string>
     <!-- 'Payment is charged to your Apple Account at purchase. The subscription renews automatically unless you cancel at least 24 hours before the period ends. Manage or cancel it in Settings › Apple Account › Subscriptions.' -->
     <string name="payment_is_charged_to_your_apple_account_at_purchase_the_sub_6660ae">"El pago se carga a tu Cuenta de Apple al comprar. La suscripción se renueva automáticamente a menos que la canceles al menos 24 horas antes de que termine el periodo. Gestiónala o cancélala en Ajustes › Cuenta de Apple › Suscripciones."</string>
@@ -2409,7 +2406,6 @@
     <string name="recent_days">"Días recientes"</string>
     <string name="recent_school_events">"Novedades recientes del colegio"</string>
     <string name="recently_moved">"Se mudó hace poco"</string>
-    <string name="recommended">"Recomendado"</string>
     <string name="reconnect">"Reconectar"</string>
     <string name="record">"Botón de grabar"</string>
     <string name="record_a_speech_and_get_a_score">"Graba un discurso y recibe una nota"</string>
@@ -4053,8 +4049,6 @@
     <!-- "Your friend enters this code when they sign up, and you both get %lld minutes. You're rewarded for your first %lld friends." -->
     <string name="your_friend_enters_this_code_when_they_sign_up_and_you_both_e0ffad">"Si un amigo pone este código al registrarse, cada uno recibe %1$d minutos. A ti se te premia por los primeros %2$d amigos."</string>
     <string name="your_future_self">"Tu yo fluido"</string>
-    <!-- 'Your future self answers as soon as you stop. Quick like a phone call, but a pause to think can cut you off.' -->
-    <string name="your_future_self_answers_as_soon_as_you_stop_quick_like_a_ph_748422">"Tu yo fluido responde en cuanto te detienes. Es ágil como una llamada, pero si paras a pensar, puede cortarte."</string>
     <!-- 'Your future self may ask something that needs this. Just answer the way you normally would.' -->
     <string name="your_future_self_may_ask_something_that_needs_this_just_answ_9f3c92">"Tu yo fluido puede preguntarte algo que lo necesite. Responde como lo harías normalmente."</string>
     <!-- 'Your future self speaks mostly at your level, and lets a word or turn of phrase from just above it slip in now and then — that small stretch is where you grow. Never two levels up.' -->

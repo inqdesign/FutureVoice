@@ -13,6 +13,8 @@
     <string name="a_book">"一本教材"</string>
     <!-- 'A book lands here once every word and line in it is mastered. Nothing you file away counts — only what you finished.' -->
     <string name="a_book_lands_here_once_every_word_and_line_in_it_is_mastered_d3fa9a">"複習本裡的單字和句子全部掌握後，就會來到這裡。先放著的不算，只算完成的。"</string>
+    <!-- "A call answers the moment you pause. With this on, your future self waits until you press Send, like a message, so pausing to think won't cut you off." -->
+    <string name="a_call_answers_the_moment_you_pause_with_this_on_your_future_3f6834">"通話時，你一停下來就會回答。開啟後，流利的自己會像傳訊息一樣，等你按下傳送才回答，停下來想一想也不會被打斷。"</string>
     <string name="a_call_with_a_client">"和客戶通電話"</string>
     <string name="a_check_up">"健康檢查"</string>
     <string name="a_clerk">"櫃檯人員"</string>
@@ -263,7 +265,6 @@
     <string name="another_you_already_fluent">"已經很流利的\n另一個你"</string>
     <string name="answer">"接聽"</string>
     <string name="answer_in">"回答語言"</string>
-    <string name="answer_when_i_pause">"一停就回答"</string>
     <string name="answer_with_send">"按傳送再回答"</string>
     <string name="answers">"各題結果"</string>
     <!-- "Answers in your own words count toward your level, sentences built around a word you're studying included. Lines read straight from a suggestion count as practice." -->
@@ -1006,7 +1007,6 @@
     <string name="fine">"良好"</string>
     <!-- 'Finish a talk and it lands here as a book — replay it, pick up its words, shadow the smoother versions of your own lines.' -->
     <string name="finish_a_talk_and_it_lands_here_as_a_book_replay_it_pick_up_f70da1">"講完一通對話，它就會變成教材出現在這裡。可以重聽、收下裡面的單字，再跟讀自己說過的話修得更順的版本。"</string>
-    <string name="finish_then_send">"說完再按傳送"</string>
     <string name="finished">"完成"</string>
     <!-- 'Finished books. They keep their progress — unarchive anytime.' -->
     <string name="finished_books_they_keep_their_progress_unarchive_anytime">"讀完的複習本。進度都會保留，隨時可以取消封存。"</string>
@@ -1248,7 +1248,6 @@
     <string name="how_we_read_it">"判斷依據"</string>
     <string name="how_were_your_first_20_minutes">"最初的 20 分鐘，感覺怎麼樣？"</string>
     <string name="how_would_a_fluent_speaker_say_it">"說得流利的人會怎麼說？"</string>
-    <string name="how_you_answer">"回答方式"</string>
     <string name="how_you_met">"怎麼認識的"</string>
     <string name="how_you_met_and_how_long">"怎麼認識的（認識多久了）"</string>
     <string name="how_you_sound">"聽自己的聲音"</string>
@@ -2155,8 +2154,6 @@
     <string name="paused_tap_to_pick_it_back_up">"暫停中 · 點一下繼續"</string>
     <string name="pauses">"停頓"</string>
     <string name="pauses_min_lldm_per_talk_lld_words_turn">"每分鐘停頓 %1$s 次 · 每次 %2$d 分鐘 · 每輪 %3$d 字"</string>
-    <!-- "Pausing won't cut you off. Your future self answers when you press Send." -->
-    <string name="pausing_won_t_cut_you_off_your_future_self_answers_when_you_741091">"中途停頓也不會被打斷。按下傳送後，流利的自己才會回答。"</string>
     <string name="paying_and_splitting_the_bill">"結帳與分攤"</string>
     <!-- 'Payment is charged to your Apple Account at purchase. The subscription renews automatically unless you cancel at least 24 hours before the period ends. Manage or cancel it in Settings › Apple Account › Subscriptions.' -->
     <string name="payment_is_charged_to_your_apple_account_at_purchase_the_sub_6660ae">"購買時會向你的Apple帳號收費。除非在週期結束前至少24小時取消，否則訂閱會自動續訂。可到「設定 › Apple帳號 › 訂閱」管理或取消。"</string>
@@ -2413,7 +2410,6 @@
     <string name="recent_days">"最近紀錄"</string>
     <string name="recent_school_events">"最近學校的事"</string>
     <string name="recently_moved">"最近搬家"</string>
-    <string name="recommended">"推薦"</string>
     <string name="reconnect">"重新連線"</string>
     <string name="record">"錄製按鈕"</string>
     <string name="record_a_speech_and_get_a_score">"錄一段演講並拿到分數"</string>
@@ -4057,8 +4053,6 @@
     <!-- "Your friend enters this code when they sign up, and you both get %lld minutes. You're rewarded for your first %lld friends." -->
     <string name="your_friend_enters_this_code_when_they_sign_up_and_you_both_e0ffad">"朋友註冊時輸入這組邀請碼，兩人各拿到%1$d分鐘。你的獎勵以前%2$d位朋友為限。"</string>
     <string name="your_future_self">"未來的自己"</string>
-    <!-- 'Your future self answers as soon as you stop. Quick like a phone call, but a pause to think can cut you off.' -->
-    <string name="your_future_self_answers_as_soon_as_you_stop_quick_like_a_ph_748422">"你一停下來就會回答。像講電話一樣流暢，但停下來想一想時，可能會被打斷。"</string>
     <!-- 'Your future self may ask something that needs this. Just answer the way you normally would.' -->
     <string name="your_future_self_may_ask_something_that_needs_this_just_answ_9f3c92">"流利的自己可能會問需要用到這個的問題，像平常一樣回答就好。"</string>
     <!-- 'Your future self speaks mostly at your level, and lets a word or turn of phrase from just above it slip in now and then — that small stretch is where you grow. Never two levels up.' -->
