@@ -38,6 +38,7 @@ tlp = importlib.util.module_from_spec(spec); spec.loader.exec_module(tlp)
 
 LANGS = os.environ.get("LANGS", "en,ko,ja,de,es").split(",")
 MODELS = os.environ.get("MODELS", "gemini,haiku").split(",")
+WRITERS = os.environ.get("WRITERS", ",".join(MODELS)).split(",")  # checkers are MODELS
 PARTS = os.environ.get("PARTS", "write,rate").split(",")
 RUNS = int(os.environ.get("RUNS", "2"))
 LEVEL = os.environ.get("LEVEL", "a2")
@@ -54,7 +55,9 @@ BATCH = re.search(r"static let batchPerKind = (\d+)", SRC).group(1)
 
 
 def claude(model, system, user, tokens, thinking):
-    extra = ({"thinking": {"type": "disabled"}} if thinking == "off" else
+    # Sonnet 5.5 refuses "disabled"; "between_tools" is its thinking-off.
+    off = {"type": "between_tools"} if "sonnet" in model else {"type": "disabled"}
+    extra = ({"thinking": off} if thinking == "off" else
              {"thinking": {"type": "adaptive"}} if thinking == "adaptive" else {})
     j = tlp.post("https://api.anthropic.com/v1/messages", {
         "model": model, "max_tokens": tokens, **extra,
@@ -71,6 +74,8 @@ def call(model, system, user, tokens):
     try:
         if model == "haiku":
             out = claude("claude-haiku-5-5", system, user, tokens, HAIKU_THINKING)
+        elif model == "sonnet":
+            out = claude("claude-sonnet-5-5", system, user, tokens, HAIKU_THINKING)
         elif model == "gold":
             out = claude("claude-opus-5-5", system, user, 16000, "adaptive")
         else:
@@ -186,7 +191,7 @@ if __name__ == "__main__":
     lines = []
     with cf.ThreadPoolExecutor(int(os.environ.get("PAR", "6"))) as ex:
         if "write" in PARTS:
-            jobs = [(w, l, r) for w in MODELS for l in LANGS for r in range(RUNS)]
+            jobs = [(w, l, r) for w in WRITERS for l in LANGS for r in range(RUNS)]
             for writer, lang, run, n_items, qs, verdicts, dt, times, errors, err in ex.map(run_write, jobs):
                 print(f"\n### WRITE {writer} {lang} run{run} {dt:.1f}s items={n_items} valid={len(qs)}"
                       + (f" ERROR {err}" if err else ""), flush=True)

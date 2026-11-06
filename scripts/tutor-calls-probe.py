@@ -48,10 +48,15 @@ CHECK_SYSTEM = tlp.literal_body(CHECK_SRC, CHECK_SRC.index("let system = "))
 CHECK_CONTENT = tlp.literal_body(CHECK_SRC, CHECK_SRC.index("let content = "))
 
 
-def haiku(system, user, tokens):
-    extra = {"thinking": {"type": "disabled"}} if HAIKU_THINKING == "off" else {}
+CLAUDE_MODELS = {"haiku": "claude-haiku-5-5", "sonnet": "claude-sonnet-5-5"}
+
+
+def haiku(system, user, tokens, model="haiku"):
+    # Sonnet 5.5 refuses "disabled"; "between_tools" is its thinking-off.
+    off = {"type": "between_tools"} if model == "sonnet" else {"type": "disabled"}
+    extra = {"thinking": off} if HAIKU_THINKING == "off" else {}
     j = tlp.post("https://api.anthropic.com/v1/messages", {
-        "model": "claude-haiku-5-5", "max_tokens": tokens, **extra,
+        "model": CLAUDE_MODELS[model], "max_tokens": tokens, **extra,
         "system": system + os.environ.get("HAIKU_ADDENDUM", "") + "\n\nAnswer with the JSON object only.",
         "messages": [{"role": "user", "content": user}]},
         {"anthropic-version": "2023-06-01", "x-api-key": tlp.ANTHROPIC})
@@ -63,7 +68,7 @@ def haiku(system, user, tokens):
 def call(model, gem_model, thinking, tokens, system, user):
     t = time.time()
     try:
-        out = (haiku(system, user, tokens) if model == "haiku"
+        out = (haiku(system, user, tokens, model) if model in CLAUDE_MODELS
                else tlp.gemini(gem_model, system, user, thinking=thinking, tokens=tokens))
     except Exception as e:
         out = f"ERROR {e}"
