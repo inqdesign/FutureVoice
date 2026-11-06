@@ -9,8 +9,10 @@ import SwiftUI
 ///
 /// Raised ONCE, from `ConversationView.openConversation` — the one door every
 /// fresh call goes through — and only on an install with no spoken talk on
-/// file. Tutor mode too, since it decides how the call OPENS (a lesson
-/// instead of a hello). The call waits on it like it waits on the mic sheet; Start, Skip and
+/// file. No tutor switch (removed 2026-11-06, founder): the call's kind was
+/// already picked on the Talk ring, and the switch wrote the same key, so
+/// turning it on here made a tapped "Let's talk" open as a lesson. The call
+/// waits on it like it waits on the mic sheet; Start, Skip and
 /// every other dismissal resume it. Everything is written on Start; Skip
 /// keeps what was there. Capture: `-capture first-call-setup`.
 struct FirstCallSetupSheet: View {
@@ -43,7 +45,6 @@ struct FirstCallSetupSheet: View {
     @State private var speed: SpeechSpeed = .default
     @State private var coach = false
     @State private var sendToAnswer = false
-    @State private var tutor = false
     @State private var loaded = false
     @State private var started = false
 
@@ -127,17 +128,6 @@ struct FirstCallSetupSheet: View {
                     Text("Speaking speed")
                 }
 
-                // Same switch and words as the call's own settings.
-                if TutorMode.isAvailable {
-                    Section {
-                        Toggle(isOn: $tutor) {
-                            Label("Tutor mode", systemImage: "graduationcap")
-                        }
-                    } footer: {
-                        Text(explain("Pick a topic and your future self teaches it step by step, until you can say it without a mistake."))
-                    }
-                }
-
                 Section {
                     Toggle(isOn: $coach) {
                         Label("Try saying", systemImage: "lightbulb")
@@ -206,7 +196,6 @@ struct FirstCallSetupSheet: View {
         speed = SpeechSpeed(rawValue: UserDefaults.standard.string(forKey: SpeechSpeed.key) ?? "") ?? .default
         coach = CoachMode.isOn
         sendToAnswer = SendToAnswer.isOn
-        tutor = TutorMode.isOn
     }
 
     private func start() {
@@ -217,12 +206,11 @@ struct FirstCallSetupSheet: View {
         // and an unset choice would follow a later level change instead.
         UserDefaults.standard.set(coach, forKey: CoachMode.key)
         UserDefaults.standard.set(sendToAnswer, forKey: SendToAnswer.key)
-        if TutorMode.isAvailable { UserDefaults.standard.set(tutor, forKey: TutorMode.key) }
         started = true
         report("first_call_setup", [
             "level": level.rawValue, "speed": speed.rawValue,
             "coach": coach ? "on" : "off", "send": sendToAnswer ? "on" : "off",
-            "tutor": tutor ? "on" : "off",
+            "tutor": TutorMode.isOn ? "on" : "off",
         ])
         dismiss()
     }

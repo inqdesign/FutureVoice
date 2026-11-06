@@ -53,7 +53,6 @@ struct CallSettingsSheet: View {
     /// nil until the learner flips it — the level decides until then.
     @AppStorage(CoachMode.key) private var coachModeChoice: Bool?
     @AppStorage(AppState.proficiencyKey) private var proficiencyRaw = CEFRLevel.b1.rawValue
-    @AppStorage(TutorMode.key) private var tutorMode = false
     @AppStorage(Furigana.key) private var furigana = true
     @AppStorage(SendToAnswer.key) private var sendToAnswerChoice: Bool?
     private var sendToAnswer: Binding<Bool> {
@@ -91,18 +90,10 @@ struct CallSettingsSheet: View {
                     Text(explain("Applies from the next thing your future self says."))
                 }
 
-                // Part of the conversation prompt; a flip mid-call sends the
-                // gateway the new prompt (`TutorMode`). Hidden while
-                // `TutorMode.isAvailable` is off.
-                if TutorMode.isAvailable {
-                    Section {
-                        Toggle(isOn: $tutorMode) {
-                            Label("Tutor mode", systemImage: "graduationcap")
-                        }
-                    } footer: {
-                        Text(explain("Pick a topic and your future self teaches it step by step, until you can say it without a mistake."))
-                    }
-                }
+                // No tutor switch here (2026-11-06, founder): the Talk ring's
+                // Talk · Tutor · Pronunciation pages are where a call's kind
+                // is picked, and this switch wrote the same key, so a free
+                // talk turned into a lesson mid-call and the ring moved with it.
 
                 // Who ends the learner's turn: a pause, or their own Send
                 // (`SendToAnswer`). A flip mid-call reaches the gateway.
