@@ -3574,8 +3574,8 @@ struct ConversationView: View {
     /// Same shape as the mic sheet: suspends until the sheet goes, and
     /// `onDismiss` resumes whichever way it went.
     private func askFirstCallSetupIfNeeded() async {
+        // Marked shown by the sheet's Start, the only way out of it.
         guard FirstCallSetupSheet.shouldShow() else { return }
-        FirstCallSetupSheet.markShown()
         await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
             firstCallSetupContinuation = cont
             askingFirstCallSetup = true

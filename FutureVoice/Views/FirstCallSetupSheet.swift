@@ -12,9 +12,11 @@ import SwiftUI
 /// file. No tutor switch (removed 2026-11-06, founder): the call's kind was
 /// already picked on the Talk ring, and the switch wrote the same key, so
 /// turning it on here made a tapped "Let's talk" open as a lesson. The call
-/// waits on it like it waits on the mic sheet; Start, Skip and
-/// every other dismissal resume it. Everything is written on Start; Skip
-/// keeps what was there. Capture: `-capture first-call-setup`.
+/// waits on it like it waits on the mic sheet. There is no Skip and no
+/// swipe-down (2026-11-06, founder: "this has to be chosen, always"): the
+/// learner leaves only through Start, which writes everything, and the
+/// sheet counts as shown only then, so a killed app asks again next call.
+/// Capture: `-capture first-call-setup`.
 struct FirstCallSetupSheet: View {
     static let shownKey = "futurevoice.firstCallSetup.shown"
 
@@ -46,7 +48,6 @@ struct FirstCallSetupSheet: View {
     @State private var coach = false
     @State private var sendToAnswer = false
     @State private var loaded = false
-    @State private var started = false
 
     var body: some View {
         NavigationStack {
@@ -123,16 +124,14 @@ struct FirstCallSetupSheet: View {
                         Label("Try saying", systemImage: "lightbulb")
                     }
                 } footer: {
-                    Text(explain("After each thing your future self says, you see a way to answer. Sometimes it uses a word you're studying, and your most common mistake becomes the call's focus."))
+                    // Only what happens in THIS call (2026-11-06): the word
+                    // hint and the grammar focus need a notebook and two
+                    // past talks, and this sheet comes before the first.
+                    Text(explain("Each time your future self says something, you see a line you could answer with."))
                 }
 
             }
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    BarCloseButton(title: "Skip") { dismiss() }
-                }
-            }
             .safeAreaInset(edge: .bottom) {
                 Button(action: start) {
                     Text("Start the call").font(.headline).frame(maxWidth: .infinity)
@@ -144,12 +143,10 @@ struct FirstCallSetupSheet: View {
                 .background(Color(.systemGroupedBackground))
             }
         }
+        .interactiveDismissDisabled(!preview)
         .onAppear {
             load()
             if !preview { report("first_call_setup_shown") }
-        }
-        .onDisappear {
-            if !started && !preview { report("first_call_setup_skipped") }
         }
     }
 
@@ -177,7 +174,7 @@ struct FirstCallSetupSheet: View {
         // and an unset choice would follow a later level change instead.
         UserDefaults.standard.set(coach, forKey: CoachMode.key)
         UserDefaults.standard.set(sendToAnswer, forKey: SendToAnswer.key)
-        started = true
+        Self.markShown()
         report("first_call_setup", [
             "level": level.rawValue, "speed": speed.rawValue,
             "coach": coach ? "on" : "off", "send": sendToAnswer ? "on" : "off",
