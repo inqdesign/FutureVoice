@@ -3271,6 +3271,24 @@ that back. `TutorLesson.swift`, `TutorLessonViews.swift`,
   A verdict on a turn that was since joined with its continuation is
   dropped (`tutorStillSaid`). Only the no-lesson stage (asking for a
   topic) and planning let the tutor answer on its own.
+- **A conversation partner first, a tutor through it** (2026-11-06,
+  founder: "the tutor must hold a natural conversation, and help them
+  reach the challenge"). Until then every turn in a lesson was read as a
+  try, so a question, a remark, and every line said in the learner's own
+  language got "not yet" (a Korean learner's 다른 주제/패션 lines in a
+  Japanese lesson). `TutorJudge` now also says what the turn WAS (`kind`:
+  try · talk · help); only a try is judged. Talk → the tutor answers it
+  like a person and steers back with a question that asks for the
+  challenge; help (how do I say…, I don't know, or `user_turn.native`,
+  which skips the judge's guess) → it teaches the line and invites a try.
+  Neither counts as a miss or moves the checklist; the app still decides
+  every tick. The block's order is two jobs, conversation then lesson;
+  challenges open as a question inside the talk with the example as "you
+  could say…", and asked about ITS life the tutor never invents one (it
+  handed itself a translator's job before the rule). Judge probe 54/54
+  (ja/en: tries, fragments, talk, help, own language, change topic);
+  Haiku replies read for every note. Telemetry `tutor_turn_talk`,
+  `tutor_turn_help`. Not yet tried in a real call.
 - **The tutor speaks first through `nudge`** (gateway, 2026-10-24): a
   bracketed note from the app ("topic picked", "lesson ready", "back to
   finish last time's") answered as soon as no line is playing, 8 per call.

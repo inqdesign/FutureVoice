@@ -90,6 +90,25 @@ final class TutorModeTests: XCTestCase {
         XCTAssertFalse(p.contains("ALL DONE"))
     }
 
+    /// Only a try is judged; talking and asking for help are answered as
+    /// conversation, and an answer from an older judge with no kind is a try.
+    func testJudgeTellsATryFromTalkAndHelp() throws {
+        func kind(_ json: String) throws -> TutorJudge.Verdict.Kind {
+            try JSONDecoder().decode(TutorJudge.Verdict.self, from: Data(json.utf8)).turnKind
+        }
+        XCTAssertEqual(try kind(#"{"kind":"talk","done":false}"#), .talk)
+        XCTAssertEqual(try kind(#"{"kind":"help","done":false}"#), .help)
+        XCTAssertEqual(try kind(#"{"kind":"try","done":true}"#), .attempt)
+        XCTAssertEqual(try kind(#"{"done":false}"#), .attempt)
+    }
+
+    func testTutorIsAConversationPartnerFirst() {
+        let p = prompt("en", tutor: true, lesson: lesson(done: 1))
+        XCTAssertTrue(p.contains("be a real conversation partner"))
+        XCTAssertTrue(p.contains("Not a try (the note says so)"))
+        XCTAssertFalse(p.contains("Don't wander off the lesson"))
+    }
+
     func testFinalCheckOutcome() {
         typealias V = TutorFinalCheck.Verdict
         func o(_ v: V, slips: Int = 0, used: Bool = false) -> TutorFinalCheck.Outcome {

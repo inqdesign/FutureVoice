@@ -397,40 +397,69 @@ enum TutorJudge {
         var wantsOtherTopic: Bool { other_topic == true }
         /// What the line still lacks, in a few English words, for the tutor.
         var missing_note: String? = nil
+        /// What the turn WAS (2026-11-06, founder: "the tutor has to be able
+        /// to hold a natural conversation, and help them reach the
+        /// challenge"): "try", "talk" or "help". Only a try is judged; a
+        /// remark, a question or a request for help was answered as a miss
+        /// before, and a line said in the learner's own language always was.
+        var kind: String? = nil
+
+        enum Kind { case attempt, talk, help }
+        /// A missing or unknown kind is a try, the old reading.
+        var turnKind: Kind {
+            switch kind {
+            case "talk": return .talk
+            case "help": return .help
+            default: return .attempt
+            }
+        }
     }
 
     /// Did `line` do `challenge`? Content only — whether it was said
     /// without mistakes is the correction call's answer, not this one's.
-    /// Also asked on every try: do they want out of this lesson?
+    /// Also asked on every turn: was it a try at all, and do they want out
+    /// of this lesson? `ownLanguage`: the gateway heard the line in the
+    /// learner's native language.
     static func read(_ line: String, challenge: TutorLesson.Challenge,
-                     targetLanguage: String, askedWith: String) async -> Verdict? {
+                     targetLanguage: String, askedWith: String,
+                     ownLanguage: Bool = false) async -> Verdict? {
         let target = LanguageCatalog.englishName(targetLanguage)
         let system = """
-        A \(target) learner is working on one speaking challenge. Decide \
-        whether the line they just said DOES it: it says, in \(target), what \
-        the challenge asks for — all of it, as a full answer, not a fragment \
-        of it or a different thing. Their own words and their own facts are \
-        fine; it doesn't have to match the example. Ignore grammar and \
-        spelling (someone else checks those) and ignore anything extra they \
-        added. It was transcribed from speech.
-        Also decide "other_topic": true ONLY when they ask to change the \
-        topic, stop or skip this lesson, or practice something else instead \
-        (in any language) — not for a mistake, a question about the \
-        challenge, or "I don't know".
-        Also "missing_note": when "done" is false, what the line still \
+        A \(target) learner is talking with their tutor, working on one \
+        speaking challenge. Read the line they just said (transcribed from \
+        speech) and decide:
+        "kind": "try" when it is an attempt at the challenge — answering \
+        what the challenge asks, in \(target), even partly or with mistakes \
+        (a short answer to the tutor's question for it is a try). "talk" \
+        when they are just talking with the tutor instead: a reaction, a \
+        comment, a story, a question about something else. "help" when they \
+        ask how to say something, ask for the example, say they don't know \
+        or are stuck, or said it in another language because they couldn't \
+        find the \(target).
+        "done": only for a try — true when it DOES the challenge: it says, \
+        in \(target), what the challenge asks for — all of it, as a full \
+        answer, not a fragment of it or a different thing. Their own words \
+        and their own facts are fine; it doesn't have to match the example. \
+        Ignore grammar and spelling (someone else checks those) and ignore \
+        anything extra they added. False for "talk" and "help".
+        "other_topic": true ONLY when they ask to change the topic, stop or \
+        skip this lesson, or practice something else instead (in any \
+        language) — not for a mistake, a question about the challenge, or \
+        "I don't know".
+        "missing_note": for a try that isn't done, what the line still \
         lacks, in a few English words ("didn't say which size"); else "".
-        Return STRICT JSON only: {"done": true|false, "other_topic": true|false, "missing_note": "..."}
+        Return STRICT JSON only: {"kind": "try"|"talk"|"help", "done": true|false, "other_topic": true|false, "missing_note": "..."}
         """
         let content = """
         Challenge: \(challenge.task)
         Example of a line that does it: \(challenge.example)
         The tutor had just said: \(askedWith)
-        The learner said: \(line)
+        The learner said: \(line)\(ownLanguage ? "\n(They said this in their own language, not in \(target).)" : "")
         """
         let verdict: Verdict? = try? await GeminiClient.background.sendJSON(
             system: system,
             messages: [GeminiClient.Message(role: .user, content: content)],
-            model: .flashLite31, maxTokens: 120, purpose: "tutor",
+            model: .flashLite31, maxTokens: 160, purpose: "tutor",
             idempotencyKey: "tutor-judge:\(UUID().uuidString)", requestTimeout: 10,
             fastThinking: true)
         return verdict
