@@ -2031,8 +2031,21 @@ six pooled ≈A2 interviews read B2 197 times in 200, twelve native ones C1.
   headword SET did not change, and `KoreanMorph` keeps ranking readings by
   the old bands (`ko_morph_rank.tsv`): the curriculum's extra nouns and its
   new bands each flipped verb readings in Tatoeba's Korean (사는 → 사, 오는
-  → 오, 배우는 → 배우), and a reading's likelihood is not a level. Korean,
-  Japanese and Spanish still use the old count rule.
+  → 오, 배우는 → 배우), and a reading's likelihood is not a level.
+- **Korean, Japanese and Spanish are calibrated too** (2026-11-06), the
+  German way, each read by the app's OWN analyzer so the level and the
+  notebook agree on what a word is (`VocabSophistication.Reader`:
+  `KoreanMorph`, `JapaneseMorph` + `word_classes_ja.tsv`, `SpanishMorph`'s
+  table). Cuts A2 / B1 / native-like: es 0.30 / 0.33 / 0.36 (126k pairs,
+  r 0.89, as good as German, but its levels are frequency bands), ja 0.86 /
+  0.90 / 0.93 (112k, r 0.85, crowded at the top: JLPT has no C2), ko 0.56 /
+  0.60 / 0.62 (only 4.8k pairs, r 0.86: A1–B1 holds, the native-like edge is
+  barely resolved). Japanese counts a hit only when every kanji said is in
+  the headword (船 is not 舟); Spanish reads a participle after haber as its
+  verb (the table grades "comprado" C2). Long stop lists per language name
+  the light verbs, pronouns, bound nouns and the grammar an analyzer reads
+  as a word. `parallel_more.sh` + `parallel_cuts_more.py` rerun it. Android:
+  owed (it reads English only).
 - `scripts/vocab-calibration/` reruns all of it (corpus downloads in the
   headers). Tests: `VocabSophisticationTests`, Android `VocabShareTest`.
   Android reads English only: it has no German lemmatizer and no word
@@ -2608,6 +2621,41 @@ and hidden for want of a wordlist. Two facts shaped the rest:
 - Exams: DELE, SIELE, OPIc. Speech challenges `…009` (the bundled sample)
   and `…00a` (ageing), `20261015160000`.
 - Tests: `SpanishTargetTests`.
+
+## One line per language, measured (2026-11-06)
+
+The shared prompt rules carry English examples, and the other languages
+kept their own habits through them. Found with the probes on Haiku 5.5 as
+production runs it (beginner, reply-leak, correction with a NATIVE language
+other than English, coach, a five-language tutor probe), fixed by lines that
+reach ONE language each (`ConversationEngine+LanguageLines.swift`,
+`LanguageLineTests`), so every other prompt is byte-identical:
+
+- **Call**: ko/ja A1–A2 beginner questions (open questions ko 20/74 → 10/75,
+  ja 13/72 → 0/76), ko/ja first-call "glad to talk" said one way (it was
+  "목소리 들으니까 좋다", the longing `selfWarmth` forbids), ja bare name or
+  きみ and 私 as the future self (no さん on their own name, one first person),
+  es Latin American words under the default accent (Spain-only words 11 → 0)
+  and no gender guessed for a learner nobody knows (the self shares it).
+- **Name the right form; never quote the wrong one.** Lines that listed the
+  forbidden form ("no encantado/encantada…", a list of open Korean
+  questions) made Haiku say it and correct itself aloud ("ケンさん…じゃなくて").
+  Japanese keeps its list only because without it the open questions came
+  back. A German line was tried and dropped for the same reason.
+- **Corrections**: with a Korean native language, ja/de "why"/"reason" came
+  back in the TARGET language (ja 19/48 → 6/48 with a worked example, de
+  7/48 → 0). `correction-probe.py` hardcodes an English native, which hid it:
+  test a native other than English. es present tense in reported speech and
+  de "der meinte" are no longer fixed (`spokenGrammarGuard`).
+- **Tutor**: ko stays 반말 and keeps THEIR ending when saying a line back,
+  ja plain form and never あなた (`tutorRegisterLine`). **Coach**: de/es
+  brackets hold the number WITH its noun ("seit [zwei Jahren]").
+- Open, not fixed: the tutor judge passes a bare "Ingenieur." but not
+  "Engineer." (a fix exists that changes every language: the founder's
+  call); the Gemini coach fallback answers Japanese casual lines politely
+  33/36; SpokenGate may pass a short English note split at a period inside
+  a quote; Spanish "para que se quede" calque in the tutor; `scripts/
+  tutor-lesson-probe.py` is out of date (en/ko only, old contract).
 
 ## A call does not die quietly (2026-09-13)
 
