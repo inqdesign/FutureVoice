@@ -1,4 +1,5 @@
--- Podcast host: open a new episode of your own show. Original script.
+-- Speech challenge (founder, 2026-11-06): podcast host, open a new episode
+-- of your own show. Original script, written for nawana.
 -- No digits ("five-minute", "half an hour").
 insert into public.speech_challenges (id, language, title, genre, body, sources, target_seconds, category, intro, link)
 values
