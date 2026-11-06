@@ -335,7 +335,8 @@ reasons are the design:
   recording, because a blob is never edited — and reads the newest copy back
   when the phone has none or an older take. `VoiceRevival` fetches it from
   iCloud on demand (`SyncEngine.fetchVoiceSample`). It goes to the learner's
-  own iCloud only; our server copy still lives 24 h.
+  own iCloud (or Google Drive) only. **We keep no copy** (2026-11-06,
+  founder): `voice-clone` forwards the recording to Cartesia and forgets it.
 - **A full iCloud is remembered, and SAID** (`SyncEngine.quotaFull`). The
   refused half (audio, or everything) is not retried for 6 h unless Sync now
   is tapped — it was retried on every write, once per turn of a live call —
@@ -2989,9 +2990,10 @@ construction:
   hardest to find themselves can't drift by trying.
 - **"Remove accent" is the bare uuid.** The recording is still the way back
   for a RE-CLONE: `VoiceSampleStore` (Documents, so it rides in the backup) is
-  what a rebuild reads. The server copy in `voice-originals` is NOT a
-  fallback: it is kept for 24 h to listen to a clone that came out wrong, and
-  the consent screen says exactly that.
+  what a rebuild reads, and the ONLY copy: since 2026-11-06 nothing keeps
+  the recording on our side (the `voice-originals` bucket is empty and
+  nothing writes to it, the Mac's archive job is gone). Don't bring a server
+  copy back: the privacy policy says the recording stays on the phone.
 
 - **The accent also picks the WORDS** (2026-10-20, `ConversationEngine.varietyGuard`,
   `VoiceAccentCatalog.writingVariety`). A non-default accent (British,
