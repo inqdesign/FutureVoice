@@ -321,6 +321,12 @@ class TalkViewModel(context: Context) : ViewModel() {
     private var tutorWaitTurnAt: Long? = null
     private var tutorWaitNoteAt: Long? = null
     private var tutorWaitKind = ""
+    /** The correction asked for before Send ([armEarlyCorrection], iOS 2026-11-06). */
+    private var earlyCorrection: Pair<String, Deferred<ConversationTurnPayload?>>? = null
+    private var earlyCorrectionJob: Job? = null
+    private var earlyCorrectionFires = 0
+    private var earlyCorrectionUsed = false
+    private var earlyCorrectionFired = 0
     /** The topic sheet is open: choosing is someone being here (iOS
      *  `showingTutorTopics` in the idle watch, 74d3ccf3). */
     private var tutorTopicsShowing = false
@@ -1012,9 +1018,13 @@ class TalkViewModel(context: Context) : ViewModel() {
                 if (wasPending && !_state.value.sendPending) pronSendSettled()
                 pronHeard(text)
             }
+            armEarlyCorrection(text)
         }
         realtime.onUserTurn = turn@{ said, wav, ms, fluency, flags ->
             markLearnerSpoke()
+            // A turn whose correction is skipped (own language, a
+            // pronunciation call) still ends the early one.
+            if (flags.native || pronThisCall) takeEarlyCorrection("")
             sendPendingJob?.cancel()
             _state.update { it.copy(sendPending = false) }
             // The rest of a turn the gateway re-opened after cutting the
@@ -1031,7 +1041,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                     })
                 }
                 val correction = if (flags.native || pronThisCall) CompletableDeferred<List<TurnFix>?>(null)
-                    else requestRealtimeSuggestion(last.id, joined, cfg)
+                    else requestRealtimeSuggestion(last.id, joined, cfg, takeEarlyCorrection(joined))
                 tutorTurn(last.id, joined, correction, ownLanguage = flags.native)
                 pronTurn(last.id, joined)
                 return@turn
@@ -1047,7 +1057,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             // A line said in their own language was answered with the target
             // way to say it; a correction would be built on the wrong language.
             val correction = if (flags.native || pronThisCall) CompletableDeferred<List<TurnFix>?>(null)
-                else requestRealtimeSuggestion(turn.id, said, cfg)
+                else requestRealtimeSuggestion(turn.id, said, cfg, takeEarlyCorrection(said))
             tutorTurn(turn.id, said, correction, ownLanguage = flags.native)
             pronTurn(turn.id, said)
         }
@@ -1066,7 +1076,10 @@ class TalkViewModel(context: Context) : ViewModel() {
                 log("tutor_turn_wait", mapOf(
                     "kind" to (if (tutorWaitNoteAt == null) "none" else tutorWaitKind),
                     "note_ms" to (tutorWaitNoteAt?.let { (it - turnAt).toString() } ?: ""),
-                    "reply_ms" to (now - turnAt).toString()))
+                    "reply_ms" to (now - turnAt).toString(),
+                    "send" to if (sendToAnswerOn) "1" else "0",
+                    "early" to if (earlyCorrectionUsed) "1" else "0",
+                    "early_fires" to earlyCorrectionFired.toString()))
                 tutorWaitTurnAt = null
                 tutorWaitNoteAt = null
             }
@@ -1278,7 +1291,8 @@ class TalkViewModel(context: Context) : ViewModel() {
     /** Answers the turn's fixes for a tutor lesson ([tutorTurn]): empty for a
      *  line too short to correct, null when the correction failed (iOS
      *  `Task<[TurnFix]?, Never>`). */
-    private fun requestRealtimeSuggestion(turnId: String, said: String, cfg: TalkConfig): Deferred<List<TurnFix>?> {
+    private fun requestRealtimeSuggestion(turnId: String, said: String, cfg: TalkConfig,
+                                          early: Deferred<ConversationTurnPayload?>? = null): Deferred<List<TurnFix>?> {
         // Never count words on " ": Japanese writes none, so every turn
         // measured one word and no Japanese line was ever corrected.
         if (com.roro.futurevoice.data.WordSplitter.count(said, cfg.targetLanguage) < 3) {
@@ -1286,6 +1300,22 @@ class TalkViewModel(context: Context) : ViewModel() {
             // can be a challenge done).
             return CompletableDeferred(emptyList())
         }
+        // A correction already asked for these words before Send (tutor
+        // lesson, Send mode) is the one used; anything else is asked now.
+        val request = early ?: correctionPayload(said, cfg, "rt-suggest:$turnId")
+        return viewModelScope.async {
+            val payload = request.await() ?: return@async null
+            val fixes = payload.turnSuggestion(said, cfg.targetLanguage)?.fixes.orEmpty()
+            // A turn since joined with its continuation is corrected as the
+            // whole line, not as its first half (iOS `transcript == said`).
+            if (_state.value.turns.firstOrNull { it.id == turnId }?.transcript == said) attachSuggestion(turnId, payload)
+            fixes
+        }
+    }
+
+    /** The correction call itself, for [said] as a reply to the last line
+     *  the fluent self said. */
+    private fun correctionPayload(said: String, cfg: TalkConfig, key: String): Deferred<ConversationTurnPayload?> {
         // The line said TO them, so the rewrite is natural in THIS
         // conversation — the whole turn is re-said now, and a turn only reads
         // right against what it answers. Context only; the prompt forbids
@@ -1295,7 +1325,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         val content = if (heard.isEmpty()) "They said: \"$said\""
             else "They were just told: \"$heard\"\nThey said: \"$said\""
         return viewModelScope.async {
-            val payload = try {
+            try {
                 GeminiClient(auth).sendJson(
                     system = CorrectionOnlyPrompt.build(cfg.targetLanguage, cfg.nativeLanguage, cfg.level,
                         relationshipLine = ConversationCharacter.relationshipRegisterLine(
@@ -1309,25 +1339,58 @@ class TalkViewModel(context: Context) : ViewModel() {
                     // was cut off at 900 — a truncation loses the WHOLE
                     // correction, and Say it again then reads the turn raw.
                     maxTokens = 2048, purpose = "turn",
-                    idempotencyKey = "rt-suggest:$turnId",
+                    idempotencyKey = key,
                     fastThinking = CorrectionThinking.fast(cfg.targetLanguage),
                 )
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 // Was invisible until 2026-10-06 (iOS). One row per failed
                 // turn; `words` says whether it is the long turns that fail.
                 com.roro.futurevoice.core.Telemetry.log("talk_correction_failed", mapOf(
                     "error" to correctionErrorKind(e),
                     "words" to com.roro.futurevoice.data.WordSplitter.count(said, cfg.targetLanguage).toString(),
                 ))
-                if (e is kotlinx.coroutines.CancellationException) throw e
                 null
-            } ?: return@async null
-            val fixes = payload.turnSuggestion(said, cfg.targetLanguage)?.fixes.orEmpty()
-            // A turn since joined with its continuation is corrected as the
-            // whole line, not as its first half (iOS `transcript == said`).
-            if (_state.value.turns.firstOrNull { it.id == turnId }?.transcript == said) attachSuggestion(turnId, payload)
-            fixes
+            }
         }
+    }
+
+    /**
+     * Send mode in a tutor lesson (iOS 2026-11-06): the learner has stopped
+     * and not yet pressed Send, and the try will wait for its correction
+     * (~3 s on Haiku) once they do. So the correction starts once the words
+     * have held still for [EARLY_CORRECTION_SETTLE_MS]; at Send it is used if
+     * the turn says the same thing, else asked again. At most
+     * [MAX_EARLY_CORRECTIONS] per turn.
+     */
+    private fun armEarlyCorrection(partial: String) {
+        earlyCorrectionJob?.cancel()
+        val cfg = config ?: return
+        if (!sendToAnswerOn || !tutorThisCall || !tutorJudging || pronThisCall || !REALTIME) return
+        val text = partial.trim()
+        if (com.roro.futurevoice.data.WordSplitter.count(text, cfg.targetLanguage) < 3 ||
+            earlyCorrectionFires >= MAX_EARLY_CORRECTIONS || earlyCorrection?.first == text) return
+        earlyCorrectionJob = viewModelScope.launch {
+            delay(EARLY_CORRECTION_SETTLE_MS)
+            if (_state.value.partial.trim() != text) return@launch
+            earlyCorrection?.second?.cancel()
+            earlyCorrectionFires += 1
+            earlyCorrection = text to correctionPayload(text, cfg, "rt-suggest-early:${StoreJson.newId()}")
+        }
+    }
+
+    /** Every learner turn ends the early correction: the one asked for these
+     *  words if there is one, null otherwise (cancelled). */
+    private fun takeEarlyCorrection(said: String): Deferred<ConversationTurnPayload?>? {
+        earlyCorrectionJob?.cancel()
+        val lang = config?.targetLanguage ?: "en"
+        val early = earlyCorrection?.takeIf { SpokenWords.saysTheSameThing(it.first, said, lang) }?.second
+        earlyCorrectionUsed = early != null
+        earlyCorrectionFired = earlyCorrectionFires
+        if (early == null) earlyCorrection?.second?.cancel()
+        earlyCorrection = null
+        earlyCorrectionFires = 0
+        return early
     }
 
     /**
@@ -3158,6 +3221,8 @@ class TalkViewModel(context: Context) : ViewModel() {
     }
 
     companion object {
+        private const val EARLY_CORRECTION_SETTLE_MS = 800L
+        private const val MAX_EARLY_CORRECTIONS = 3
         /** A second drop inside a minute is not a blip; it gets the question
          *  rather than another silent reconnect. */
         private const val AUTO_RECONNECT_SPACING_MS = 60_000L
