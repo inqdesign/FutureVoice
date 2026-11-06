@@ -120,6 +120,10 @@ Deno.serve(async (req) => {
   // client sends nothing and the prompt is byte-identical to before.
   const politeSettingLine = typeof body.polite_setting_line === "string"
     ? body.polite_setting_line.slice(0, 1200) : ""
+  // The accent's word variety (iOS `varietyGuard`, 3709fd0e), client-built:
+  // only the phone knows the accent. An older client sends nothing.
+  const varietyLine = typeof body.variety_line === "string"
+    ? body.variety_line.slice(0, 1200) : ""
 
   const rec = await recordFreeUsage({
     supabase, userId: user.id, action: "gemini_summary", purpose: "summary",
@@ -134,7 +138,7 @@ Deno.serve(async (req) => {
   const system = summarySystemPrompt({
     targetLanguage, nativeLanguage, profile: body.profile ?? {},
     knownAboutUser, rememberedNotes, shareCorrections, expressionBudget,
-    talkDate, utcOffsetMinutes, relationshipRegisterLine, politeSettingLine,
+    talkDate, utcOffsetMinutes, relationshipRegisterLine, politeSettingLine, varietyLine,
   })
   // Same user message SessionSummarizer.swift builds: the read-line and
   // drill-line notes ride under the metrics only when such a line is in the
