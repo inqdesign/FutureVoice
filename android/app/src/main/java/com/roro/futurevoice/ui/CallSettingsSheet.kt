@@ -20,7 +20,6 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.outlined.FontDownload
 import androidx.compose.material.icons.outlined.Lightbulb
-import androidx.compose.material.icons.outlined.School
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -116,18 +115,9 @@ fun CallSettingsSheet(
             }
             GroupedFooter(stringResource(R.string.applies_from_the_next_thing_your_future_self_says))
 
-            // Part of the conversation prompt; a flip mid-call sends the
-            // gateway the new prompt (`TutorMode`). Hidden while
-            // `TutorMode.IS_AVAILABLE` is off.
-            if (com.roro.futurevoice.talk.TutorMode.IS_AVAILABLE) {
-                GroupedSectionSpacer()
-                GroupedCard {
-                    ToggleRow(Icons.Outlined.School, stringResource(R.string.tutor_mode), tutorMode) {
-                        onTutorMode(it)
-                    }
-                }
-                GroupedFooter(stringResource(R.string.pick_a_topic_and_your_future_self_teaches_it_step_by_step_un_ad6699))
-            }
+            // No tutor switch here (iOS, 2026-11-06, founder): the Talk
+            // ring's pages pick a call's kind, and this switch wrote the same
+            // key. `tutorMode` / `onTutorMode` stay for the callers.
 
             // Who ends the learner's turn: a pause, or their own Send
             // (`SendToAnswer`). A flip mid-call reaches the gateway.

@@ -20,7 +20,6 @@ import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.UnfoldMore
 import androidx.compose.material.icons.outlined.Lightbulb
-import androidx.compose.material.icons.outlined.School
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -114,7 +113,6 @@ fun FirstCallSetupSheet(
     var sendToAnswer by remember {
         mutableStateOf(SendToAnswer.resolve(SendToAnswer.choice(context), currentLevel.code))
     }
-    var tutor by remember { mutableStateOf(TutorMode.isOn(context)) }
     var started by remember { mutableStateOf(false) }
 
     fun report(event: String, extra: Map<String, String> = emptyMap()) {
@@ -151,12 +149,11 @@ fun FirstCallSetupSheet(
         // and an unset choice would follow a later level change instead.
         CoachMode.setChoice(context, coach)
         SendToAnswer.setChoice(context, sendToAnswer)
-        if (TutorMode.IS_AVAILABLE) TutorMode.set(context, tutor)
         started = true
         report("first_call_setup", mapOf(
             "level" to level.code, "speed" to speed.raw,
             "coach" to if (coach) "on" else "off", "send" to if (sendToAnswer) "on" else "off",
-            "tutor" to if (tutor) "on" else "off",
+            "tutor" to if (TutorMode.isOn(context)) "on" else "off",
         ))
         onDismiss(true)
     }
@@ -212,15 +209,6 @@ fun FirstCallSetupSheet(
                     }
                 }
 
-                // Same switch and words as the call's own settings.
-                if (TutorMode.IS_AVAILABLE) {
-                    GroupedSectionSpacer()
-                    GroupedCard {
-                        SetupToggleRow(Icons.Outlined.School, stringResource(R.string.tutor_mode), tutor) { tutor = it }
-                    }
-                    GroupedFooter(stringResource(
-                        R.string.pick_a_topic_and_your_future_self_teaches_it_step_by_step_un_ad6699))
-                }
                 GroupedSectionSpacer()
                 GroupedCard {
                     SetupToggleRow(Icons.Outlined.Lightbulb, stringResource(R.string.try_saying), coach) { coach = it }
