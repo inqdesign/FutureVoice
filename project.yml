@@ -126,6 +126,9 @@ targets:
         Debug:
           PRODUCT_BUNDLE_IDENTIFIER: com.roro.futurevoice.dev
           APP_DISPLAY_NAME: nawana dev
+          # Siri hears "nawana dev" as the store app "nawana"; a dev build
+          # answers to a name the store app doesn't have.
+          APP_SPOKEN_NAME: Future Voice
           ICLOUD_CONTAINER: iCloud.com.roro.futurevoice.dev
           APS_ENVIRONMENT: development
           ICLOUD_ENVIRONMENT: Development
@@ -136,6 +139,7 @@ targets:
         Release:
           PRODUCT_BUNDLE_IDENTIFIER: com.roro.futurevoice
           APP_DISPLAY_NAME: nawana
+          APP_SPOKEN_NAME: 나와나
           ICLOUD_CONTAINER: iCloud.com.roro.futurevoice
           APS_ENVIRONMENT: production
           ICLOUD_ENVIRONMENT: Production

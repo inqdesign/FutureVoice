@@ -1,0 +1,46 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "${applicationName} call" : {
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "${applicationName} 전화" } }
+      }
+    },
+    "Call my future self in ${applicationName}" : {
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "${applicationName}에서 미래의 나한테 전화 걸어줘" } }
+      }
+    },
+    "Open my words in ${applicationName}" : {
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "${applicationName}에서 내 단어장 열어줘" } }
+      }
+    },
+    "Review my cards in ${applicationName}" : {
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "${applicationName}에서 복습하자" } }
+      }
+    },
+    "Show my words in ${applicationName}" : {
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "${applicationName} 단어장 보여줘" } }
+      }
+    },
+    "Start a talk in ${applicationName}" : {
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "${applicationName}에서 대화 시작해줘" } }
+      }
+    },
+    "Start my review in ${applicationName}" : {
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "${applicationName} 복습 시작해줘" } }
+      }
+    },
+    "Take my weekly test in ${applicationName}" : {
+      "localizations" : {
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "${applicationName}에서 주간 테스트 볼래" } }
+      }
+    }
+  },
+  "version" : "1.0"
+}
