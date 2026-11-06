@@ -205,8 +205,6 @@
     <string name="add_your_trip">"Reise hinzufügen"</string>
     <string name="advanced_i_express_myself_fluently_and_precisely">"Fortgeschritten – ich drücke mich fließend und präzise aus"</string>
     <string name="after_each_take">"Das bekommst du nach der Aufnahme"</string>
-    <!-- "After each thing your future self says, you see a way to answer. Sometimes it uses a word you're studying, and your most common mistake becomes the call's focus." -->
-    <string name="after_each_thing_your_future_self_says_you_see_a_way_to_answ_35f388">"Nach jedem Satz deines fließenden Ichs siehst du, wie du antworten kannst. Manchmal steckt ein Wort darin, das du gerade lernst, und dein häufigster Fehler wird zum Fokus des Anrufs."</string>
     <string name="after_work_drinks">"Feierabend-Drinks"</string>
     <string name="again">"Nochmal"</string>
     <string name="again_at_the_end_of_this_round">"Am Ende dieser Runde nochmal"</string>
@@ -801,6 +799,8 @@
     <string name="each_talk_fills_these_bars_a1_to_c2">"Jedes Gespräch füllt diese Balken, von A1 bis C2."</string>
     <!-- 'Each time your fluent self speaks, a short answer you could give appears above the button, at your level, with its meaning in your language. A blank (___) is where only you know the answer.' -->
     <string name="each_time_your_fluent_self_speaks_a_short_answer_you_could_g_5bd1c9">"Jedes Mal, wenn dein fließendes Ich spricht, erscheint über dem Button eine kurze Antwort, die du geben könntest – auf deinem Niveau und mit Bedeutung in deiner Sprache. Eine Lücke (___) steht für etwas, das nur du weißt."</string>
+    <!-- 'Each time your future self says something, you see a line you could answer with.' -->
+    <string name="each_time_your_future_self_says_something_you_see_a_line_you_9bbb1d">"Jedes Mal, wenn dein fließendes Ich etwas sagt, siehst du einen Satz, mit dem du antworten kannst."</string>
     <string name="earlier_calls">"Frühere Anrufe"</string>
     <string name="earphone_mic">"Kopfhörer-Mikrofon"</string>
     <string name="easy">"Leicht"</string>

@@ -205,8 +205,6 @@
     <string name="add_your_trip">"旅行を追加"</string>
     <string name="advanced_i_express_myself_fluently_and_precisely">"上級 · 流暢で正確に表現できる"</string>
     <string name="after_each_take">"録画が終わったら"</string>
-    <!-- "After each thing your future self says, you see a way to answer. Sometimes it uses a word you're studying, and your most common mistake becomes the call's focus." -->
-    <string name="after_each_thing_your_future_self_says_you_see_a_way_to_answ_35f388">"流暢な自分が話すたびに、答え方の例が出ます。勉強中の単語が入ることもあり、いちばんよくするミスがこの通話のポイントになります。"</string>
     <string name="after_work_drinks">"仕事終わりの一杯"</string>
     <string name="again">"もう一度"</string>
     <string name="again_at_the_end_of_this_round">"この回の最後にもう一度"</string>
@@ -804,6 +802,8 @@
     <string name="each_talk_fills_these_bars_a1_to_c2">"通話するたびに、A1からC2までのバーが埋まっていきます。"</string>
     <!-- 'Each time your fluent self speaks, a short answer you could give appears above the button, at your level, with its meaning in your language. A blank (___) is where only you know the answer.' -->
     <string name="each_time_your_fluent_self_speaks_a_short_answer_you_could_g_5bd1c9">"流暢な自分が話すたびに、レベルに合った短い答えの例がボタンの上に表示されます。意味も一緒に出ます。空欄（___）は、自分にしかわからない内容を入れるところです。"</string>
+    <!-- 'Each time your future self says something, you see a line you could answer with.' -->
+    <string name="each_time_your_future_self_says_something_you_see_a_line_you_9bbb1d">"流暢な自分がひとこと話すたびに、こう答えればいいという文が出ます。"</string>
     <string name="earlier_calls">"区分前の通話"</string>
     <string name="earphone_mic">"イヤホンのマイク"</string>
     <string name="easy">"簡単だった"</string>

@@ -205,8 +205,6 @@
     <string name="add_your_trip">"Ajouter ton voyage"</string>
     <string name="advanced_i_express_myself_fluently_and_precisely">"Avancé — je m’exprime avec fluidité et précision"</string>
     <string name="after_each_take">"Ce que tu obtiens à la fin"</string>
-    <!-- "After each thing your future self says, you see a way to answer. Sometimes it uses a word you're studying, and your most common mistake becomes the call's focus." -->
-    <string name="after_each_thing_your_future_self_says_you_see_a_way_to_answ_35f388">"Après chaque réplique de ton moi fluide, tu vois une façon de répondre. Parfois, elle utilise un mot que tu étudies, et ton erreur la plus fréquente devient l’objectif de l’appel."</string>
     <string name="after_work_drinks">"Verre après le boulot"</string>
     <string name="again">"Encore"</string>
     <string name="again_at_the_end_of_this_round">"On y revient à la fin de cette manche"</string>
@@ -801,6 +799,8 @@
     <string name="each_talk_fills_these_bars_a1_to_c2">"Chaque appel remplit ces barres, de A1 à C2."</string>
     <!-- 'Each time your fluent self speaks, a short answer you could give appears above the button, at your level, with its meaning in your language. A blank (___) is where only you know the answer.' -->
     <string name="each_time_your_fluent_self_speaks_a_short_answer_you_could_g_5bd1c9">"Chaque fois que ton moi fluide parle, une réponse courte que tu pourrais donner apparaît au-dessus du bouton, à ton niveau, avec son sens dans ta langue. Un blanc (___) marque ce que toi seul sais."</string>
+    <!-- 'Each time your future self says something, you see a line you could answer with.' -->
+    <string name="each_time_your_future_self_says_something_you_see_a_line_you_9bbb1d">"Chaque fois que ton moi fluide dit quelque chose, tu vois une phrase pour lui répondre."</string>
     <string name="earlier_calls">"Appels précédents"</string>
     <string name="earphone_mic">"Micro des écouteurs"</string>
     <string name="easy">"Facile"</string>

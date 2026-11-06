@@ -28,7 +28,7 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.SheetValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -69,9 +69,11 @@ import com.roro.futurevoice.talk.TutorMode
  *
  * Raised ONCE, from [TalkScreen] before the call starts — the one door every
  * fresh call goes through — and only on an install with no spoken talk on
- * file. The call waits on it like it waits on the mic sheet; Start, Skip and
- * every other dismissal resume it. Everything is written on Start; Skip keeps
- * what was there. Capture: `first-call-setup`.
+ * file. The call waits on it like it waits on the mic sheet. There is no Skip,
+ * and neither a swipe, the scrim nor Back closes it (iOS, 2026-11-06, founder:
+ * "this has to be chosen, always"): Start is the only way out, writes
+ * everything, and marks the sheet shown, so a killed app asks again next call.
+ * Capture: `first-call-setup`.
  */
 object FirstCallSetup {
     /** Same name as iOS's defaults key. */
@@ -113,7 +115,6 @@ fun FirstCallSetupSheet(
     var sendToAnswer by remember {
         mutableStateOf(SendToAnswer.resolve(SendToAnswer.choice(context), currentLevel.code))
     }
-    var started by remember { mutableStateOf(false) }
 
     fun report(event: String, extra: Map<String, String> = emptyMap()) {
         val props = mapOf("level_before" to currentLevel.code) + extra
@@ -137,11 +138,6 @@ fun FirstCallSetupSheet(
         }
     }
 
-    fun skip() {
-        if (!started) report("first_call_setup_skipped")
-        onDismiss(false)
-    }
-
     fun start() {
         if (level != currentLevel) app.setLevel(targetLanguage, level)
         SpeechSpeed.set(context, speed)
@@ -149,7 +145,7 @@ fun FirstCallSetupSheet(
         // and an unset choice would follow a later level change instead.
         CoachMode.setChoice(context, coach)
         SendToAnswer.setChoice(context, sendToAnswer)
-        started = true
+        FirstCallSetup.markShown(context)
         report("first_call_setup", mapOf(
             "level" to level.code, "speed" to speed.raw,
             "coach" to if (coach) "on" else "off", "send" to if (sendToAnswer) "on" else "off",
@@ -159,15 +155,13 @@ fun FirstCallSetupSheet(
     }
 
     ModalBottomSheet(
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        onDismissRequest = { skip() }, containerColor = AppSurfaces.ground,
+        sheetState = rememberModalBottomSheetState(
+            skipPartiallyExpanded = true,
+            confirmValueChange = { it != SheetValue.Hidden },
+        ),
+        onDismissRequest = {}, containerColor = AppSurfaces.ground,
     ) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding()) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
-                TextButton(onClick = { skip() }) {
-                    Text(stringResource(R.string.skip), style = MaterialTheme.typography.titleMedium)
-                }
-            }
             Column(
                 Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp),
@@ -211,7 +205,7 @@ fun FirstCallSetupSheet(
                     SetupToggleRow(Icons.Outlined.Lightbulb, stringResource(R.string.try_saying), coach) { coach = it }
                 }
                 GroupedFooter(stringResource(
-                    R.string.after_each_thing_your_future_self_says_you_see_a_way_to_answ_35f388))
+                    R.string.each_time_your_future_self_says_something_you_see_a_line_you_9bbb1d))
 
 
                 Spacer(Modifier.size(12.dp))

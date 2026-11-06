@@ -205,8 +205,6 @@
     <string name="add_your_trip">"여행 추가"</string>
     <string name="advanced_i_express_myself_fluently_and_precisely">"고급 · 유창하고 정확하게 표현해요"</string>
     <string name="after_each_take">"녹화를 마치면"</string>
-    <!-- "After each thing your future self says, you see a way to answer. Sometimes it uses a word you're studying, and your most common mistake becomes the call's focus." -->
-    <string name="after_each_thing_your_future_self_says_you_see_a_way_to_answ_35f388">"유창해진 내가 말할 때마다 이렇게 답해 보라는 문장이 떠요. 공부 중인 단어가 들어가기도 하고, 가장 자주 하는 실수는 통화의 초점이 돼요."</string>
     <string name="after_work_drinks">"퇴근 후 한잔"</string>
     <string name="again">"다시"</string>
     <string name="again_at_the_end_of_this_round">"이번 판 끝에 다시 해요"</string>
@@ -804,6 +802,8 @@
     <string name="each_talk_fills_these_bars_a1_to_c2">"대화할 때마다 A1부터 C2까지 막대가 채워져요."</string>
     <!-- 'Each time your fluent self speaks, a short answer you could give appears above the button, at your level, with its meaning in your language. A blank (___) is where only you know the answer.' -->
     <string name="each_time_your_fluent_self_speaks_a_short_answer_you_could_g_5bd1c9">"유창해진 내가 말할 때마다 내 레벨에 맞는 짧은 답 예시가 버튼 위에 떠요. 뜻도 함께 나와요. 빈칸(___)은 나만 아는 내용을 넣는 자리예요."</string>
+    <!-- 'Each time your future self says something, you see a line you could answer with.' -->
+    <string name="each_time_your_future_self_says_something_you_see_a_line_you_9bbb1d">"유창해진 내가 한마디 할 때마다, 이렇게 답하면 된다는 문장을 보여 줘요."</string>
     <string name="earlier_calls">"구분 전 통화"</string>
     <string name="earphone_mic">"이어폰 마이크"</string>
     <string name="easy">"쉬웠어요"</string>

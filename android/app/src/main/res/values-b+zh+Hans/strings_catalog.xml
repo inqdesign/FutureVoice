@@ -205,8 +205,6 @@
     <string name="add_your_trip">"添加旅行"</string>
     <string name="advanced_i_express_myself_fluently_and_precisely">"高级 · 能流利又精准地表达自己"</string>
     <string name="after_each_take">"录完你会得到这些"</string>
-    <!-- "After each thing your future self says, you see a way to answer. Sometimes it uses a word you're studying, and your most common mistake becomes the call's focus." -->
-    <string name="after_each_thing_your_future_self_says_you_see_a_way_to_answ_35f388">"流利的自己每说一句，就会出现一个回答的例句。有时会用到你正在学的单词，你最常犯的错误也会成为这次通话的重点。"</string>
     <string name="after_work_drinks">"下班喝一杯"</string>
     <string name="again">"再一次"</string>
     <string name="again_at_the_end_of_this_round">"这一轮最后再练一次"</string>
@@ -804,6 +802,8 @@
     <string name="each_talk_fills_these_bars_a1_to_c2">"每次通话都会把A1到C2的长条填满一点。"</string>
     <!-- 'Each time your fluent self speaks, a short answer you could give appears above the button, at your level, with its meaning in your language. A blank (___) is where only you know the answer.' -->
     <string name="each_time_your_fluent_self_speaks_a_short_answer_you_could_g_5bd1c9">"流利的自己每说一句，按钮上方就会出现一个符合你水平的简短回答示例，并附上母语释义。空格（___）是只有你知道的内容。"</string>
+    <!-- 'Each time your future self says something, you see a line you could answer with.' -->
+    <string name="each_time_your_future_self_says_something_you_see_a_line_you_9bbb1d">"流利的自己每说一句，就会出现一句你可以拿来回答的话。"</string>
     <string name="earlier_calls">"之前的通话"</string>
     <string name="earphone_mic">"耳机麦克风"</string>
     <string name="easy">"很简单"</string>

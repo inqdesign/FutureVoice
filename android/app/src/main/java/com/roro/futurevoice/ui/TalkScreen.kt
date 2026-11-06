@@ -482,8 +482,8 @@ fun TalkScreen(
     var setupLevel by remember { mutableStateOf<com.roro.futurevoice.data.CefrLevel?>(null) }
     LaunchedEffect(askingMic) {
         if (askingMic || firstCallSetupPending != null) return@LaunchedEffect
+        // Marked shown by the sheet's Start, the only way out of it.
         val show = FirstCallSetup.shouldShow(appContext)
-        if (show) FirstCallSetup.markShown(appContext)
         firstCallSetupPending = show
     }
     if (firstCallSetupPending == true) {
