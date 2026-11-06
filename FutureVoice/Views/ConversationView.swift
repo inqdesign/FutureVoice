@@ -2344,6 +2344,8 @@ struct ConversationView: View {
     /// how many early ones were asked for it.
     @State private var earlyCorrectionUsed = false
     @State private var earlyCorrectionFired = 0
+    /// Corrections of held tutor turns, shown when the tutor's reply begins.
+    @State private var heldSuggestions: [UUID: TurnSuggestion] = [:]
     @State private var idleWatchTask: Task<Void, Never>?
     /// The last moment anything real happened. Deliberately OUTSIDE the watch
     /// task: the task is re-armed every time the mic opens, and a noisy room
@@ -3214,6 +3216,7 @@ struct ConversationView: View {
                 tutorWaitTurnAt = nil
                 tutorWaitNoteAt = nil
             }
+            flushHeldSuggestions()
             // The hint belonged to the question just answered.
             if (coachHint != nil || coachReply != nil) && !coachStale {
                 withAnimation(.easeInOut(duration: 0.2)) { coachStale = true }
@@ -3393,11 +3396,34 @@ struct ConversationView: View {
                   let suggestion = payload.turnSuggestion(for: said),
                   let idx = turns.firstIndex(where: { $0.id == turnId }),
                   turns[idx].transcript == said else { return fixes }
-            turns[idx].suggestion = suggestion
-            suggestionsShown += 1
-            checkFocusRepeat(suggestion, turnId: turnId)
+            // A held tutor turn: the card waits for the tutor's voice, so the
+            // correction never shows before the answer (founder, 2026-11-06).
+            if tutorWaitTurnAt != nil {
+                heldSuggestions[turnId] = suggestion
+                // A reply that never begins must not lose the card: the
+                // summary and the drill cards are built from it.
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(8))
+                    flushHeldSuggestions()
+                }
+            } else {
+                showSuggestion(suggestion, on: turnId)
+            }
             return fixes
         }
+    }
+
+    private func flushHeldSuggestions() {
+        let held = heldSuggestions
+        heldSuggestions = [:]
+        for (id, suggestion) in held { showSuggestion(suggestion, on: id) }
+    }
+
+    private func showSuggestion(_ suggestion: TurnSuggestion, on turnId: UUID) {
+        guard let idx = turns.firstIndex(where: { $0.id == turnId }) else { return }
+        turns[idx].suggestion = suggestion
+        suggestionsShown += 1
+        checkFocusRepeat(suggestion, turnId: turnId)
     }
 
     /// The correction call itself, for `said` as a reply to the last line
@@ -3463,7 +3489,7 @@ struct ConversationView: View {
                   realtime.partial.trimmingCharacters(in: .whitespacesAndNewlines) == text else { return }
             earlyCorrection?.task.cancel()
             earlyCorrectionFires += 1
-            earlyCorrection = (text, correctionPayload(said: text, key: "rt-suggest-early:\(UUID().uuidString)"))
+            earlyCorrection = (text, correctionPayload(said: text, key: "rt-suggest:early-\(UUID().uuidString)"))
         }
     }
 
@@ -3482,8 +3508,12 @@ struct ConversationView: View {
         return early
     }
 
-    private static let earlyCorrectionSettle = 0.8
-    private static let maxEarlyCorrections = 3
+    /// Short and generous: the words that count are the LAST ones, which
+    /// land as one more update once the transcriber finalizes, and the cap
+    /// was spent on pauses mid-sentence before they did (device, 2026-11-06:
+    /// 3 fired, none used). A spare call is a few hundredths of a cent.
+    private static let earlyCorrectionSettle = 0.5
+    private static let maxEarlyCorrections = 8
 
     /// News topic: ZERO LLM calls. The platform news pool already generated
     /// this story once for everyone — the title is phrased as a friend
@@ -4859,6 +4889,9 @@ struct ConversationView: View {
     }
 
     private func endSession() async {
+        // A correction still on its way attaches directly from here on.
+        tutorWaitTurnAt = nil
+        flushHeldSuggestions()
         // Once the summary sheet has closed, the call is wrapped up and the
         // screen is on its way out. The sheet's Done sits where the call's End
         // does (both top trailing), so a quick second tap on Done landed on
