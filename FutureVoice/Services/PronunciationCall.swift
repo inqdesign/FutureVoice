@@ -336,6 +336,12 @@ struct PronunciationRound: Equatable {
         /// not 'say the whole sentence again'"). nil = the sentence.
         var drillWord: String?
         var drillTries = 0
+        /// The words (keys) that missed on this sentence's first judged
+        /// reading. A reading after that is judged on these alone and the
+        /// set only shrinks, so the sentence can't fail on a word that
+        /// already came out (2026-11-06: one sentence read 11 times, a new
+        /// word drilled every time). nil = not judged yet.
+        var watch: Set<String>?
         /// The last take's verdict as the learner sees it: what was judged
         /// (a word and its sound, or the flow), its score, and whether it
         /// cleared the bar (founder, 2026-11-04: "show 'not yet' or a score
@@ -510,14 +516,25 @@ enum PronunciationJudge {
     /// the word, with its l at 60; "read" said as "lead" kept 60 as a word
     /// with its r at 17. The accent is in the PHONEMES, and in a sound
     /// lesson the lesson's own phonemes are what is judged.
+    ///
+    /// Outside the lesson's sound only what plainly didn't come out stops a
+    /// sentence (2026-11-06, a Plus learner on the th lesson: 41 of 52
+    /// readings scoring 85–97 were "not yet", one sentence read 11 times,
+    /// each time a DIFFERENT word, and "decision" drilled for its /ə/, which
+    /// /ɪ/ says just as well). A sentence has ~30 sounds and Azure's number
+    /// for an accented one wobbles, so "the lowest of all of them under 65"
+    /// failed nearly every reading somewhere, and somewhere new each time.
     /// A lesson phoneme under this is "not yet".
     static let lessonSoundBar = 70
     /// Any word under this is "not yet".
-    static let wordBar = 70
-    /// Any sound under this is "not yet", lesson sound or not.
-    static let soundBar = 65
+    static let wordBar = 50
+    /// Any CONSONANT under this is "not yet", lesson sound or not ("드링크"
+    /// put consonants at 23–60, 프라이트's f at 38). Vowels outside the
+    /// lesson never stop a reading: their quality is where accents and
+    /// dialects differ ("decision" with /ə/ or /ɪ/), not where words break.
+    static let soundBar = 50
     /// A word-final p/t/k/b/d/g: often unreleased in native speech.
-    static let finalStopBar = 55
+    static let finalStopBar = 40
     /// Prosody (en-US only) and fluency under these: said, but not smoothly.
     static let prosodyBar = 80
     static let fluencyBar = 70
@@ -526,11 +543,20 @@ enum PronunciationJudge {
     /// Kept for the course's colour of a topic's last score.
     static let passBar = 70
 
+    /// `only`: judge just these words (keys) — a sentence read again after
+    /// a miss is judged on what was wrong the first time, never on a word
+    /// that already came out (`Line.watch`). `excluding`: skip these words,
+    /// for listing every word that missed (`missedWords`).
     static func verdict(result: PronunciationResult?, line: PronunciationRound.Line,
-                        said: String, phonemes: [String], language: String) -> Verdict {
+                        said: String, phonemes: [String], language: String,
+                        only: Set<String>? = nil, excluding: Set<String> = []) -> Verdict {
         guard let result else { return .unheard }
         if (result.completeness ?? 100) < completenessBar { return .offScript }
-        let judged = result.referenceWords.filter(\.isJudged)
+        func inScope(_ w: PronunciationResult.Word) -> Bool {
+            let k = key(w.word)
+            return !excluding.contains(k) && (only?.contains(k) ?? true)
+        }
+        let judged = result.referenceWords.filter { $0.isJudged && inScope($0) }
 
         // 1. The lesson's sound, wherever it is in the sentence.
         if !phonemes.isEmpty {
@@ -562,6 +588,10 @@ enum PronunciationJudge {
         let soundHits = judged.compactMap { w -> (PronunciationResult.Word, PronunciationResult.Phoneme)? in
             let named = w.phonemes.filter { $0.accuracy != nil }
             let off = named.enumerated().filter { i, p in
+                // Vowels outside the lesson never stop a reading (see the
+                // bars); an unnamed phoneme (not English) is judged as before.
+                if !p.phoneme.isEmpty, p.phoneme.contains(where: { vowelChars.contains($0) }),
+                   !isLesson(p.phoneme, phonemes) { return false }
                 let finalStop = i == named.count - 1 && ["p", "t", "k", "b", "d", "g"].contains(p.phoneme)
                 return p.accuracy! < (finalStop ? finalStopBar : soundBar)
             }.map(\.element)
@@ -573,7 +603,7 @@ enum PronunciationJudge {
                            score: result.soundScore, heard: nil)
         }
         // 3. Any word that came out badly, or a word left out.
-        if let w = result.referenceWords.filter({ $0.isOmission || ($0.isJudged && ($0.accuracy ?? 100) < wordBar) })
+        if let w = result.referenceWords.filter({ inScope($0) && ($0.isOmission || ($0.isJudged && ($0.accuracy ?? 100) < wordBar)) })
             .min(by: { ($0.accuracy ?? 0) < ($1.accuracy ?? 0) }) {
             return .notYet(word: w.word, sound: w.isJudged ? sound(in: w, preferring: phonemes) : nil,
                            score: result.soundScore, heard: nil)
@@ -583,6 +613,25 @@ enum PronunciationJudge {
             return .notSmooth(score: result.soundScore)
         }
         return .pass(score: result.soundScore)
+    }
+
+    /// Every word that missed in a take, worst first: the verdict asked
+    /// again with each word it named set aside. What a sentence read again
+    /// is judged on (`Line.watch`), so a retry can only get closer.
+    static func missedWords(result: PronunciationResult?, line: PronunciationRound.Line,
+                            said: String, phonemes: [String], language: String,
+                            only: Set<String>? = nil) -> [String] {
+        var out: [String] = []
+        var seen = Set<String>()
+        while out.count < 12,
+              case .notYet(let word, _, _, _) = verdict(result: result, line: line, said: said,
+                                                       phonemes: phonemes, language: language,
+                                                       only: only, excluding: seen) {
+            let k = key(word)
+            guard !k.isEmpty, seen.insert(k).inserted else { break }
+            out.append(word)
+        }
+        return out
     }
 
     /// What the card shows for a verdict: the word and sound that were

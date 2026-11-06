@@ -3392,6 +3392,26 @@ call time." `PronunciationCall.swift`, `PronunciationCallViews.swift`.
   55); else any word under 70 or omitted; else prosody (en-US) under 80 or
   fluency under 70 → not smooth; else pass. The transcript is read only
   when there is no audio judge at all.
+- **Outside the lesson sound, only what plainly broke** (2026-11-06, a
+  Plus learner on the th lesson, 5 calls in an hour, "뚜껑이 열린다"): 41
+  of 52 sentence readings scoring 85–97 were "not yet", one sentence was
+  read 11 times with a NEW word drilled each time, and "decision" was
+  drilled for its /ə/ (/ɪ/ is just as right). A sentence has ~30 sounds and
+  Azure's number for an accented one wobbles, so "the lowest anywhere under
+  65" failed nearly every reading somewhere new. Now: the lesson phoneme
+  under 70 (unchanged); a CONSONANT under 50 (word-final stop 40) — a
+  non-lesson VOWEL never stops a reading; a word under 50 or omitted. And
+  a sentence read again after a miss is judged only on the words that
+  missed on the first reading (`Line.watch`, `missedWords`), a set that only
+  shrinks. A word drilled alone that Azure can't match is "not yet" on that
+  word, never off-script (9 of her 66 word takes were told "just the
+  word"). The learner's bubble shows the word or sentence ON SCREEN, not
+  the transcript ("기수전", or "think" beside a "Good" for "thank"), and the
+  gateway never treats a pron-call line as the native language (the voice
+  said "just try a short English phrase" to an accented reading). Open:
+  minimal pairs (thank → think, leaving → living passed at 96 / 94);
+  scripted Azure forgives a swapped vowel, and NBest isn't used for it
+  yet. `PronunciationJudgeTests`.
 - **Measured the same day** (macOS voices, en-US, `scratchpad` probe):
   word scores can't tell "드링크" from a native "drink" (97 both);
   phonemes can — Korean-style readings put consonants at 23–60, native at

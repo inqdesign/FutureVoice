@@ -1414,6 +1414,12 @@ export class CallSession implements DurableObject {
   /** The transcriber finalized an utterance. It becomes a turn now, or it
    *  waits: a line ending on a hanging word is a breath, not an ending. */
   private handleUtterance(text: string, native = false): void {
+    // A pronunciation call: the learner is always reading the target line
+    // on their screen, and a strong accent comes back in their own script
+    // ("기수전" for "decision", 2026-11-06). That is a take to be judged,
+    // never a line said in their own language: no native wrapper, so the
+    // voice never answers a reading with "just try a short English phrase".
+    if (this.callMode === "pron") native = false
     console.log(`utterance: "${text.slice(0, 80)}" pending=${this.pendingUtterance !== null}`)
     // The speaker heard itself: an utterance that is a verbatim fragment of
     // the line just played is the microphone, not the learner — drop it

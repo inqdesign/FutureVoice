@@ -728,6 +728,12 @@ struct ConversationView: View {
     @State private var pronPlanning = false
     /// Takes in a row that came back with nothing usable on this sentence.
     @State private var pronUnheard = 0
+    /// What each pronunciation take was a reading OF (the word or sentence
+    /// on screen), shown in the learner's bubble instead of the live
+    /// transcript. The verdict is the audio's; a transcript beside it said
+    /// "기수전" or "think" next to a "Good" for "thank" (2026-11-06), so the
+    /// bubble contradicted the card it sat under.
+    @State private var pronReadTexts: [UUID: String] = [:]
     @State private var showingPronTopics = false
     /// The learner's turn to read: opened the moment the fluent self stops
     /// speaking, closed when the take is sent (`pronHeard`).
@@ -1630,7 +1636,8 @@ struct ConversationView: View {
                                      translates: !LanguageCatalog.sameLanguage(appState.targetLanguage,
                                                                                appState.nativeLanguage),
                                      showsCorrections: showsCorrections,
-                                     otherName: otherSideName)
+                                     otherName: otherSideName,
+                                     readText: turn.role == .user ? pronReadTexts[turn.id] : nil)
                                 .id(turn.id)
                                 // A reply arrives already growing; sliding it
                                 // up from below on top of that read as a jolt.
@@ -5313,6 +5320,7 @@ struct ConversationView: View {
         guard let i = round.current else { return }
         let line = round.lines[i]
         let drill = line.drillWord
+        pronReadTexts[turnId] = drill ?? line.text
         let audioURL = turns.first(where: { $0.id == turnId })?.audioURL
         let target = appState.targetLanguage
         Task { @MainActor in
@@ -5341,10 +5349,29 @@ struct ConversationView: View {
             let verdict = noReader
                 ? PronunciationJudge.fallback(line: line, said: said, language: target)
                 : PronunciationJudge.verdict(result: result, line: line, said: said,
-                                             phonemes: now.topic.phonemes, language: target)
+                                             phonemes: now.topic.phonemes, language: target,
+                                             only: line.watch)
+            // What missed this time, out of what missed before: the next
+            // reading is judged on these alone.
+            if !noReader, result != nil {
+                switch verdict {
+                case .notYet:
+                    now.lines[i].watch = Set(PronunciationJudge.missedWords(
+                        result: result, line: line, said: said, phonemes: now.topic.phonemes,
+                        language: target, only: line.watch).map(PronunciationJudge.key))
+                case .notSmooth:
+                    now.lines[i].watch = []
+                default:
+                    break
+                }
+            }
+            var verdictWord = ""
+            if case .notYet(let w, _, _, _) = verdict { verdictWord = w }
             Telemetry.log("pron_take", [
                 "topic": now.topic.id,
                 "verdict": Self.pronVerdictName(verdict),
+                "word": verdictWord,
+                "watch": now.lines[i].watch.map { String($0.count) } ?? "",
                 "score": result.map { String($0.soundScore) } ?? "",
                 "fluency": result.map { String($0.fluency) } ?? "",
                 "prosody": result?.prosody.map(String.init) ?? "",
@@ -5559,8 +5586,16 @@ struct ConversationView: View {
                                          phonemes: now.topic.phonemes, language: appState.targetLanguage)
         // One word has no rhythm to judge: its sounds are the take.
         if case .notSmooth(let score) = verdict { verdict = .pass(score: score) }
+        // A word read on its own that Azure couldn't match is that word not
+        // coming out yet — never "they said something else", which the voice
+        // answered with "just the word" to someone who had just said it
+        // (2026-11-06: 9 of 66 word takes).
+        if case .offScript = verdict, let result {
+            verdict = .notYet(word: word, sound: nil, score: result.soundScore, heard: nil)
+        }
         Telemetry.log("pron_word_take", [
             "topic": now.topic.id,
+            "word": word,
             "verdict": Self.pronVerdictName(verdict),
             "score": result.map { String($0.soundScore) } ?? "",
             "try": String(now.lines[i].drillTries + 1),
@@ -6351,6 +6386,9 @@ private struct TurnView: View {
     var showsCorrections = true
     /// The other side's label — the person or role on a cast call.
     var otherName: String = chrome("Future self")
+    /// A pronunciation take: the word or sentence on screen, shown in place
+    /// of the transcript (`ConversationView.pronReadTexts`).
+    var readText: String? = nil
 
     @State private var translation: String?
     @State private var showing = false
@@ -6376,6 +6414,8 @@ private struct TurnView: View {
                 Text(explain("Writing down what you said…"))
                     .opacity(0.6)
                     .italic()
+            } else if turn.role == .user, let readText {
+                Text(readText)
             } else if turn.role == .user {
                 FuriganaText(turn.transcript, rubyFont: .caption2) {
                     Text(turn.transcript)
@@ -6452,13 +6492,13 @@ private struct TurnView: View {
         if showing { showing = false; return }
         showing = true
         guard translation == nil else { return }
-        if let c = Translator.cached(turn.transcript, to: nativeLanguage) {
+        if let c = Translator.cached(readText ?? turn.transcript, to: nativeLanguage) {
             translation = c
             return
         }
         loading = true
         Task {
-            let t = await Translator.translate(turn.transcript, to: nativeLanguage)
+            let t = await Translator.translate(readText ?? turn.transcript, to: nativeLanguage)
             translation = t
             loading = false
             if t == nil { showing = false }
