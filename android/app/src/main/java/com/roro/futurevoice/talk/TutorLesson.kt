@@ -267,22 +267,37 @@ object TutorJudge {
         @SerialName("other_topic") val otherTopic: Boolean? = null,
         /** What the line still lacks, in a few English words, for the tutor. */
         @SerialName("missing_note") val missingNote: String? = null,
+        /** What the turn WAS (iOS 9952d507): "try", "talk" or "help". Only a
+         *  try is judged; a remark, a question or a request for help was
+         *  answered as a miss before. */
+        val kind: String? = null,
     ) {
         val wantsOtherTopic: Boolean get() = otherTopic == true
+        enum class Kind { ATTEMPT, TALK, HELP }
+        /** A missing or unknown kind is a try, the old reading. */
+        val turnKind: Kind get() = when (kind) {
+            "talk" -> Kind.TALK
+            "help" -> Kind.HELP
+            else -> Kind.ATTEMPT
+        }
     }
 
     /** Did [line] do [challenge]? Content only — the correction call judges
-     *  the mistakes. Also asked on every try: do they want out of the lesson? */
+     *  the mistakes. Also asked on every turn: was it a try at all, and do
+     *  they want out of the lesson? [ownLanguage]: the gateway heard the
+     *  line in the learner's native language. */
     suspend fun read(line: String, challenge: TutorLesson.Challenge, targetLanguage: String,
-                     askedWith: String): Verdict? =
+                     askedWith: String, ownLanguage: Boolean = false): Verdict? =
         withTimeoutOrNull(10_000) {
             runCatching {
+                val target = LanguageCatalog.englishName(targetLanguage)
                 GeminiClient(AuthRepository()).sendJson(
-                    system = TutorPrompts.judgeSystem(LanguageCatalog.englishName(targetLanguage)),
+                    system = TutorPrompts.judgeSystem(target),
                     messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER,
-                        TutorPrompts.judgeContent(challenge.task, challenge.example, askedWith, line))),
+                        TutorPrompts.judgeContent(challenge.task, challenge.example, askedWith, line,
+                            target, ownLanguage))),
                     serializer = Verdict.serializer(),
-                    model = GeminiClient.Model.FLASH_LITE_31, maxTokens = 120, purpose = "tutor",
+                    model = GeminiClient.Model.FLASH_LITE_31, maxTokens = 160, purpose = "tutor",
                     idempotencyKey = "tutor-judge:${StoreJson.newId()}",
                     fastThinking = true,
                 )
@@ -394,7 +409,7 @@ object TutorNudges {
     const val RESUME_FINAL_CHECK = "The learner is back for the final check of last time's lesson (see TUTOR MODE). Greet them in a few words, say the only thing left is the final check, and ask them to say it all in their own words, in one go — no example, no hints."
     fun picked(request: String) = "The learner picked a topic on their screen: \"$request\". Say in a few words that you're setting it up — nothing else yet."
     fun planFailed(request: String) = "Setting up the lesson didn't work. Ask them, in one short question, what exactly they want to be able to say about: \"$request\"."
-    const val NEXT_ROUND_READY = "The next round is ready (see TUTOR MODE): new challenges, a step further than the last round. Say so in a few words — don't go over the last round again — then start challenge 1: say what it is, give its example line, and ask them to say it about themselves."
+    const val NEXT_ROUND_READY = "The next round is ready (see TUTOR MODE): new challenges, a step further than the last round. Say so in a few words — don't go over the last round again — then bring challenge 1 into the conversation: a natural question that asks for it, about their life, and how they could say it (its example line, fitted to them)."
     fun nextRoundFailed(title: String) = "Setting up the next round of \"$title\" didn't work. Say so in a few words and ask whether they'd like another topic instead."
     /** `fromTopic`: the call opened on its own topic and nothing named it
      *  yet; every other path already did ("setting that up"), and naming it
@@ -402,7 +417,7 @@ object TutorNudges {
     fun ready(fromTopic: Boolean): String {
         val intro = if (fromTopic) "In a few words say what it is and that you'll go one step at a time"
             else "Don't announce the topic again, you already did. Say in a few words that you'll go one step at a time"
-        return "Today's lesson is ready (see TUTOR MODE). $intro, then start challenge 1: say what it is, give its example line, and ask them to say it about themselves."
+        return "Today's lesson is ready (see TUTOR MODE). $intro, then bring challenge 1 into the conversation: a natural question that asks for it, about their life, and how they could say it (its example line, fitted to them)."
     }
     const val SAVED_FINISHED = "The learner tapped to choose another topic. The app is saving the finished lesson in their book. Say so in a few words and ask what they want to practice next — they can also pick a topic from the button on their screen."
     const val DROPPED = "The learner tapped to choose another topic, and the app dropped today's lesson. Say sure in a few words and ask what they want to practice instead — they can also pick a topic from the button on their screen."
@@ -411,10 +426,17 @@ object TutorNudges {
     // A challenge (iOS `tutorCheck`).
     const val LEAVE = "They asked to leave this lesson. Agree right away in a few words — never \"let's finish this one first\". If they named what they'd like instead, say that's the new lesson and you're setting it up; otherwise ask what they'd like to practice."
     const val LINE_UNCHECKED = "The app couldn't check that line. Ask them, in a few words, to say it once more."
-    fun notYet(what: String, noSlips: Boolean) = "Result: NOT YET. $what Say their line back the right way as ONE sentence (their words, only that fixed)${if (noSlips) ", or give them the example fitted to them" else ""}, and ask them to say it again. Not \"great\", nothing that sounds like it's done."
+    fun notYet(what: String, noSlips: Boolean) = "Result: NOT YET. $what First a few words reacting to what they MEANT (not to how they said it). Then say their line back the right way as ONE sentence (their words, only that fixed)${if (noSlips) ", or give them the example fitted to them" else ""}, and ask them to say it again. Not \"great\", nothing that sounds like it's done."
     const val ONCE_MORE = "Result: ONCE MORE. That was right. Say so in a few words and ask them to say it one more time, so it sticks. Don't move on yet."
     const val DONE_LAST = "Result: DONE — that was the last challenge. In a few words say that's every part, then ask them to say it all now, in their own words, in one go — no example, no list of the parts, no hints. That is the final check."
-    fun doneNext(i: Int, n: Int, task: String, example: String) = "Result: DONE — challenge ${i + 1} is checked off. A short \"you got it\", then start challenge ${n + 1}: say what it is (\"$task\"), give its example line (\"$example\") and ask them to say it about themselves."
+    fun doneNext(i: Int, n: Int, task: String, example: String) = "Result: DONE — challenge ${i + 1} is checked off. A short, real \"you got it\" that reacts to what they said, then move the conversation on to challenge ${n + 1} (\"$task\"): a natural question that asks for it, about their life, and how they could say it (\"$example\", fitted to them)."
+    /** Not a try (iOS 9952d507): they asked for help, or said it in their
+     *  own language — taught, never a miss. */
+    fun help(ownLanguage: Boolean, languageName: String, i: Int, task: String, example: String) =
+        "Not a try: they ${if (ownLanguage) "said this in their own language — they couldn't find the $languageName" else "asked for help with how to say it, or are stuck"}. Teach it: give them the $languageName line for what they meant, short and at their level, fitted to challenge ${i + 1} (\"$task\"; e.g. \"$example\"), and invite them to say it. No \"not yet\" — this is help, not a miss."
+    /** Not a try: they're just talking — answered like a person, then back. */
+    fun talk(slip: String?, i: Int, task: String) =
+        "Not a try: they're just talking with you (a remark, a story, or a question). Answer it as a real conversation partner — react to what they meant, answer a question properly.${slip?.let { " If it helps, say their phrase back the right way inside your reply, in passing ($it), without asking them to repeat it." } ?: ""} Then steer back with one natural question that asks for challenge ${i + 1} (\"$task\"). No verdict, no \"not yet\"."
 
     // After a lesson (iOS `tutorAfterLesson`).
     const val ONCE_MORE_CLEAN = "Their once-more was clean. Say so warmly in a few words, then ask whether they want more of this topic or another one."
@@ -427,6 +449,7 @@ object TutorNudges {
     const val UNCLEAR = "Answer what they said in one short line, then ask again, in other words: say it once more, more of this topic, or another topic?"
 
     // The final check (iOS `tutorFinalCheckTry`).
+    fun checkOwnLanguage(languageName: String) = "Final check: they said this in their own language — they couldn't find the $languageName. Not a try and not a miss: give them the $languageName way to say what they meant, short, then ask them to say it all, in one go."
     const val ANSWER_UNCHECKED = "The app couldn't check that answer. Ask them, in a few words, to say it all once more, in one go."
     fun showExample(languageName: String, own: String) = "They asked you to show them how the whole thing goes. Show it: say it as ONE natural answer, in $languageName, built from their own lines in this lesson${if (own.isEmpty()) "" else " ($own)"} with any slip fixed — like a model answer, no list of parts. Then ask them to say it themselves now, in one go."
     fun notAnAttempt(slips: String) = "Final check: that was not an attempt at the whole thing (a question, a remark, or one part only).${if (slips.isEmpty()) "" else " Slips in it: $slips — say that line back the right way first."} Answer what they said in a line, give no verdict on the whole, then ask them to say it all, in one go."

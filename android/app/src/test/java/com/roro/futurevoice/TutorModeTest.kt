@@ -10,6 +10,7 @@ import com.roro.futurevoice.talk.Turn
 import com.roro.futurevoice.talk.TurnRole
 import com.roro.futurevoice.talk.TutorCurriculum
 import com.roro.futurevoice.talk.TutorFinalCheck
+import com.roro.futurevoice.talk.TutorJudge
 import com.roro.futurevoice.talk.TutorLesson
 import com.roro.futurevoice.talk.TutorLessonStore
 import com.roro.futurevoice.talk.TutorPlanner
@@ -227,5 +228,15 @@ class TutorModeTest {
         assertTrue(TutorPrompts.levelLadder(CefrLevel.B1).contains("An everyday transaction"))
         assertFalse(TutorPrompts.levelLadder(CefrLevel.A2).contains("An everyday transaction"))
         assertTrue(TutorPrompts.levelLadder(CefrLevel.C2).contains(":\nC2 — managing"))
+    }
+
+    /** Only a try is judged (iOS 9952d507); an older judge's answer with no
+     *  kind is a try. */
+    @Test fun judgeTellsATryFromTalkAndHelp() {
+        fun kind(json: String) = StoreJson.json.decodeFromString(TutorJudge.Verdict.serializer(), json).turnKind
+        assertEquals(TutorJudge.Verdict.Kind.TALK, kind("""{"kind":"talk","done":false}"""))
+        assertEquals(TutorJudge.Verdict.Kind.HELP, kind("""{"kind":"help","done":false}"""))
+        assertEquals(TutorJudge.Verdict.Kind.ATTEMPT, kind("""{"kind":"try","done":true}"""))
+        assertEquals(TutorJudge.Verdict.Kind.ATTEMPT, kind("""{"done":false}"""))
     }
 }

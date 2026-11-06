@@ -1026,7 +1026,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                 }
                 val correction = if (flags.native || pronThisCall) CompletableDeferred<List<TurnFix>?>(null)
                     else requestRealtimeSuggestion(last.id, joined, cfg)
-                tutorTurn(last.id, joined, correction)
+                tutorTurn(last.id, joined, correction, ownLanguage = flags.native)
                 pronTurn(last.id, joined)
                 return@turn
             }
@@ -1042,7 +1042,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             // way to say it; a correction would be built on the wrong language.
             val correction = if (flags.native || pronThisCall) CompletableDeferred<List<TurnFix>?>(null)
                 else requestRealtimeSuggestion(turn.id, said, cfg)
-            tutorTurn(turn.id, said, correction)
+            tutorTurn(turn.id, said, correction, ownLanguage = flags.native)
             pronTurn(turn.id, said)
         }
         realtime.onReplyAudio = { ctx, pcm, rate ->
@@ -2307,7 +2307,8 @@ class TalkViewModel(context: Context) : ViewModel() {
      * branch sends exactly one. The judge runs alongside the correction,
      * never after it, so the hold is one call long, not two.
      */
-    private fun tutorTurn(turnId: String, said: String, correction: Deferred<List<TurnFix>?>) {
+    private fun tutorTurn(turnId: String, said: String, correction: Deferred<List<TurnFix>?>,
+                          ownLanguage: Boolean = false) {
         if (!tutorThisCall || _state.value.tutorPlanning) return
         val lesson = _state.value.tutorLesson
         if (lesson == null || lesson.droppedAt != null) {
@@ -2316,8 +2317,8 @@ class TalkViewModel(context: Context) : ViewModel() {
         }
         when {
             lesson.isFinished -> tutorAfterLesson(turnId, said, correction, lesson)
-            lesson.inFinalCheck -> tutorFinalCheckTry(turnId, said, correction)
-            else -> tutorCheck(turnId, said, correction)
+            lesson.inFinalCheck -> tutorFinalCheckTry(turnId, said, correction, ownLanguage)
+            else -> tutorCheck(turnId, said, correction, ownLanguage)
         }
     }
 
@@ -2444,7 +2445,8 @@ class TalkViewModel(context: Context) : ViewModel() {
      * - right on the first try, or right again after "once more" → DONE,
      *   ticked, and the tutor starts the next challenge (or the final check).
      */
-    private fun tutorCheck(turnId: String, said: String, correction: Deferred<List<TurnFix>?>) {
+    private fun tutorCheck(turnId: String, said: String, correction: Deferred<List<TurnFix>?>,
+                           ownLanguage: Boolean = false) {
         val cfg = config ?: return
         val lesson = _state.value.tutorLesson ?: return
         val i = lesson.current ?: return
@@ -2453,7 +2455,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         viewModelScope.launch {
             // Asked on every try, fixes or not: a request to change the
             // topic can come with a mistake in it.
-            val judged = async { TutorJudge.read(said, challenge, cfg.targetLanguage, asked) }
+            val judged = async { TutorJudge.read(said, challenge, cfg.targetLanguage, asked, ownLanguage) }
             val fixes = correction.await().orEmpty()
             val verdict = judged.await()
             val now = _state.value.tutorLesson
@@ -2465,9 +2467,24 @@ class TalkViewModel(context: Context) : ViewModel() {
                 dropTutorLesson(said = said)
                 return@launch
             }
+            val slips = fixes.map { "\"${it.was}\" → \"${it.now}\"" }
+            // A line in their own language is a request for the words, never
+            // a miss — and with no judge to say otherwise, still help.
+            val kind = if (ownLanguage) TutorJudge.Verdict.Kind.HELP
+                else verdict?.turnKind ?: TutorJudge.Verdict.Kind.ATTEMPT
+            if (kind == TutorJudge.Verdict.Kind.HELP) {
+                log("tutor_turn_help", mapOf("own_language" to if (ownLanguage) "1" else "0"))
+                tutorNudge(TutorNudges.help(ownLanguage, LanguageCatalog.englishName(cfg.targetLanguage),
+                    i, challenge.task, challenge.example))
+                return@launch
+            }
+            if (kind == TutorJudge.Verdict.Kind.TALK) {
+                log("tutor_turn_talk")
+                tutorNudge(TutorNudges.talk(slips.firstOrNull(), i, challenge.task))
+                return@launch
+            }
             if (verdict == null) { tutorNudge(TutorNudges.LINE_UNCHECKED); return@launch }
             tutorLastTry = said
-            val slips = fixes.map { "\"${it.was}\" → \"${it.now}\"" }
             if (slips.isNotEmpty() || !verdict.done) {
                 tutorMissedThisChallenge = true
                 tutorCleanOnce = false
@@ -2700,11 +2717,18 @@ class TalkViewModel(context: Context) : ViewModel() {
      * answer), a shaky pass is asked for once more first, a missing part is
      * named and practiced. It can't be skipped.
      */
-    private fun tutorFinalCheckTry(turnId: String, said: String, correction: Deferred<List<TurnFix>?>) {
+    private fun tutorFinalCheckTry(turnId: String, said: String, correction: Deferred<List<TurnFix>?>,
+                                   ownLanguage: Boolean = false) {
         val cfg = config ?: return
         val lesson = _state.value.tutorLesson ?: return
         if (!lesson.inFinalCheck) return
         val asked = tutorLine(answeredBy = turnId)
+        if (ownLanguage) {
+            // Not a try at the whole thing: the words they're missing.
+            log("tutor_turn_help", mapOf("own_language" to "1", "check" to "1"))
+            tutorNudge(TutorNudges.checkOwnLanguage(LanguageCatalog.englishName(cfg.targetLanguage)))
+            return
+        }
         viewModelScope.launch {
             val judged = async { TutorFinalCheck.read(said, lesson, asked, cfg.targetLanguage) }
             val fixes = correction.await().orEmpty()

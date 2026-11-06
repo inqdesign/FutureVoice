@@ -51,6 +51,8 @@ judge = kotlin(literal_at(src, 'let system = """', jd), {"target": "target"})
 judge_content = kotlin(literal_at(src, 'let content = """', jd), {
     "challenge.task": "task", "challenge.example": "example",
     "askedWith": "askedWith", "line": "line",
+    'ownLanguage ? "\\n(They said this in their own language, not in \\(target).)" : ""':
+        '(if (ownLanguage) "\\n(They said this in their own language, not in $target.)" else "")',
 })
 
 fc = src.index("enum TutorFinalCheck {")
@@ -104,7 +106,8 @@ object TutorPrompts {{
         {judge}
 
     /** iOS `TutorJudge.read`'s user message. */
-    fun judgeContent(task: String, example: String, askedWith: String, line: String): String =
+    fun judgeContent(task: String, example: String, askedWith: String, line: String,
+                     target: String = "", ownLanguage: Boolean = false): String =
         {judge_content}
 
     /** iOS `TutorFinalCheck.read`'s system prompt. */
