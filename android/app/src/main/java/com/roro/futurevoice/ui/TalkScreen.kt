@@ -416,7 +416,7 @@ fun TalkScreen(
     }
     // Tutor mode: a flip mid-call reaches the live call (`TutorMode`).
     var tutorMode by remember { mutableStateOf((com.roro.futurevoice.talk.TutorMode.isOn(context) && !withPerson) || forceTutor) }
-    // Send-to-answer: the learner's flip, else on for A1 (`SendToAnswer.resolve`).
+    // Send-to-answer: the learner's flip, else on for A1–B1 (`SendToAnswer.resolve`).
     var sendToAnswer by remember {
         mutableStateOf(com.roro.futurevoice.talk.SendToAnswer.resolve(
             com.roro.futurevoice.talk.SendToAnswer.choice(context), level.code))

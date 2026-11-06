@@ -69,12 +69,13 @@ class CoachPlanTest {
         assertTrue(CoachMode.resolve(true, "c1"))
     }
 
-    /** iOS `SendToAnswerDefaultTests`: on for A1 and A2 until the learner flips it. */
+    /** iOS `SendToAnswerDefaultTests`: on for A1–B1 until the learner flips it. */
     @Test fun sendToAnswerLevelDecidesUntilTheLearnerChooses() {
         assertTrue(SendToAnswer.resolve(null, "a1"))
         assertTrue(SendToAnswer.resolve(null, "a2"))
-        assertFalse(SendToAnswer.resolve(null, "b1"))
-        assertFalse(SendToAnswer.resolve(null, ""))
+        assertTrue(SendToAnswer.resolve(null, "b1"))
+        assertFalse(SendToAnswer.resolve(null, "b2"))
+        assertTrue(SendToAnswer.resolve(null, ""))
         assertFalse(SendToAnswer.resolve(false, "a2"))
         assertTrue(SendToAnswer.resolve(true, "c1"))
     }
