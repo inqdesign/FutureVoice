@@ -1,29 +1,12 @@
 # <generator> <iOS sha> — see iosref.py. Speech script Study (iOS 18f1fbf7, on
 # feat/script-study, not yet merged into the IOS_REF branch).
 gen-script-study-prompt.py 18f1fbf7
-# The free talk's random follow-up (FreeTalkCue, iOS bbfa2902 + its indent fix
-# 94295d18; + "my own topic", deed6cf4; + a person met before, 0d691811; + the
-# accent's language variety, 3709fd0e). The shared pin can't move yet: speech Study / week report.
-# + tutor mode's lesson (iOS af3c7ffe … bd242766); the final check and the
-# app's verdict on every answer (iOS 23ce515f … 06933043).
-# + the rewrite says what they meant, at the level's reach (iOS 8537accf).
-gen-conversation-prompt.py 8537accf
 # The "my own topic" opener (topicOpeners, iOS deed6cf4).
 # + tutor mode's opener (iOS af3c7ffe).
 gen-free-talk-openers.py 456c94e9
 # The quick quiz's written questions (QuickQuizStock, iOS 9c61e6de; own expressions
 # rated and written fresh, 6912c9db).
 gen-quiz-prompts.py 6912c9db
-# The accent's language variety (varietyGuard, iOS 3709fd0e).
-# + the rewrite says what they meant, at the level's reach (iOS 8537accf).
-gen-correction-prompt.py 8537accf
-# + the call so far and the learner's facts (iOS 6d8b4f56).
-# + who the other speaker is (iOS 317e8819).
-# + the suggestion grows with the level (suggestionShape, iOS a1e756aa).
-gen-coach-prompts.py 39bca0b8
-# Tutor mode's lesson prompts (iOS af3c7ffe … bd242766); the final check's
-# judge and the next-topic offer (iOS 23ce515f … a0133a8b).
-gen-tutor-prompts.py d3a28206
 # The vocabulary level reads the share of advanced words, and the assessment
 # judges word precision (lexical_precision, iOS e7625c42); the mean level of
 # content words, precision deciding above B1 (iOS 4925df02).
@@ -40,3 +23,5 @@ gen-level-tag-prompt.py 465331f6
 gen-tutor-agent-prompts.py c8b22752
 # The coach's measured pronunciation line (renderPronunciationForPrompt, iOS 0971c05d).
 gen-shadow-coach-prompt.py 0971c05d
+# The conversation, correction, coach and tutor generators follow the shared
+# IOS_REF again since iOS 5a462332 (lines for one target language each).

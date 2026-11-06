@@ -37,6 +37,13 @@ body = kotlin(literal_at(src, 'return """', src.index("static func correctionOnl
     # A non-default voice accent's variety (British, Australian, Castilian);
     # hand-written in talk/LanguageVariety.kt, "" otherwise.
     "varietyGuard(targetLanguage)": "LanguageVariety.guard(targetLanguage)",
+    # Per-language lines (iOS 5a462332), hand-written in talk/LanguageLines.kt,
+    # "" for every other language: spoken forms that are not slips (Spanish
+    # reported speech, German demonstratives), and the notes in the learner's
+    # own language (Japanese / German targets).
+    "spokenGrammarGuard(targetLanguage)": "LanguageLines.spokenGrammarGuard(targetLanguage)",
+    "notesLanguageGuard(targetLanguage, nativeLanguage: nativeLanguage)":
+        "LanguageLines.notesLanguageGuard(targetLanguage, nativeLanguage)",
     # A call with someone the learner SET a form of address for: the one
     # register slip a coach may name. Built by the caller
     # (`ConversationCharacter.relationshipRegisterLine`), "" otherwise.

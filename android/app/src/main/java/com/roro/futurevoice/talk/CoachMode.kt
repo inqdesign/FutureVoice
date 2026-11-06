@@ -386,7 +386,22 @@ object CoachSuggester {
             if (register != null && SpeechRegister.hasForms(target)) register.promptDescription(target) else null)
         return CoachPrompts.suggesterSystem(
             LanguageCatalog.englishName(target), LanguageCatalog.englishName(native), level, address,
-            LanguageVariety.guard(target))
+            LanguageVariety.guard(target), bracketAgreementLine(target))
+    }
+
+    /** iOS `CoachSuggester.bracketAgreementLine` (5a462332): a placeholder
+     *  holds the number WITH its noun, so the learner's own "one" can't break
+     *  the agreement. German and Spanish only; "" otherwise. */
+    internal fun bracketAgreementLine(target: String): String = when (target.substringBefore('-')) {
+        "de" -> "\n- A bracket holds the WHOLE phrase that changes when they put in their" +
+            " own fact: a number together with its noun, an article together with its" +
+            " noun (\"seit [zwei Jahren]\", \"ich hab [einen Bruder]\" — never \"seit [zwei]" +
+            " Jahren\"), because in German the noun and its ending change with the number."
+        "es" -> "\n- A bracket holds the WHOLE phrase that changes when they put in their" +
+            " own fact: a number together with its noun, an article together with its" +
+            " noun (\"llevo [dos años]\", \"tengo [un hermano]\" — never \"tengo [dos]" +
+            " hermanos\"), because in Spanish the noun changes with the number."
+        else -> ""
     }
 }
 

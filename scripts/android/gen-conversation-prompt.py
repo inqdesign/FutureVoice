@@ -82,11 +82,21 @@ csp = func_from("static func conversationSystemPrompt(")
 news = kotlin_conv(literal_at(engine, 'let newsBlock = newsFacts.isEmpty ? "" : """', csp), {
     'newsFacts.map { "- \\($0)" }.joined(separator: "\\n")': 'newsFacts.joinToString("\\n") { "- $it" }',
 })
+# Per-language lines (iOS 5a462332) are hand-ported in talk/LanguageLines.kt
+# (logic + text), "" for every other language.
 first = kotlin_conv(literal_at(engine, "let firstMeetingBlock = (firstMeeting && counterpart == nil) ?", csp),
-               {"languageName": "languageName"})
-they_called = kotlin_conv(literal_at(
-    engine, "let theyCalledBlock = (topic.isEmpty && counterpart == nil && !firstMeeting && !learnerPicksTopic && !tutor) ?", csp),
-    {"freeTalkCue.instruction": "freeTalkCue.instruction"})
+               {"languageName": "languageName",
+                "firstCallLanguageLine(targetLanguage)": "LanguageLines.firstCall(targetLanguage)"})
+# A later call the same day (iOS 98d7ff2a): the opening line's two kinds.
+_ok = re.search(rf'let openerKind = sameDay == nil\s*\? {LIT}\s*: {LIT}', engine[csp:])
+if not _ok:
+    sys.exit("openerKind's shape changed — `sameDay == nil ? \"…\" : \"…\"` expected")
+they_called = kotlin_conv(literal_at(engine, "let theyCalledBlock = isFreeTalk ? ", csp), {
+    "freeTalkCue.instruction": "freeTalkCue.instruction",
+    "openerKind": f'(if (sameDay) {kt(unescape(_ok.group(2)))}\n             else {kt(unescape(_ok.group(1)))})',
+})
+# What you and they did earlier today (iOS 98d7ff2a), free talk only.
+earlier = kotlin_conv(literal_at(engine, "let earlierBlock = sameDay.map { e in ", csp), {"e.record": "record"})
 # "My own topic" (topics page, iOS deed6cf4).
 own_topic = kotlin_conv(literal_at(
     engine, "let ownTopicBlock = (learnerPicksTopic && topic.isEmpty && counterpart == nil && !tutor) ?", csp), {})
@@ -101,6 +111,7 @@ system = kotlin_conv(literal_at(engine, 'return """', main_anchor), {
     "counterpartBlock": "counterpartBlock",
     "firstMeetingBlock": "firstMeetingBlock",
     "theyCalledBlock": "theyCalledBlock",
+    "earlierBlock": "earlierBlock",
     "ownTopicBlock": "ownTopicBlock",
     "clockBlock": "clockBlock",
     "LanguageCatalog.englishName(nativeLanguage)": "nativeName",
@@ -115,13 +126,20 @@ system = kotlin_conv(literal_at(engine, 'return """', main_anchor), {
     "maxTurnSentences": "MAX_TURN_SENTENCES",
     "CoachingLanguage.breathPunctuation": "CoachingLanguage.breathPunctuation",
     "varietyGuard(targetLanguage)": "LanguageVariety.guard(targetLanguage)",
+    # Spanish (iOS 5a462332): the gender half only as the future self, the
+    # variety half with no other variety picked; Japanese: how the future
+    # self calls them. `asFutureSelf` = no cast person and no topic.
+    "spanishGuard(targetLanguage, asFutureSelf: counterpart == nil && topic.isEmpty)":
+        "LanguageLines.spanishGuard(targetLanguage, asFutureSelf)",
+    "selfAddressLine(targetLanguage, asFutureSelf: counterpart == nil && topic.isEmpty)":
+        "LanguageLines.selfAddress(targetLanguage, asFutureSelf)",
     "CoachingLanguage.selfWarmth": "CoachingLanguage.selfWarmth",
     "tutor": "tutor",
     # The learner's own goals (iOS 3d655c8b, WHO YOU BECAME): which calls
     # get it is ConversationEngine.kt's; "" = byte-identical, as iOS is with
     # no goals.
     "futureBlock": "futureBlock",
-    "beginnerQuestions(level)": "beginnerQuestions(level)",
+    "beginnerQuestions(level, targetLanguage: targetLanguage)": "beginnerQuestions(level, targetLanguage)",
     # The lesson-dependent block is assembled in ConversationEngine.kt
     # (`TutorPrompt`), from the pieces lifted below.
     'tutor ? tutorBlock(targetLanguage: targetLanguage, languageName: languageName, lesson: tutorLesson, justTicked: tutorJustTicked, lastFixes: tutorLastFixes, planning: tutorPlanning) : ""':
@@ -152,13 +170,15 @@ def goal_line(swift):
 
 goal_when = "\n        ".join(f'"{raw}" -> {goal_line(goal_text[case])}' for case, raw in goal_ids)
 goal_list = ", ".join(f'"{raw}"' for _, raw in goal_ids)
-beginner = kotlin_conv(literal_at(engine, "static func beginnerQuestions(_ level: CEFRLevel)"),
-                  {"level.rawValue.uppercased()": "level.code.uppercase()"})
+beginner = kotlin_conv(literal_at(engine, "static func beginnerQuestions(_ level: CEFRLevel"),
+                  {"level.rawValue.uppercased()": "level.code.uppercase()",
+                   "beginnerQuestionLanguageLine(targetLanguage)": "LanguageLines.beginnerQuestion(targetLanguage)"})
 guards = {
     "scriptGuard(targetLanguage)": "CorrectionOnlyPrompt.scriptGuard(targetLanguage)",
     "spacingGuard(targetLanguage)": "CorrectionOnlyPrompt.spacingGuard(targetLanguage)",
     "registerGuard(targetLanguage)": "CorrectionOnlyPrompt.registerGuard(targetLanguage)",
     "varietyGuard(targetLanguage)": "LanguageVariety.guard(targetLanguage)",
+    "spokenGrammarGuard(targetLanguage)": "LanguageLines.spokenGrammarGuard(targetLanguage)",
 }
 # Tutor mode's lesson block (iOS af3c7ffe…bd242766): the text of each branch;
 # which branch, and the checklist rows, are TutorPrompt's (hand-ported).
@@ -186,6 +206,7 @@ tutor_now_part = kotlin_conv(literal_at(engine, 'lessonPart = """', tb_fix_at), 
 tutor_none = kotlin_conv(literal_at(engine, 'lessonPart = """', tb_now_at + 10), {})
 tutor = kotlin_conv(literal_at(engine, 'return """', tb),
                {"languageName": "languageName", "lessonPart": "lessonPart", **guards,
+                "tutorRegisterLine(targetLanguage)": "LanguageLines.tutorRegisterLine(targetLanguage)",
                 "tutorNow(lesson: lesson, justTicked: justTicked && !planning)": "tutorNow"})
 tn = engine.index("private static func tutorNow(lesson: TutorLesson?, justTicked: Bool)")
 tn_check_at = engine.index('return """', tn)
@@ -204,6 +225,8 @@ output = kotlin_conv(literal_at(engine, "static func turnOutputInstruction("), {
     "politeSettingLine(targetLanguage, counterpart: counterpart, inScene: inScene)":
         "ConversationCharacter.politeSettingLine(targetLanguage, counterpart, inScene)",
     "rewriteRules(level)": "CorrectionOnlyPrompt.rewriteRules(level)",
+    "notesLanguageGuard(targetLanguage, nativeLanguage: nativeLanguage)":
+        "LanguageLines.notesLanguageGuard(targetLanguage, nativeLanguage)",
 })
 realtime = kotlin_conv(literal_at(view, "private static let realtimeStyleRules = "), {})
 
@@ -287,7 +310,7 @@ object ConversationPrompt {{
             {news}
 
     /** iOS `firstMeetingBlock`, when it applies. */
-    fun firstCallBlock(languageName: String): String =
+    fun firstCallBlock(languageName: String, targetLanguage: String): String =
         {first}
 
     /**
@@ -333,8 +356,14 @@ object ConversationPrompt {{
     }}
 
     /** iOS `theyCalledBlock` — a plain free talk the LEARNER placed. */
-    fun theyCalledBlock(freeTalkCue: FreeTalkCue): String =
+    fun theyCalledBlock(freeTalkCue: FreeTalkCue, sameDay: Boolean = false): String =
         {they_called}
+
+    /** iOS `earlierBlock` (98d7ff2a): what you and they did earlier today —
+     *  a talk, a tutor lesson, a scene or a pronunciation drill. Free talk
+     *  only; absent, every prompt from before is byte-identical. */
+    fun earlierTodayBlock(record: String): String =
+        {earlier}
 
     /** iOS `ownTopicBlock` — a "my own topic" call (topics page): the
      *  subject the learner names is the call. */
@@ -342,7 +371,7 @@ object ConversationPrompt {{
         {own_topic}
 
     /** iOS `beginnerQuestions` — empty at B1 and above. */
-    fun beginnerQuestions(level: CefrLevel): String {{
+    fun beginnerQuestions(level: CefrLevel, targetLanguage: String = ""): String {{
         if (level != CefrLevel.A1 && level != CefrLevel.A2) return ""
         return {beginner}
     }}
@@ -396,8 +425,11 @@ object ConversationPrompt {{
         languageName: String, nativeName: String, levelName: String, level: CefrLevel,
         personaBlock: String, counterpartBlock: String, firstMeetingBlock: String,
         theyCalledBlock: String, ownTopicBlock: String, clockBlock: String,
+        earlierBlock: String = "",
         patterns: String, weak: String, topic: String, newsBlock: String, briefBlock: String,
         targetLanguage: String, tutor: Boolean, tutorBlock: String = "", futureBlock: String = "",
+        /** The model IS the learner's future self (iOS `counterpart == nil && topic.isEmpty`). */
+        asFutureSelf: Boolean,
     ): String =
         {system}
 

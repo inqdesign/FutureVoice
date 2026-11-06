@@ -145,6 +145,9 @@ object ConversationPromptFixtures {
             persona = goalsPersona),
         Fixture("goals_cast_en_absent", "en", "ko", CefrLevel.B1, persona = goalsPersona, counterpart = closeFriend),
         Fixture("goals_tutor_de_absent", "de", "en", CefrLevel.B2, persona = goalsPersona, tutor = true),
+        // Lines for one target language (iOS 5a462332): Spanish as the future
+        // self gets the gender line beside the Latin American one.
+        Fixture("free_es_a2_self", "es", "ko", CefrLevel.A2, persona = thinPersona),
     )
 
     /** name → (target, native, counterpart, inScene) for `turnOutputInstruction`. */
@@ -155,6 +158,8 @@ object ConversationPromptFixtures {
         listOf("output/ko_manager", "ko", "ja", manager, false),
         listOf("output/ja_stranger", "ja", "ko", stranger, false),
         listOf("output/de_plain", "de", "en", null, false),
+        listOf("output/es_plain", "es", "en", null, false),
+        listOf("output/de_native_ko", "de", "ko", null, false),
     )
 
     /** Mirrors `corrections` in scripts/android/promptgen/main.swift. */
@@ -165,5 +170,8 @@ object ConversationPromptFixtures {
         listOf("correction/ko_manager", "ko", "ja", CefrLevel.B1, manager, false),
         listOf("correction/ja_stranger", "ja", "ko", CefrLevel.A1, stranger, false),
         listOf("correction/de_plain", "de", "en", CefrLevel.C1, null, false),
+        listOf("correction/es_plain", "es", "en", CefrLevel.B1, null, false),
+        listOf("correction/ja_native_en", "ja", "en", CefrLevel.B1, null, false),
+        listOf("correction/de_native_ko", "de", "ko", CefrLevel.A2, null, false),
     )
 }

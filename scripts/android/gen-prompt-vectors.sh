@@ -18,6 +18,10 @@ for f in Models/Models.swift Models/SpeechRegister.swift Services/ConversationEn
          Services/PersonHistory.swift; do
   git show "$REF:FutureVoice/$f" > "$SRC/$(basename "$f")"
 done
+# Lines for one target language each (iOS 5a462332).
+if git cat-file -e "$REF:FutureVoice/Services/ConversationEngine+LanguageLines.swift" 2>/dev/null; then
+  git show "$REF:FutureVoice/Services/ConversationEngine+LanguageLines.swift" > "$SRC/ConversationEngine+LanguageLines.swift"
+fi
 # Tutor mode's lesson types (iOS af3c7ffe) — the model only; the store and
 # the model calls below it need the app.
 if git cat-file -e "$REF:FutureVoice/Services/TutorLesson.swift" 2>/dev/null; then

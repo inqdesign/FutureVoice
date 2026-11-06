@@ -124,7 +124,7 @@ object ConversationEngine {
 
         // The very first call — never for a cast counterpart.
         val firstMeetingBlock = if (firstMeeting && counterpart == null)
-            ConversationPrompt.firstCallBlock(languageName) else ""
+            ConversationPrompt.firstCallBlock(languageName, targetLanguage) else ""
 
         // A plain free talk the learner placed: their subject first, and on
         // "nothing much" the fluent self brings what `freeTalkCue` says (iOS `bbfa2902`).
@@ -173,6 +173,9 @@ object ConversationEngine {
             tutorBlock = if (tutor) TutorPrompt.block(targetLanguage, languageName, tutorLesson,
                 tutorJustTicked, tutorLastFixes, tutorPlanning) else "",
             futureBlock = futureBlock,
+            // iOS `counterpart == nil && topic.isEmpty` (5a462332): the
+            // Spanish gender line and the Japanese self-address line.
+            asFutureSelf = counterpart == null && topic.isEmpty(),
         )
     }
 

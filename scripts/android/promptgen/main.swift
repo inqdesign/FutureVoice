@@ -193,6 +193,9 @@ let fixtures: [Fixture] = [
             counterpart: closeFriend),
     Fixture(name: "goals_tutor_de_absent", target: "de", native: "en", level: .b2, persona: goalsPersona,
             tutor: true),
+    // Lines for one target language (iOS 5a462332): Spanish as the future
+    // self gets the gender line beside the Latin American one.
+    Fixture(name: "free_es_a2_self", target: "es", native: "ko", level: .a2, persona: thinPersona),
 ]
 
 var prompts: [String: String] = [:]
@@ -213,6 +216,8 @@ let outputs: [(String, String, String, Counterpart?, Bool)] = [
     ("output/ko_manager", "ko", "ja", manager, false),
     ("output/ja_stranger", "ja", "ko", stranger, false),
     ("output/de_plain", "de", "en", nil, false),
+    ("output/es_plain", "es", "en", nil, false),
+    ("output/de_native_ko", "de", "ko", nil, false),
 ]
 for (name, target, native, cp, scene) in outputs {
     LanguageScope.active = target
@@ -229,6 +234,9 @@ let corrections: [(String, String, String, CEFRLevel, Counterpart?, Bool)] = [
     ("correction/ko_manager", "ko", "ja", .b1, manager, false),
     ("correction/ja_stranger", "ja", "ko", .a1, stranger, false),
     ("correction/de_plain", "de", "en", .c1, nil, false),
+    ("correction/es_plain", "es", "en", .b1, nil, false),
+    ("correction/ja_native_en", "ja", "en", .b1, nil, false),
+    ("correction/de_native_ko", "de", "ko", .a2, nil, false),
 ]
 for (name, target, native, level, cp, scene) in corrections {
     LanguageScope.active = target

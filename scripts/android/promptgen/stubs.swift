@@ -33,3 +33,13 @@ enum CoachRead { static func isRead(_ said: String, line: String?) -> Bool { fal
 /// `FutureGoal.swift` (iOS 3d655c8b, compiled from the ref) files each goal
 /// under its purpose; the prompt never reads the purpose.
 enum LearningPurpose { case start, hobby, exam, study, job, work, abroad, travel }
+/// `ConversationEngine.conversationSystemPrompt(earlierToday:)` (iOS 98d7ff2a,
+/// defined in FreeTalkOpeners.swift, which needs the app); no fixture has one.
+struct EarlierToday: Equatable { var record: String }
+/// `ConversationEngine+LanguageLines.swift` (iOS 5a462332) extends it with
+/// `bracketAgreementLine`; the coach prompt itself needs the app.
+enum CoachSuggester {}
+/// `Models.swift` carries the phoneme assessment on a shadow attempt and a
+/// speech take (iOS 0971c05d, defined in the app's pronunciation reader); no
+/// prompt reads it.
+struct PronunciationResult: Codable, Hashable { struct Word: Codable, Hashable {} }
