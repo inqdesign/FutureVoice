@@ -1041,7 +1041,8 @@ fun TalkScreen(
                                     state.grammarFocus?.label else null,
                                 meaningLanguage = nativeLanguage.takeUnless {
                                     com.roro.futurevoice.data.LanguageCatalog.sameLanguage(targetLanguage, it)
-                                })
+                                },
+                                readText = if (turn.role == TurnRole.USER) state.pronReadTexts[turn.id] else null)
                         }
                     }
                     // Subtitles off: the call is audio only, like a phone call —
@@ -1395,15 +1396,19 @@ fun DialogueLine(turn: Turn, isCurrent: Boolean = false,
                  /** The learner's language when a line's "Meaning" may be
                   *  asked for (iOS `TurnView.translates`) — null when the
                   *  target IS that language, or on a surface without it. */
-                 meaningLanguage: String? = null) {
+                 meaningLanguage: String? = null,
+                 /** A pronunciation take: the word or sentence on screen,
+                  *  shown in place of the transcript (iOS `readText`). */
+                 readText: String? = null) {
     val isUser = turn.role == TurnRole.USER
+    val shown = readText ?: turn.transcript
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     // Keyed on the text: a late transcription upgrade rewrites the line, and
     // a meaning fetched for the OLD wording must not sit under the new one.
-    var translation by remember(turn.id, turn.transcript) {
+    var translation by remember(turn.id, shown) {
         mutableStateOf(meaningLanguage?.let {
-            com.roro.futurevoice.net.Translator.cached(context, turn.transcript, it)
+            com.roro.futurevoice.net.Translator.cached(context, shown, it)
         })
     }
     var showingMeaning by remember(turn.id) { mutableStateOf(false) }
@@ -1411,10 +1416,10 @@ fun DialogueLine(turn: Turn, isCurrent: Boolean = false,
     fun fetchMeaning(lang: String) {
         if (translation != null || loadingMeaning) return
         loadingMeaning = true
-        val text = turn.transcript
+        val text = shown
         scope.launch {
             val t = com.roro.futurevoice.net.Translator.translate(context, text, lang)
-            if (text == turn.transcript) translation = t
+            if (text == shown) translation = t
             loadingMeaning = false
             if (t == null) showingMeaning = false
         }
@@ -1470,7 +1475,8 @@ fun DialogueLine(turn: Turn, isCurrent: Boolean = false,
     ) {
         // With furigana the line is laid out in units (iOS `FuriganaText`),
         // and the fluent self's fade gives way to it.
-        FuriganaText(androidx.compose.ui.text.AnnotatedString(turn.transcript)) {
+        if (readText != null) Text(readText)
+        else FuriganaText(androidx.compose.ui.text.AnnotatedString(turn.transcript)) {
             if (fadesIn) FadeInText(turn.transcript) else Text(turn.transcript)
         }
     }

@@ -194,6 +194,11 @@ data class TalkUiState(
     val pronTopic: PronunciationCourse.Topic? = null,
     /** A round is being written. */
     val pronPlanning: Boolean = false,
+    /** What each pronunciation take was a reading OF (the word or sentence
+     *  on screen), shown in the learner's bubble instead of the transcript:
+     *  the verdict is the audio's, and a transcript beside it ("기수전", or
+     *  "think" beside a "Good" for "thank") contradicted it (iOS 5b9ee99d). */
+    val pronReadTexts: Map<String, String> = emptyMap(),
     /** The call asks the screen to open the course (the learner wants a
      *  different sound); the screen clears it when it opens. */
     val pronTopicsRequested: Boolean = false,
@@ -2013,6 +2018,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         val i = round.current ?: return
         val line = round.lines[i]
         val drill = line.drillWord
+        _state.update { it.copy(pronReadTexts = it.pronReadTexts + (turnId to (drill ?: line.text))) }
         val audio = _state.value.turns.firstOrNull { it.id == turnId }?.audioURL?.let { java.io.File(it) }
             ?.takeIf { it.exists() }
         val target = cfg.targetLanguage
@@ -2039,9 +2045,20 @@ class TalkViewModel(context: Context) : ViewModel() {
                 outcome == PronunciationAssessor.Outcome.CAPPED || outcome == PronunciationAssessor.Outcome.SKIPPED ||
                 audio == null || pronUnheard >= 2)
             val verdict = if (noReader) PronunciationJudge.fallback(line, said, target)
-                else PronunciationJudge.verdict(result, line, said, now.topic.phonemes, target)
+                else PronunciationJudge.verdict(result, line, said, now.topic.phonemes, target, only = line.watch)
+            // What missed this time, out of what missed before: the next
+            // reading is judged on these alone.
+            val watch: Set<String>? = when {
+                noReader || result == null -> line.watch
+                verdict is PronunciationJudge.Verdict.NotYet -> PronunciationJudge.missedWords(
+                    result, line, said, now.topic.phonemes, target, line.watch).map(PronunciationJudge::key).toSet()
+                verdict is PronunciationJudge.Verdict.NotSmooth -> emptySet()
+                else -> line.watch
+            }
             com.roro.futurevoice.core.Telemetry.log("pron_take", mapOf(
                 "topic" to now.topic.id, "verdict" to verdict.name,
+                "word" to ((verdict as? PronunciationJudge.Verdict.NotYet)?.word ?: ""),
+                "watch" to (watch?.size?.toString() ?: ""),
                 "score" to (result?.soundScore?.toString() ?: ""),
                 "fluency" to (result?.fluency?.toString() ?: ""),
                 "prosody" to (result?.prosody?.toString() ?: ""),
@@ -2049,7 +2066,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             val fb = PronunciationJudge.feedback(verdict, result, line, now.topic.phonemes)
             val heard = (verdict as? PronunciationJudge.Verdict.NotYet)?.takeIf { it.heard != null }
             now = now.replacing(i) { l ->
-                l.copy(lastResult = result ?: l.lastResult, feedback = fb ?: l.feedback,
+                l.copy(lastResult = result ?: l.lastResult, feedback = fb ?: l.feedback, watch = watch,
                     notSmooth = verdict is PronunciationJudge.Verdict.NotSmooth,
                     heardWord = heard?.word, heardAs = heard?.heard)
             }.copy(carried = null)
@@ -2086,7 +2103,20 @@ class TalkViewModel(context: Context) : ViewModel() {
                 }
                 is PronunciationJudge.Verdict.NotYet -> {
                     pronUnheard = 0
-                    // The word on its own first, then the sentence again.
+                    // The word on its own first, then the sentence again. A word
+                    // already right on its own is practiced joined to its
+                    // neighbours instead: the joining is what slipped.
+                    if (PronunciationJudge.key(verdict.word) in line.soloPassed) {
+                        val chunk = PronunciationJudge.flowText(verdict.word, line.text)
+                        now = now.replacing(i) { l ->
+                            l.copy(tries = l.tries + 1, bestScore = maxOf(l.bestScore ?: 0, verdict.score),
+                                drillWord = chunk, drillTries = 0)
+                        }
+                        _state.update { it.copy(pronRound = now) }
+                        sendTutorSystem()
+                        tutorNudge(PronunciationNotes.inFlow(chunk, verdict.word))
+                        return@launch
+                    }
                     val drillText = PronunciationJudge.drillText(verdict.word, line.text, target)
                     now = now.replacing(i) { l ->
                         l.copy(tries = l.tries + 1, bestScore = maxOf(l.bestScore ?: 0, verdict.score),
@@ -2251,8 +2281,13 @@ class TalkViewModel(context: Context) : ViewModel() {
             else PronunciationJudge.verdict(result, probe, said, round.topic.phonemes, target)
         // One word has no rhythm to judge: its sounds are the take.
         if (verdict is PronunciationJudge.Verdict.NotSmooth) verdict = PronunciationJudge.Verdict.Pass(verdict.score)
+        // A word read on its own that Azure couldn't match is that word not
+        // coming out yet, never "they said something else" (iOS 5b9ee99d).
+        if (verdict == PronunciationJudge.Verdict.OffScript && result != null) {
+            verdict = PronunciationJudge.Verdict.NotYet(word, null, result.soundScore, null)
+        }
         com.roro.futurevoice.core.Telemetry.log("pron_word_take", mapOf("topic" to round.topic.id,
-            "verdict" to verdict.name, "score" to (result?.soundScore?.toString() ?: ""),
+            "word" to word, "verdict" to verdict.name, "score" to (result?.soundScore?.toString() ?: ""),
             "try" to (round.lines[i].drillTries + 1).toString()))
         var now = round
         PronunciationJudge.feedback(verdict, result, probe, round.topic.phonemes)?.let { fb ->
@@ -2262,7 +2297,11 @@ class TalkViewModel(context: Context) : ViewModel() {
             is PronunciationJudge.Verdict.Pass, is PronunciationJudge.Verdict.NotSmooth -> {
                 pronUnheard = 0
                 pronClearMissed(word, now.topic.id)
-                now = now.replacing(i) { it.copy(drillWord = null, drillTries = 0) }
+                val solo = !word.any { it.isWhitespace() }
+                now = now.replacing(i) {
+                    it.copy(drillWord = null, drillTries = 0,
+                        soloPassed = if (solo) it.soloPassed + PronunciationJudge.key(word) else it.soloPassed)
+                }
                 _state.update { it.copy(pronRound = now) }
                 com.roro.futurevoice.ui.HapticEngine.success(appContext)
                 sendTutorSystem()

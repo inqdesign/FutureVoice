@@ -290,6 +290,15 @@ data class PronunciationRound(
          *  sentence is read again. null = the sentence. */
         val drillWord: String? = null,
         val drillTries: Int = 0,
+        /** The words (keys) that missed on this sentence's first judged
+         *  reading. A reading after that is judged on these alone and the
+         *  set only shrinks (2026-11-06, iOS 5b9ee99d). null = not judged yet. */
+        val watch: Set<String>? = null,
+        /** Words (keys) already said right ON THEIR OWN in this sentence's
+         *  drill. One that misses in the sentence again is practiced with its
+         *  neighbours next ([PronunciationJudge.flowText]): the sentence's
+         *  score is the one that counts (founder, 2026-11-06, iOS cd5be2f3). */
+        val soloPassed: Set<String> = emptySet(),
         /** The last take's verdict as the learner sees it. */
         val feedback: Feedback? = null,
         /** The second time this sentence comes up in the round. */
@@ -437,10 +446,14 @@ object PronunciationJudge {
 
     /** The AUDIO decides, never the transcript (founder, 2026-11-04). Bars
      *  set on the founder's own takes that day (iOS). */
+    /** Outside the lesson's sound only what plainly didn't come out stops a
+     *  sentence (2026-11-06, iOS 5b9ee99d: a learner's 85–97 readings failed
+     *  41 times in 52, somewhere new each time). A non-lesson VOWEL never
+     *  stops a reading ("decision" with /ə/ or /ɪ/). */
     const val LESSON_SOUND_BAR = 70
-    const val WORD_BAR = 70
-    const val SOUND_BAR = 65
-    const val FINAL_STOP_BAR = 55
+    const val WORD_BAR = 50
+    const val SOUND_BAR = 50
+    const val FINAL_STOP_BAR = 40
     const val PROSODY_BAR = 80
     const val FLUENCY_BAR = 70
     const val COMPLETENESS_BAR = 50
@@ -449,11 +462,19 @@ object PronunciationJudge {
 
     private val FINAL_STOPS = setOf("p", "t", "k", "b", "d", "g")
 
+    /** [only]: judge just these words (keys) — a sentence read again after a
+     *  miss is judged on what was wrong the first time ([PronunciationRound.Line.watch]).
+     *  [excluding]: skip these words, for listing every miss ([missedWords]). */
     fun verdict(result: PronunciationResult?, line: PronunciationRound.Line, said: String,
-                phonemes: List<String>, language: String): Verdict {
+                phonemes: List<String>, language: String,
+                only: Set<String>? = null, excluding: Set<String> = emptySet()): Verdict {
         result ?: return Verdict.Unheard
         if ((result.completeness ?: 100) < COMPLETENESS_BAR) return Verdict.OffScript
-        val judged = result.referenceWords.filter { it.isJudged }
+        fun inScope(w: PronunciationResult.Word): Boolean {
+            val k = key(w.word)
+            return k !in excluding && (only?.contains(k) ?: true)
+        }
+        val judged = result.referenceWords.filter { it.isJudged && inScope(it) }
 
         // 1. The lesson's sound, wherever it is in the sentence.
         if (phonemes.isNotEmpty()) {
@@ -479,6 +500,9 @@ object PronunciationJudge {
         val soundHits = judged.mapNotNull { w ->
             val named = w.phonemes.filter { it.accuracy != null }
             val off = named.filterIndexed { i, p ->
+                // Vowels outside the lesson never stop a reading; an unnamed
+                // phoneme (not English) is judged as before.
+                if (p.phoneme.isNotEmpty() && hasVowel(p.phoneme) && !isLesson(p.phoneme, phonemes)) return@filterIndexed false
                 val finalStop = i == named.size - 1 && p.phoneme in FINAL_STOPS
                 p.accuracy!! < (if (finalStop) FINAL_STOP_BAR else SOUND_BAR)
             }
@@ -488,7 +512,7 @@ object PronunciationJudge {
             return Verdict.NotYet(w.word, p.phoneme.ifEmpty { null }, result.soundScore, null)
         }
         // 3. Any word that came out badly, or a word left out.
-        result.referenceWords.filter { it.isOmission || (it.isJudged && (it.accuracy ?: 100) < WORD_BAR) }
+        result.referenceWords.filter { inScope(it) && (it.isOmission || (it.isJudged && (it.accuracy ?: 100) < WORD_BAR)) }
             .minByOrNull { it.accuracy ?: 0 }?.let { w ->
                 return Verdict.NotYet(w.word, if (w.isJudged) sound(w, phonemes) else null, result.soundScore, null)
             }
@@ -497,6 +521,35 @@ object PronunciationJudge {
             return Verdict.NotSmooth(result.soundScore)
         }
         return Verdict.Pass(result.soundScore)
+    }
+
+    /** Every word that missed in a take, worst first: the verdict asked again
+     *  with each word it named set aside. */
+    fun missedWords(result: PronunciationResult?, line: PronunciationRound.Line, said: String,
+                    phonemes: List<String>, language: String, only: Set<String>? = null): List<String> {
+        val out = mutableListOf<String>()
+        val seen = mutableSetOf<String>()
+        while (out.size < 12) {
+            val v = verdict(result, line, said, phonemes, language, only, seen) as? Verdict.NotYet ?: break
+            val k = key(v.word)
+            if (k.isEmpty() || !seen.add(k)) break
+            out += v.word
+        }
+        return out
+    }
+
+    /** [word] with the words on either side of it, as the sentence runs them
+     *  together ("I'd rather walk"): the drill for a word that is right alone
+     *  and slips in the sentence. At the sentence's edge, the two words after
+     *  or before it. */
+    fun flowText(word: String, sentence: String): String {
+        val words = sentence.split(Regex("\\s+")).filter { it.isNotEmpty() }
+        val k = key(word.split(Regex("\\s+")).firstOrNull { it.isNotEmpty() } ?: word)
+        val i = words.indexOfFirst { key(it) == k }
+        if (words.size < 2 || i < 0) return trimPunctuation(word)
+        val lo = maxOf(0, minOf(i - 1, words.size - 3))
+        val hi = minOf(words.size - 1, lo + 2)
+        return trimPunctuation(words.subList(lo, hi + 1).joinToString(" "))
     }
 
     /** What the card shows for a verdict: the word and sound that were
@@ -840,6 +893,12 @@ object PronunciationNotes {
 
     /** Said alone, a word can lose the sound it has in the sentence. */
     const val AS_IN_SENTENCE = " Say it exactly the way it sounds inside the sentence on their screen (a reduced \"the\" stays \"thuh\" before a consonant), never a careful dictionary form."
+
+    /** The word is right alone and slipped in the sentence again: now it is
+     *  practiced joined to its neighbours. */
+    fun inFlow(chunk: String, word: String): String =
+        "Result: NOT YET. " + only("${cap(word)} alone is good. Now together: $chunk. $chunk.", 16) +
+            AS_IN_SENTENCE
 
     fun wordPassed(word: String): String =
         "Result: PASSED. " + only(reaction(listOf("Yes! Now the whole sentence.",
