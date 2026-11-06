@@ -435,8 +435,8 @@ object TutorNudges {
     fun help(ownLanguage: Boolean, languageName: String, i: Int, task: String, example: String) =
         "Not a try: they ${if (ownLanguage) "said this in their own language — they couldn't find the $languageName" else "asked for help with how to say it, or are stuck"}. Teach it: give them the $languageName line for what they meant, short and at their level, fitted to challenge ${i + 1} (\"$task\"; e.g. \"$example\"), and invite them to say it. No \"not yet\" — this is help, not a miss."
     /** Not a try: they're just talking — answered like a person, then back. */
-    fun talk(slip: String?, i: Int, task: String) =
-        "Not a try: they're just talking with you (a remark, a story, or a question). Answer it as a real conversation partner — react to what they meant, answer a question properly.${slip?.let { " If it helps, say their phrase back the right way inside your reply, in passing ($it), without asking them to repeat it." } ?: ""} Then steer back with one natural question that asks for challenge ${i + 1} (\"$task\"). No verdict, no \"not yet\"."
+    fun talk(i: Int, task: String) =
+        "Not a try: they're just talking with you (a remark, a story, or a question). Answer it as a real conversation partner — react to what they meant, answer a question properly. Then steer back with one natural question that asks for challenge ${i + 1} (\"$task\"). No verdict, no \"not yet\"."
 
     // After a lesson (iOS `tutorAfterLesson`).
     const val ONCE_MORE_CLEAN = "Their once-more was clean. Say so warmly in a few words, then ask whether they want more of this topic or another one."

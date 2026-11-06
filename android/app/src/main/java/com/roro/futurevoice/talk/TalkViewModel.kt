@@ -315,6 +315,12 @@ class TalkViewModel(context: Context) : ViewModel() {
     private val tutorCheckTurnIds = mutableSetOf<String>()
     /** A tutor note written while the call was paused ([tutorNudge]). */
     private var pendingTutorNudge: String? = null
+    /** How long a held tutor turn waits (iOS, 2026-11-06): when the turn
+     *  reached the app, when the note went out, what it was. Reported once
+     *  the reply begins (`tutor_turn_wait`). */
+    private var tutorWaitTurnAt: Long? = null
+    private var tutorWaitNoteAt: Long? = null
+    private var tutorWaitKind = ""
     /** The topic sheet is open: choosing is someone being here (iOS
      *  `showingTutorTopics` in the idle watch, 74d3ccf3). */
     private var tutorTopicsShowing = false
@@ -1055,6 +1061,15 @@ class TalkViewModel(context: Context) : ViewModel() {
             }
         }
         realtime.onReplyBegan = { ctx ->
+            tutorWaitTurnAt?.let { turnAt ->
+                val now = System.currentTimeMillis()
+                log("tutor_turn_wait", mapOf(
+                    "kind" to (if (tutorWaitNoteAt == null) "none" else tutorWaitKind),
+                    "note_ms" to (tutorWaitNoteAt?.let { (it - turnAt).toString() } ?: ""),
+                    "reply_ms" to (now - turnAt).toString()))
+                tutorWaitTurnAt = null
+                tutorWaitNoteAt = null
+            }
             val turn = Turn(role = TurnRole.FLUENT_SELF, transcript = "")
             realtimeReplyTurns[ctx] = turn.id
             // The hint and the suggestion belonged to the line just answered:
@@ -2310,6 +2325,10 @@ class TalkViewModel(context: Context) : ViewModel() {
     private fun tutorTurn(turnId: String, said: String, correction: Deferred<List<TurnFix>?>,
                           ownLanguage: Boolean = false) {
         if (!tutorThisCall || _state.value.tutorPlanning) return
+        if (tutorJudging) {
+            tutorWaitTurnAt = System.currentTimeMillis()
+            tutorWaitNoteAt = null
+        }
         val lesson = _state.value.tutorLesson
         if (lesson == null || lesson.droppedAt != null) {
             startTutorLesson(said, askedWith = tutorLine(answeredBy = turnId), picked = false, fromTopic = false)
@@ -2346,7 +2365,11 @@ class TalkViewModel(context: Context) : ViewModel() {
     /** A tutor note for a call that may be paused (iOS `tutorNudge`,
      *  74d3ccf3): a paused call has hung up, so the note waits and goes out
      *  when the call is picked back up ([connectRealtime]). */
-    private fun tutorNudge(note: String) {
+    private fun tutorNudge(note: String, waitKind: String = "other") {
+        if (tutorWaitTurnAt != null && tutorWaitNoteAt == null) {
+            tutorWaitNoteAt = System.currentTimeMillis()
+            tutorWaitKind = waitKind
+        }
         if (REALTIME && _state.value.phase == TalkPhase.PAUSED) pendingTutorNudge = note
         else realtime.nudge(note)
     }
@@ -2456,18 +2479,19 @@ class TalkViewModel(context: Context) : ViewModel() {
             // Asked on every try, fixes or not: a request to change the
             // topic can come with a mistake in it.
             val judged = async { TutorJudge.read(said, challenge, cfg.targetLanguage, asked, ownLanguage) }
-            val fixes = correction.await().orEmpty()
+            // The judge (~0.7 s) is read before the correction (~3 s on
+            // Haiku): a turn that isn't a try is answered without waiting
+            // for it (iOS, 2026-11-06: the wait after Send was ~4–5 s).
             val verdict = judged.await()
-            val now = _state.value.tutorLesson
-            if (tutorCallOver || !tutorStillSaid(turnId, said) || now == null ||
-                now.id != lesson.id || now.current != i) return@launch
+            val early = _state.value.tutorLesson
+            if (tutorCallOver || !tutorStillSaid(turnId, said) || early == null ||
+                early.id != lesson.id || early.current != i) return@launch
             if (verdict?.wantsOtherTopic == true) {
                 // The held turn's one line, before the lesson changes.
-                tutorNudge(TutorNudges.LEAVE)
+                tutorNudge(TutorNudges.LEAVE, waitKind = "leave")
                 dropTutorLesson(said = said)
                 return@launch
             }
-            val slips = fixes.map { "\"${it.was}\" → \"${it.now}\"" }
             // A line in their own language is a request for the words, never
             // a miss — and with no judge to say otherwise, still help.
             val kind = if (ownLanguage) TutorJudge.Verdict.Kind.HELP
@@ -2475,15 +2499,20 @@ class TalkViewModel(context: Context) : ViewModel() {
             if (kind == TutorJudge.Verdict.Kind.HELP) {
                 log("tutor_turn_help", mapOf("own_language" to if (ownLanguage) "1" else "0"))
                 tutorNudge(TutorNudges.help(ownLanguage, LanguageCatalog.englishName(cfg.targetLanguage),
-                    i, challenge.task, challenge.example))
+                    i, challenge.task, challenge.example), waitKind = "help")
                 return@launch
             }
             if (kind == TutorJudge.Verdict.Kind.TALK) {
                 log("tutor_turn_talk")
-                tutorNudge(TutorNudges.talk(slips.firstOrNull(), i, challenge.task))
+                tutorNudge(TutorNudges.talk(i, challenge.task), waitKind = "talk")
                 return@launch
             }
-            if (verdict == null) { tutorNudge(TutorNudges.LINE_UNCHECKED); return@launch }
+            val fixes = correction.await().orEmpty()
+            val now = _state.value.tutorLesson
+            if (tutorCallOver || !tutorStillSaid(turnId, said) || now == null ||
+                now.id != lesson.id || now.current != i) return@launch
+            val slips = fixes.map { "\"${it.was}\" → \"${it.now}\"" }
+            if (verdict == null) { tutorNudge(TutorNudges.LINE_UNCHECKED, waitKind = "unchecked"); return@launch }
             tutorLastTry = said
             if (slips.isNotEmpty() || !verdict.done) {
                 tutorMissedThisChallenge = true
@@ -2494,7 +2523,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                 val what = if (slips.isEmpty())
                     "It doesn't do challenge ${i + 1} yet (\"${challenge.task}\")${verdict.missingNote?.let { ": $it" } ?: ""}."
                     else "Slips: ${slips.joinToString("; ")}."
-                tutorNudge(TutorNudges.notYet(what, noSlips = slips.isEmpty()))
+                tutorNudge(TutorNudges.notYet(what, noSlips = slips.isEmpty()), waitKind = "not_yet")
                 return@launch
             }
             tutorLastFixes = emptyList()
@@ -2502,7 +2531,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                 tutorCleanOnce = true
                 tutorJustTicked = false
                 sendTutorSystem()
-                tutorNudge(TutorNudges.ONCE_MORE)
+                tutorNudge(TutorNudges.ONCE_MORE, waitKind = "once_more")
                 return@launch
             }
             resetTutorTries()
@@ -2522,10 +2551,10 @@ class TalkViewModel(context: Context) : ViewModel() {
                 "of" to next.challenges.size.toString(), "by" to "app"))
             sendTutorSystem()
             val n = next.current
-            if (last) tutorNudge(TutorNudges.DONE_LAST)
+            if (last) tutorNudge(TutorNudges.DONE_LAST, waitKind = "done")
             else if (n != null) {
                 val c = next.challenges[n]
-                tutorNudge(TutorNudges.doneNext(i, n, c.task, c.example))
+                tutorNudge(TutorNudges.doneNext(i, n, c.task, c.example), waitKind = "done")
             }
         }
     }
