@@ -90,4 +90,12 @@ final class PronunciationJudgeTests: XCTestCase {
         }
         XCTAssertEqual(w, "think")
     }
+
+    func testAWordRightAloneIsPracticedWithItsNeighbours() {
+        let j = PronunciationJudge.self
+        XCTAssertEqual(j.flowText(for: "rather", in: "I'd rather walk than drive."), "I'd rather walk")
+        XCTAssertEqual(j.flowText(for: "This", in: "This is my mother."), "This is my")
+        XCTAssertEqual(j.flowText(for: "mother", in: "This is my mother."), "is my mother")
+        XCTAssertEqual(j.flowText(for: "that", in: "Not that."), "Not that")
+    }
 }

@@ -3412,6 +3412,11 @@ call time." `PronunciationCall.swift`, `PronunciationCallViews.swift`.
   minimal pairs (thank → think, leaving → living passed at 96 / 94);
   scripted Azure forgives a swapped vowel, and NBest isn't used for it
   yet. `PronunciationJudgeTests`.
+- **The sentence's score is the one that counts** (same day, founder). A
+  word right on its own and missed in the sentence again ("rather" at
+  96/92/90 alone, "not yet" three times in the sentence) keeps its bar;
+  its next drill is the word JOINED to its neighbours (`flowText`, "I'd
+  rather walk", `Line.soloPassed`), because the joining is what slipped.
 - **Measured the same day** (macOS voices, en-US, `scratchpad` probe):
   word scores can't tell "드링크" from a native "drink" (97 both);
   phonemes can — Korean-style readings put consonants at 23–60, native at

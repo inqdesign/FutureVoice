@@ -5426,9 +5426,19 @@ struct ConversationView: View {
                 pronUnheard = 0
                 now.lines[i].tries += 1
                 now.lines[i].bestScore = max(now.lines[i].bestScore ?? 0, score)
-                // The word on its own first, then the sentence again.
-                now.lines[i].drillWord = PronunciationJudge.drillText(for: word, in: line.text, language: target)
+                // The word on its own first, then the sentence again. A word
+                // already right on its own is practiced joined to its
+                // neighbours instead: the joining is what slipped.
                 now.lines[i].drillTries = 0
+                if now.lines[i].soloPassed.contains(PronunciationJudge.key(word)) {
+                    let chunk = PronunciationJudge.flowText(for: word, in: line.text)
+                    now.lines[i].drillWord = chunk
+                    withAnimation(.easeInOut(duration: 0.25)) { pronRound = now }
+                    sendTutorSystem()
+                    tutorNudge(PronunciationNotes.inFlow(chunk: chunk, word: word))
+                    return
+                }
+                now.lines[i].drillWord = PronunciationJudge.drillText(for: word, in: line.text, language: target)
                 withAnimation(.easeInOut(duration: 0.25)) { pronRound = now }
                 sendTutorSystem()
                 tutorNudge(PronunciationNotes.notYet(word: now.lines[i].drillWord ?? word, sound: sound, heard: heard,
@@ -5609,6 +5619,9 @@ struct ConversationView: View {
             // One word has no rhythm to judge: its sounds are the take.
             pronUnheard = 0
             pronClearMissed(in: word, topicId: now.topic.id)
+            if !word.contains(where: \.isWhitespace) {
+                now.lines[i].soloPassed.insert(PronunciationJudge.key(word))
+            }
             now.lines[i].drillWord = nil
             now.lines[i].drillTries = 0
             withAnimation(.easeInOut(duration: 0.3)) { pronRound = now }

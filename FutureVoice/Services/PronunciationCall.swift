@@ -342,6 +342,14 @@ struct PronunciationRound: Equatable {
         /// already came out (2026-11-06: one sentence read 11 times, a new
         /// word drilled every time). nil = not judged yet.
         var watch: Set<String>?
+        /// Words (keys) already said right ON THEIR OWN in this sentence's
+        /// drill. One that misses in the sentence again is practiced with
+        /// its neighbours next (`flowText`): alone it is there, and what the
+        /// sentence asks is the joining (founder, 2026-11-06: "rather" passed
+        /// alone at 96/92/90 and missed in the sentence three times — the
+        /// sentence's score is the one that counts, so the bar stays and the
+        /// practice moves).
+        var soloPassed: Set<String> = []
         /// The last take's verdict as the learner sees it: what was judged
         /// (a word and its sound, or the flow), its score, and whether it
         /// cleared the bar (founder, 2026-11-04: "show 'not yet' or a score
@@ -703,6 +711,21 @@ enum PronunciationJudge {
         return pair.joined(separator: " ").trimmingCharacters(in: .punctuationCharacters)
     }
 
+    /// `word` with the words on either side of it, as the sentence runs
+    /// them together ("I'd rather walk"): the drill for a word that is
+    /// right alone and slips in the sentence. At the sentence's edge, the
+    /// two words after or before it.
+    static func flowText(for word: String, in sentence: String) -> String {
+        let words = sentence.split(whereSeparator: \.isWhitespace).map(String.init)
+        let k = key(word.split(whereSeparator: \.isWhitespace).first.map(String.init) ?? word)
+        guard words.count >= 2, let i = words.firstIndex(where: { key($0) == k }) else {
+            return word.trimmingCharacters(in: .punctuationCharacters)
+        }
+        let lo = max(0, min(i - 1, words.count - 3))
+        let hi = min(words.count - 1, lo + 2)
+        return words[lo...hi].joined(separator: " ").trimmingCharacters(in: .punctuationCharacters)
+    }
+
     /// How a sound came out, read off Azure's list of what it heard
     /// (`Phoneme.heard`). Only for a sound that scored low: a clean sound's
     /// list is noise (a native "drink"'s ɪ had æ on top at 100).
@@ -1009,6 +1032,13 @@ enum PronunciationNotes {
     /// Said alone, a word can lose the sound it has in the sentence ("the"
     /// becomes "thee"); the voice says it the sentence's way.
     static let asInSentence = " Say it exactly the way it sounds inside the sentence on their screen (a reduced \"the\" stays \"thuh\" before a consonant), never a careful dictionary form."
+
+    /// The word is right alone and slipped in the sentence again: now it is
+    /// practiced joined to its neighbours.
+    static func inFlow(chunk: String, word: String) -> String {
+        "Result: NOT YET. " + only("\(word.capitalized) alone is good. Now together: \(chunk). \(chunk).", max: 16)
+            + asInSentence
+    }
 
     static func wordPassed(word: String) -> String {
         "Result: PASSED. " + only(reaction(["Yes! Now the whole sentence.",
