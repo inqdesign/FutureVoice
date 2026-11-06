@@ -2667,7 +2667,14 @@ reach ONE language each (`ConversationEngine+LanguageLines.swift`,
   fallthrough. **Haiku 5.5 thinks by default**: with the app's 160-token
   ceiling that was an EMPTY answer 22/105, and with room to think it passed
   one-word answers (96/105). Check thinking before moving any short-ceiling
-  call.
+  call. **The after-lesson read and the final check follow** (same day,
+  `tutor-next:` / `tutor-check:`, thinking off, `scripts/tutor-calls-probe.py`):
+  next 116/120 vs flash-lite 120/120, every miss "unclear" (the tutor asks
+  again); check 90/90 on both, ~1.0 s. **The planner stays on Gemini**:
+  without thinking Haiku wrote the German examples in English 24/24 (a
+  Claude-only line saying so halved it, not more); with thinking it was
+  right but took 4–6 s against 1.7 s, and the plan is a wait the learner
+  sits through.
 - Open, not fixed: the Gemini coach fallback (only when the Haiku call
   fails) answers Japanese casual lines politely 33/36; SpokenGate may pass
   a short English note split at a period inside a quote (no real case yet).

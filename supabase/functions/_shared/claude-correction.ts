@@ -89,6 +89,8 @@ export const CLAUDE_PURPOSE_ADDENDA: Record<string, string> = {
   // everything but the live call moves to Haiku. ~1/8 the cost per question.
   "tutor-bot": JSON_ONLY,
   "tutor-judge": JSON_ONLY,
+  "tutor-next": JSON_ONLY,
+  "tutor-check": JSON_ONLY,
 }
 
 /** A move named by the request's idempotency-key prefix, for a purpose that
@@ -100,18 +102,30 @@ const KEYED_MOVES: { name: string; purpose: string; keyPrefix: string; model: st
   // off 105/105, flash-lite 102/105 (a bare "Ingeniero." read as done every
   // time). Median 0.94 s vs 0.70 s.
   { name: "tutor-judge", purpose: "tutor", keyPrefix: "tutor-judge:", model: "gemini-3.1-flash-lite" },
+  // TutorNext.read and TutorFinalCheck.read (scripts/tutor-calls-probe.py,
+  // five languages × 3 runs, thinking off): next 116/120 vs flash-lite
+  // 120/120, every miss "unclear" (the tutor asks again); check 90/90 on
+  // both, median 1.00 s vs 1.06 s. The planner ("tutor-plan:") stays on
+  // Gemini: without thinking Haiku wrote the German examples in English
+  // (24/24), with it the plan took 4–6 s against 1.7 s.
+  { name: "tutor-next", purpose: "tutor", keyPrefix: "tutor-next:", model: "gemini-3.1-flash-lite" },
+  { name: "tutor-check", purpose: "tutor", keyPrefix: "tutor-check:", model: "gemini-3.6-flash" },
 ]
 
 /** Calls asked with Claude's thinking OFF. Haiku 5.5 thinks by default, and
  *  on the judge that spent the app's 160-token ceiling before any JSON
  *  (an empty answer, 22/105), and with room to think it passed one-word
  *  answers as done (96/105). */
-const NO_THINKING = new Set(["tutor-judge"])
+const NO_THINKING = new Set(["tutor-judge", "tutor-next", "tutor-check"])
 
 /** How long a moved call waits on Claude before the Gemini fallthrough. The
  *  judge is on the tutor's reply path and the app gives up at 10 s, so a
  *  stalled Claude must leave time for Gemini (0.7 s median). */
-const CLAUDE_TIMEOUT_MS: Record<string, number> = { "tutor-judge": 4_000 }
+const CLAUDE_TIMEOUT_MS: Record<string, number> = {
+  "tutor-judge": 4_000,
+  "tutor-next": 4_000,   // the app gives up at 10 s
+  "tutor-check": 6_000,  // the app gives up at 15 s
+}
 
 /** The name `CLAUDE_PURPOSES` lists a request under: its keyed move, else
  *  its purpose. */
