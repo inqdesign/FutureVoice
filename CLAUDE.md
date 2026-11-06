@@ -3294,7 +3294,12 @@ that back. `TutorLesson.swift`, `TutorLessonViews.swift`,
   Send. `tutor_turn_wait` (kind · note_ms · reply_ms, from the turn
   reaching the app) is the real number; the gateway's `voice_first`
   never measured a held turn. Gemini 3.6 flash corrects in ~1.3 s, not
-  switched: its quality on this contract is unmeasured.
+  switched: cost (Haiku is ~7x cheaper). In Send mode the correction
+  starts BEFORE Send instead (`armEarlyCorrection`): once the held words
+  stand still 0.8 s, and at Send it is used if the turn says the same
+  thing (`takeEarlyCorrection`), else asked again; ≤3 a turn, so a
+  changed line costs one more Haiku call. `tutor_turn_wait` carries
+  `send` · `early` · `early_fires`.
 - **The tutor speaks first through `nudge`** (gateway, 2026-10-24): a
   bracketed note from the app ("topic picked", "lesson ready", "back to
   finish last time's") answered as soon as no line is playing, 8 per call.

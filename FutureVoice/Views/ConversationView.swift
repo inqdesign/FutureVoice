@@ -1750,7 +1750,10 @@ struct ConversationView: View {
             .onChange(of: visibleTurns.count) { _, _ in scroll(proxy) }
             .onChange(of: phase)       { _, _ in scroll(proxy) }
             .onChange(of: live.transcript) { _, _ in scroll(proxy) }
-            .onChange(of: realtime.partial) { _, _ in scroll(proxy) }
+            .onChange(of: realtime.partial) { _, p in
+                scroll(proxy)
+                armEarlyCorrection(p)
+            }
             // A correction card grows the LEARNER's bubble, mid-list, often
             // while the reply below it is still being revealed. The bottom
             // anchor already moves the end with it in the same animation; a
@@ -2326,6 +2329,14 @@ struct ConversationView: View {
     @State private var tutorWaitTurnAt: Date?
     @State private var tutorWaitNoteAt: Date?
     @State private var tutorWaitKind = ""
+    /// The correction asked for before Send (`armEarlyCorrection`).
+    @State private var earlyCorrection: (said: String, task: Task<ConversationTurnPayload?, Never>)?
+    @State private var earlyCorrectionTimer: Task<Void, Never>?
+    @State private var earlyCorrectionFires = 0
+    /// For `tutor_turn_wait`: was the turn's correction the early one, and
+    /// how many early ones were asked for it.
+    @State private var earlyCorrectionUsed = false
+    @State private var earlyCorrectionFired = 0
     @State private var idleWatchTask: Task<Void, Never>?
     /// The last moment anything real happened. Deliberately OUTSIDE the watch
     /// task: the task is re-armed every time the mic opens, and a noisy room
@@ -3119,6 +3130,9 @@ struct ConversationView: View {
         }
         realtime.onUserTurn = { text, url, ms, fluency, flags in
             guard !isTornDown else { return }
+            // A turn whose correction is skipped (own language, a
+            // pronunciation call) still ends the early one.
+            if flags.native || pronThisCall { _ = takeEarlyCorrection(matching: "") }
             // The rest of a turn the gateway re-opened after cutting the
             // learner off (2026-10-08): it joins the bubble it belongs to —
             // one turn, one take, one correction — instead of standing as a
@@ -3138,7 +3152,8 @@ struct ConversationView: View {
                 didSaveCurrentSession = false
                 creditGoalChips(turnId: id)
                 let correction = flags.native || pronThisCall ? Task { [TurnFix]?.none }
-                    : requestRealtimeSuggestion(for: id, said: joined)
+                    : requestRealtimeSuggestion(for: id, said: joined,
+                                                early: takeEarlyCorrection(matching: joined))
                 tutorTurn(turnId: id, said: joined, ownLanguage: flags.native, correction: correction)
                 pronTurn(turnId: id, said: joined)
                 return
@@ -3171,7 +3186,8 @@ struct ConversationView: View {
             // way to say it; a correction of it would be built on words in
             // the wrong language.
             let correction = flags.native || pronThisCall ? Task { [TurnFix]?.none }
-                : requestRealtimeSuggestion(for: turn.id, said: text)
+                : requestRealtimeSuggestion(for: turn.id, said: text,
+                                            early: takeEarlyCorrection(matching: text))
             tutorTurn(turnId: turn.id, said: text, ownLanguage: flags.native, correction: correction)
             pronTurn(turnId: turn.id, said: text)
         }
@@ -3184,7 +3200,10 @@ struct ConversationView: View {
                 let ms = { (d: Date) in String(Int(d.timeIntervalSince(turnAt) * 1000)) }
                 Telemetry.log("tutor_turn_wait", ["kind": tutorWaitNoteAt == nil ? "none" : tutorWaitKind,
                                                   "note_ms": tutorWaitNoteAt.map(ms) ?? "",
-                                                  "reply_ms": ms(Date())])
+                                                  "reply_ms": ms(Date()),
+                                                  "send": sendToAnswer ? "1" : "0",
+                                                  "early": earlyCorrectionUsed ? "1" : "0",
+                                                  "early_fires": String(earlyCorrectionFired)])
                 tutorWaitTurnAt = nil
                 tutorWaitNoteAt = nil
             }
@@ -3345,7 +3364,8 @@ struct ConversationView: View {
     /// too short to correct, nil when the call failed) so a tutor lesson can
     /// judge the same turn alongside it (`tutorTurn`).
     @discardableResult
-    private func requestRealtimeSuggestion(for turnId: UUID, said: String) -> Task<[TurnFix]?, Never> {
+    private func requestRealtimeSuggestion(for turnId: UUID, said: String,
+                                           early: Task<ConversationTurnPayload?, Never>? = nil) -> Task<[TurnFix]?, Never> {
         // Words, not spaces: a Japanese line is one space-free run, and
         // counting on " " gave every Japanese turn a length of one — no
         // correction was ever requested on this path.
@@ -3354,44 +3374,11 @@ struct ConversationView: View {
             // can be a challenge done).
             return Task { [] }
         }
-        let target = appState.targetLanguage
-        let native = appState.nativeLanguage
-        // The line said TO them, so the rewrite can be natural IN THIS
-        // conversation rather than natural in a vacuum — the whole turn is
-        // being re-said now, and a turn only reads right against what it
-        // answers. Context only; the prompt says so and forbids correcting it.
-        let heard = turns.last(where: { $0.role == .fluentSelf })?
-            .transcript.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let content = heard.isEmpty
-            ? "They said: \"\(said)\""
-            : "They were just told: \"\(heard)\"\nThey said: \"\(said)\""
+        // A correction already asked for these words before Send (tutor
+        // lesson, Send mode) is the one used; anything else is asked now.
+        let request = early ?? correctionPayload(said: said, key: "rt-suggest:\(turnId.uuidString)")
         return Task { @MainActor () -> [TurnFix]? in
-            let payload: ConversationTurnPayload?
-            do {
-                payload = try await GeminiClient.background.sendJSON(
-                    system: ConversationEngine.correctionOnlyPrompt(
-                        targetLanguage: target, nativeLanguage: native,
-                        level: appState.proficiency, counterpart: counterpart,
-                        inScene: sessionScenarioId != nil),
-                    messages: [GeminiClient.Message(role: .user, content: content)],
-                    // Headroom, not a length: thinking spends from the same
-                    // ceiling, and a long turn's whole rewrite plus its fixes
-                    // was cut off at 900 — a truncation loses the WHOLE
-                    // correction, and Say it again then reads the turn raw.
-                    maxTokens: 2048,
-                    purpose: "turn",
-                    idempotencyKey: "rt-suggest:\(turnId.uuidString)",
-                    fastThinking: ConversationEngine.correctionThinksFast(targetLanguage: target))
-            } catch {
-                // Was invisible until 2026-10-06. One row per failed turn;
-                // `words` says whether it is the long turns that fail.
-                Telemetry.log("talk_correction_failed", [
-                    "error": Self.correctionErrorKind(error),
-                    "words": String(WordSplitter.count(said)),
-                ])
-                payload = nil
-            }
-            guard let payload else { return nil }
+            guard let payload = await request.value else { return nil }
             let fixes = payload.turnSuggestion(for: said)?.fixes ?? []
             // `transcript == said`: a turn that has since been joined with its
             // continuation is corrected as the whole line, not as its first half.
@@ -3405,6 +3392,91 @@ struct ConversationView: View {
             return fixes
         }
     }
+
+    /// The correction call itself, for `said` as a reply to the last line
+    /// the fluent self said.
+    private func correctionPayload(said: String, key: String) -> Task<ConversationTurnPayload?, Never> {
+        let target = appState.targetLanguage
+        let native = appState.nativeLanguage
+        // The line said TO them, so the rewrite can be natural IN THIS
+        // conversation rather than natural in a vacuum — the whole turn is
+        // being re-said now, and a turn only reads right against what it
+        // answers. Context only; the prompt says so and forbids correcting it.
+        let heard = turns.last(where: { $0.role == .fluentSelf })?
+            .transcript.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let content = heard.isEmpty
+            ? "They said: \"\(said)\""
+            : "They were just told: \"\(heard)\"\nThey said: \"\(said)\""
+        let system = ConversationEngine.correctionOnlyPrompt(
+            targetLanguage: target, nativeLanguage: native,
+            level: appState.proficiency, counterpart: counterpart,
+            inScene: sessionScenarioId != nil)
+        return Task { @MainActor () -> ConversationTurnPayload? in
+            do {
+                return try await GeminiClient.background.sendJSON(
+                    system: system,
+                    messages: [GeminiClient.Message(role: .user, content: content)],
+                    // Headroom, not a length: thinking spends from the same
+                    // ceiling, and a long turn's whole rewrite plus its fixes
+                    // was cut off at 900 — a truncation loses the WHOLE
+                    // correction, and Say it again then reads the turn raw.
+                    maxTokens: 2048,
+                    purpose: "turn",
+                    idempotencyKey: key,
+                    fastThinking: ConversationEngine.correctionThinksFast(targetLanguage: target))
+            } catch {
+                if Task.isCancelled { return nil }
+                // Was invisible until 2026-10-06. One row per failed turn;
+                // `words` says whether it is the long turns that fail.
+                Telemetry.log("talk_correction_failed", [
+                    "error": Self.correctionErrorKind(error),
+                    "words": String(WordSplitter.count(said)),
+                ])
+                return nil
+            }
+        }
+    }
+
+    /// Send mode in a tutor lesson: the learner has stopped and not yet
+    /// pressed Send, and the try will wait for its correction (~3 s on
+    /// Haiku) once they do. So the correction starts once the words have
+    /// held still for `earlyCorrectionSettle` (2026-11-06); at Send it is
+    /// used if the turn says the same thing, else asked again. At most
+    /// `maxEarlyCorrections` per turn.
+    private func armEarlyCorrection(_ partial: String) {
+        earlyCorrectionTimer?.cancel()
+        guard sendToAnswer, tutorThisCall, tutorJudging, !pronThisCall,
+              RealtimeMode.isEnabled, phoneCallActive else { return }
+        let text = partial.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard WordSplitter.count(text) >= 3, earlyCorrectionFires < Self.maxEarlyCorrections,
+              earlyCorrection?.said != text else { return }
+        earlyCorrectionTimer = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(Self.earlyCorrectionSettle))
+            guard !Task.isCancelled, !isTornDown,
+                  realtime.partial.trimmingCharacters(in: .whitespacesAndNewlines) == text else { return }
+            earlyCorrection?.task.cancel()
+            earlyCorrectionFires += 1
+            earlyCorrection = (text, correctionPayload(said: text, key: "rt-suggest-early:\(UUID().uuidString)"))
+        }
+    }
+
+    /// Every learner turn ends the early correction: the one asked for
+    /// these words if there is one, nil otherwise (cancelled).
+    private func takeEarlyCorrection(matching said: String) -> Task<ConversationTurnPayload?, Never>? {
+        earlyCorrectionTimer?.cancel()
+        let early = earlyCorrection.flatMap { e in
+            ConversationEngine.saysTheSameThing(e.said, said) ? e.task : nil
+        }
+        earlyCorrectionUsed = early != nil
+        earlyCorrectionFired = earlyCorrectionFires
+        if early == nil { earlyCorrection?.task.cancel() }
+        earlyCorrection = nil
+        earlyCorrectionFires = 0
+        return early
+    }
+
+    private static let earlyCorrectionSettle = 0.8
+    private static let maxEarlyCorrections = 3
 
     /// News topic: ZERO LLM calls. The platform news pool already generated
     /// this story once for everyone — the title is phrased as a friend
