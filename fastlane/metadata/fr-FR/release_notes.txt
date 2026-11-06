@@ -2,7 +2,6 @@ Nouveau
 • Répondre avec Envoyer : active-le et ton moi fluide attend que tu touches Envoyer, pour qu’une pause de réflexion ne te coupe plus. Tu peux le choisir avant ton premier appel, et il est activé par défaut jusqu’à B1.
 • Un classement général des Discours : ton meilleur score à chaque défi, additionné.
 • Les textes que ton tuteur écrit pour toi (préparation d’objectif, articles d’actualité) peuvent maintenant se travailler comme un discours.
-• Ouvre un appel, ta révision, tes mots ou le test de la semaine directement depuis Siri et l’app Raccourcis.
 
 Améliorations
 • Le mode tuteur discute avec toi comme un vrai interlocuteur et t’amène vers la phrase visée. Poser une question ou parler dans ta langue ne te vaut plus un « encore une fois ».

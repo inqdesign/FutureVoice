@@ -2,7 +2,6 @@ New
 • Answer with Send: turn it on and your future self waits until you tap Send, so pausing to think never cuts you off. You can choose it before your first call, and it's on by default up to B1.
 • A Speech leaderboard for everything: your best score on each challenge, added up.
 • Readings your tutor writes for you (goal prep, news articles) can now be practiced as speeches.
-• Open a call, your review, your words or the weekly test straight from Siri and the Shortcuts app.
 
 Improved
 • Tutor mode talks with you like a real partner and steers you toward the goal line. Asking a question or speaking your own language no longer gets a "try again".
