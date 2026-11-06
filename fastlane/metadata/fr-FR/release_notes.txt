@@ -1,9 +1,11 @@
 Nouveau
-• Les appels de prononciation : la troisième page de l’anneau Parler. Lis une phrase, et ta propre voix te dit quel son corriger. Ils ne comptent que la moitié du temps de conversation.
-• Touche ton score de prononciation pour voir comment chaque mot et chaque son est sorti.
-• Croise quelqu’un sur la carte des Scènes, et la situation commence sur-le-champ.
-• Tu peux aussi commencer avec la voix du tuteur IA, sans enregistrer la tienne.
+• Répondre avec Envoyer : active-le et ton moi fluide attend que tu touches Envoyer, pour qu’une pause de réflexion ne te coupe plus. Tu peux le choisir avant ton premier appel, et il est activé par défaut jusqu’à B1.
+• Un classement général des Discours : ton meilleur score à chaque défi, additionné.
+• Les textes que ton tuteur écrit pour toi (préparation d’objectif, articles d’actualité) peuvent maintenant se travailler comme un discours.
+• Ouvre un appel, ta révision, tes mots ou le test de la semaine directement depuis Siri et l’app Raccourcis.
 
 Améliorations
-• La prononciation compte désormais dans ton score de Discours.
-• Ton deuxième appel de la journée reprend ce que tu as raconté plus tôt.
+• Le mode tuteur discute avec toi comme un vrai interlocuteur et t’amène vers la phrase visée. Poser une question ou parler dans ta langue ne te vaut plus un « encore une fois ».
+• Le tuteur répond plus vite, et ses corrections s’affichent quand il commence à parler.
+• Les appels de prononciation ne te font plus relire sans fin la même phrase.
+• Les niveaux de vocabulaire en coréen, japonais et espagnol sont plus justes.

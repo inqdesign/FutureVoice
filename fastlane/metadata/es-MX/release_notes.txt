@@ -1,9 +1,11 @@
 Novedades
-• Llamadas de pronunciación: la tercera página del anillo de Hablar. Lee una frase y tu propia voz te dice qué sonido corregir. Usan solo la mitad del tiempo de conversación.
-• Toca tu puntuación de pronunciación para ver cómo salió cada palabra y cada sonido.
-• Encuéntrate con alguien en el mapa de Escenas y la situación empieza ahí mismo.
-• También puedes empezar con la voz del tutor IA, sin grabar la tuya.
+• Responder con Enviar: actívalo y tu yo fluido espera hasta que toques Enviar, así que pararte a pensar ya no corta lo que dices. Puedes elegirlo antes de tu primera llamada y viene activado hasta B1.
+• Una clasificación general de Discurso: tu mejor puntuación en cada reto, sumada.
+• Los textos que te escribe tu tutor (preparación de objetivos, noticias) ahora se pueden practicar como discurso.
+• Abre una llamada, tu repaso, tus palabras o la prueba semanal directamente desde Siri y la app Atajos.
 
 Mejoras
-• La pronunciación ahora cuenta en tu puntuación de Discurso.
-• Tu segunda llamada del día retoma lo que hablaste antes.
+• El modo tutor conversa contigo como alguien de verdad y te lleva hacia la frase objetivo. Si preguntas algo o hablas en tu idioma, ya no te pide que lo intentes otra vez.
+• El tutor responde más rápido y las correcciones aparecen cuando empieza a hablar.
+• Las llamadas de pronunciación ya no te hacen leer la misma frase una y otra vez.
+• Los niveles de vocabulario de coreano, japonés y español son más precisos.

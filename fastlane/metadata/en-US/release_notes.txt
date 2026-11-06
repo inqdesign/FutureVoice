@@ -1,9 +1,11 @@
 New
-• Pronunciation calls: the third page of the Talk ring. Read a sentence and your own voice tells you which sound to fix. It uses half the talk time.
-• Tap your pronunciation score to see how each word and sound came out.
-• Bump into someone on the Watch map and a situation starts right there.
-• You can also start with the AI tutor's voice, without recording yours.
+• Answer with Send: turn it on and your future self waits until you tap Send, so pausing to think never cuts you off. You can choose it before your first call, and it's on by default up to B1.
+• A Speech leaderboard for everything: your best score on each challenge, added up.
+• Readings your tutor writes for you (goal prep, news articles) can now be practiced as speeches.
+• Open a call, your review, your words or the weekly test straight from Siri and the Shortcuts app.
 
 Improved
-• Pronunciation now counts toward your Speech score.
-• Your second call of the day picks up what you talked about earlier.
+• Tutor mode talks with you like a real partner and steers you toward the goal line. Asking a question or speaking your own language no longer gets a "try again".
+• The tutor answers faster, and its corrections appear when it starts talking.
+• Fixed pronunciation calls asking you to read the same sentence again and again.
+• Vocabulary levels for Korean, Japanese and Spanish are more accurate.

@@ -1,9 +1,11 @@
 Neu
-• Aussprache-Anrufe: die dritte Seite des Sprechen-Rings. Lies einen Satz vor, und deine eigene Stimme sagt dir, welchen Laut du verbessern kannst. Sie zählen nur die Hälfte der Sprechzeit.
-• Tipp auf deinen Aussprache-Wert, um zu sehen, wie jedes Wort und jeder Laut klang.
-• Triff auf der Ansehen-Karte zufällig jemanden, und die Situation beginnt sofort.
-• Du kannst auch mit der Stimme des KI-Tutors starten, ohne deine aufzunehmen.
+• Mit Senden antworten: Ist es an, wartet dein fließendes Ich, bis du auf Senden tippst. So unterbricht dich keine Denkpause mehr. Du kannst es vor deinem ersten Anruf wählen, bis B1 ist es standardmäßig an.
+• Eine Gesamt-Rangliste für Reden: deine beste Punktzahl jeder Challenge, zusammengezählt.
+• Texte, die dein Tutor für dich schreibt (Zielvorbereitung, Nachrichtenartikel), kannst du jetzt als Rede üben.
+• Öffne einen Anruf, deine Wiederholung, deine Wörter oder den Wochentest direkt über Siri und die Kurzbefehle-App.
 
 Verbesserungen
-• Die Aussprache zählt jetzt zu deinem Rede-Wert.
-• Dein zweiter Anruf am Tag knüpft an das an, worüber ihr vorhin gesprochen habt.
+• Der Tutor-Modus unterhält sich mit dir wie ein echter Gesprächspartner und führt dich zum Zielsatz. Fragen oder ein Satz in deiner Muttersprache gelten nicht mehr als Fehlversuch.
+• Der Tutor antwortet schneller, und Korrekturen erscheinen, sobald er zu sprechen beginnt.
+• Aussprache-Anrufe lassen dich nicht mehr endlos denselben Satz wiederholen.
+• Die Wortschatz-Stufen für Koreanisch, Japanisch und Spanisch sind genauer.
