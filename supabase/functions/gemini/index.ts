@@ -21,7 +21,7 @@ import { requireUser, handlePreflight, errorResponse, upstreamErrorResponse, cor
 import { recordFreeUsage, enforceRequestRate, rateLimitedResponse,
          recordProviderUsage, background, geminiUsageFields,
          billingClient, type ChargeableAction } from "../_shared/credits.ts"
-import { claudeCorrection, claudePurpose, isCorrectionRequest, isMovableRequest, onForUser }
+import { claudeCorrection, claudeMoveName, claudePurpose, isCorrectionRequest, isMovableRequest, onForUser }
   from "../_shared/claude-correction.ts"
 
 const SOURCE_FN = "gemini"
@@ -169,10 +169,12 @@ Deno.serve(async (req) => {
   const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY")
   const isCorrection = !!anthropicKey && onForUser(Deno.env.get("CLAUDE_CORRECTION"), user.id)
     && isCorrectionRequest(purpose, stream, idemKey, geminiBody)
-  // Other measured purposes: `CLAUDE_PURPOSES` lists them ("coach,…").
+  // Other measured purposes: `CLAUDE_PURPOSES` lists them ("coach,…"), or
+  // a call inside a purpose named by its key prefix ("tutor-judge").
   const listed = (Deno.env.get("CLAUDE_PURPOSES") ?? "").split(",").map((x) => x.trim()).filter(Boolean)
-  const isMoved = !isCorrection && !!anthropicKey && !!purpose && listed.includes(purpose)
-    && isMovableRequest(purpose, model, stream, geminiBody)
+  const moveName = claudeMoveName(purpose, idemKey)
+  const isMoved = !isCorrection && !!anthropicKey && !!moveName && listed.includes(moveName)
+    && isMovableRequest(moveName, model, stream, geminiBody)
   const claudeModel = isCorrection || isMoved
     ? Deno.env.get("CLAUDE_CORRECTION_MODEL") ?? "claude-haiku-5-5" : null
 
@@ -216,7 +218,7 @@ Deno.serve(async (req) => {
   if (claudeModel && anthropicKey) {
     const answer = isCorrection
       ? await claudeCorrection(anthropicKey, claudeModel, geminiBody)
-      : await claudePurpose(anthropicKey, claudeModel, purpose!, geminiBody)
+      : await claudePurpose(anthropicKey, claudeModel, moveName!, geminiBody)
     if (answer) {
       background(recordProviderUsage({ idempotencyKey: idemKey, usage: answer.usage }))
       return new Response(answer.json, {

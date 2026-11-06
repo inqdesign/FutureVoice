@@ -2659,11 +2659,18 @@ reach ONE language each (`ConversationEngine+LanguageLines.swift`,
   every note `tutorTurn` sends from the Swift source and stops on an
   interpolation it doesn't know, so a changed note is probed as it ships.
   Judge cases include talk, help, own language and change topic.
-- Open, not fixed: the tutor judge passes a bare one-word answer in some
-  languages and not others (es "Ingeniero." done, en "Engineer." not; a
-  fix exists that changes every language: the founder's call); the Gemini
-  coach fallback answers Japanese casual lines politely 33/36; SpokenGate
-  may pass a short English note split at a period inside a quote.
+- **The tutor judge moves to Haiku, thinking OFF** (server, keyed by the
+  `tutor-judge:` idempotency prefix both apps send, so store builds follow;
+  on once `CLAUDE_PURPOSES` lists `tutor-judge`). flash-lite read a bare
+  "Ingeniero." as done 3/3; Haiku without thinking 105/105 on the probe's
+  judge set, median 0.94 s vs 0.70 s, Claude given 4 s before the Gemini
+  fallthrough. **Haiku 5.5 thinks by default**: with the app's 160-token
+  ceiling that was an EMPTY answer 22/105, and with room to think it passed
+  one-word answers (96/105). Check thinking before moving any short-ceiling
+  call.
+- Open, not fixed: the Gemini coach fallback (only when the Haiku call
+  fails) answers Japanese casual lines politely 33/36; SpokenGate may pass
+  a short English note split at a period inside a quote (no real case yet).
 
 ## A call does not die quietly (2026-09-13)
 

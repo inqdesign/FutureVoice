@@ -40,6 +40,9 @@ PARTS = os.environ.get("PARTS", "plan,judge,tutor").split(",")
 RUNS = int(os.environ.get("RUNS", "2"))
 LEVEL = os.environ.get("LEVEL", "a2")
 TUTOR_EXTRA = os.environ.get("TUTOR_EXTRA", "")
+# The judge as it runs today (gemini) or as the server would run it on Claude
+# (haiku: no thinking, the system + "Answer with the JSON object only.").
+JUDGE_MODEL = os.environ.get("JUDGE_MODEL", "gemini")
 GEMINI = re.search(r"GEMINI_API_KEY=(.*)", open(f"{ROOT}/gateway/.dev.vars").read()).group(1).strip().strip('"')
 ANTHROPIC = open(os.path.expanduser("~/keys/anthropic.txt")).read().strip()
 NAMES = {"en": "English", "ko": "Korean", "ja": "Japanese", "de": "German", "es": "Spanish"}
@@ -190,6 +193,19 @@ def haiku(system, history):
         "thinking": {"type": "adaptive"}, "output_config": {"effort": "medium"},
         "messages": msgs}, {"anthropic-version": "2023-06-01", "x-api-key": ANTHROPIC})
     return "".join(b.get("text", "") for b in j["content"] if b.get("type") == "text").strip()
+
+JUDGE_THINKING = os.environ.get("JUDGE_THINKING", "off")  # off | default
+
+def claude_json(system, user, tokens=int(os.environ.get("JUDGE_TOKENS", "160"))):
+    extra = {"thinking": {"type": "disabled"}} if JUDGE_THINKING == "off" else {}
+    j = post("https://api.anthropic.com/v1/messages", {
+        "model": "claude-haiku-5-5", "max_tokens": tokens, **extra,
+        "system": system + "\n\nAnswer with the JSON object only.",
+        "messages": [{"role": "user", "content": user}]},
+        {"anthropic-version": "2023-06-01", "x-api-key": ANTHROPIC})
+    raw = "".join(b.get("text", "") for b in j["content"] if b.get("type") == "text")
+    a, b = raw.find("{"), raw.rfind("}")
+    return raw[a:b + 1] if a >= 0 and b > a else raw
 
 # ---------- fixtures: one target-language lesson per language, challenge 2 is NOW
 
@@ -347,7 +363,8 @@ def run_judge(job):
     content = fill(JUDGE_CONTENT, {"challenge.task": task, "challenge.example": ex, "askedWith": ASK[lang],
                                    "line": line,
                                    "ownLanguage": f"\n(They said this in their own language, not in {name}.)" if own else ""})
-    out = gemini("gemini-3.1-flash-lite", system, content, thinking="minimal", tokens=160)
+    out = (claude_json(system, content) if JUDGE_MODEL == "haiku"
+           else gemini("gemini-3.1-flash-lite", system, content, thinking="minimal", tokens=160))
     try:
         j = json.loads(out)
         got = ("other" if j.get("other_topic") else
@@ -359,7 +376,8 @@ def run_judge(job):
 
 if __name__ == "__main__":
     jobs_p = [(l, a, s, r) for l in LANGS for (a, s) in REQ[l] for r in range(RUNS)] if "plan" in PARTS else []
-    jobs_j = [(l, line, own, w) for l in LANGS for (line, own, w) in judge_lines(l)] if "judge" in PARTS else []
+    jobs_j = [(l, line, own, w) for l in LANGS for (line, own, w) in judge_lines(l)
+              for _ in range(RUNS)] if "judge" in PARTS else []
     jobs_t = [(l, n, r) for l in LANGS for n in tutor_cases(l) for r in range(1, RUNS + 1)] if "tutor" in PARTS else []
 
     def run_tutor(job):

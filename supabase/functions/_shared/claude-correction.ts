@@ -88,24 +88,56 @@ export const CLAUDE_PURPOSE_ADDENDA: Record<string, string> = {
   // The tutor bot's chat ({reply, action}), founder's call 2026-10-28:
   // everything but the live call moves to Haiku. ~1/8 the cost per question.
   "tutor-bot": JSON_ONLY,
+  "tutor-judge": JSON_ONLY,
+}
+
+/** A move named by the request's idempotency-key prefix, for a purpose that
+ *  other, unmeasured calls share ("tutor" is also the planner, the next-step
+ *  read and the final check). Both apps send these prefixes. */
+const KEYED_MOVES: { name: string; purpose: string; keyPrefix: string; model: string }[] = [
+  // TutorJudge.read (2026-11-06, scripts/tutor-lesson-probe.py
+  // JUDGE_MODEL=haiku, 35 lines × 3 in five languages): Haiku with thinking
+  // off 105/105, flash-lite 102/105 (a bare "Ingeniero." read as done every
+  // time). Median 0.94 s vs 0.70 s.
+  { name: "tutor-judge", purpose: "tutor", keyPrefix: "tutor-judge:", model: "gemini-3.1-flash-lite" },
+]
+
+/** Calls asked with Claude's thinking OFF. Haiku 5.5 thinks by default, and
+ *  on the judge that spent the app's 160-token ceiling before any JSON
+ *  (an empty answer, 22/105), and with room to think it passed one-word
+ *  answers as done (96/105). */
+const NO_THINKING = new Set(["tutor-judge"])
+
+/** How long a moved call waits on Claude before the Gemini fallthrough. The
+ *  judge is on the tutor's reply path and the app gives up at 10 s, so a
+ *  stalled Claude must leave time for Gemini (0.7 s median). */
+const CLAUDE_TIMEOUT_MS: Record<string, number> = { "tutor-judge": 4_000 }
+
+/** The name `CLAUDE_PURPOSES` lists a request under: its keyed move, else
+ *  its purpose. */
+export function claudeMoveName(purpose: string | undefined, idemKey: string): string | undefined {
+  return KEYED_MOVES.find((m) => m.purpose === purpose && idemKey.startsWith(m.keyPrefix))?.name ?? purpose
 }
 
 /** A buffered request a listed purpose can move: not streamed, no tools, no
  *  audio or files, and asking for the model it was measured against. */
-export function isMovableRequest(purpose: string | undefined, model: string, stream: boolean,
+export function isMovableRequest(name: string | undefined, model: string, stream: boolean,
                                  body: GeminiBody): boolean {
-  if (!purpose || !(purpose in CLAUDE_PURPOSE_ADDENDA)) return false
-  if (stream || model !== "gemini-3.6-flash" || body.tools) return false
+  if (!name || !(name in CLAUDE_PURPOSE_ADDENDA)) return false
+  const measured = KEYED_MOVES.find((m) => m.name === name)?.model ?? "gemini-3.6-flash"
+  if (stream || model !== measured || body.tools) return false
   return (body.contents ?? []).every((c) => (c.parts ?? []).every((p) => p.inlineData === undefined))
 }
 
-export function claudePurpose(apiKey: string, model: string, purpose: string,
+export function claudePurpose(apiKey: string, model: string, name: string,
                               body: GeminiBody): Promise<ClaudeAnswer | null> {
-  return claudeAnswer(apiKey, model, body, CLAUDE_PURPOSE_ADDENDA[purpose] ?? JSON_ONLY)
+  return claudeAnswer(apiKey, model, body, CLAUDE_PURPOSE_ADDENDA[name] ?? JSON_ONLY, NO_THINKING.has(name),
+                      CLAUDE_TIMEOUT_MS[name])
 }
 
 async function claudeAnswer(apiKey: string, model: string, body: GeminiBody,
-                            addendum: string): Promise<ClaudeAnswer | null> {
+                            addendum: string, noThinking = false,
+                            timeoutMs = 12_000): Promise<ClaudeAnswer | null> {
   const system = (body.system_instruction ?? body.systemInstruction)?.parts
     ?.map((p) => p.text ?? "").join("") ?? ""
   const messages: { role: "user" | "assistant"; content: string }[] = []
@@ -133,8 +165,9 @@ async function claudeAnswer(apiKey: string, model: string, body: GeminiBody,
         // register), so it is cached: a read is a tenth of the input price.
         system: [{ type: "text", text: system + addendum, cache_control: { type: "ephemeral" } }],
         messages,
+        ...(noThinking ? { thinking: { type: "disabled" } } : {}),
       }),
-      signal: AbortSignal.timeout(12_000),
+      signal: AbortSignal.timeout(timeoutMs),
     })
     if (!resp.ok) {
       console.warn(`claude correction ${resp.status}: ${(await resp.text()).slice(0, 200)}`)
