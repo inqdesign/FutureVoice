@@ -34,6 +34,10 @@ struct FirstCallSetupSheet: View {
 
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
+    /// Developer → "Preview first-call setup": the sheet as a new learner
+    /// sees it, on an install that is long past it. Start writes nothing and
+    /// nothing is reported.
+    var preview = false
 
     @State private var level: CEFRLevel = .b1
     @State private var speed: SpeechSpeed = .default
@@ -162,10 +166,10 @@ struct FirstCallSetupSheet: View {
         }
         .onAppear {
             load()
-            report("first_call_setup_shown")
+            if !preview { report("first_call_setup_shown") }
         }
         .onDisappear {
-            if !started { report("first_call_setup_skipped") }
+            if !started && !preview { report("first_call_setup_skipped") }
         }
     }
 
@@ -206,6 +210,7 @@ struct FirstCallSetupSheet: View {
     }
 
     private func start() {
+        if preview { dismiss(); return }
         if level != appState.proficiency { appState.setLevel(level, for: appState.targetLanguage) }
         UserDefaults.standard.set(speed.rawValue, forKey: SpeechSpeed.key)
         // Written even when unchanged: the learner saw the switch and chose,

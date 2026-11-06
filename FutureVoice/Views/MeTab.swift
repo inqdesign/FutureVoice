@@ -77,6 +77,7 @@ struct MeTab: View {
     @State private var confirmingAudioCacheClear = false
     @State private var previewFeedback: FeedbackSheet.Context?
     @State private var lookingAtOnboarding = false
+    @State private var previewingFirstCallSetup = false
     @AppStorage(PeopleSky.defaultsKey) private var peopleSkyOn = true
     #endif
     var body: some View {
@@ -290,6 +291,15 @@ struct MeTab: View {
                             title: explain(key: "dev.onboardingLook.title", default: "Look at onboarding"),
                             subtitle: explain(key: "dev.onboardingLook.subtitle", default: "Open any step as a new learner sees it. Nothing is reset"))
                     }
+                    // Raised once, before a new install's first call; this
+                    // opens it on demand. Start writes nothing here.
+                    Button {
+                        previewingFirstCallSetup = true
+                    } label: {
+                        row(icon: "phone.badge.waveform",
+                            title: explain(key: "dev.firstCallSetup.title", default: "Preview first-call setup"),
+                            subtitle: explain(key: "dev.firstCallSetup.subtitle", default: "The sheet before a new learner's first call. Nothing is saved"))
+                    }
                     Button {
                         confirmingOnboardingReset = true
                     } label: {
@@ -480,6 +490,9 @@ struct MeTab: View {
             .sheet(item: $previewFeedback) { FeedbackSheet(context: $0) }
             .sheet(isPresented: $lookingAtOnboarding) {
                 OnboardingLookSheet().environmentObject(appState).environmentObject(auth)
+            }
+            .sheet(isPresented: $previewingFirstCallSetup) {
+                FirstCallSetupSheet(preview: true).environmentObject(appState)
             }
             // Extracted into a modifier: inline, these two tipped `body` past
             // what the type-checker will solve in reasonable time.
