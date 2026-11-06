@@ -332,6 +332,9 @@ class TalkViewModel(context: Context) : ViewModel() {
     private var earlyCorrectionFires = 0
     private var earlyCorrectionUsed = false
     private var earlyCorrectionFired = 0
+    /** Corrections of held tutor turns, shown when the tutor's reply begins
+     *  (iOS 3d67e234): the card never shows before the answer. */
+    private val heldSuggestions = LinkedHashMap<String, ConversationTurnPayload>()
     /** The topic sheet is open: choosing is someone being here (iOS
      *  `showingTutorTopics` in the idle watch, 74d3ccf3). */
     private var tutorTopicsShowing = false
@@ -580,6 +583,9 @@ class TalkViewModel(context: Context) : ViewModel() {
     fun end() {
         if (_state.value.phase == TalkPhase.ENDED || _state.value.phase == TalkPhase.IDLE) return
         endRequested = true
+        // A correction still on its way attaches directly from here on.
+        tutorWaitTurnAt = null
+        flushHeldSuggestions()
         // The gateway holds the mic and the sockets; putting the call down
         // has to reach it, or the room keeps streaming.
         if (REALTIME) {
@@ -1088,6 +1094,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                 tutorWaitTurnAt = null
                 tutorWaitNoteAt = null
             }
+            flushHeldSuggestions()
             val turn = Turn(role = TurnRole.FLUENT_SELF, transcript = "")
             realtimeReplyTurns[ctx] = turn.id
             // The hint and the suggestion belonged to the line just answered:
@@ -1313,7 +1320,16 @@ class TalkViewModel(context: Context) : ViewModel() {
             val fixes = payload.turnSuggestion(said, cfg.targetLanguage)?.fixes.orEmpty()
             // A turn since joined with its continuation is corrected as the
             // whole line, not as its first half (iOS `transcript == said`).
-            if (_state.value.turns.firstOrNull { it.id == turnId }?.transcript == said) attachSuggestion(turnId, payload)
+            if (_state.value.turns.firstOrNull { it.id == turnId }?.transcript == said) {
+                // A held tutor turn: the card waits for the tutor's voice, so
+                // the correction never shows before the answer (iOS 3d67e234).
+                if (tutorWaitTurnAt != null) {
+                    heldSuggestions[turnId] = payload
+                    // A reply that never begins must not lose the card: the
+                    // summary and the drill cards are built from it.
+                    viewModelScope.launch { delay(8_000); flushHeldSuggestions() }
+                } else attachSuggestion(turnId, payload)
+            }
             fixes
         }
     }
@@ -1380,7 +1396,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             if (_state.value.partial.trim() != text) return@launch
             earlyCorrection?.second?.cancel()
             earlyCorrectionFires += 1
-            earlyCorrection = text to correctionPayload(text, cfg, "rt-suggest-early:${StoreJson.newId()}")
+            earlyCorrection = text to correctionPayload(text, cfg, "rt-suggest:early-${StoreJson.newId()}")
         }
     }
 
@@ -1842,6 +1858,12 @@ class TalkViewModel(context: Context) : ViewModel() {
     }
 
     /** The suggestion belongs to the USER turn it corrects, not to the reply. */
+    private fun flushHeldSuggestions() {
+        val held = heldSuggestions.toList()
+        heldSuggestions.clear()
+        for ((id, payload) in held) attachSuggestion(id, payload)
+    }
+
     private fun attachSuggestion(userTurnId: String, payload: ConversationTurnPayload) {
         val said = _state.value.turns.firstOrNull { it.id == userTurnId }?.transcript.orEmpty()
         // Dictation EXPANDS contractions, so a learner who said "I'm" is
@@ -3260,8 +3282,11 @@ class TalkViewModel(context: Context) : ViewModel() {
     }
 
     companion object {
-        private const val EARLY_CORRECTION_SETTLE_MS = 800L
-        private const val MAX_EARLY_CORRECTIONS = 3
+        // Short and generous (iOS 3d67e234): the words that count are the
+        // LAST ones, which land as one more update once the transcriber
+        // finalizes, and the old cap was spent on mid-sentence pauses.
+        private const val EARLY_CORRECTION_SETTLE_MS = 500L
+        private const val MAX_EARLY_CORRECTIONS = 8
         /** A second drop inside a minute is not a blip; it gets the question
          *  rather than another silent reconnect. */
         private const val AUTO_RECONNECT_SPACING_MS = 60_000L
