@@ -1,3 +1,4 @@
+import NaturalLanguage
 import XCTest
 @testable import FutureVoice
 
@@ -102,6 +103,61 @@ final class VocabSophisticationTests: XCTestCase {
         XCTAssertEqual(VocabSophistication.level(read(0.56), profile: de, precision: nil)?.level, .a2)
         XCTAssertEqual(VocabSophistication.level(read(0.59), profile: de, precision: nil)?.level, .b1)
         XCTAssertTrue(VocabSophistication.isCalibrated("de"))
-        XCTAssertFalse(VocabSophistication.isCalibrated("ko"))
+        XCTAssertFalse(VocabSophistication.isCalibrated("fr"))
+    }
+
+    /// Korean, Japanese and Spanish carry the English cuts over through
+    /// Tatoeba pairs (`scripts/vocab-calibration/parallel_cuts_more.py`).
+    func testKoreanJapaneseSpanishHaveTheirOwnCuts() {
+        let cases: [(String, [(Double, CEFRLevel)])] = [
+            ("ko", [(0.55, .a1), (0.58, .a2), (0.61, .b1), (0.63, .b2)]),
+            ("ja", [(0.85, .a1), (0.88, .a2), (0.91, .b1), (0.94, .b2)]),
+            ("es", [(0.29, .a1), (0.31, .a2), (0.34, .b1), (0.37, .b2)]),
+        ]
+        for (code, bands) in cases {
+            let profile = VocabSophistication.profiles[code]!
+            XCTAssertTrue(VocabSophistication.isCalibrated(code))
+            for (mean, level) in bands {
+                XCTAssertEqual(VocabSophistication.level(read(mean), profile: profile, precision: nil)?.level,
+                               level, "\(code) \(mean)")
+            }
+        }
+    }
+
+    // MARK: - The readers, against the real bundled pools
+
+    private func contentWords(_ text: String, _ code: String) -> [String] {
+        let saved = UserDefaults.standard.string(forKey: LanguageCatalog.targetLanguageDefaultsKey)
+        UserDefaults.standard.set(code, forKey: LanguageCatalog.targetLanguageDefaultsKey)
+        defer { UserDefaults.standard.set(saved, forKey: LanguageCatalog.targetLanguageDefaultsKey) }
+        return VocabSophistication.contentLemmas(text, profile: VocabSophistication.profiles[code]!,
+                                                 tagger: NLTagger(tagSchemes: [.lemma, .lexicalClass]),
+                                                 lexicon: CoreVocabulary.set)
+    }
+
+    /// Korean: `KoreanMorph` headwords, minus pronouns, light verbs and
+    /// postposition verbs (그녀 and 위하다 are B1 on the list).
+    func testKoreanCountsContentHeadwords() {
+        XCTAssertEqual(contentWords("나는 어제 친구를 만났어요.", "ko"), ["어제", "친구", "만나다"])
+        XCTAssertEqual(contentWords("그녀가 나를 위해 노래를 했어요.", "ko"), ["노래"])
+    }
+
+    /// Japanese: `JapaneseMorph` headwords, content classes only, and never
+    /// a reading match onto another word's kanji (船 is not 舟, 的 not まと).
+    func testJapaneseCountsOnlyWordsSaid() {
+        XCTAssertEqual(contentWords("私は昨日友達に会いました。", "ja"), ["昨日", "友達", "会う"])
+        XCTAssertEqual(contentWords("船に乗りました。", "ja"), ["乗る"])
+        XCTAssertEqual(contentWords("理論的には正しい。", "ja"), ["理論", "正しい"])
+        XCTAssertEqual(contentWords("彼女は本を読んでしまった。", "ja"), ["本", "読む"])
+    }
+
+    /// Spanish: the form table, with a participle after haber read as its
+    /// verb (the table grades "comprado" C2 as its own headword).
+    func testSpanishReadsThePerfectAsItsVerb() {
+        XCTAssertEqual(contentWords("He comprado un libro.", "es"), ["comprar", "libro"])
+        XCTAssertEqual(contentWords("Ella ha leído dos cartas.", "es"), ["leer", "carta"])
+        XCTAssertEqual(contentWords("El libro comprado es caro.", "es"), ["libro", "comprado", "caro"])
+        XCTAssertEqual(VocabSophistication.spanishParticipleVerb("dicho"), "decir")
+        XCTAssertEqual(VocabSophistication.spanishParticipleVerb("oído"), "oír")
     }
 }
