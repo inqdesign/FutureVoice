@@ -16,8 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.UnfoldMore
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.School
@@ -184,6 +184,20 @@ fun FirstCallSetupSheet(
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
 
+                // How a turn ends, first and as a CHOICE (iOS, 2026-11-06,
+                // founder): each option says what happens, so the explanation
+                // is the choice.
+                GroupedSectionHeader(stringResource(R.string.how_you_answer))
+                GroupedCard {
+                    AnswerOptionRow(stringResource(R.string.finish_then_send),
+                        stringResource(R.string.pausing_won_t_cut_you_off_your_future_self_answers_when_you_741091),
+                        recommended = true, selected = sendToAnswer) { sendToAnswer = true }
+                    GroupedRowDivider(inset = false)
+                    AnswerOptionRow(stringResource(R.string.answer_when_i_pause),
+                        stringResource(R.string.your_future_self_answers_as_soon_as_you_stop_quick_like_a_ph_748422),
+                        recommended = false, selected = !sendToAnswer) { sendToAnswer = false }
+                }
+
                 GroupedSectionSpacer()
                 GroupedCard { SetupLevelRow(level, targetLanguage) { pickLevel(it) } }
                 GroupedFooter(levelBlurb(level))
@@ -214,12 +228,6 @@ fun FirstCallSetupSheet(
                 GroupedFooter(stringResource(
                     R.string.after_each_thing_your_future_self_says_you_see_a_way_to_answ_35f388))
 
-                GroupedSectionSpacer()
-                GroupedCard {
-                    SetupToggleRow(Icons.AutoMirrored.Outlined.Send, stringResource(R.string.answer_with_send),
-                        sendToAnswer) { sendToAnswer = it }
-                }
-                GroupedFooter(stringResource(R.string.take_your_time_your_future_self_waits_until_you_press_send))
 
                 Spacer(Modifier.size(12.dp))
             }
@@ -258,6 +266,34 @@ private fun SetupLevelRow(level: CefrLevel, target: String, onPick: (CefrLevel) 
                 expanded = open, onDismissRequest = { open = false },
                 options = CefrLevel.entries.map { it to LanguageCatalog.levelLabel(it, target) },
                 selected = level, onPick = onPick)
+        }
+    }
+}
+
+/** iOS: one row of an inline `Picker` — title (+ "Recommended"), detail
+ *  under it, a check on the picked one. */
+@Composable
+private fun AnswerOptionRow(title: String, detail: String, recommended: Boolean,
+                            selected: Boolean, onPick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = onPick).padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                if (recommended) {
+                    Text(stringResource(R.string.recommended), style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Text(detail, style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (selected) {
+            Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(22.dp),
+                tint = MaterialTheme.colorScheme.primary)
+        } else {
+            Spacer(Modifier.size(22.dp))
         }
     }
 }

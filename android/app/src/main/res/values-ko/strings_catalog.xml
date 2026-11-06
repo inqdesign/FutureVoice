@@ -263,6 +263,7 @@
     <string name="another_you_already_fluent">"이미 유창한\n또 하나의 나"</string>
     <string name="answer">"받기"</string>
     <string name="answer_in">"답변 언어"</string>
+    <string name="answer_when_i_pause">"멈추면 바로 답하기"</string>
     <string name="answer_with_send">"보내기로 답하기"</string>
     <string name="answers">"문제별 결과"</string>
     <!-- "Answers in your own words count toward your level, sentences built around a word you're studying included. Lines read straight from a suggestion count as practice." -->
@@ -1005,6 +1006,7 @@
     <string name="fine">"좋음"</string>
     <!-- 'Finish a talk and it lands here as a book — replay it, pick up its words, shadow the smoother versions of your own lines.' -->
     <string name="finish_a_talk_and_it_lands_here_as_a_book_replay_it_pick_up_f70da1">"대화를 마치면 여기에 교재로 들어와요. 다시 듣고, 나온 단어를 챙기고, 내가 한 말을 더 매끄럽게 다듬은 문장으로 섀도잉해요."</string>
+    <string name="finish_then_send">"다 말하고 보내기"</string>
     <string name="finished">"완료"</string>
     <!-- 'Finished books. They keep their progress — unarchive anytime.' -->
     <string name="finished_books_they_keep_their_progress_unarchive_anytime">"끝낸 책이에요. 진행 상황은 그대로 남고, 언제든 다시 꺼낼 수 있어요."</string>
@@ -1246,6 +1248,7 @@
     <string name="how_we_read_it">"이렇게 판단했어요"</string>
     <string name="how_were_your_first_20_minutes">"처음 20분, 어땠어요?"</string>
     <string name="how_would_a_fluent_speaker_say_it">"유창한 사람이라면 어떻게 말할까요?"</string>
+    <string name="how_you_answer">"답하는 방법"</string>
     <string name="how_you_met">"어떻게 만났는지"</string>
     <string name="how_you_met_and_how_long">"어떻게 만났는지 (그리고 얼마나 됐는지)"</string>
     <string name="how_you_sound">"내 목소리 듣기"</string>
@@ -2152,6 +2155,8 @@
     <string name="paused_tap_to_pick_it_back_up">"잠시 멈췄어요 · 탭하면 이어서 해요"</string>
     <string name="pauses">"쉼"</string>
     <string name="pauses_min_lldm_per_talk_lld_words_turn">"분당 멈춤 %1$s회 · 통화당 %2$d분 · 턴당 %3$d단어"</string>
+    <!-- "Pausing won't cut you off. Your future self answers when you press Send." -->
+    <string name="pausing_won_t_cut_you_off_your_future_self_answers_when_you_741091">"말하다 멈춰도 끊기지 않아요. 보내기를 누르면 그때 답해요."</string>
     <string name="paying_and_splitting_the_bill">"계산하고 나눠 내기"</string>
     <!-- 'Payment is charged to your Apple Account at purchase. The subscription renews automatically unless you cancel at least 24 hours before the period ends. Manage or cancel it in Settings › Apple Account › Subscriptions.' -->
     <string name="payment_is_charged_to_your_apple_account_at_purchase_the_sub_6660ae">"결제는 구매 시 Apple 계정으로 청구됩니다. 기간 종료 24시간 전까지 해지하지 않으면 구독은 자동으로 갱신됩니다. 설정 › Apple 계정 › 구독에서 관리하거나 해지할 수 있습니다."</string>
@@ -2408,6 +2413,7 @@
     <string name="recent_days">"최근 기록"</string>
     <string name="recent_school_events">"최근 학교 일"</string>
     <string name="recently_moved">"최근 이사함"</string>
+    <string name="recommended">"추천"</string>
     <string name="reconnect">"다시 연결"</string>
     <string name="record">"녹화 버튼"</string>
     <string name="record_a_speech_and_get_a_score">"스피치를 녹음하고 점수 받기"</string>
@@ -4051,6 +4057,8 @@
     <!-- "Your friend enters this code when they sign up, and you both get %lld minutes. You're rewarded for your first %lld friends." -->
     <string name="your_friend_enters_this_code_when_they_sign_up_and_you_both_e0ffad">"친구가 가입할 때 이 코드를 넣으면 둘 다 %1$d분을 받아요. 내 몫은 처음 %2$d명까지고요."</string>
     <string name="your_future_self">"유창해진 나"</string>
+    <!-- 'Your future self answers as soon as you stop. Quick like a phone call, but a pause to think can cut you off.' -->
+    <string name="your_future_self_answers_as_soon_as_you_stop_quick_like_a_ph_748422">"말을 멈추면 바로 답해요. 전화처럼 빠르지만, 생각하느라 쉬면 중간에 끊길 수 있어요."</string>
     <!-- 'Your future self may ask something that needs this. Just answer the way you normally would.' -->
     <string name="your_future_self_may_ask_something_that_needs_this_just_answ_9f3c92">"유창해진 내가 이걸 써야 하는 질문을 할 수도 있어요. 평소처럼 대답하면 돼요."</string>
     <!-- 'Your future self speaks mostly at your level, and lets a word or turn of phrase from just above it slip in now and then — that small stretch is where you grow. Never two levels up.' -->

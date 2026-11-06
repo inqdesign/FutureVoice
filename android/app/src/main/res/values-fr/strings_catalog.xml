@@ -263,6 +263,7 @@
     <string name="another_you_already_fluent">"Un autre toi.\nDéjà fluide."</string>
     <string name="answer">"Répondre"</string>
     <string name="answer_in">"Langue de réponse"</string>
+    <string name="answer_when_i_pause">"Répondre dès que je m’arrête"</string>
     <string name="answer_with_send">"Répondre avec Envoyer"</string>
     <string name="answers">"Réponses"</string>
     <!-- "Answers in your own words count toward your level, sentences built around a word you're studying included. Lines read straight from a suggestion count as practice." -->
@@ -1002,6 +1003,7 @@
     <string name="fine">"Bien"</string>
     <!-- 'Finish a talk and it lands here as a book — replay it, pick up its words, shadow the smoother versions of your own lines.' -->
     <string name="finish_a_talk_and_it_lands_here_as_a_book_replay_it_pick_up_f70da1">"Termine un appel et il arrive ici sous forme de carnet – réécoute-le, garde ses mots et fais du shadowing sur les versions plus fluides de tes propres phrases."</string>
+    <string name="finish_then_send">"Finis, puis Envoyer"</string>
     <string name="finished">"Terminé"</string>
     <!-- 'Finished books. They keep their progress — unarchive anytime.' -->
     <string name="finished_books_they_keep_their_progress_unarchive_anytime">"Carnets terminés. Ils gardent ta progression — à ressortir quand tu veux."</string>
@@ -1243,6 +1245,7 @@
     <string name="how_we_read_it">"Comment on l’a évalué"</string>
     <string name="how_were_your_first_20_minutes">"Comment se sont passées tes 20 premières minutes ?"</string>
     <string name="how_would_a_fluent_speaker_say_it">"Comment le dirait quelqu’un qui parle couramment ?"</string>
+    <string name="how_you_answer">"Ta façon de répondre"</string>
     <string name="how_you_met">"Comment vous vous êtes rencontrés"</string>
     <string name="how_you_met_and_how_long">"Comment tu l’as connu (et depuis quand)"</string>
     <string name="how_you_sound">"Écouter ma voix"</string>
@@ -2148,6 +2151,8 @@
     <string name="paused_tap_to_pick_it_back_up">"En pause · touche pour continuer"</string>
     <string name="pauses">"Pauses"</string>
     <string name="pauses_min_lldm_per_talk_lld_words_turn">"%1$s pauses/min · %2$d min par appel · %3$d mots/tour"</string>
+    <!-- "Pausing won't cut you off. Your future self answers when you press Send." -->
+    <string name="pausing_won_t_cut_you_off_your_future_self_answers_when_you_741091">"Une pause ne te coupe pas. Ton moi fluide répond quand tu touches Envoyer."</string>
     <string name="paying_and_splitting_the_bill">"Payer et partager l’addition"</string>
     <!-- 'Payment is charged to your Apple Account at purchase. The subscription renews automatically unless you cancel at least 24 hours before the period ends. Manage or cancel it in Settings › Apple Account › Subscriptions.' -->
     <string name="payment_is_charged_to_your_apple_account_at_purchase_the_sub_6660ae">"Le paiement est débité de ton compte Apple à l’achat. L’abonnement se renouvelle automatiquement sauf si tu le résilies au moins 24 heures avant la fin de la période. Tu peux le gérer ou le résilier dans Réglages › Compte Apple › Abonnements."</string>
@@ -2404,6 +2409,7 @@
     <string name="recent_days">"Jours récents"</string>
     <string name="recent_school_events">"Événements récents à l’école"</string>
     <string name="recently_moved">"A déménagé récemment"</string>
+    <string name="recommended">"Recommandé"</string>
     <string name="reconnect">"Reconnecter"</string>
     <string name="record">"Enregistrer"</string>
     <string name="record_a_speech_and_get_a_score">"Enregistre un discours et reçois un score"</string>
@@ -4047,6 +4053,8 @@
     <!-- "Your friend enters this code when they sign up, and you both get %lld minutes. You're rewarded for your first %lld friends." -->
     <string name="your_friend_enters_this_code_when_they_sign_up_and_you_both_e0ffad">"Un ami entre ce code à l’inscription et chacun reçoit %1$d minutes. La récompense vaut pour tes %2$d premiers amis."</string>
     <string name="your_future_self">"Ton futur moi"</string>
+    <!-- 'Your future self answers as soon as you stop. Quick like a phone call, but a pause to think can cut you off.' -->
+    <string name="your_future_self_answers_as_soon_as_you_stop_quick_like_a_ph_748422">"Ton moi fluide répond dès que tu t’arrêtes. C’est rapide comme un appel, mais une pause pour réfléchir peut te couper."</string>
     <!-- 'Your future self may ask something that needs this. Just answer the way you normally would.' -->
     <string name="your_future_self_may_ask_something_that_needs_this_just_answ_9f3c92">"Ton moi fluide te posera peut-être une question qui en a besoin. Réponds comme d’habitude."</string>
     <!-- 'Your future self speaks mostly at your level, and lets a word or turn of phrase from just above it slip in now and then — that small stretch is where you grow. Never two levels up.' -->
