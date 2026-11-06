@@ -69,11 +69,9 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -167,7 +165,6 @@ fun WeeklyPlanEditor(
     val canEdit = !onboarding || onboardingEditing
     val context = LocalContext.current
     val res = context.resources
-    val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     val plan by StudyPlanStore.plan.collectAsStateWithLifecycle()
     val testRevision by WeeklyTestSettings.revision.collectAsStateWithLifecycle()
@@ -239,7 +236,7 @@ fun WeeklyPlanEditor(
                 val sameDay = StudyPlan.isSameDay(day, newStart)
                 val moved = plan.moving(source.id, day, newStart, StudyPlan.Scope.EVERY_WEEK)
                 if (moved == null || !update(moved)) { refused = true; return }
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                HapticEngine.light(context)
                 com.roro.futurevoice.core.Analytics.capture("plan_block_moved",
                     mapOf("kind" to occ.kind.raw, "scope" to "weekday"))
                 if (spans && sameDay) pendingFollow = source.id to newStart
@@ -271,7 +268,7 @@ fun WeeklyPlanEditor(
         val next = plan.copy(blocks = plan.blocks + StudyPlan.Block(kind = kind, weekdays = days,
             hour = start / 60, minute = start % 60, minutes = kind.defaultAmount)).mergingTwins()
         if (!update(next)) return
-        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        HapticEngine.light(context)
         val id = StudyPlanStore.plan.value.blocks.firstOrNull {
             it.kind == kind && it.startMinute == start && !it.isAnytime
         }?.id
@@ -504,7 +501,7 @@ private fun WeekGrid(
     onDragTarget: (Long?) -> Unit,
 ) {
     val density = LocalDensity.current
-    val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
     val hourPx = with(density) { HOUR_HEIGHT.toPx() }
     val start = snapshot.startHour
     val gridHeight = HOUR_HEIGHT * (snapshot.endHour - start)
@@ -592,7 +589,7 @@ private fun WeekGrid(
                             detectDragGesturesAfterLongPress(
                                 onDragStart = {
                                     dragging = occ.id; dragOffset = Offset.Zero; target = occ.start
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    HapticEngine.selection(context)
                                     onDragTarget(occ.start)
                                 },
                                 onDrag = { change, amount ->
@@ -601,7 +598,7 @@ private fun WeekGrid(
                                     val t = newStart(occ, dragOffset) ?: occ.start
                                     if (t != target) {
                                         target = t
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        HapticEngine.selection(context)
                                         onDragTarget(t)
                                     }
                                 },
