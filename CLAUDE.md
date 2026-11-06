@@ -2675,6 +2675,15 @@ reach ONE language each (`ConversationEngine+LanguageLines.swift`,
   Claude-only line saying so halved it, not more); with thinking it was
   right but took 4–6 s against 1.7 s, and the plan is a wait the learner
   sits through.
+- **The quick quiz's writer and level rating move too, its check stays**
+  (same day, `quiz-stock:` / `quiz-rate:`, thinking off — with thinking the
+  writer spent its 6,000 tokens thinking and wrote no JSON;
+  `scripts/quiz-probe.py`, a Claude Opus reader running the check prompt as
+  the reference): questions with exactly one right choice 129/170 vs
+  3.6-flash 119/155, rating within one band 117/120 vs 120/120. The
+  one-answer check (`quiz-stock-check:`, also the weekly test's) stays on
+  Gemini: Haiku dropped 35 good questions to its 12, and checking its own
+  batches it let twice as many ambiguous ones through (19% vs 9%).
 - Open, not fixed: the Gemini coach fallback (only when the Haiku call
   fails) answers Japanese casual lines politely 33/36; SpokenGate may pass
   a short English note split at a period inside a quote (no real case yet).

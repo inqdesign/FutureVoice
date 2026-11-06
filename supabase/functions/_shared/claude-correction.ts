@@ -91,6 +91,8 @@ export const CLAUDE_PURPOSE_ADDENDA: Record<string, string> = {
   "tutor-judge": JSON_ONLY,
   "tutor-next": JSON_ONLY,
   "tutor-check": JSON_ONLY,
+  "quiz-stock": JSON_ONLY,
+  "quiz-rate": JSON_ONLY,
 }
 
 /** A move named by the request's idempotency-key prefix, for a purpose that
@@ -110,13 +112,23 @@ const KEYED_MOVES: { name: string; purpose: string; keyPrefix: string; model: st
   // (24/24), with it the plan took 4–6 s against 1.7 s.
   { name: "tutor-next", purpose: "tutor", keyPrefix: "tutor-next:", model: "gemini-3.1-flash-lite" },
   { name: "tutor-check", purpose: "tutor", keyPrefix: "tutor-check:", model: "gemini-3.6-flash" },
+  // QuickQuizStock's writer and level rating (scripts/quiz-probe.py, five
+  // languages × 2 batches, a Claude Opus reader as the reference, thinking
+  // off): questions with exactly one right choice 129/170 vs 3.6-flash
+  // 119/155, rating within one band 117/120 vs 120/120. The one-answer
+  // check ("quiz-stock-check:") stays on Gemini: Haiku dropped 35 good
+  // questions to Gemini's 12, and checking its own batches it let twice as
+  // many ambiguous ones through (19% vs 9%).
+  { name: "quiz-stock", purpose: "quiz", keyPrefix: "quiz-stock:", model: "gemini-3.6-flash" },
+  { name: "quiz-rate", purpose: "quiz", keyPrefix: "quiz-rate:", model: "gemini-3.6-flash" },
 ]
 
 /** Calls asked with Claude's thinking OFF. Haiku 5.5 thinks by default, and
  *  on the judge that spent the app's 160-token ceiling before any JSON
  *  (an empty answer, 22/105), and with room to think it passed one-word
- *  answers as done (96/105). */
-const NO_THINKING = new Set(["tutor-judge", "tutor-next", "tutor-check"])
+ *  answers as done (96/105). The quiz writer's 6,000 went to thinking too
+ *  (4,900–6,000 tokens, no JSON or a cut one). */
+const NO_THINKING = new Set(["tutor-judge", "tutor-next", "tutor-check", "quiz-stock", "quiz-rate"])
 
 /** How long a moved call waits on Claude before the Gemini fallthrough. The
  *  judge is on the tutor's reply path and the app gives up at 10 s, so a
@@ -125,6 +137,7 @@ const CLAUDE_TIMEOUT_MS: Record<string, number> = {
   "tutor-judge": 4_000,
   "tutor-next": 4_000,   // the app gives up at 10 s
   "tutor-check": 6_000,  // the app gives up at 15 s
+  "quiz-stock": 25_000,  // ~8 s a batch; the app gives up at 45 s
 }
 
 /** The name `CLAUDE_PURPOSES` lists a request under: its keyed move, else
