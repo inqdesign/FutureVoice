@@ -47,6 +47,7 @@ OUT = ROOT / "supabase/functions/session-summary/prompt.ts"
 ENGINE = show("FutureVoice/Services/ConversationEngine.swift")
 COACHING = show("FutureVoice/Services/CoachingLanguage.swift")
 CATALOG = show("FutureVoice/Services/LanguageCatalog.swift")
+LANGLINES = show("FutureVoice/Services/ConversationEngine+LanguageLines.swift")
 
 
 def func_body(src: str, name: str) -> str:
@@ -211,6 +212,12 @@ INTERP = {
     # scene character, a stranger, a public figure, a colleague. Also built
     # by the client (Android `ConversationCharacter.politeSettingLine`).
     "politeSettingLine(targetLanguage, counterpart: counterpart, inScene: inScene)": "${opts.politeSettingLine ?? \"\"}",
+    # Spanish and German only (iOS 5a462332), from the language alone.
+    "spokenGrammarGuard(targetLanguage)": "${spokenGrammarGuard(opts.targetLanguage)}",
+    # The accent's word variety (iOS 3709fd0e): needs the learner's accent,
+    # which only the client knows, so the client builds it (Android
+    # `ConversationEngine.varietyGuard`) — "" for the default accent.
+    "varietyGuard(targetLanguage)": "${opts.varietyLine ?? \"\"}",
     norm('knownAboutUser.isEmpty ? "(nothing yet)" : knownAboutUser.map { "- \\($0)" }'
          '.joined(separator: "\\n")'): "${knownBlock}",
     norm('rememberedNotes.isEmpty ? "(nothing yet)" : rememberedNotes.enumerated().map { '
@@ -263,6 +270,12 @@ une_text = literals(re.sub(r"guard .*?else \{ return \"\" \}", "", une, count=1)
 une_parts = une_text.split("\\(LanguageCatalog.englishName(targetLanguage))")
 if len(une_parts) != 2 or "\\(" in "".join(une_parts):
     sys.exit("unspacedExpressionNote's interpolation changed")
+
+sgg = func_body(LANGLINES, "spokenGrammarGuard")
+sgg_cases = {lang: literals(block)
+             for lang, block in re.findall(r'case "(\w+)":\s*return(.*?)(?=\n\s*(?:case |default:))', sgg, re.S)}
+if set(sgg_cases) != {"es", "de"} or any("\\(" in t for t in sgg_cases.values()):
+    sys.exit("spokenGrammarGuard's shape changed — es + de literals expected")
 
 for name, s in [("summary", summary), ("contract", contract)]:
     if "\\(" in s:
@@ -368,6 +381,18 @@ export function registerGuard(targetLanguage: string): string {{
   }}
 }}
 
+const SPOKEN_GRAMMAR_ES = {J(sgg_cases["es"])}
+const SPOKEN_GRAMMAR_DE = {J(sgg_cases["de"])}
+
+/** `ConversationEngine.spokenGrammarGuard` — Spanish and German only. */
+export function spokenGrammarGuard(targetLanguage: string): string {{
+  switch (base(targetLanguage)) {{
+    case "es": return SPOKEN_GRAMMAR_ES
+    case "de": return SPOKEN_GRAMMAR_DE
+    default: return ""
+  }}
+}}
+
 /** `ConversationEngine.unspacedExpressionNote` — for a target without spaces. */
 export function unspacedExpressionNote(targetLanguage: string): string {{
   if (writesSpaces(targetLanguage)) return ""
@@ -408,6 +433,9 @@ export function summarySystemPrompt(opts: {{
   relationshipRegisterLine?: string
   /** The client-built polite-setting exception, Korean ("" when none). */
   politeSettingLine?: string
+  /** The client-built word-variety line for a non-default accent
+   *  (`varietyGuard`, "" when none). */
+  varietyLine?: string
 }}): string {{
   const languageName = englishName(opts.targetLanguage)
   const nativeName = englishName(opts.nativeLanguage)

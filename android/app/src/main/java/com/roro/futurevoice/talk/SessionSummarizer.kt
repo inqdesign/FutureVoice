@@ -504,6 +504,7 @@ object SessionSummarizer {
         utc_offset_minutes = utcOffsetMinutes,
         relationship_register_line = relationshipRegisterLine,
         polite_setting_line = politeSettingLine,
+        variety_line = LanguageVariety.guard(session.targetLanguage),
     )
 
     /**
