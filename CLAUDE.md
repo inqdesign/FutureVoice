@@ -2649,14 +2649,21 @@ reach ONE language each (`ConversationEngine+LanguageLines.swift`,
   test a native other than English. es present tense in reported speech and
   de "der meinte" are no longer fixed (`spokenGrammarGuard`).
 - **Tutor**: ko stays 반말 and keeps THEIR ending when saying a line back,
-  ja plain form and never あなた (`tutorRegisterLine`). **Coach**: de/es
-  brackets hold the number WITH its noun ("seit [zwei Jahren]").
-- Open, not fixed: the tutor judge passes a bare "Ingenieur." but not
-  "Engineer." (a fix exists that changes every language: the founder's
-  call); the Gemini coach fallback answers Japanese casual lines politely
-  33/36; SpokenGate may pass a short English note split at a period inside
-  a quote; Spanish "para que se quede" calque in the tutor; `scripts/
-  tutor-lesson-probe.py` is out of date (en/ko only, old contract).
+  ja plain form and never あなた, es asks for ONCE MORE as "¡Muy bien! Dilo
+  otra vez." (the note's "so it sticks" came out as the calque "para que se
+  quede" 4/4; naming the right form spread it onto every NOT YET, this
+  line is 0/6) (`tutorRegisterLine`). **Coach**: de/es brackets hold the
+  number WITH its noun ("seit [zwei Jahren]").
+- `scripts/tutor-lesson-probe.py` covers the five languages and the
+  current contract: it LIFTS the planner, the judge (system + content) and
+  every note `tutorTurn` sends from the Swift source and stops on an
+  interpolation it doesn't know, so a changed note is probed as it ships.
+  Judge cases include talk, help, own language and change topic.
+- Open, not fixed: the tutor judge passes a bare one-word answer in some
+  languages and not others (es "Ingeniero." done, en "Engineer." not; a
+  fix exists that changes every language: the founder's call); the Gemini
+  coach fallback answers Japanese casual lines politely 33/36; SpokenGate
+  may pass a short English note split at a period inside a quote.
 
 ## A call does not die quietly (2026-09-13)
 
@@ -3339,8 +3346,8 @@ that back. `TutorLesson.swift`, `TutorLessonViews.swift`,
   register (Haiku drifted to 해요체/여러분 to match a polite example).
 - The Claude reply ceiling went 1024 → 2048: a tick turn thinks 800–1,460
   tokens and came back EMPTY 4/5 at 1024. Measured with
-  `scripts/tutor-lesson-probe.py` (planner, judge 4/4, every tutor reply
-  printed): after the fix, move-on 3/3 ko, 2–3/3 en; the flash-lite hedge
+  `scripts/tutor-lesson-probe.py` (then en/ko; five languages since
+  2026-11-06; planner, judge 4/4, every tutor reply printed): after the fix, move-on 3/3 ko, 2–3/3 en; the flash-lite hedge
   moves on 4/4. Not yet tried in a real call.
 
 ## The pronunciation call — the ring's third page (2026-11-04)

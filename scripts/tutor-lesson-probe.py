@@ -1,165 +1,377 @@
 #!/usr/bin/env python3
-"""Tutor mode's lesson, against the live models (2026-10-24).
+"""Tutor mode against the live models, five languages, current contract
+(rewritten 2026-11-06; the 2026-10-24 version was en/ko and the old notes).
+
+Every prompt and every app note is LIFTED from the Swift source, never
+retyped, so a changed note is probed as it ships:
+  - TutorPlanner.plan and TutorJudge.read (system + content) from
+    FutureVoice/Services/TutorLesson.swift;
+  - the notes `tutorTurn` sends (lesson ready, NOT YET, ONCE MORE, DONE, not a
+    try: talk / help) from FutureVoice/Views/ConversationView.swift, with
+    their interpolations filled from the fixture below — an interpolation the
+    script doesn't know stops it, so a new one can't pass silently;
+  - the tutor's system prompt from ConversationPromptDumpTests' dump
+    (`<lang>-<level>-tutor-lesson.txt`), with a target-language lesson put in
+    place of the fixture's English checklist.
 
 Three parts, every reply PRINTED so it can be read (a count alone missed
-leaks before — see claude-reply-rollout):
-  1. planner — TutorPlanner's prompt (lifted from the Swift source) on a few
-     topic requests, two of which name no topic and must come back false.
-  2. judge   — TutorJudge's prompt on lines that do / don't do a challenge.
-  3. tutor   — the live reply model (Claude Haiku, adaptive thinking, the
-     gateway's CLAUDE_ADDENDUM) on the dumped tutor prompts
-     (ConversationPromptDumpTests → DUMP_DIR): no topic yet, the lesson-ready
-     note, a mistake, a right line (must ask once more, NOT move on), and a
-     right line after the app's tick (must move on).
+leaks before):
+  1. plan   — the planner (gemini-3.6-flash) on two requests per language.
+  2. judge  — the judge (gemini-3.1-flash-lite, thinking minimal) on tries,
+              fragments, talk, help, own-language and change-topic lines;
+              each line prints OK/BAD against what the app expects.
+  3. tutor  — Haiku 5.5 as the gateway runs it (adaptive thinking, the
+              CLAUDE_ADDENDUM, the realtime style rules) answering each note.
 
-  DUMP_DIR=<dir> scripts/tutor-lesson-probe.py [en,ko]
+  DUMP_DIR=<dir> scripts/tutor-lesson-probe.py
+    env: LANGS=en,ko,ja,de,es  PARTS=plan,judge,tutor  RUNS=2  LEVEL=a2
+         PAR=6  TUTOR_EXTRA=<text appended to the tutor system, for trials>
+  Dump: TEST_RUNNER_PROMPT_DUMP_DIR=<dir> xcodebuild test … \
+        -only-testing:FutureVoiceTests/ConversationPromptDumpTests
 Keys: gateway/.dev.vars GEMINI_API_KEY, ~/keys/anthropic.txt.
 """
-import json, os, re, sys, urllib.request, time
+import concurrent.futures as cf
+import json, os, re, time, urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DUMP = os.environ["DUMP_DIR"]
-LANGS = (sys.argv[1] if len(sys.argv) > 1 else "en,ko").split(",")
+LANGS = os.environ.get("LANGS", "en,ko,ja,de,es").split(",")
+PARTS = os.environ.get("PARTS", "plan,judge,tutor").split(",")
+RUNS = int(os.environ.get("RUNS", "2"))
 LEVEL = os.environ.get("LEVEL", "a2")
-GEMINI = re.search(r"GEMINI_API_KEY=(.*)", open(f"{ROOT}/gateway/.dev.vars").read()).group(1).strip()
+TUTOR_EXTRA = os.environ.get("TUTOR_EXTRA", "")
+GEMINI = re.search(r"GEMINI_API_KEY=(.*)", open(f"{ROOT}/gateway/.dev.vars").read()).group(1).strip().strip('"')
 ANTHROPIC = open(os.path.expanduser("~/keys/anthropic.txt")).read().strip()
-gw = open(f"{ROOT}/gateway/src/claude-reply.ts").read()
-ADDENDUM = re.search(r"CLAUDE_ADDENDUM = `(.*?)`", gw, re.S).group(1)
-cv = open(f"{ROOT}/FutureVoice/Views/ConversationView.swift").read()
-STYLE = re.search(r'realtimeStyleRules = """\n(.*?)"""', cv, re.S).group(1)
-STYLE = re.sub(r"\\\n\s*", "", "\n" + re.sub(r"^ {8}", "", STYLE, flags=re.M))
 NAMES = {"en": "English", "ko": "Korean", "ja": "Japanese", "de": "German", "es": "Spanish"}
+NATIVE = {"en": "Korean", "ko": "English", "ja": "Korean", "de": "Korean", "es": "Korean"}
 
-def swift_string(src, after):
-    body = re.search(re.escape(after) + r'.*?"""\n(.*?)"""', src, re.S).group(1)
-    body = re.sub(r"^ {8}", "", body, flags=re.M)
-    return re.sub(r"\\\n\s*", "", body)
+# ---------- Swift source lifting
 
-tl = open(f"{ROOT}/FutureVoice/Services/TutorLesson.swift").read()
-PLAN = swift_string(tl, "static func plan(")
-JUDGE = swift_string(tl[tl.index("enum TutorJudge"):], "static func read(")
+def read(path):
+    return open(f"{ROOT}/{path}").read()
+
+def literal_body(src, start):
+    """The body of the triple-quoted literal that opens at or after `start`,
+    with Swift's line-continuation backslashes joined and indentation dropped."""
+    a = src.index('"""\n', start) + 4
+    b = src.index('"""', a)
+    lines = src[a:b].split("\n")
+    indent = len(lines[-1])  # the closing delimiter's indentation
+    body = "\n".join(l[indent:] if l.strip() else "" for l in lines[:-1])
+    return re.sub(r"\\\n", "", body)
+
+def interpolations(s):
+    """(start, end, expression) for every top-level `\\( … )` in s, matching
+    parentheses outside string literals (which may nest interpolations)."""
+    out, i = [], 0
+    while True:
+        i = s.find("\\(", i)
+        if i < 0:
+            return out
+        j, depth, in_str = i + 2, 1, False
+        while depth:
+            c = s[j]
+            if in_str:
+                if c == "\\" and s[j + 1] == "(":
+                    k, d = j + 2, 1  # skip a nested interpolation inside the string
+                    while d:
+                        d += {"(": 1, ")": -1}.get(s[k], 0); k += 1
+                    j = k; continue
+                if c == "\\":
+                    j += 2; continue
+                if c == '"':
+                    in_str = False
+            else:
+                if c == '"':
+                    in_str = True
+                elif c == "(":
+                    depth += 1
+                elif c == ")":
+                    depth -= 1
+            j += 1
+        out.append((i, j, s[i + 2:j - 1]))
+        i = j
+
+def fill(template, values):
+    """Replace every interpolation by values[key] where the expression starts
+    with key (longest key first). An unknown expression is an error."""
+    keys = sorted(values, key=len, reverse=True)
+    out, last = [], 0
+    for a, b, expr in interpolations(template):
+        key = next((k for k in keys if expr.startswith(k)), None)
+        if key is None:
+            raise SystemExit(f"unknown interpolation \\({expr}) — add it to the probe's fixture")
+        out.append(template[last:a]); out.append(values[key]); last = b
+    out.append(template[last:])
+    return "".join(out).replace('\\"', '"').replace("\\n", "\n")
+
+def note_literal(src, lead):
+    """The string literal handed to tutorNudge whose text starts with `lead`."""
+    i = src.index('tutorNudge("' + lead) + len("tutorNudge(")
+    j, depth, in_str = i, 0, False
+    # walk the literal: from the opening quote to its closing quote at depth 0
+    j += 1
+    while True:
+        c = src[j]
+        if c == "\\" and src[j + 1] == "(":
+            k, d = j + 2, 1
+            while d:
+                d += {"(": 1, ")": -1}.get(src[k], 0)
+                if src[k] == '"':  # a string inside the interpolation
+                    k += 1
+                    while src[k] != '"':
+                        k += 2 if src[k] == "\\" else 1
+                k += 1
+            j = k; continue
+        if c == "\\":
+            j += 2; continue
+        if c == '"':
+            return src[i + 1:j]
+        j += 1
+
+TL = read("FutureVoice/Services/TutorLesson.swift")
+PLAN = literal_body(TL, TL.index("static func plan("))
+JUDGE_SRC = TL[TL.index("enum TutorJudge"):]
+JUDGE_SYSTEM = literal_body(JUDGE_SRC, JUDGE_SRC.index("let system = "))
+JUDGE_CONTENT = literal_body(JUDGE_SRC, JUDGE_SRC.index("let content = "))
+LADDER_SRC = TL[TL.index("static func levelLadder"):]
+
+def ladder(level):
+    m = re.search(r'case \.%s[^:]*:\s*band = """\n(.*?)"""' % level, LADDER_SRC, re.S)
+    band = re.sub(r"\\\n\s*", "", re.sub(r"^ {12}", "", m.group(1), flags=re.M)).strip()
+    return "WHAT THIS LEVEL PRACTICES — the challenges must fit this, not a level below:\n" + band
+
+CV = read("FutureVoice/Views/ConversationView.swift")
+N_READY = note_literal(CV, "Today's lesson is ready")
+N_NOTYET = note_literal(CV, "Result: NOT YET.")
+N_ONCE = note_literal(CV, "Result: ONCE MORE.")
+N_DONE = note_literal(CV, "Result: DONE — challenge")
+N_HELP = note_literal(CV, "Not a try: they \\(ownLanguage")
+N_TALK = note_literal(CV, "Not a try: they're just talking")
+NOTE = "[Note from the app — the learner did not say this: %s]"
+
+# ---------- model calls
 
 def post(url, body, headers):
     req = urllib.request.Request(url, json.dumps(body).encode(), {"content-type": "application/json", **headers})
-    for i in range(4):
+    err = None
+    for i in range(7):
         try:
             return json.load(urllib.request.urlopen(req, timeout=90))
-        except Exception as e:
-            err = e; time.sleep(2 * (i + 1))
+        except Exception as e:  # rate limits and the odd 5xx
+            err = e; time.sleep(4 * (i + 1))
     raise err
 
-def gemini(model, system, user, thinking="low"):
+def gemini(model, system, user, thinking="low", tokens=2000):
     j = post(f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI}", {
         "systemInstruction": {"parts": [{"text": system}]},
         "contents": [{"role": "user", "parts": [{"text": user}]}],
-        "generationConfig": {"responseMimeType": "application/json", "maxOutputTokens": 2000,
+        "generationConfig": {"responseMimeType": "application/json", "maxOutputTokens": tokens,
                              "thinkingConfig": {"thinkingLevel": thinking}}}, {})
-    return "".join(p.get("text", "") for p in j["candidates"][0]["content"]["parts"])
+    return "".join(p.get("text", "") for p in j["candidates"][0]["content"]["parts"] if not p.get("thought"))
+
+gw = read("gateway/src/claude-reply.ts")
+ADDENDUM = re.search(r"CLAUDE_ADDENDUM = `(.*?)`", gw, re.S).group(1)
+STYLE = re.search(r'realtimeStyleRules = """\n(.*?)"""', CV, re.S).group(1)
+STYLE = re.sub(r"\\\n\s*", "", "\n" + re.sub(r"^ {8}", "", STYLE, flags=re.M))
 
 def haiku(system, history):
     msgs = []
     for role, text in history:
         r = "assistant" if role == "m" else "user"
-        if msgs and msgs[-1]["role"] == r: msgs[-1]["content"] += "\n" + text
-        else: msgs.append({"role": r, "content": text})
-    if msgs[0]["role"] == "assistant": msgs.insert(0, {"role": "user", "content": "(call connected)"})
+        if msgs and msgs[-1]["role"] == r:
+            msgs[-1]["content"] += "\n" + text
+        else:
+            msgs.append({"role": r, "content": text})
+    if msgs[0]["role"] == "assistant":
+        msgs.insert(0, {"role": "user", "content": "(call connected)"})
     j = post("https://api.anthropic.com/v1/messages", {
         "model": "claude-haiku-5-5", "max_tokens": 2048, "system": system + STYLE + ADDENDUM,
         "thinking": {"type": "adaptive"}, "output_config": {"effort": "medium"},
         "messages": msgs}, {"anthropic-version": "2023-06-01", "x-api-key": ANTHROPIC})
     return "".join(b.get("text", "") for b in j["content"] if b.get("type") == "text").strip()
 
-# ---- 1. planner — (tutor's line or None for an on-screen pick, learner's words, want a lesson?)
-ASK_EN = "Oh, nice, let's do some English practice! What do you want to work on today?"
+# ---------- fixtures: one target-language lesson per language, challenge 2 is NOW
+
+LESSON = {
+ "en": ("Introducing yourself", [
+    ("Say your name and where you're from", "I'm Minji, and I'm from Busan."),
+    ("Say what you do for work or study", "I work as a nurse at a hospital."),
+    ("Say one thing you like doing in your free time, with a reason", "I love hiking because it clears my head.")]),
+ "ko": ("자기소개", [
+    ("Say your name and where you're from", "저는 민지예요. 부산에서 왔어요."),
+    ("Say what you do for work or study", "저는 병원에서 간호사로 일해요."),
+    ("Say one thing you like doing in your free time, with a reason", "주말에는 등산을 좋아해요. 머리가 맑아져서요.")]),
+ "ja": ("自己紹介", [
+    ("Say your name and where you're from", "ミンジです。釜山から来ました。"),
+    ("Say what you do for work or study", "病院で看護師をしています。"),
+    ("Say one thing you like doing in your free time, with a reason", "休みの日は山登りが好きです。気分がすっきりするので。")]),
+ "de": ("Sich vorstellen", [
+    ("Say your name and where you're from", "Ich bin Minji und komme aus Busan."),
+    ("Say what you do for work or study", "Ich arbeite als Krankenpflegerin im Krankenhaus."),
+    ("Say one thing you like doing in your free time, with a reason", "Ich wandere gern, weil ich dabei abschalten kann.")]),
+ "es": ("Presentarte", [
+    ("Say your name and where you're from", "Soy Minji y soy de Busan."),
+    ("Say what you do for work or study", "Trabajo de enfermera en un hospital."),
+    ("Say one thing you like doing in your free time, with a reason", "Me encanta hacer senderismo porque me despeja.")]),
+}
+ASK = {
+ "en": "Now, what do you do? For example: I work as a nurse at a hospital. Your turn, about you.",
+ "ko": "이제 무슨 일 하는지 말해 볼까? 예를 들면, 저는 병원에서 간호사로 일해요. 네 얘기로 해 봐.",
+ "ja": "じゃあ次は仕事のこと。たとえば「病院で看護師をしています。」自分のことで言ってみて。",
+ "de": "Jetzt: Was machst du beruflich? Zum Beispiel: Ich arbeite als Krankenpflegerin im Krankenhaus. Sag's über dich.",
+ "es": "Ahora, ¿a qué te dedicas? Por ejemplo: Trabajo de enfermera en un hospital. Dilo sobre ti.",
+}
+# (line with a slip, its "was" → "now", the right line)
+TRY = {
+ "en": ("I am work in a company as engineer.", '"I am work in a company as engineer" → "I work at a company as an engineer"', "I work as an engineer at a car company."),
+ "ko": ("저는 회사를 엔지니어 일해요.", '"회사를 엔지니어 일해요" → "회사에서 엔지니어로 일해요"', "저는 자동차 회사에서 엔지니어로 일해요."),
+ "ja": ("会社でエンジニアにしています。", '"エンジニアにしています" → "エンジニアをしています"', "自動車会社でエンジニアをしています。"),
+ "de": ("Ich arbeite als ein Ingenieur bei eine Autofirma.", '"als ein Ingenieur bei eine Autofirma" → "als Ingenieur bei einer Autofirma"', "Ich arbeite als Ingenieur bei einer Autofirma."),
+ "es": ("Yo trabajo como un ingeniero en una empresa de coches.", '"trabajo como un ingeniero" → "trabajo de ingeniero"', "Trabajo de ingeniero en una empresa de coches."),
+}
+# What the tutor said back after a NOT YET (stands in for its own fix line).
+FIXED = {
+ "en": "We'd say: I work at a company as an engineer. Try it again.",
+ "ko": "이렇게 말해: 회사에서 엔지니어로 일해요. 다시 해 봐.",
+ "ja": "こう言うよ。「会社でエンジニアをしています。」もう一回言ってみて。",
+ "de": "Man sagt: Ich arbeite als Ingenieur bei einer Firma. Sag's noch mal.",
+ "es": "Se dice: Trabajo de ingeniero en una empresa. Dilo otra vez.",
+}
+# A remark / question (talk) and a request for the words (help), in the target.
+TALK = {
+ "en": "Wait, do you still like your job, in the future?",
+ "ko": "근데 미래의 나는 아직도 그 일 좋아해?",
+ "ja": "ねえ、未来の私はまだその仕事好き？",
+ "de": "Sag mal, magst du deinen Job in der Zukunft noch?",
+ "es": "Oye, ¿en el futuro todavía te gusta tu trabajo?",
+}
+HELP = {
+ "en": "How do I say that I design car parts?",
+ "ko": "자동차 부품 설계한다는 건 어떻게 말해?",
+ "ja": "車の部品を設計してるって、どう言うの？",
+ "de": "Wie sage ich, dass ich Autoteile entwerfe?",
+ "es": "¿Cómo digo que diseño piezas de coche?",
+}
+# Said in the learner's native language (NATIVE above).
+OWN = {
+ "en": "자동차 부품 설계하는 일 해.", "ko": "I design car parts.", "ja": "자동차 부품 설계하는 일 해.",
+ "de": "자동차 부품 설계하는 일 해.", "es": "자동차 부품 설계하는 일 해.",
+}
+FRAGMENT = {"en": "Engineer.", "ko": "엔지니어.", "ja": "エンジニア。", "de": "Ingenieur.", "es": "Ingeniero."}
+OTHER = {
+ "en": "Can we do something else? Ordering food maybe.",
+ "ko": "다른 거 하면 안 돼? 음식 주문하는 거.",
+ "ja": "別のことやってもいい？注文の練習とか。",
+ "de": "Können wir was anderes machen? Essen bestellen vielleicht.",
+ "es": "¿Podemos hacer otra cosa? Pedir comida, por ejemplo.",
+}
+
+def note_values(lang, own_language=False, slips=None, what=None):
+    task, ex = LESSON[lang][1][1]
+    nxt_task, nxt_ex = LESSON[lang][1][2]
+    name = NAMES[lang]
+    return {
+        "intro": "In a few words say what it is and that you'll go one step at a time",
+        "i + 1": "2", "n + 1": "3",
+        "challenge.task": task, "challenge.example": ex,
+        "next.task": nxt_task, "next.example": nxt_ex,
+        "what": what or "",
+        "slips.isEmpty": "" if slips else ", or give them the example fitted to them",
+        "LanguageCatalog.englishName(target)": name,
+        "ownLanguage": (f"said this in their own language — they couldn't find the {name}" if own_language
+                        else "asked for help with how to say it, or are stuck"),
+    }
+
+def tutor_system(lang, now=1):
+    s = open(f"{DUMP}/{lang}-{LEVEL}-tutor-lesson.txt").read()
+    title, ch = LESSON[lang]
+    rows = "\n".join(f'  [{"DONE" if i < now else ("NOW " if i == now else "    ")}] {i + 1}. {t} — e.g. "{e}"'
+                     for i, (t, e) in enumerate(ch))
+    s, n = re.subn(r"TODAY'S LESSON: \"[^\"]*\"([^\n]*?you follow it:\n)(?:  \[[^\n]*\n)+",
+                   lambda m: f'TODAY\'S LESSON: "{title}"{m.group(1)}{rows}\n', s, flags=re.S)
+    if n != 1:
+        raise SystemExit("the dump's lesson block changed shape — update tutor_system()")
+    return s + TUTOR_EXTRA
+
+def tutor_cases(lang):
+    wrong, slips, right = TRY[lang]
+    return {
+        "ready": [("u", NOTE % fill(N_READY, note_values(lang)))],
+        "notyet": [("m", ASK[lang]), ("u", wrong + "\n" + NOTE % fill(N_NOTYET, note_values(lang, slips=[slips], what=f"Slips: {slips}.")))],
+        "oncemore": [("m", ASK[lang]), ("u", wrong), ("m", FIXED[lang]),
+                     ("u", right + "\n" + NOTE % fill(N_ONCE, note_values(lang)))],
+        "done": [("m", ASK[lang]), ("u", right + "\n" + NOTE % fill(N_DONE, note_values(lang)))],
+        "talk": [("m", ASK[lang]), ("u", TALK[lang] + "\n" + NOTE % fill(N_TALK, note_values(lang)))],
+        "help": [("m", ASK[lang]), ("u", HELP[lang] + "\n" + NOTE % fill(N_HELP, note_values(lang)))],
+        "own": [("m", ASK[lang]), ("u", OWN[lang] + "\n" + NOTE % fill(N_HELP, note_values(lang, own_language=True)))],
+    }
+
+# ---------- 1. planner
 REQ = {
-    "en": [(ASK_EN, "I'd like to practice introducing myself.", True),
-           # the device case, 2026-10-24: "I'd like" misheard
-           (ASK_EN, "I don't like to practice on introducing myself.", False),
-           ("Introducing yourself — want to practice that?", "Yes.", True),
-           ("Would you like to practice talking about travel, or ordering food at a café?", "The second one.", True),
-           (None, "Meeting someone new", True),
-           (ASK_EN, "I don't know.", False),
-           (ASK_EN, "um hello", False)],
-    "ko": [("좋아, 오늘은 수업이야. 오늘은 어떤 말을 할 수 있게 되고 싶어?", "처음 만난 사람한테 자기소개하는 거 연습하고 싶어.", True),
-           ("좋아, 오늘은 수업이야. 오늘은 어떤 말을 할 수 있게 되고 싶어?", "몰라 아무거나.", False),
-           (None, "카페에서 주문하기", True)],
+ "en": [("좋아, 오늘은 수업이야. 오늘은 어떤 말을 할 수 있게 되고 싶어?", "I want to practice ordering at a café."), (None, "Introducing yourself")],
+ "ko": [("Okay, lesson time. What do you want to be able to say today?", "카페에서 주문하는 거 연습하고 싶어."), (None, "자기소개")],
+ "ja": [("よし、今日はレッスンね。今日はどんなことが言えるようになりたい？", "カフェで注文する練習をしたい。"), (None, "自己紹介")],
+ "de": [("Okay, heute ist Unterricht. Was willst du heute sagen können?", "Ich will üben, im Café zu bestellen."), (None, "Sich vorstellen")],
+ "es": [("Bueno, hoy toca clase. ¿Qué quieres poder decir hoy?", "Quiero practicar pedir en una cafetería."), (None, "Presentarte")],
 }
-for lang in LANGS:
-    native = "Korean" if lang != "ko" else "English"
-    sysp = (PLAN.replace("\\(target)", NAMES[lang]).replace("\\(native)", native)
-            .replace("\\(level.rawValue.uppercased())", LEVEL.upper())
-            .replace('\\(about.isEmpty ? "" : "\\nWhat is known about them: \\(about). Context only.")', ""))
-    for asked, said, want in REQ.get(lang, []):
-        msg = f'The tutor asked: "{asked}"\nThey answered: "{said}"' if asked else f'They picked on screen: "{said}"'
-        out = gemini("gemini-3.6-flash", sysp, msg)
+
+def planner_prompt(lang):
+    return fill(PLAN, {"target": NAMES[lang], "native": NATIVE[lang],
+                       "level.rawValue.uppercased()": LEVEL.upper(), "levelLadder(level)": ladder(LEVEL),
+                       "about.isEmpty": ""})
+
+def run_plan(job):
+    lang, asked, said, run = job
+    msg = f'The tutor asked: "{asked}"\nThey answered: "{said}"' if asked else f'They picked on screen: "{said}"'
+    try:
+        j = json.loads(gemini("gemini-3.6-flash", planner_prompt(lang), msg))
+    except Exception as e:
+        return f"### PLAN {lang} {said} ERROR {e}"
+    rows = "\n".join(f"    - {c.get('goal')} | {c.get('task')} | e.g. {c.get('example')}" for c in j.get("challenges", []))
+    return f"### PLAN {lang} run{run} topic={j.get('topic')} · {said} → {j.get('title')} / {j.get('title_target')}\n{rows}"
+
+# ---------- 2. judge: (line, own_language, expected) — expected is
+# "done" (a try that does it), "try" (a try that doesn't), "talk", "help", "other"
+
+def judge_lines(lang):
+    return [(TRY[lang][2], False, "done"), (TRY[lang][0], False, "done"),  # slips are not the judge's job
+            (FRAGMENT[lang], False, "try"), (TALK[lang], False, "talk"), (HELP[lang], False, "help"),
+            (OWN[lang], True, "help"), (OTHER[lang], False, "other")]
+
+def run_judge(job):
+    lang, line, own, want = job
+    task, ex = LESSON[lang][1][1]
+    name = NAMES[lang]
+    system = fill(JUDGE_SYSTEM, {"target": name})
+    content = fill(JUDGE_CONTENT, {"challenge.task": task, "challenge.example": ex, "askedWith": ASK[lang],
+                                   "line": line,
+                                   "ownLanguage": f"\n(They said this in their own language, not in {name}.)" if own else ""})
+    out = gemini("gemini-3.1-flash-lite", system, content, thinking="minimal", tokens=160)
+    try:
+        j = json.loads(out)
+        got = ("other" if j.get("other_topic") else
+               j.get("kind") if j.get("kind") in ("talk", "help") else
+               "done" if j.get("done") else "try")
+    except Exception:
+        got = "?"
+    return f"### JUDGE {'OK ' if got == want else 'BAD'} {lang} want={want} got={got} · {line} → {out.strip()}"
+
+if __name__ == "__main__":
+    jobs_p = [(l, a, s, r) for l in LANGS for (a, s) in REQ[l] for r in range(RUNS)] if "plan" in PARTS else []
+    jobs_j = [(l, line, own, w) for l in LANGS for (line, own, w) in judge_lines(l)] if "judge" in PARTS else []
+    jobs_t = [(l, n, r) for l in LANGS for n in tutor_cases(l) for r in range(1, RUNS + 1)] if "tutor" in PARTS else []
+
+    def run_tutor(job):
+        lang, name, run = job
         try:
-            j = json.loads(out); got = j.get("topic"); title = j.get("title", "")
-        except Exception:
-            got, title = "?", out[:80]
-        flag = "OK " if got == want else "BAD"
-        print(f"### PLAN {flag} {lang} want={want} got={got} · {said} → {title} | {[c.get('goal') for c in j.get('challenges', [])] if isinstance(got, bool) and got else ''}")
+            # Lesson ready: challenge 1 is NOW; every other case is on challenge 2.
+            out = haiku(tutor_system(lang, now=0 if name == "ready" else 1), tutor_cases(lang)[name])
+        except Exception as e:
+            out = f"ERROR {e}"
+        return f"### TUTOR {lang} · {name} · run {run}\n{out}"
 
-# ---- 2. judge
-CH = ("Say your name and where you're from", "I'm Minji, and I'm from Busan.")
-LINES = [("My name is Tom and I'm from Leeds.", True), ("I'm Tom.", False),
-         ("I like coffee.", False), ("Hi, I am Tom, I come from Leeds in England.", True)]
-ASKED = [("Tell me your name and where you're from.", False),
-         ("Nice and clear. Say it once more, just like that.", False),
-         ("You got it! Next: what do you do? Say: I work as a nurse — about you.", True)]
-for line, want in ([] if os.environ.get("PLAN_ONLY") else LINES):
-    sysp = JUDGE.replace("\\(target)", "English")
-    for asked, moved in (ASKED if want else ASKED[:1]):
-        out = gemini("gemini-3.1-flash-lite", sysp,
-                     f"Challenge: {CH[0]}\nExample of a line that does it: {CH[1]}\n"
-                     f"The tutor had just said: {asked}\nThe learner said: {line}",
-                     thinking="minimal")
-        print(f"### JUDGE want done={want} moved={moved} · {asked[:30]} · {line} → {out.strip()}")
-
-# ---- 3. tutor replies
-NOTE = "[Note from the app — the learner did not say this: %s]"
-CASES = {
-    "en": {
-        "notopic": ("tutor", [("m", "Okay, lesson time. What do you want to be able to say today? Tell me, or pick a topic from the button."),
-                              ("u", "I want to introduce myself when I meet new people.")]),
-        "ready": ("lesson", [("m", "Great, introducing yourself it is. Let me set it up."),
-                             ("u", NOTE % "Today's lesson is ready (see TUTOR MODE). In a few words say what it is and that you'll go one step at a time, then start the current challenge: say what it is, give its example line, and ask them to say it about themselves.")]),
-        "mistake": ("lesson", [("m", "Now, what do you do? Say: I work as a nurse at a hospital — but about you."),
-                               ("u", "I am work in company as engineer.")]),
-        "right": ("lesson", [("m", "Now, what do you do? Say: I work as a nurse at a hospital — but about you."),
-                             ("u", "I work as an engineer at a car company.")]),
-        "ticked": ("ticked", [("m", "Now, what do you do? Say: I work as a nurse at a hospital — but about you."),
-                              ("u", "I work as an engineer at a car company."),
-                              ("m", "Nice, that sounded right. Say it once more, just like that."),
-                              ("u", "I work as an engineer at a car company.")]),
-        # No app tick: the tutor itself must move on (2026-10-25).
-        "again": ("lesson", [("m", "Now, what do you do? Say: I work as a nurse at a hospital — but about you."),
-                             ("u", "I work as an engineer at a car company."),
-                             ("m", "Nice and clear. Say it once more, just like that."),
-                             ("u", "I work as an engineer at a car company.")]),
-    },
-    "ko": {
-        "notopic": ("tutor", [("m", "좋아, 오늘은 수업이야. 오늘은 어떤 말을 할 수 있게 되고 싶어? 말해 줘도 되고, 버튼에서 주제를 골라도 돼."),
-                              ("u", "처음 만난 사람한테 자기소개하는 거.")]),
-        "ready": ("lesson", [("m", "좋아, 자기소개로 하자. 잠깐 준비할게."),
-                             ("u", NOTE % "Today's lesson is ready (see TUTOR MODE). In a few words say what it is and that you'll go one step at a time, then start the current challenge: say what it is, give its example line, and ask them to say it about themselves.")]),
-        "mistake": ("lesson", [("m", "이제 무슨 일 하는지 말해 볼까? 예를 들면, 저는 병원에서 간호사로 일해요. 네 얘기로 해 봐."),
-                               ("u", "저는 회사를 엔지니어 일해요.")]),
-        "right": ("lesson", [("m", "이제 무슨 일 하는지 말해 볼까? 예를 들면, 저는 병원에서 간호사로 일해요. 네 얘기로 해 봐."),
-                             ("u", "저는 자동차 회사에서 엔지니어로 일해요.")]),
-        "ticked": ("ticked", [("m", "이제 무슨 일 하는지 말해 볼까? 예를 들면, 저는 병원에서 간호사로 일해요. 네 얘기로 해 봐."),
-                              ("u", "저는 자동차 회사에서 엔지니어로 일해요."),
-                              ("m", "좋아, 맞게 했어. 한 번만 더 똑같이 말해 봐."),
-                              ("u", "저는 자동차 회사에서 엔지니어로 일해요.")]),
-        "again": ("lesson", [("m", "이제 무슨 일 하는지 말해 볼까? 예를 들면, 저는 병원에서 간호사로 일해요. 네 얘기로 해 봐."),
-                             ("u", "저는 자동차 회사에서 엔지니어로 일해요."),
-                             ("m", "좋아, 깔끔해. 한 번만 더 똑같이 말해 봐."),
-                             ("u", "저는 자동차 회사에서 엔지니어로 일해요.")]),
-    },
-}
-RUNS = int(os.environ.get("RUNS", "2"))
-for lang in LANGS:
-    for name, (kind, hist) in ([] if os.environ.get("PLAN_ONLY") else CASES.get(lang, {}).items()):
-        suffix = "" if kind == "tutor" else f"-{kind}"
-        system = open(f"{DUMP}/{lang}-{LEVEL}-tutor{suffix}.txt").read()
-        for i in range(RUNS):
-            print(f"\n### TUTOR {lang} · {name} · run {i + 1}\n{haiku(system, hist)}")
+    with cf.ThreadPoolExecutor(int(os.environ.get("PAR", "6"))) as ex:
+        for out in ex.map(run_plan, jobs_p): print(out, flush=True)
+        for out in ex.map(run_judge, jobs_j): print(out, flush=True)
+        for out in ex.map(run_tutor, jobs_t): print("\n" + out, flush=True)
