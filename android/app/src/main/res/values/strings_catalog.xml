@@ -5,6 +5,7 @@
 <resources>
     <string name="a_10_minute_lesson_uses_5_minutes">"A 10-minute lesson uses 5 minutes."</string>
     <!-- 'A 10-minute tutor call every weekday is about 200 minutes a month. Here, minutes count only while the conversation is going — pauses are free.' -->
+    <string name="a_10_minute_tutor_call_every_weekday_is_about_200_minutes_a_0d4b45">"A 10-minute tutor call every weekday is about 200 minutes a month. Here, minutes count only while the conversation is going — pauses are free."</string>
     <string name="a_badge_next_to_your_name_where_you_meet_people">"A badge next to your name where you meet people."</string>
     <string name="a_barista">"a barista"</string>
     <string name="a_better_word">"A better word"</string>
@@ -412,7 +413,6 @@
     <string name="building_situations_topics">"Building situations &amp; topics"</string>
     <string name="building_your_review_material">"Building your review material"</string>
     <string name="busy_calendar">"Busy calendar"</string>
-    <string name="busy_day_what_did_you_do_this_morning">"Busy day? What did you do this morning?"</string>
     <string name="busy_lately">"Busy lately"</string>
     <string name="busy_today">"Busy today?"</string>
     <string name="busy_with_work">"Busy with work"</string>
@@ -1260,7 +1260,6 @@
     <string name="i_called_earlier">"I called earlier."</string>
     <string name="i_chat_easily_with_neighbors_and_other_parents">"I chat easily with neighbors and other parents"</string>
     <string name="i_couldn_t_answer_that_just_now_try_again_in_a_moment">"I couldn't answer that just now. Try again in a moment."</string>
-    <string name="i_go_to_the_office_early_yesterday_so_i_left_at_four">"I go to the office early yesterday, so I left at four."</string>
     <string name="i_got_the_job_i_wanted">"I got the job I wanted"</string>
     <string name="i_got_the_score_i_needed">"I got the score I needed"</string>
     <string name="i_handle_the_doctor_the_landlord_and_the_town_hall_myself">"I handle the doctor, the landlord and the town hall myself"</string>
@@ -1875,7 +1874,7 @@
     <string name="new_records_pushed_you_from_lld_to_lld">"New records pushed you from #%1$d to #%2$d."</string>
     <string name="new_scenario">"New scenario"</string>
     <string name="new_script">"New script"</string>
-    <string name="new_scripts_are_a_plus_feature">"New scripts come with a plan"</string>
+    <string name="new_scripts_are_a_plus_feature">"New scripts are a Plus feature"</string>
     <string name="new_situation">"New situation"</string>
     <string name="new_talk_lld_10_min">"New talk %d/10 min"</string>
     <!-- "New talks and recordings aren't backed up to iCloud right now, so they're on this device only. If you delete the app on this device, they're deleted with it." -->
@@ -2553,7 +2552,6 @@
     <string name="s_30_days_in_a_row_without_missing_one_leave_a_heart_or_a_sh_0d416d">"30 days in a row without missing one. Leave a heart or a short cheer."</string>
     <string name="s_3_days">"3 days"</string>
     <string name="s_50_off">"50% off"</string>
-    <string name="s_5ab26b1d">"  →  "</string>
     <string name="said_lld">"Said %d×"</string>
     <string name="same_as_before">"same as before"</string>
     <!-- 'Same bands as “How this is assessed” — tap a skill for its measured numbers.' -->
@@ -2826,6 +2824,7 @@
     <!-- 'Speech' -->
     <string name="speech_d00d85">"Speech"</string>
     <!-- '+ Speech' -->
+    <string name="speech_d35aea">"+ Speech"</string>
     <string name="speech_genre_briefing">"Briefing"</string>
     <string name="speech_genre_explain">"Explainer"</string>
     <string name="speech_genre_news">"News"</string>
@@ -3180,8 +3179,8 @@
     <string name="the_other_days_are_rest_days_nothing_is_planned_and_they_nev_321b55">"The other days are rest days: nothing is planned, and they never break your streak."</string>
     <string name="the_other_person">"The other person"</string>
     <string name="the_outlined_cell_is_you">"The outlined cell is you."</string>
-    <!-- "The phone's mic hears more detail, but only when the phone is near you. The earphone's mic sounds narrower, and is always at your mouth. You can change this later in Me → Sound & mic." -->
     <string name="the_part_you_re_unsure_of_where_you_got_stuck_last_time">"The part you're unsure of, where you got stuck last time…"</string>
+    <!-- "The phone's mic hears more detail, but only when the phone is near you. The earphone's mic sounds narrower, and is always at your mouth. You can change this later in Me → Sound & mic." -->
     <string name="the_phone_s_mic_hears_more_detail_but_only_when_the_phone_is_3f6c6c">"The phone's mic hears more detail, but only when the phone is near you. The earphone's mic sounds narrower, and is always at your mouth. You can change this later in Me → Sound &amp; mic."</string>
     <string name="the_playground">"The playground"</string>
     <string name="the_preparing_finished_before_the_interview">"The preparing finished before the interview."</string>
@@ -3192,6 +3191,7 @@
     <string name="the_reusable_phrases_this_talk_produced_the_ones_your_fluent_1940be">"The reusable phrases this talk produced — the ones your fluent self reached for, and the ones you said yourself. Tap for the card: meaning, examples, and where it came up."</string>
     <string name="the_right_way">"The right way"</string>
     <string name="the_ring_is_today_s_goal">"The ring is today's goal"</string>
+    <!-- 'The role, an experience you want to tell, a question you dread…' -->
     <string name="the_role_an_experience_you_want_to_tell_a_question_you_dread">"The role, an experience you want to tell, a question you dread…"</string>
     <string name="the_role_the_score_you_need_who_will_be_there">"The role, the score you need, who will be there…"</string>
     <string name="the_same_fix_kept_coming_back_one_more_look_and_it_s_yours">"The same fix kept coming back. One more look and it's yours."</string>
@@ -3204,7 +3204,7 @@
     <!-- 'The same setting as Me → Level. The next assessment overwrites it with what your talks show.' -->
     <string name="the_same_setting_as_me_level_the_next_assessment_overwrites_9d19dc">"The same setting as Me → Level. The next assessment overwrites it with what your talks show."</string>
     <!-- 'The sample script stays free to practise. With Plus or Max, practise any text you like.' -->
-    <string name="the_sample_script_stays_free_to_practise_with_plus_or_max_pr_9a1a82">"The sample script stays free to practise. With a plan, practise any text you like."</string>
+    <string name="the_sample_script_stays_free_to_practise_with_plus_or_max_pr_9a1a82">"The sample script stays free to practise. With Plus or Max, practise any text you like."</string>
     <!-- "The scene's book brings its words and expressions back to you as cards." -->
     <string name="the_scene_s_book_brings_its_words_and_expressions_back_to_yo_bf4a1f">"The scene's book brings its words and expressions back to you as cards."</string>
     <!-- 'The script and your face together in one vertical video. Save it to Photos to share, or delete it.' -->
@@ -3628,6 +3628,7 @@
     <string name="what_is_it">"What is it?"</string>
     <string name="what_it_is">"What it is"</string>
     <string name="what_it_is_who_s_involved_what_worries_you">"What it is, who's involved, what worries you…"</string>
+    <!-- "What it's about, the point to get across, a question you dread…" -->
     <string name="what_it_s_about_the_point_to_get_across_a_question_you_dread">"What it's about, the point to get across, a question you dread…"</string>
     <string name="what_never_moves_the_level">"What never moves the level"</string>
     <string name="what_s_going_on_in_their_life">"What's going on in their life?"</string>
@@ -3668,6 +3669,7 @@
     <string name="what_this_is_about">"What this is about"</string>
     <string name="what_to_have_ready">"What to have ready"</string>
     <string name="what_to_practice">"What to practice"</string>
+    <!-- "What to sort out there (a flat, the bank, a visa), what's already settled…" -->
     <string name="what_to_sort_out_there_a_flat_the_bank_a_visa_what_s_already_7fd465">"What to sort out there (a flat, the bank, a visa), what's already settled…"</string>
     <string name="what_uses_talk_time">"What uses talk time?"</string>
     <string name="what_was_said">"What was said"</string>
@@ -3681,6 +3683,7 @@
     <!-- 'What you keep getting wrong comes back every day,\nand you say it until it sticks.' -->
     <string name="what_you_keep_getting_wrong_comes_back_every_day_and_you_say_38c34e">"What you keep getting wrong comes back every day,\nand you say it until it sticks."</string>
     <string name="what_you_learn_today_is_gone_in_a_few_days">"What you learn today is gone in a few days"</string>
+    <!-- "What you'll do there, who you'll meet, where you'll need to talk…" -->
     <string name="what_you_ll_do_there_who_you_ll_meet_where_you_ll_need_to_ta_a8d05e">"What you'll do there, who you'll meet, where you'll need to talk…"</string>
     <string name="what_you_pick_becomes_your_goal_practice_aims_at_it">"What you pick becomes your goal — practice aims at it."</string>
     <string name="what_you_read">"What you read"</string>
@@ -3854,7 +3857,7 @@
     <string name="write_it_the_way_you_d_say_it_now">"Write it the way you'd say it now"</string>
     <string name="write_one_for_me">"Write one for me"</string>
     <string name="write_one_with_ai">"Write one with AI"</string>
-    <string name="write_scripts_on_any_topic_or_add_your_own_with_plus">"Write scripts on any topic, or add your own, with a plan."</string>
+    <string name="write_scripts_on_any_topic_or_add_your_own_with_plus">"Write scripts on any topic, or add your own, with Plus."</string>
     <!-- 'Write to us to see or correct what we hold about you, including the date you gave consent.' -->
     <string name="write_to_us_to_see_or_correct_what_we_hold_about_you_includi_0fbfc2">"Write to us to see or correct what we hold about you, including the date you gave consent."</string>
     <string name="write_with_ai">"Write with AI"</string>
