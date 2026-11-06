@@ -437,7 +437,7 @@ enum CoachSuggester {
           brackets, a word or two inside each, nothing else in brackets. \
           Every detail of their life the answer gives (a city, how long, \
           who, what they did) is in brackets or left out, never stated \
-          plainly: a longer answer adds a reason or a view, not more facts.
+          plainly: a longer answer adds a reason or a view, not more facts.\(bracketAgreementLine(target))
         - It is the SAME person who said the learner's earlier lines in the \
           call: carry on from what they already said, never contradict it, \
           never give again a fact they already gave, and stay on the thread \

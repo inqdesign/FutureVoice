@@ -282,7 +282,7 @@ enum ConversationEngine {
           rather than pressing — offer something of your own, or let the \
           subject go. A first call that ends with ONE thing you both enjoyed \
           talking about went better than one that got through their \
-          biography.
+          biography.\(firstCallLanguageLine(targetLanguage))
         """ : ""
 
         // A plain free talk is a call the LEARNER placed (2026-10-13, founder):
@@ -428,7 +428,7 @@ enum ConversationEngine {
           Drop fillers in occasionally where a real speaker would: "yeah", "well", \
           "I mean", "honestly", "you know", "uh", "hm". Not every turn — sparingly, \
           where it fits.
-        - \(CoachingLanguage.breathPunctuation)\(varietyGuard(targetLanguage))
+        - \(CoachingLanguage.breathPunctuation)\(varietyGuard(targetLanguage))\(spanishGuard(targetLanguage, asFutureSelf: counterpart == nil && topic.isEmpty))
         - Real conversation is lots of brief turns, not paragraphs. Never a \
           paragraph, at any level.
         - VARY turn length — DOWNWARD from the ceiling, never past it. Sometimes \
@@ -578,14 +578,14 @@ enum ConversationEngine {
           French tu, Spanish tú, Italian tu, Portuguese você), use the INFORMAL
           one — you are talking to yourself, and formality makes you a
           stranger. Under YOUR CHARACTER the relationship and the scene choose
-          the form instead.
+          the form instead.\(selfAddressLine(targetLanguage, asFutureSelf: counterpart == nil && topic.isEmpty))
         - \(tutor ? "Correct the user only as TUTOR MODE below says." : "Never correct the user mid-conversation. Corrections happen elsewhere.")
         - Before you send a turn, check it twice: (1) count the sentences —
           more than \(maxTurnSentences)? drop an idea and rewrite, don't merge
           or truncate; (2) re-read it against PITCH TO THEIR LEVEL
           (\(levelName)) — a word or clause above that line that isn't the one
           deliberate stretch gets the plainer version. Check (2) is the one
-          that carries their level; (1) is only about not monologuing.\(beginnerQuestions(level))\(tutor ? tutorBlock(targetLanguage: targetLanguage, languageName: languageName, lesson: tutorLesson, justTicked: tutorJustTicked, lastFixes: tutorLastFixes, planning: tutorPlanning) : "")
+          that carries their level; (1) is only about not monologuing.\(beginnerQuestions(level, targetLanguage: targetLanguage))\(tutor ? tutorBlock(targetLanguage: targetLanguage, languageName: languageName, lesson: tutorLesson, justTicked: tutorJustTicked, lastFixes: tutorLastFixes, planning: tutorPlanning) : "")
         """
     }
 
@@ -758,7 +758,7 @@ enum ConversationEngine {
         change something you can HEAR said out loud. If you can't tell \
         whether the learner or the transcriber made it, it isn't a mistake. \
         Keep THEIR speech level — never make their line more polite or more \
-        formal than they said it.\(scriptGuard(targetLanguage))\(spacingGuard(targetLanguage))\(registerGuard(targetLanguage))\(varietyGuard(targetLanguage))
+        formal than they said it.\(scriptGuard(targetLanguage))\(spacingGuard(targetLanguage))\(registerGuard(targetLanguage))\(spokenGrammarGuard(targetLanguage))\(varietyGuard(targetLanguage))
         - Those guards were written for a correction card; wherever one says \
           "return null", here it means: not a mistake.\(LanguageCatalog.base(targetLanguage) == "ko" ? "\n- Spacing is never heard. Never mention 띄어쓰기 and never say a line back only to space it (할수 → 할 수 is the same sound)." : "")
         - If a note on their turn says they said it in their own language, \
@@ -775,7 +775,7 @@ enum ConversationEngine {
           the line's register, never yours: don't switch how you speak to \
           them to match it — your own words stay informal (Korean 반말, never \
           해요체, 여러분 or 당신; Japanese plain form; German du), and only \
-          the quoted example line is in its own register.
+          the quoted example line is in its own register.\(tutorRegisterLine(targetLanguage))
         - All of it in \(languageName) only, like everything else.\(tutorNow(lesson: lesson, justTicked: justTicked && !planning))
         """
     }
@@ -829,7 +829,7 @@ enum ConversationEngine {
     /// this). Last in the prompt on purpose, and it says it outranks what
     /// came before. Empty at B1 and above, so those prompts are unchanged
     /// byte for byte (`BeginnerQuestionTests`).
-    static func beginnerQuestions(_ level: CEFRLevel) -> String {
+    static func beginnerQuestions(_ level: CEFRLevel, targetLanguage: String = "") -> String {
         guard level == .a1 || level == .a2 else { return "" }
         return """
 
@@ -863,7 +863,7 @@ enum ConversationEngine {
           went to work, then home.").
         - If they get stuck, go quiet, or answer in another language: don't \
           press and don't change the subject — ask the same thing more \
-          easily, as two choices ("Do you live in a city, or a small town?").
+          easily, as two choices ("Do you live in a city, or a small town?").\(beginnerQuestionLanguageLine(targetLanguage))
         """
     }
 
@@ -1148,7 +1148,7 @@ enum ConversationEngine {
           natural speech, never something to report or "fix" anywhere. Every
           fluent_alternative / correction / suggested_drill must sound like a
           line said out loud in casual conversation — the user's own register,
-          contractions welcome — never a written-essay rewrite.\(registerGuard(targetLanguage))\(varietyGuard(targetLanguage))\(relationshipRegisterLine(targetLanguage, counterpart: counterpart))\(politeSettingLine(targetLanguage, counterpart: counterpart, inScene: inScene))
+          contractions welcome — never a written-essay rewrite.\(registerGuard(targetLanguage))\(spokenGrammarGuard(targetLanguage))\(varietyGuard(targetLanguage))\(relationshipRegisterLine(targetLanguage, counterpart: counterpart))\(politeSettingLine(targetLanguage, counterpart: counterpart, inScene: inScene))
         - cefr_level: a single holistic CEFR estimate of the user's SPEAKING in
           this whole conversation, weighing vocabulary range, grammatical
           control, fluency, and how well they express ideas together. Anchor to
@@ -1459,7 +1459,7 @@ enum ConversationEngine {
           "I am" → "I'm", "do not" → "don't", "it is" → "it's" — is correcting
           the transcriber, not the learner, and tells them they made a mistake
           they did not make. NEVER offer one. If the only thing you would
-          change in a line is a contraction, the line was fine: return null.\(scriptGuard(targetLanguage))\(spacingGuard(targetLanguage))\(registerGuard(targetLanguage))\(varietyGuard(targetLanguage))\(relationshipRegisterLine(targetLanguage, counterpart: counterpart))\(politeSettingLine(targetLanguage, counterpart: counterpart, inScene: inScene))
+          change in a line is a contraction, the line was fine: return null.\(scriptGuard(targetLanguage))\(spacingGuard(targetLanguage))\(registerGuard(targetLanguage))\(spokenGrammarGuard(targetLanguage))\(varietyGuard(targetLanguage))\(relationshipRegisterLine(targetLanguage, counterpart: counterpart))\(politeSettingLine(targetLanguage, counterpart: counterpart, inScene: inScene))
         - "suggestion" answers TWO different questions about the user's most
           recent line, and both are needed: "alternative" is how a fluent
           speaker would say THE WHOLE THING here, and "fixes" lists the
@@ -1511,7 +1511,7 @@ enum ConversationEngine {
           the \(nativeName) word for it. This holds even when \(nativeName)
           speakers commonly mix that word in casually.
           "alternative" above is unaffected: it stays
-          \(LanguageCatalog.englishName(targetLanguage)) material.
+          \(LanguageCatalog.englishName(targetLanguage)) material.\(notesLanguageGuard(targetLanguage, nativeLanguage: nativeLanguage))
         - The suggestion is shown silently as text — never mention it in "reply",
           never correct the user out loud.
         """
@@ -1579,7 +1579,7 @@ enum ConversationEngine {
           building" arrives as "I am building" every time. A suggestion whose
           only change is contracting what you received is correcting the
           transcriber, not the learner. If that is the only change you would
-          make, the line was fine: return null.\(scriptGuard(targetLanguage))\(spacingGuard(targetLanguage))\(registerGuard(targetLanguage))\(varietyGuard(targetLanguage))\(relationshipRegisterLine(targetLanguage, counterpart: counterpart))\(politeSettingLine(targetLanguage, counterpart: counterpart, inScene: inScene))
+          make, the line was fine: return null.\(scriptGuard(targetLanguage))\(spacingGuard(targetLanguage))\(registerGuard(targetLanguage))\(spokenGrammarGuard(targetLanguage))\(varietyGuard(targetLanguage))\(relationshipRegisterLine(targetLanguage, counterpart: counterpart))\(politeSettingLine(targetLanguage, counterpart: counterpart, inScene: inScene))
         - Judge it as SPEECH, never as writing. Contractions, casual register
           and fragments ("Sounds good.", "Maybe tomorrow?") are how fluent
           speakers talk, not slips.
@@ -1603,7 +1603,7 @@ enum ConversationEngine {
         - "reason": ≤ 12 words in \(nativeName) on why the rewrite reads
           better as a whole, quoting the \(targetName) words that changed
           untranslated. Those quotes are the only foreign text; every other
-          word is \(nativeName).
+          word is \(nativeName).\(notesLanguageGuard(targetLanguage, nativeLanguage: nativeLanguage))
         """
     }
 
