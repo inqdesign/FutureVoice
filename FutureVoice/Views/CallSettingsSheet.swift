@@ -102,7 +102,7 @@ struct CallSettingsSheet: View {
                         Label("Answer with Send", systemImage: "paperplane")
                     }
                 } footer: {
-                    Text(explain("Take your time. Your future self waits until you press Send."))
+                    Text(explain("A call answers the moment you pause. With this on, your future self waits until you press Send, like a message, so pausing to think won't cut you off."))
                 }
 
                 Section {

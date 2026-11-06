@@ -107,48 +107,48 @@
         }
       }
     },
-    "Answer when I pause" : {
+    "A call answers the moment you pause. With this on, your future self waits until you press Send, like a message, so pausing to think won't cut you off." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Antworten, sobald ich pausiere"
+            "value" : "Im Anruf kommt die Antwort, sobald du eine Pause machst. Ist das an, wartet dein fließendes Ich wie bei einer Nachricht, bis du auf Senden tippst – eine Denkpause unterbricht dich nicht."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Responder al hacer una pausa"
+            "value" : "En una llamada, la respuesta llega en cuanto haces una pausa. Si lo activas, tu yo fluido espera a que toques Enviar, como en un mensaje, así que parar a pensar no te corta."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Répondre dès que je m’arrête"
+            "value" : "Dans un appel, la réponse arrive dès que tu fais une pause. Si tu l’actives, ton moi fluide attend que tu touches Envoyer, comme pour un message : une pause pour réfléchir ne te coupe pas."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "止まったらすぐ答える"
+            "value" : "通話では、話が止まるとすぐに答えます。オンにすると、メッセージのように送信を押すまで流暢な自分が待つので、考えて間をあけても途中で切れません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "멈추면 바로 답하기"
+            "value" : "통화는 말을 멈추면 바로 답해요. 이걸 켜면 메시지처럼 보내기를 누를 때까지 기다려서, 생각하느라 멈춰도 끊기지 않아요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "一停就回答"
+            "value" : "通话时，你一停下来就会回答。开启后，流利的自己会像发消息一样，等你按下发送才回答，停下来想一想也不会被打断。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "一停就回答"
+            "value" : "通話時，你一停下來就會回答。開啟後，流利的自己會像傳訊息一樣，等你按下傳送才回答，停下來想一想也不會被打斷。"
           }
         }
       }
@@ -183,98 +183,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "첫 통화 설정 미리 보기"
-          }
-        }
-      }
-    },
-    "Finish, then Send" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Erst fertig sprechen, dann Senden"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Termina y toca Enviar"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Finis, puis Envoyer"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "話し終えてから送信"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "다 말하고 보내기"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "说完再按发送"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "說完再按傳送"
-          }
-        }
-      }
-    },
-    "How you answer" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wie du antwortest"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cómo respondes"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ta façon de répondre"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "答え方"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "답하는 방법"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "回答方式"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "回答方式"
           }
         }
       }
@@ -327,98 +235,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "总排名"
-          }
-        }
-      }
-    },
-    "Pausing won't cut you off. Your future self answers when you press Send." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Eine Pause unterbricht dich nicht. Dein fließendes Ich antwortet, wenn du auf Senden tippst."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Si haces una pausa, no te corta. Tu yo fluido responde cuando tocas Enviar."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Une pause ne te coupe pas. Ton moi fluide répond quand tu touches Envoyer."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "途中で止まっても切れません。送信を押すと、流暢な自分が答えます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "말하다 멈춰도 끊기지 않아요. 보내기를 누르면 그때 답해요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "中途停顿也不会被打断。按下发送后，流利的自己才会回答。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "中途停頓也不會被打斷。按下傳送後，流利的自己才會回答。"
-          }
-        }
-      }
-    },
-    "Recommended" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Empfohlen"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Recomendado"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Recommandé"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "おすすめ"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "추천"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "推荐"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "推薦"
           }
         }
       }
@@ -11136,52 +10952,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "免費情境練習 1 次 · 不扣通話時間"
-          }
-        }
-      }
-    },
-    "Your future self answers as soon as you stop. Quick like a phone call, but a pause to think can cut you off." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dein fließendes Ich antwortet, sobald du aufhörst. Schnell wie ein Telefonat, aber eine Denkpause kann dich unterbrechen."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tu yo fluido responde en cuanto te detienes. Es ágil como una llamada, pero si paras a pensar, puede cortarte."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ton moi fluide répond dès que tu t’arrêtes. C’est rapide comme un appel, mais une pause pour réfléchir peut te couper."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "話すのをやめるとすぐ答えます。電話のようにテンポよく進みますが、考えて間をあけると途中で切れることがあります。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "말을 멈추면 바로 답해요. 전화처럼 빠르지만, 생각하느라 쉬면 중간에 끊길 수 있어요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你一停下来就会回答。像打电话一样顺畅，但停下来想一想时，可能会被打断。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你一停下來就會回答。像講電話一樣流暢，但停下來想一想時，可能會被打斷。"
           }
         }
       }

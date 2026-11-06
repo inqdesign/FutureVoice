@@ -64,29 +64,19 @@ struct FirstCallSetupSheet: View {
                     .listRowInsets(EdgeInsets(top: 8, leading: 4, bottom: 4, trailing: 4))
                 }
 
-                // How a turn ends, first and as a CHOICE (2026-11-06, founder:
-                // "this is an important feature, it needs an explanation"). A
-                // B1 learner passed this sheet in 7 s with the switch off and
-                // was cut off 11 times in one call; a bare toggle at the bottom
-                // said nothing about what turning it off costs. Each option
-                // says what happens, so the explanation is the choice.
+                // How a turn ends, first, with what it changes (2026-11-06,
+                // founder: "this is an important feature, it needs an
+                // explanation"). A B1 learner passed this sheet in 7 s with
+                // the switch off and was cut off 11 times in one call. A call
+                // is a phone call; Send is the one way to make it wait like a
+                // message, so it stays a switch (a two-way choice was tried
+                // the same day and read wrong: "it is a call by default").
                 Section {
-                    Picker(selection: $sendToAnswer) {
-                        answerOption(title: "Finish, then Send",
-                                     detail: "Pausing won't cut you off. Your future self answers when you press Send.",
-                                     recommended: true)
-                            .tag(true)
-                        answerOption(title: "Answer when I pause",
-                                     detail: "Your future self answers as soon as you stop. Quick like a phone call, but a pause to think can cut you off.",
-                                     recommended: false)
-                            .tag(false)
-                    } label: {
-                        EmptyView()
+                    Toggle(isOn: $sendToAnswer) {
+                        Label("Answer with Send", systemImage: "paperplane")
                     }
-                    .pickerStyle(.inline)
-                    .labelsHidden()
-                } header: {
-                    Text("How you answer")
+                } footer: {
+                    Text(explain("A call answers the moment you pause. With this on, your future self waits until you press Send, like a message, so pausing to think won't cut you off."))
                 }
 
                 Section {
@@ -161,25 +151,6 @@ struct FirstCallSetupSheet: View {
         .onDisappear {
             if !started && !preview { report("first_call_setup_skipped") }
         }
-    }
-
-    private func answerOption(title: LocalizedStringKey, detail: LocalizedStringKey,
-                              recommended: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack(spacing: 6) {
-                Text(title).font(.body.weight(.semibold))
-                if recommended {
-                    Text("Recommended")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                }
-            }
-            Text(detail)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(.vertical, 2)
     }
 
     private func report(_ event: String, _ extra: [String: String] = [:]) {
