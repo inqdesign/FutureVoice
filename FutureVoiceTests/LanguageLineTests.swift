@@ -53,6 +53,7 @@ final class LanguageLineTests: XCTestCase {
         XCTAssertTrue(ConversationEngine.spokenGrammarGuard("de").contains("DEMONSTRATIVES"))
         XCTAssertTrue(ConversationEngine.tutorRegisterLine("ko").contains("반말"))
         XCTAssertTrue(ConversationEngine.tutorRegisterLine("ja").contains("plain form"))
+        XCTAssertTrue(ConversationEngine.tutorRegisterLine("es").contains("Dilo otra vez"))
         XCTAssertTrue(CoachSuggester.bracketAgreementLine("de").contains("seit [zwei Jahren]"))
         XCTAssertTrue(CoachSuggester.bracketAgreementLine("es").contains("tengo [un hermano]"))
     }

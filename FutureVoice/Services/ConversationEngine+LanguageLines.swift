@@ -159,6 +159,7 @@ extension ConversationEngine {
     /// Tutor mode's own voice. Baseline: the Korean tutor slipped into 해요체
     /// or said the learner's 해요 line back in 반말 in 5 of 18 lines, the
     /// Japanese one spoke です/ます with あなた in 6 of 12. After: 0/16, 0/8.
+    /// Spanish: the "say it again" calque, 4/4 → 0/6.
     static func tutorRegisterLine(_ targetLanguage: String) -> String {
         switch LanguageCatalog.base(targetLanguage) {
         case "ko":
@@ -171,6 +172,13 @@ extension ConversationEngine {
                 + "\n  never です/ます, ください or しましょう in your own words), and never あなた:"
                 + "\n  say their name or nothing. A line you say back for them to repeat keeps"
                 + "\n  the ending THEY used: they said しています, so it stays しています."
+        case "es":
+            // The ONCE MORE note says "so it sticks", and Haiku said it as
+            // "para que se quede" 4/4 (a calque). Naming the reason the right
+            // way ("para que se te quede") spread it onto every NOT YET too;
+            // this one line, verbatim, is 0/6 with NOT YET unchanged.
+            return "\n- Spanish, ONCE MORE: asking for it again is just \"¡Muy bien! Dilo otra vez.\""
+                + " The reason stays unsaid."
         default:
             return ""
         }
