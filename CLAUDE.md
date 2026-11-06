@@ -3288,7 +3288,13 @@ that back. `TutorLesson.swift`, `TutorLessonViews.swift`,
   handed itself a translator's job before the rule). Judge probe 54/54
   (ja/en: tries, fragments, talk, help, own language, change topic);
   Haiku replies read for every note. Telemetry `tutor_turn_talk`,
-  `tutor_turn_help`. Not yet tried in a real call.
+  `tutor_turn_help`. Not yet tried in a real call. The judge (~0.7 s) is
+  read BEFORE the correction (~3 s on Haiku): a talk, help or leave turn
+  is answered without waiting for it, which was most of the 4–5 s after
+  Send. `tutor_turn_wait` (kind · note_ms · reply_ms, from the turn
+  reaching the app) is the real number; the gateway's `voice_first`
+  never measured a held turn. Gemini 3.6 flash corrects in ~1.3 s, not
+  switched: its quality on this contract is unmeasured.
 - **The tutor speaks first through `nudge`** (gateway, 2026-10-24): a
   bracketed note from the app ("topic picked", "lesson ready", "back to
   finish last time's") answered as soon as no line is playing, 8 per call.

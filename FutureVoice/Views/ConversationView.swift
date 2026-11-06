@@ -2320,6 +2320,12 @@ struct ConversationView: View {
     @State private var isPausedForIdle = false
     /// A tutor note written while the call was paused (`tutorNudge`).
     @State private var pendingTutorNudge: String?
+    /// How long a held tutor turn waits (2026-11-06): when the learner's
+    /// turn reached the app, when the app's note went out, and what the note
+    /// was. Reported once the reply begins (`tutor_turn_wait`).
+    @State private var tutorWaitTurnAt: Date?
+    @State private var tutorWaitNoteAt: Date?
+    @State private var tutorWaitKind = ""
     @State private var idleWatchTask: Task<Void, Never>?
     /// The last moment anything real happened. Deliberately OUTSIDE the watch
     /// task: the task is re-armed every time the mic opens, and a noisy room
@@ -3174,6 +3180,14 @@ struct ConversationView: View {
         // split speech. Audio is attached at the end, to the same turn.
         realtime.onReplyBegan = { context in
             guard !isTornDown else { return }
+            if let turnAt = tutorWaitTurnAt {
+                let ms = { (d: Date) in String(Int(d.timeIntervalSince(turnAt) * 1000)) }
+                Telemetry.log("tutor_turn_wait", ["kind": tutorWaitNoteAt == nil ? "none" : tutorWaitKind,
+                                                  "note_ms": tutorWaitNoteAt.map(ms) ?? "",
+                                                  "reply_ms": ms(Date())])
+                tutorWaitTurnAt = nil
+                tutorWaitNoteAt = nil
+            }
             // The hint belonged to the question just answered.
             if (coachHint != nil || coachReply != nil) && !coachStale {
                 withAnimation(.easeInOut(duration: 0.2)) { coachStale = true }
@@ -3287,7 +3301,11 @@ struct ConversationView: View {
 
     /// A tutor note for a call that may be paused: a paused call has hung up,
     /// so the note waits and goes out when the call is picked back up.
-    private func tutorNudge(_ note: String) {
+    private func tutorNudge(_ note: String, waitKind: String = "other") {
+        if tutorWaitTurnAt != nil, tutorWaitNoteAt == nil {
+            tutorWaitNoteAt = Date()
+            tutorWaitKind = waitKind
+        }
         if RealtimeMode.isEnabled, !phoneCallActive {
             pendingTutorNudge = note
         } else {
@@ -5624,6 +5642,10 @@ struct ConversationView: View {
     /// correction, never after it, so the hold is one call long, not two.
     private func tutorTurn(turnId: UUID, said: String, ownLanguage: Bool = false, correction: Task<[TurnFix]?, Never>) {
         guard tutorThisCall, !tutorPlanning else { return }
+        if tutorJudging {
+            tutorWaitTurnAt = Date()
+            tutorWaitNoteAt = nil
+        }
         guard let lesson = tutorLesson, lesson.droppedAt == nil else {
             let asked = tutorLine(answeredBy: turnId)
             startTutorLesson(request: said, askedWith: asked, picked: false, fromTopic: false)
@@ -5774,32 +5796,37 @@ struct ConversationView: View {
             async let judged = TutorJudge.read(said, challenge: challenge,
                                                targetLanguage: target, askedWith: asked,
                                                ownLanguage: ownLanguage)
-            let fixes = await correction.value ?? []
+            // The judge (~0.7 s) is read before the correction (~3 s on
+            // Haiku): a turn that isn't a try is answered without waiting
+            // for it (2026-11-06, the wait after Send was ~4–5 s).
             let verdict = await judged
-            guard !isTornDown, tutorStillSaid(turnId, said), var now = tutorLesson,
-                  now.id == lesson.id, now.current == i else { return }
+            guard !isTornDown, tutorStillSaid(turnId, said), tutorLesson?.id == lesson.id,
+                  tutorLesson?.current == i else { return }
             if verdict?.wantsOtherTopic == true {
                 // The held turn's one line, before the lesson changes.
-                tutorNudge("They asked to leave this lesson. Agree right away in a few words — never \"let's finish this one first\". If they named what they'd like instead, say that's the new lesson and you're setting it up; otherwise ask what they'd like to practice.")
+                tutorNudge("They asked to leave this lesson. Agree right away in a few words — never \"let's finish this one first\". If they named what they'd like instead, say that's the new lesson and you're setting it up; otherwise ask what they'd like to practice.", waitKind: "leave")
                 dropTutorLesson(said: said)
                 return
             }
-            let slips = fixes.map { "\"\($0.was)\" → \"\($0.now)\"" }
             // A line in their own language is a request for the words, never
             // a miss — and with no judge to say otherwise, still help.
             let kind: TutorJudge.Verdict.Kind = ownLanguage ? .help : (verdict?.turnKind ?? .attempt)
             if kind == .help {
                 Telemetry.log("tutor_turn_help", ["own_language": ownLanguage ? "1" : "0"])
-                tutorNudge("Not a try: they \(ownLanguage ? "said this in their own language — they couldn't find the \(LanguageCatalog.englishName(target))" : "asked for help with how to say it, or are stuck"). Teach it: give them the \(LanguageCatalog.englishName(target)) line for what they meant, short and at their level, fitted to challenge \(i + 1) (\"\(challenge.task)\"; e.g. \"\(challenge.example)\"), and invite them to say it. No \"not yet\" — this is help, not a miss.")
+                tutorNudge("Not a try: they \(ownLanguage ? "said this in their own language — they couldn't find the \(LanguageCatalog.englishName(target))" : "asked for help with how to say it, or are stuck"). Teach it: give them the \(LanguageCatalog.englishName(target)) line for what they meant, short and at their level, fitted to challenge \(i + 1) (\"\(challenge.task)\"; e.g. \"\(challenge.example)\"), and invite them to say it. No \"not yet\" — this is help, not a miss.", waitKind: "help")
                 return
             }
             if kind == .talk {
                 Telemetry.log("tutor_turn_talk")
-                tutorNudge("Not a try: they're just talking with you (a remark, a story, or a question). Answer it as a real conversation partner — react to what they meant, answer a question properly.\(slips.isEmpty ? "" : " If it helps, say their phrase back the right way inside your reply, in passing (\(slips[0])), without asking them to repeat it.") Then steer back with one natural question that asks for challenge \(i + 1) (\"\(challenge.task)\"). No verdict, no \"not yet\".")
+                tutorNudge("Not a try: they're just talking with you (a remark, a story, or a question). Answer it as a real conversation partner — react to what they meant, answer a question properly. Then steer back with one natural question that asks for challenge \(i + 1) (\"\(challenge.task)\"). No verdict, no \"not yet\".", waitKind: "talk")
                 return
             }
+            let fixes = await correction.value ?? []
+            guard !isTornDown, tutorStillSaid(turnId, said), var now = tutorLesson,
+                  now.id == lesson.id, now.current == i else { return }
+            let slips = fixes.map { "\"\($0.was)\" → \"\($0.now)\"" }
             guard let verdict else {
-                tutorNudge("The app couldn't check that line. Ask them, in a few words, to say it once more.")
+                tutorNudge("The app couldn't check that line. Ask them, in a few words, to say it once more.", waitKind: "unchecked")
                 return
             }
             tutorLastTry = said
@@ -5812,7 +5839,7 @@ struct ConversationView: View {
                 let what = slips.isEmpty
                     ? "It doesn't do challenge \(i + 1) yet (\"\(challenge.task)\")\(verdict.missing_note.map { ": \($0)" } ?? "")."
                     : "Slips: \(slips.joined(separator: "; "))."
-                tutorNudge("Result: NOT YET. \(what) First a few words reacting to what they MEANT (not to how they said it). Then say their line back the right way as ONE sentence (their words, only that fixed)\(slips.isEmpty ? ", or give them the example fitted to them" : ""), and ask them to say it again. Not \"great\", nothing that sounds like it's done.")
+                tutorNudge("Result: NOT YET. \(what) First a few words reacting to what they MEANT (not to how they said it). Then say their line back the right way as ONE sentence (their words, only that fixed)\(slips.isEmpty ? ", or give them the example fitted to them" : ""), and ask them to say it again. Not \"great\", nothing that sounds like it's done.", waitKind: "not_yet")
                 return
             }
             tutorLastFixes = []
@@ -5820,7 +5847,7 @@ struct ConversationView: View {
                 tutorCleanOnce = true
                 tutorJustTicked = false
                 sendTutorSystem()
-                tutorNudge("Result: ONCE MORE. That was right. Say so in a few words and ask them to say it one more time, so it sticks. Don't move on yet.")
+                tutorNudge("Result: ONCE MORE. That was right. Say so in a few words and ask them to say it one more time, so it sticks. Don't move on yet.", waitKind: "once_more")
                 return
             }
             tutorLastTry = ""
@@ -5843,10 +5870,10 @@ struct ConversationView: View {
                                                    "by": "app"])
             sendTutorSystem()
             if last {
-                tutorNudge("Result: DONE — that was the last challenge. In a few words say that's every part, then ask them to say it all now, in their own words, in one go — no example, no list of the parts, no hints. That is the final check.")
+                tutorNudge("Result: DONE — that was the last challenge. In a few words say that's every part, then ask them to say it all now, in their own words, in one go — no example, no list of the parts, no hints. That is the final check.", waitKind: "done")
             } else if let n = now.current {
                 let next = now.challenges[n]
-                tutorNudge("Result: DONE — challenge \(i + 1) is checked off. A short, real \"you got it\" that reacts to what they said, then move the conversation on to challenge \(n + 1) (\"\(next.task)\"): a natural question that asks for it, about their life, and how they could say it (\"\(next.example)\", fitted to them).")
+                tutorNudge("Result: DONE — challenge \(i + 1) is checked off. A short, real \"you got it\" that reacts to what they said, then move the conversation on to challenge \(n + 1) (\"\(next.task)\"): a natural question that asks for it, about their life, and how they could say it (\"\(next.example)\", fitted to them).", waitKind: "done")
             }
         }
     }
