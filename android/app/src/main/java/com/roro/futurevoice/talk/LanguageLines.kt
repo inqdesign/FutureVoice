@@ -119,6 +119,10 @@ object LanguageLines {
             "\n  never です/ます, ください or しましょう in your own words), and never あなた:" +
             "\n  say their name or nothing. A line you say back for them to repeat keeps" +
             "\n  the ending THEY used: they said しています, so it stays しています."
+        // The ONCE MORE note's "so it sticks" came out as the calque "para
+        // que se quede" 4/4; this line, verbatim, is 0/6 (iOS).
+        "es" -> "\n- Spanish, ONCE MORE: asking for it again is just \"¡Muy bien! Dilo otra vez.\"" +
+            " The reason stays unsaid."
         else -> ""
     }
 }

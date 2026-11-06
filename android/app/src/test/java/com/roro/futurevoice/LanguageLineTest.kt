@@ -63,6 +63,7 @@ class LanguageLineTest {
         assertTrue(LanguageLines.spokenGrammarGuard("de").contains("DEMONSTRATIVES"))
         assertTrue(LanguageLines.tutorRegisterLine("ko").contains("반말"))
         assertTrue(LanguageLines.tutorRegisterLine("ja").contains("plain form"))
+        assertTrue(LanguageLines.tutorRegisterLine("es").contains("Dilo otra vez"))
         assertTrue(CoachSuggester.bracketAgreementLine("de").contains("seit [zwei Jahren]"))
         assertTrue(CoachSuggester.bracketAgreementLine("es").contains("tengo [un hermano]"))
     }
