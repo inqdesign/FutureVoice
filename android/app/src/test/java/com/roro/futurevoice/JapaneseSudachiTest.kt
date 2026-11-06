@@ -49,6 +49,10 @@ class JapaneseSudachiTest {
         assumeTrue("run through Gradle: :ja_dict:fetchSudachiDict provides the dictionary",
             dic != null && dic.isFile)
         JapaneseDictionary.load(dic!!)
+        // The word classes a stem rule's guess is checked against, as the app reads them.
+        com.roro.futurevoice.data.WordClass.opener = { name ->
+            File("src/main/assets/wordlists/$name").takeIf { it.exists() }?.inputStream()
+        }
         assertTrue(JapaneseDictionary.isReady)
         lines = Json.decodeFromString(File("src/test/resources/japanese/ios-cuts.json").readText())
         val levels = tsv("cefr_words_ja.tsv", 2..3).associate { it[0] to CefrLevel.from(it[1]) }
@@ -68,10 +72,10 @@ class JapaneseSudachiTest {
     private fun iosHeadwords(line: Line): List<String> {
         JapaneseMorph.segmenterOverride = { text ->
             var cursor = 0
-            line.words.map { w ->
+            line.words.mapIndexed { i, w ->
                 val start = text.indexOf(w, cursor)
                 cursor = start + w.length
-                JapaneseMorph.Token(w, start, cursor)
+                JapaneseMorph.Token(w, start, cursor, line.readings.getOrNull(i))
             }
         }
         try {
@@ -108,6 +112,25 @@ class JapaneseSudachiTest {
         assertTrue("identical $identical of ${lines.size}", identical >= 86)
         assertTrue("recall $hit of $total", hit >= 0.97 * total)
         assertEquals(0, extra)
+    }
+
+    /** iOS 79c20a9c's homophone rules on Sudachi's OWN cuts and readings —
+     *  what a Japanese learner's phone actually runs. */
+    @Test fun noHomophoneOnSudachiCuts() {
+        fun heads(text: String) = JapaneseMorph.headwords(text, lexicon, forms).map { it.first }
+        val wrong = listOf(
+            "一週間前に来た。" to "習慣", "三回見た。" to "さじ", "部屋の中で寝た。" to "当たる",
+            "紙を二枚ください。" to "びら", "行くつもりだった。" to "積もる", "それでいいよ。" to "それる",
+            "子供のとき、" to "解く", "日本について話す。" to "点く", "世界において有名だ。" to "老いる",
+            "勉強すればいい。" to "擦れる", "こっちのほうがいい。" to "放る", "水さえない。" to "冴える",
+            "そういうわけで、" to "分ける", "時間があれば行く。" to "荒れる", "百円しかない。" to "叱る",
+            "どこで会う？" to "どく", "何をやっているの？" to "やつ", "理論的には正しい。" to "まと",
+            "船に乗った。" to "舟", "好きな曲を聴く。" to "局", "飛行機は詩情を奪ってしまった。" to "始末",
+        )
+        for ((line, head) in wrong) assertFalse("$line → ${heads(line)}", head in heads(line))
+        assertEquals(listOf("それ", "大事", "こと"), heads("それは大事な事だ。"))
+        assertEquals(listOf("何", "やる"), heads("何をやっているの？"))
+        assertEquals(listOf("勉強", "する", "いい"), heads("勉強すればいい。"))
     }
 
     @Test fun cutsAgreeAsMeasured() {

@@ -220,8 +220,9 @@ out["shadow_analyze"] = shadowCases.map { c -> [String: Any] in
 }
 
 // ── 7. Japanese segmentation and headwords ───────────────────────────────
-// The port has no system tokenizer with readings, so these vectors are how
-// the Kotlin side proves it cuts the same sentences into the same words.
+// These vectors are how the Kotlin side proves it reads the same words off
+// the same cuts. `word_classes_ja.tsv` sits next to the binary
+// (gen-vectors.sh) so `Bundle.main` finds it, as the app's bundle does.
 func loadTSV(_ path: String, columns: Int) -> [String: String] {
     guard let text = try? String(contentsOfFile: path, encoding: .utf8) else { return [:] }
     var out: [String: String] = [:]
@@ -231,7 +232,10 @@ func loadTSV(_ path: String, columns: Int) -> [String: String] {
     }
     return out
 }
-let jaLexicon = Set(loadTSV("FutureVoice/Resources/cefr_words_ja.tsv", columns: 3).keys)
+// Every headword, read or not: a kana word (する, いい, つもり) carries no
+// reading column, and a lexicon without them is not the app's.
+let jaLexicon = Set(loadTSV("FutureVoice/Resources/cefr_words_ja.tsv", columns: 2).keys)
+    .union(loadTSV("FutureVoice/Resources/cefr_words_ja.tsv", columns: 3).keys)
 let jaForms = loadTSV("FutureVoice/Resources/ja_forms.tsv", columns: 2)
 let jaSentences = [
     "今日は暑いね。水を飲んだ？",
@@ -242,12 +246,26 @@ let jaSentences = [
     "「ちょっと待って」と言われた。",
     "nawana で毎日練習しています。",
     "ご飯を食べてから、少し休もう。",
+    // Homophones and grammar that must not land on another headword
+    // (JapaneseMorphTests.testNoHomophoneOrGrammarBecomesAnotherWord, iOS 79c20a9c).
+    "一週間前に来た。", "三回見た。", "部屋の中で寝た。", "紙を二枚ください。",
+    "行くつもりだった。", "それでいいよ。", "子供のとき、", "日本について話す。",
+    "世界において有名だ。", "勉強すればいい。", "こっちのほうがいい。", "水さえない。",
+    "そういうわけで、", "時間があれば行く。", "百円しかない。", "どこで会う？",
+    "何をやっているの？", "理論的には正しい。", "船に乗った。", "好きな曲を聴く。",
+    "飛行機は詩情を奪ってしまった。", "的を射る。", "鞄を買った。", "準備できてる？",
+    "話せば分かる。", "運動した。", "おいしいし、安い。", "大事なことだ。",
+    // A one-kanji spelling of a kana word, read as that word (事 → こと).
+    "それは大事な事だ。", "いい所だね。",
 ]
 LanguageScope.active = "ja"
 out["japanese"] = jaSentences.map { text -> [String: Any] in
     [
         "text": text,
         "words": WordSplitter.words(text),
+        // The tokenizer's reading of each word — the Kotlin side feeds them
+        // back with the cuts (Sudachi gives the same readings on a device).
+        "readings": JapaneseMorph.words(in: text).map(\.reading),
         "count": WordSplitter.count(text),
         "timing_words": WordSplitter.timingWords(text),
         "headwords": JapaneseMorph.headwords(in: text, lexicon: jaLexicon, forms: jaForms)

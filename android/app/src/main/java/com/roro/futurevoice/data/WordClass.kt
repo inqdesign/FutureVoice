@@ -60,6 +60,12 @@ enum class WordClass(val raw: String) {
             }
         }
 
+        /** [word]'s classes from the TABLE alone — null when the table
+         *  doesn't list it (no shape rule guesses here). `JapaneseMorph`
+         *  checks a stem rule's guess against it, as iOS reads the same file. */
+        fun tableClasses(word: String, language: String): Set<WordClass>? =
+            table(base(language))[word.trim().lowercase()]
+
         /** Whether [a] and [b] share a class — or [a]'s class is unknown, in
          *  which case anything is allowed beside it. */
         fun sameClass(a: String, b: String, language: String): Boolean {
@@ -69,6 +75,10 @@ enum class WordClass(val raw: String) {
         }
 
         private fun table(base: String): Map<String, Set<WordClass>> = synchronized(tables) {
+            // Nothing to read from yet (a JVM test before it sets [opener]):
+            // answer empty without caching it, so the table loads once a
+            // source exists.
+            if (opener == null && appContext == null) return emptyMap()
             tables.getOrPut(base) {
                 val name = "word_classes_$base.tsv"
                 val stream = opener?.invoke(name)

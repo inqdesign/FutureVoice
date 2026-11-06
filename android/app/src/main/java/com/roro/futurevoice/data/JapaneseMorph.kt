@@ -13,12 +13,15 @@ package com.roro.futurevoice.data
  * `BreakIterator`, which agreed with iOS on 6 of 40. That fallback gives
  * boundaries and nothing else, so its tokens carry no reading: the forms
  * table (`ja_forms.tsv`, わかる → 分かる) does that work instead. It costs
- * recall, never correctness.
+ * recall, never correctness. Sudachi's tokens carry their reading, which
+ * [dictionaryForm] reads exactly as iOS reads `CFStringTokenizer`'s.
  */
 object JapaneseMorph {
 
-    /** One segmented word and where it sat in the text. */
-    data class Token(val surface: String, val start: Int, val end: Int)
+    /** One segmented word and where it sat in the text. [reading] is
+     *  hiragana, the reading of the SURFACE (行き → いき) — Sudachi's; null
+     *  on ICU's cut, which has none. */
+    data class Token(val surface: String, val start: Int, val end: Int, val reading: String? = null)
 
     /** A run of the original text: a word, or what sat between two words.
      *  Concatenating every piece gives the text back. */
@@ -36,7 +39,7 @@ object JapaneseMorph {
         // measured worse).
         JapaneseDictionary.morphs(text)?.let { morphs ->
             return morphs.filter { m -> m.surface.any { it.isLetterOrDigit() } }
-                .map { Token(it.surface, it.start, it.end) }
+                .map { Token(it.surface, it.start, it.end, it.reading.ifEmpty { it.surface }) }
         }
         val it = android.icu.text.BreakIterator.getWordInstance(java.util.Locale.JAPANESE)
         it.setText(text)
@@ -117,8 +120,7 @@ object JapaneseMorph {
                 continue
             }
             val token = tokens[i]
-            val inflected = i + 1 < tokens.size && tokens[i + 1].surface in INFLECTIONS
-            dictionaryForm(token.surface, inflected, lexicon, forms)?.let {
+            headword(i, tokens, lexicon, forms)?.let {
                 out.add(Triple(it, token.start, token.end))
             }
             i += 1
@@ -142,8 +144,7 @@ object JapaneseMorph {
                 i += width
                 continue
             }
-            val inflected = i + 1 < tokens.size && tokens[i + 1].surface in INFLECTIONS
-            keyByToken[i] = dictionaryForm(tokens[i].surface, inflected, lexicon, forms) ?: ""
+            keyByToken[i] = headword(i, tokens, lexicon, forms) ?: ""
             i += 1
         }
         val out = ArrayList<String>()
@@ -168,23 +169,140 @@ object JapaneseMorph {
         return null
     }
 
+    /** The headword token [i] stands for, or null — [dictionaryForm] with
+     *  the tokens around it, which decide most of what the token can be. */
+    private fun headword(i: Int, tokens: List<Token>, lexicon: Set<String>,
+                         forms: Map<String, String>): String? {
+        val token = tokens[i]
+        if (isCompoundParticle(i, tokens)) return null
+        // て|しまう is grammar ("ended up"), not 閉まる or 始末.
+        if (i > 0 && tokens[i - 1].surface in setOf("て", "で") &&
+            token.surface in setOf("しまう", "しまっ", "しまい", "しまわ", "しまえ", "しまお")) return null
+        // The token after this one, if nothing stands between them — in
+        // はい、そう, はい is not a stem before そう.
+        val next = if (i + 1 < tokens.size && tokens[i + 1].start == token.end) tokens[i + 1].surface else null
+        // A lone し with no inflection after it is する's stem after a noun
+        // or an object (運動|し, 耳に|し, 買い物を|し|に) and the particle
+        // after anything that inflects (おいしい|し, 話せる|し, ない|し).
+        if (token.surface == "し" && (next?.let { stemSlot(it, "し") } ?: Slot.NONE) == Slot.NONE) {
+            if (i == 0) return null
+            val before = tokens[i - 1].surface.lastOrNull() ?: return null
+            val ok = isKanji(before) || before.code in 0x30A1..0x30F6 ||
+                tokens[i - 1].surface in setOf("を", "に")
+            return if (ok && "する" in lexicon) "する" else null
+        }
+        // One kanji glued to a kanji word before it is a suffix or a counter
+        // (理論|的, 三|回, 二|枚, 一日|中), read on'yomi; glued to the kanji
+        // word after it, a prefix (同|意見). Only the exact headword may
+        // stand for it: 的 reads まと and 枚 has a JMdict spelling of びら,
+        // neither of which was said. A verb stem keeps its rules (三回|見|た).
+        if (isSingleKanji(token.surface) &&
+            (next?.let { stemSlot(it, token.surface) } ?: Slot.NONE) == Slot.NONE &&
+            token.surface !in ONE_KANJI_ICHIDAN && token.surface !in IRREGULARS) {
+            val suffix = i > 0 && tokens[i - 1].end == token.start &&
+                tokens[i - 1].surface.lastOrNull()?.let(::isKanji) == true
+            val prefix = i + 1 < tokens.size && tokens[i + 1].start == token.end &&
+                tokens[i + 1].surface.firstOrNull()?.let(::isKanji) == true
+            if (suffix || prefix) {
+                return if (token.surface in lexicon && !isFunctionToken(token.surface)) token.surface else null
+            }
+        }
+        return dictionaryForm(token.surface, lexicon = lexicon, forms = forms,
+            reading = token.reading, next = next)
+    }
+
+    /** に|つい|て, に|おい|て …: one particle the tokenizer cut in three, not
+     *  点く or 老いる. Kana only — 置いて and 付いて are the verbs. */
+    private fun isCompoundParticle(i: Int, tokens: List<Token>): Boolean {
+        if (i == 0 || tokens[i - 1].surface != "に" || tokens[i - 1].end != tokens[i].start) return false
+        val s = tokens[i].surface
+        if (s in setOf("ついて", "おいて", "とって", "よって", "わたって")) return true
+        if (s !in setOf("つい", "おい", "とっ", "よっ", "わたっ") || i + 1 >= tokens.size) return false
+        return tokens[i + 1].surface == "て" && tokens[i + 1].start == tokens[i].end
+    }
+
+    private sealed interface Hit {
+        data class Found(val head: String) : Hit
+        data object Stop : Hit
+        data object Miss : Hit
+    }
+
     /**
-     * The headword one token stands for, or null.
+     * The headword one token stands for, or null. Tries the surface's
+     * candidates, then the same candidates spelled in kana (a kanji spelling
+     * the list doesn't carry, 解る, still reads わかる).
      *
-     * [inflected] — the next token is inflection (ます, たい, て …), so this
-     * token is a verb or adjective stem. That flips the order: 行き before
-     * ました is 行く, not the noun 行き.
+     * [next] — the token after this one. Inflection there (ます, ない, て,
+     * ば …) marks this token as a stem, and WHICH inflection says which stem:
+     * 行き before ました is 行く, not the noun 行き; すれ before ば is する,
+     * not 擦れる; 中 before で is the noun with a particle, not 中る.
+     * [inflected] is the older, context-free switch — a stem of any shape.
+     *
+     * [reading] null means UNKNOWN (ICU's cut), not "no reading": a one-kanji
+     * `forms` entry onto a kana word (事 → こと) is then kept, since nothing
+     * says the word was read otherwise; iOS always has the reading.
      */
     fun dictionaryForm(surface: String, inflected: Boolean = false,
-                       lexicon: Set<String>, forms: Map<String, String>): String? {
+                       lexicon: Set<String>, forms: Map<String, String>,
+                       reading: String? = null, next: String? = null): String? {
         if (isFunctionToken(surface)) return null
-        fun resolve(c: String): String? {
-            val head = if (c in lexicon) c else forms[c]?.takeIf { it in lexicon }
-            return head?.takeIf { !isFunctionToken(it) }
+        val slot = next?.let { stemSlot(it, surface) } ?: if (inflected) Slot.LOOSE else Slot.NONE
+        val isStem = slot != Slot.NONE
+        fun resolve(c: String, need: Need): Hit {
+            // An irregular that is grammar ends the ladder: あれ before ば is
+            // ある, and the pronoun あれ further down is not what was said.
+            // A rule's guess that is grammar is only a miss (しかし|ながら
+            // guesses しか on the way to しかし).
+            if (isFunctionToken(c)) return if (need == Need.IRREGULAR) Hit.Stop else Hit.Miss
+            val head = when {
+                c in lexicon -> c
+                else -> forms[c]?.takeIf { it in lexicon && formIsSpelling(c, it, reading) }
+            } ?: return Hit.Miss
+            if (isFunctionToken(head)) return if (need == Need.IRREGULAR) Hit.Stop else Hit.Miss
+            return if (fits(head, need)) Hit.Found(head) else Hit.Miss
         }
-        val all = candidates(surface, inflected)
-        val ordered = if (inflected && all.isNotEmpty()) all.drop(1) + all.first() else all
-        for (c in ordered) resolve(c)?.let { return it }
+        fun ordered(s: String): List<Pair<String, Need>> {
+            val all = ladder(s, slot)
+            return if (isStem && all.isNotEmpty()) all.drop(1) + all.first() else all
+        }
+        for ((c, need) in ordered(surface)) {
+            when (val hit = resolve(c, need)) {
+                is Hit.Found -> return hit.head
+                Hit.Stop -> return null
+                Hit.Miss -> continue
+            }
+        }
+        if (reading != null && reading != surface && !isFunctionToken(reading)) {
+            // A kanji noun's reading is kana, so the stem rules would happily
+            // run on it — 箸 reads はし, and はし + る is 走る. The reading may
+            // only stand in for the surface, never grow a verb the kanji
+            // didn't have.
+            val kanjiNoun = !isStem && surface.none { isKana(it) }
+            // And a kanji surface may only be read onto a headword that shares
+            // a kanji with it (分った → 分かる), or onto a word the list writes
+            // in kana, spelled exactly as read — a kanji word (鞄 → かばん), a
+            // stem's rule (出来|た → できる) or a verb in its dictionary form
+            // (出来る → できる). Anything else is a homophone: 週間 is not 習慣,
+            // 曲 is not 局, 回 (かい) is not さじ, 言い is not いい.
+            val kanji = surface.filter { isKanji(it) }.toSet()
+            val allKanji = surface.none { isKana(it) }
+            val steps = if (kanjiNoun) listOf(reading to Need.ANY) else ordered(reading)
+            for ((c, need) in steps) {
+                when (val hit = resolve(c, need)) {
+                    is Hit.Found -> {
+                        val head = hit.head
+                        val dictionaryVerb = surface.lastOrNull()?.let { it in U_ROW_KANA } == true &&
+                            classesOf(head)?.contains("verb") == true
+                        val kanaAsRead = head == c && head.all { isKana(it) } &&
+                            (allKanji || need != Need.ANY || dictionaryVerb)
+                        if (kanji.isNotEmpty() && head.none { it in kanji } && !kanaAsRead) continue
+                        return head
+                    }
+                    Hit.Stop -> return null
+                    Hit.Miss -> continue
+                }
+            }
+        }
         return null
     }
 
@@ -198,48 +316,140 @@ object JapaneseMorph {
      * handful of one-kanji ichidan verbs (見, 出, 寝 …) are listed, because
      * 見に行く puts a particle, not inflection, after the stem.
      */
-    fun candidates(raw: String, inflected: Boolean = true): List<String> {
+    fun candidates(raw: String, inflected: Boolean = true): List<String> =
+        ladder(raw, if (inflected) Slot.LOOSE else Slot.NONE).map { it.first }
+
+    /** What kind of headword a rule's guess has to be: the stem rules make
+     *  verbs and adjectives, and a guess that lands on a noun is a homophone
+     *  of the stem (やっ + つ is the noun やつ, not やる). */
+    private enum class Need(val raw: String) {
+        ANY("any"), IRREGULAR("irregular"), VERB("verb"), ADJECTIVE("adjective"), NOUN("noun")
+    }
+
+    /** Which stem the token after this one asks for. */
+    private enum class Slot {
+        /** Not a stem. */
+        NONE,
+        /** A stem of unknown shape — every rule (a chunk left whole, or a
+         *  caller that only said "inflected"). */
+        LOOSE,
+        MASU,       // ます, たい, ながら — i-row (書き), ichidan (食べ)
+        NAI,        // ない, れる, せる — a-row (書か), ichidan
+        TE,         // て, た — onbin っ/い, し (話し), ichidan
+        DE,         // で, だ — onbin ん/い (読ん, 泳い) only
+        BA,         // ば — e-row (書け, すれ, 食べれ)
+        VOLITIONAL, // う — o-row (書こ)
+        YOO,        // よう — ichidan (食べ)
+        IMPERATIVE, // ろ — ichidan (見)
+    }
+
+    private fun stemSlot(next: String, stem: String): Slot = when (next) {
+        "ます", "まし", "ませ", "ましょ", "ましょう", "ません", "たい", "たく", "たかっ",
+        "たけれ", "ながら", "なさい", "なさっ", "そう", "つつ" -> Slot.MASU
+        "ない", "なかっ", "なく", "なけれ", "なきゃ", "なけりゃ", "なくちゃ", "なさ", "ず", "ぬ",
+        "れ", "れる", "られ", "られる", "せ", "せる", "させ", "させる" -> Slot.NAI
+        "て", "た", "ちゃ", "ちゃう", "ちゃっ", "ちゃい", "たり", "たら", "たろ",
+        "てる", "てた", "てて", "てれ", "とく", "とい" -> Slot.TE
+        // After anything but 読ん / 泳い this is the particle で or the
+        // copula だ — 中で, それで, どこで, つもりだ — not inflection.
+        "で", "だ", "じゃ", "だり", "だら", "じゃう", "じゃっ",
+        "でる", "でた", "でて", "どく", "どい" ->
+            if (stem.endsWith("ん") || stem.endsWith("い")) Slot.DE else Slot.NONE
+        "ば" -> Slot.BA
+        "う" -> Slot.VOLITIONAL
+        "よう" -> Slot.YOO
+        "ろ" -> Slot.IMPERATIVE
+        else -> Slot.NONE
+    }
+
+    private fun ladder(raw: String, slot: Slot): List<Pair<String, Need>> {
         val token = raw.trim()
         if (token.isEmpty() || !token.all { isJapanese(it) }) return emptyList()
-        val bases = mutableListOf(token)
+        val bases = mutableListOf(token to slot)
         // A chunk the tokenizer left whole (食べました) — strip inflection
         // down to the stem the rules below expect.
-        strippingSuffix(token)?.let { bases.add(it) }
+        strippingSuffix(token)?.let { bases.add(it to Slot.LOOSE) }
 
-        val out = ArrayList<String>()
-        for (base in bases) {
-            out.add(base)
-            // Irregulars first, where a single kana would otherwise guess wild.
-            IRREGULARS[base]?.let { out.addAll(it) }
-            ONE_KANJI_ICHIDAN[base]?.let { out.add(it) }
-            if (!inflected && base.none { isKana(it) }) continue
+        val out = ArrayList<Pair<String, Need>>()
+        for ((n, pair) in bases.withIndex()) {
+            val (base, baseSlot) = pair
+            // A kana chunk's stripped stem is only a stem: そこない is not そこ.
+            if (n == 0 || !token.all { isKana(it) }) out.add(base to Need.ANY)
+            val isStem = baseSlot != Slot.NONE
+            val loneKana = base.length == 1 && isKana(base[0])
+            // Irregulars first, where a single kana would otherwise guess
+            // wild — and a lone し, き, こ is one only as a stem (on its own,
+            // 雨も降るし, し is the particle).
+            IRREGULARS[base]?.takeIf { isStem || !loneKana }?.let { l -> l.forEach { out.add(it to Need.IRREGULAR) } }
+            ONE_KANJI_ICHIDAN[base]?.let { out.add(it to Need.VERB) }
+            val hasKana = base.any { isKana(it) }
+            if (!isStem && !hasKana) continue
             // A lone kana stem is almost always inflection; only the
             // irregulars above may speak for it.
-            if (base.length < 2 && isKana(base[0])) continue
-            val last = base.last().toString()
+            if (loneKana) continue
+            val last = base.last()
             val head = base.dropLast(1)
 
             // i-adjective: 多く / 高かっ / 高けれ → 多い / 高い.
-            if (base.endsWith("かっ") || base.endsWith("けれ")) out.add(base.dropLast(2) + "い")
-            if (last == "く" && head.isNotEmpty()) out.add(head + "い")
+            if (base.endsWith("かっ") || base.endsWith("けれ")) out.add(base.dropLast(2) + "い" to Need.ADJECTIVE)
+            if (last == 'く' && head.isNotEmpty()) out.add(head + "い" to Need.ADJECTIVE)
 
-            // Ichidan: the stem IS the dictionary form minus る (疲れ, 見, 食べ).
-            out.add(base + "る")
+            // A word written in kana with no inflection after it is a word,
+            // not a stem: とき is not 解く, しか is not 叱る, ほう is not 放る.
+            // Kanji with okurigana keeps every rule (休み, 疲れ).
+            val rules = when {
+                isStem -> baseSlot
+                base.all { isKana(it) } -> continue
+                else -> Slot.LOOSE
+            }
 
-            // Godan: the stem's last kana moves to the u-row (行き → 行く).
-            // Onbin stems (行っ, 読ん, 書い) have several possible sources;
-            // the lexicon picks.
-            if (head.isNotEmpty()) GODAN_ENDINGS[last]?.forEach { out.add(head + it) }
+            // Ichidan: the stem IS the dictionary form minus る (疲れ, 食べ,
+            // 起き) — and an ichidan stem ends in an i- or e-row kana, so
+            // しか + ない is never しかる. A kanji-final stem (得|られる,
+            // 観|たい) only before real inflection — 中|で is not 中る.
+            if (rules in ICHIDAN_SLOTS &&
+                (last in I_ROW_KANA || last in E_ROW_KANA || (isKanji(last) && rules != Slot.LOOSE))) {
+                out.add(base + "る" to Need.VERB)
+            }
+
+            // Godan: the stem's last kana moves to the u-row (行き → 行く,
+            // 行か → 行く), in the row the next token asks for. Onbin stems
+            // (行っ, 読ん, 書い) have several possible sources; the lexicon
+            // picks.
+            if (head.isNotEmpty()) godanEndings(rules)[last.toString()]?.forEach { out.add(head + it to Need.VERB) }
 
             // Suru-noun: 勉強し / 勉強さ / 勉強せ → 勉強 (the list carries the noun).
-            if (last in setOf("し", "さ", "せ") && head.isNotEmpty()) {
-                out.add(head)
-                out.add(head + "する")
+            if (last.toString() in setOf("し", "さ", "せ") && head.isNotEmpty() && rules != Slot.DE) {
+                out.add(head to Need.NOUN)
+                out.add(head + "する" to Need.VERB)
             }
         }
-        val seen = LinkedHashSet<String>()
-        for (c in out) if (c.isNotEmpty()) seen.add(c)
-        return seen.toList()
+        val seen = HashSet<String>()
+        return out.filter { it.first.isNotEmpty() && seen.add(it.first) }
+    }
+
+    /** A rule's guess must be the kind of word the rule makes. A headword the
+     *  class table doesn't know passes. */
+    private fun fits(head: String, need: Need): Boolean {
+        if (need == Need.ANY || need == Need.IRREGULAR) return true
+        val classes = classesOf(head) ?: return true
+        return need.raw in classes
+    }
+
+    /** headword → class names, from `word_classes_ja.tsv` (through
+     *  [WordClass], which reads the same file). Null for a word off the
+     *  table, which turns the check off — as iOS's empty table does. */
+    private fun classesOf(head: String): Set<String>? =
+        WordClass.tableClasses(head, "ja")?.mapTo(HashSet()) { it.raw }
+
+    /** A `forms` entry keyed by ONE kanji is a rare spelling far more often
+     *  than the word said: 船 → 舟, 枚 → びら, 的 → まと, 具 → 妻. Kept only
+     *  when the headword is written with that kanji, or is the kana word the
+     *  tokenizer read it as (事 → こと, 所 → ところ). With no reading at all
+     *  (ICU's cut) a kana headword is kept — nothing says otherwise. */
+    private fun formIsSpelling(key: String, head: String, reading: String?): Boolean {
+        if (!isSingleKanji(key) || head == key || head.contains(key)) return true
+        return head.all { isKana(it) } && (reading == null || head == reading)
     }
 
     // ── Tables ──
@@ -250,6 +460,11 @@ object JapaneseMorph {
         "し" to listOf("する"), "さ" to listOf("する"), "せ" to listOf("する"),
         "き" to listOf("来る", "くる"), "こ" to listOf("来る", "くる"), "来" to listOf("来る"),
         "行っ" to listOf("行く"), "いっ" to listOf("行く", "いく"),
+        // する and ある before ば: すれ is not 擦れる, あれ is not 荒れる (or
+        // the pronoun) — ある is grammar, so the ladder stops there.
+        "すれ" to listOf("する"), "あれ" to listOf("ある"),
+        // いき before ます in kana is 行く far more often than 生きる.
+        "いき" to listOf("行く", "いく"),
     )
 
     private val ONE_KANJI_ICHIDAN = mapOf(
@@ -257,13 +472,7 @@ object JapaneseMorph {
         "居" to "居る", "似" to "似る",
     )
 
-    /** Tokens that mark the one before them as a stem. */
-    private val INFLECTIONS = setOf(
-        "ます", "まし", "ませ", "たい", "たく", "たかっ", "て", "た", "で", "だ",
-        "ない", "なかっ", "なく", "なけれ", "なきゃ", "れる", "られ", "られる",
-        "せる", "させ", "させる", "ちゃ", "じゃ", "ば", "う", "よう", "ろ",
-    )
-
+    /** Every godan rule at once, for a stem of unknown shape. */
     private val GODAN_ENDINGS = mapOf(
         // i-row (masu stem)
         "い" to listOf("う", "く", "ぐ"), "き" to listOf("く"), "ぎ" to listOf("ぐ"),
@@ -284,6 +493,56 @@ object JapaneseMorph {
         // onbin (te/ta stems) — い also covers 書い → 書く / 泳い → 泳ぐ
         "っ" to listOf("う", "つ", "る"), "ん" to listOf("む", "ぶ", "ぬ"),
     )
+
+    private val I_ROW = mapOf(
+        "い" to listOf("う"), "き" to listOf("く"), "ぎ" to listOf("ぐ"), "し" to listOf("す"),
+        "ち" to listOf("つ"), "に" to listOf("ぬ"), "び" to listOf("ぶ"), "み" to listOf("む"),
+        "り" to listOf("る"),
+    )
+    private val A_ROW = mapOf(
+        "わ" to listOf("う"), "か" to listOf("く"), "が" to listOf("ぐ"), "さ" to listOf("す"),
+        "た" to listOf("つ"), "な" to listOf("ぬ"), "ば" to listOf("ぶ"), "ま" to listOf("む"),
+        "ら" to listOf("る"),
+    )
+    /** Also the potential stem (書け|ます, 読め|ない), which inflects like
+     *  an ichidan verb. */
+    private val E_ROW = mapOf(
+        "え" to listOf("う"), "け" to listOf("く"), "げ" to listOf("ぐ"), "せ" to listOf("す"),
+        "て" to listOf("つ"), "ね" to listOf("ぬ"), "べ" to listOf("ぶ"), "め" to listOf("む"),
+        "れ" to listOf("る"),
+    )
+    private val O_ROW = mapOf(
+        "お" to listOf("う"), "こ" to listOf("く"), "ご" to listOf("ぐ"), "そ" to listOf("す"),
+        "と" to listOf("つ"), "の" to listOf("ぬ"), "ぼ" to listOf("ぶ"), "も" to listOf("む"),
+        "ろ" to listOf("る"),
+    )
+
+    /** Swift's `merging { $0 + $1 }`: a key in both keeps a's list, then b's. */
+    private fun merge(a: Map<String, List<String>>, b: Map<String, List<String>>): Map<String, List<String>> {
+        val out = LinkedHashMap(a)
+        for ((k, v) in b) out[k] = (out[k] ?: emptyList()) + v
+        return out
+    }
+
+    private val GODAN_BY_SLOT: Map<Slot, Map<String, List<String>>> by lazy {
+        mapOf(
+            Slot.NONE to emptyMap(), Slot.IMPERATIVE to emptyMap(),
+            Slot.LOOSE to GODAN_ENDINGS,
+            Slot.MASU to merge(I_ROW, E_ROW),
+            Slot.NAI to merge(A_ROW, E_ROW),
+            Slot.TE to merge(mapOf("っ" to listOf("う", "つ", "る"), "い" to listOf("く"), "し" to listOf("す")), E_ROW),
+            Slot.DE to mapOf("ん" to listOf("む", "ぶ", "ぬ"), "い" to listOf("ぐ")),
+            Slot.BA to E_ROW, Slot.YOO to E_ROW,
+            Slot.VOLITIONAL to O_ROW,
+        )
+    }
+
+    private fun godanEndings(slot: Slot): Map<String, List<String>> = GODAN_BY_SLOT.getValue(slot)
+
+    private val ICHIDAN_SLOTS = setOf(Slot.LOOSE, Slot.MASU, Slot.NAI, Slot.TE, Slot.YOO, Slot.IMPERATIVE)
+    private val I_ROW_KANA = "いきぎしじちぢにひびぴみり".toSet()
+    private val E_ROW_KANA = "えけげせぜてでねへべぺめれ".toSet()
+    private val U_ROW_KANA = "うくぐすずつづぬふぶぷむゆる".toSet()
 
     /** Inflection a tokenizer may leave attached, longest first. */
     private val SUFFIXES = listOf(
@@ -308,6 +567,10 @@ object JapaneseMorph {
         "れ", "てる", "てた", "てて", "てれ", "とく", "とい", "とる",
         "ちゃう", "ちゃっ", "ちゃい", "じゃう", "じゃっ",
         "たり", "ながら", "ず", "ぬ", "まい", "じゃん", "かな", "かしら", "っけ",
+        // Particles and formal nouns the stem rules would otherwise grow into
+        // verbs (しか → 叱る, さえ → 冴える, わけ → 分ける), and the sentence
+        // particle かい, which JMdict spells as さじ.
+        "しか", "さえ", "すら", "こそ", "わけ", "かい",
     )
 
     fun isFunctionToken(s: String): Boolean = s in FUNCTION_TOKENS
@@ -373,6 +636,10 @@ object JapaneseMorph {
     }
 
     private fun isKana(ch: Char): Boolean = ch.code in 0x3041..0x30FF
+
+    private fun isKanji(ch: Char): Boolean = ch.code in 0x4E00..0x9FFF || ch.code == 0x3005
+
+    private fun isSingleKanji(s: String): Boolean = s.length == 1 && isKanji(s[0])
 
     private fun isJapanese(ch: Char): Boolean = ch.code in 0x3041..0x30FF ||
         ch.code in 0x4E00..0x9FFF || ch.code == 0x3005

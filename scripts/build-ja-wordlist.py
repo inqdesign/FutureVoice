@@ -293,8 +293,14 @@ def main():
             reading = "・".join(ordered) if not KANA.match(head) else ""
             f.write(f"{head}\t{level}\t{reading}\n" if reading else f"{head}\t{level}\n")
 
+    # Pairs the sources join that are different words (2026-11-06, found by
+    # the vocabulary calibration over Tatoeba): a deck row or a JMdict match
+    # gave the spelling of one word to another that only sounds alike.
+    not_forms = {"武道": "ぶどう", "卑下": "ひげ", "二度": "再び", "下番": "かばん",
+                 "かい": "さじ", "つく": "点く"}
     kept = sorted((alt, next(iter(c))) for alt, c in forms.items()
-                  if len(c) == 1 and alt not in level_of)
+                  if len(c) == 1 and alt not in level_of
+                  and not_forms.get(alt) != next(iter(c)))
     with open(os.path.join(OUT, "ja_forms.tsv"), "w", encoding="utf-8") as f:
         f.write(credit)
         for alt, head in kept:

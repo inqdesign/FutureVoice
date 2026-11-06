@@ -20,6 +20,9 @@ swiftc -O -o "$BIN" \
   FutureVoice/Services/WordSplitter.swift \
   FutureVoice/Services/JapaneseMorph.swift \
   FutureVoice/Services/TextScript.swift
+# JapaneseMorph checks a stem rule's guess against the word classes, read
+# through Bundle.main — a command-line tool's is the directory it sits in.
+cp FutureVoice/Resources/word_classes_ja.tsv "$(dirname "$BIN")/"
 "$BIN" "$OUT"
 cp "$OUT" android/app/src/test/resources/vectors/summary-ingestion.json
 echo "vectors regenerated → $OUT (+ android test resources)"

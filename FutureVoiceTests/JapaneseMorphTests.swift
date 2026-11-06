@@ -103,6 +103,37 @@ final class JapaneseMorphTests: XCTestCase {
         XCTAssertFalse(h.contains("場"))
     }
 
+    /// Precision, from calibrating against Tatoeba: a word never lands on a
+    /// DIFFERENT headword that only shares its reading or one of its stem
+    /// shapes, and grammar stays grammar.
+    func testNoHomophoneOrGrammarBecomesAnotherWord() {
+        let wrong: [(String, String)] = [
+            ("一週間前に来た。", "習慣"), ("三回見た。", "さじ"), ("部屋の中で寝た。", "当たる"),
+            ("紙を二枚ください。", "びら"), ("行くつもりだった。", "積もる"), ("それでいいよ。", "それる"),
+            ("子供のとき、", "解く"), ("日本について話す。", "点く"), ("世界において有名だ。", "老いる"),
+            ("勉強すればいい。", "擦れる"), ("こっちのほうがいい。", "放る"), ("水さえない。", "冴える"),
+            ("そういうわけで、", "分ける"), ("時間があれば行く。", "荒れる"), ("百円しかない。", "叱る"),
+            ("どこで会う？", "どく"), ("何をやっているの？", "やつ"), ("理論的には正しい。", "まと"),
+            ("船に乗った。", "舟"), ("好きな曲を聴く。", "局"), ("飛行機は詩情を奪ってしまった。", "始末"),
+        ]
+        for (line, head) in wrong {
+            XCTAssertFalse(heads(line).contains(head), "\(line) → \(heads(line))")
+        }
+        // …while the right word is still found.
+        XCTAssertEqual(heads("三回見た。"), ["三", "見る"])
+        XCTAssertEqual(heads("何をやっているの？"), ["何", "やる"])
+        XCTAssertEqual(heads("部屋の中で寝た。"), ["部屋", "中", "寝る"])
+        XCTAssertEqual(heads("行くつもりだった。"), ["行く", "つもり"])
+        XCTAssertEqual(heads("勉強すればいい。"), ["勉強", "する", "いい"])
+        XCTAssertEqual(heads("的を射る。").first, "まと")
+        XCTAssertEqual(heads("鞄を買った。"), ["かばん", "買う"])
+        XCTAssertEqual(heads("準備できてる？"), ["準備", "できる"])
+        XCTAssertEqual(heads("話せば分かる。"), ["話す", "分かる"])
+        // A lone し: する after a noun, the particle after an inflected word.
+        XCTAssertEqual(heads("運動した。"), ["運動", "する"])
+        XCTAssertFalse(heads("おいしいし、安い。").contains("する"))
+    }
+
     // MARK: - Through the stores
 
     func testVocabStoreLemmasAndLookupKeyRouteToJapanese() {
