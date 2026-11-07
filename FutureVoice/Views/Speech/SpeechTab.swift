@@ -60,9 +60,17 @@ struct SpeechTab: View {
                     SpeechOverallBoardView()
                         .environmentObject(appState)
                 } label: {
-                    SpeechOverallBanner(rows: overall)
+                    SpeechOverallBanner(rows: overall, season: challenges.overallSeason,
+                                        isFinal: challenges.overallSeason != nil
+                                            && challenges.overallSeason != challenges.openSeason)
                 }
                 .buttonStyle(.plain)
+            }
+            // Between seasons (2026-11-07: Season 1 closed with its winners,
+            // Season 2 opens with its own scoring) the page says so rather
+            // than showing an empty grid.
+            if challenges.live.isEmpty, let ended = challenges.lastEndedSeason {
+                SpeechSeasonBreakCard(ended: ended)
             }
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(challenges.live) { script in
@@ -76,10 +84,12 @@ struct SpeechTab: View {
                     .buttonStyle(.plain)
                 }
             }
-            Text("Everyone reads the same script. Your best take goes on the board.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 4)
+            if !challenges.live.isEmpty {
+                Text("Everyone reads the same script. Your best take goes on the board.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 4)
+            }
             if !challenges.past.isEmpty {
                 NavigationLink {
                     SpeechChallengeListView()
