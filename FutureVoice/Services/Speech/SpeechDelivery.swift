@@ -42,6 +42,9 @@ struct SpeechDelivery: Equatable {
     var stalls: Int = 0
     /// The weakest sounds, worst first, each with the word it was in.
     var weakest: [Sound] = []
+    /// Words heard between script words that the script doesn't have —
+    /// repeats, false starts, a word slipped in — in reading order.
+    var stumbles: [String] = []
 
     struct Break: Equatable, Codable, Hashable {
         var before: String
@@ -106,24 +109,44 @@ struct SpeechDelivery: Equatable {
         }
         weakest.sort { $0.score < $1.score }
         var words = 0, seconds = 0.0
+        var stumbles: [String] = []
         let spaced = LanguageCatalog.writesSpaces(language)
         for piece in pieces {
+            let all = piece.result.words
+            // A stumble: a word Azure heard that the script doesn't have
+            // (a repeat, a false start, a word slipped in), BETWEEN two
+            // script words. At a piece's edges an Insertion is the prompter's
+            // cut landing a word early or late, not the reader.
+            let firstSaid = all.firstIndex { !$0.isInsertion && !$0.isOmission && $0.durationMs > 0 }
+            let lastSaid = all.lastIndex { !$0.isInsertion && !$0.isOmission && $0.durationMs > 0 }
+            if let f = firstSaid, let l = lastSaid, f < l {
+                for i in (f + 1)..<l where all[i].isInsertion && !Self.fillers.contains(core(all[i].word)) {
+                    stumbles.append(all[i].word)
+                }
+            }
+
             // With miscue on, Azure returns the reference's words in order
-            // (Omissions included) plus Insertions: drop the Insertions and
-            // the rest lines up with the reference one for one.
-            let said = piece.result.words.filter { !$0.isInsertion }
-            let ref = piece.reference.split(whereSeparator: \.isWhitespace).map(String.init)
+            // (Omissions included) plus Insertions. The script's own tokens
+            // don't always split the way Azure's words do ("—", hyphens,
+            // numbers), so the two are lined up by content, not by count: a
+            // boundary is judged only where its word found its script token.
+            let said = all.filter { !$0.isInsertion }
+            let ref = spaced ? referenceTokens(piece.reference) : []
+            let match = align(said.map { core($0.word) }, ref.map(\.core))
+            let matched = match.compactMap { $0 }.count
+            let lined = spaced && !said.isEmpty && Double(matched) >= 0.6 * Double(said.count)
             let timed = said.enumerated().filter { !$0.element.isOmission && $0.element.durationMs > 0 }
             guard let first = timed.first?.element, let last = timed.last?.element else { continue }
             var sentenceGaps = 0.0
-            let lined = spaced && ref.count == said.count
             for (a, b) in zip(timed, timed.dropFirst()) {
                 let gap = Double(b.element.offsetMs - (a.element.offsetMs + a.element.durationMs)) / 1000
-                guard lined else { continue }
-                let token = ref[a.offset]
-                if token.last.map({ ".!?。！？".contains($0) }) == true {
+                guard lined, let r = match[a.offset] else { continue }
+                switch ref[r].stop {
+                case .sentence:
                     sentenceGaps += max(0, gap)
-                } else if token.last.map({ ",;:—–、，".contains($0) }) != true {
+                case .clause:
+                    break
+                case .none:
                     boundaries += 1
                     if gap >= pauseSeconds {
                         mid += 1
@@ -148,7 +171,90 @@ struct SpeechDelivery: Equatable {
             midPauses: aligned ? mid : nil, midBoundaries: aligned ? boundaries : nil,
             wordsPerMinute: wpm, monotoneWords: monotone, pitchRange: nil, pitchSD: nil,
             soundAccuracy: weighted { (r: PronunciationResult) -> Int? in r.soundScore },
-            breaks: breaks, stalls: stalls, weakest: Array(weakest.prefix(12)))
+            breaks: breaks, stalls: stalls, weakest: Array(weakest.prefix(12)), stumbles: stumbles)
+    }
+
+    // MARK: - Lining Azure's words up with the script
+
+    /// What the boundary after a script token is.
+    enum Stop { case none, clause, sentence }
+    struct RefToken: Equatable {
+        let core: String
+        var stop: Stop
+    }
+
+    /// Spoken fillers Azure files as Insertions; the take's filler count
+    /// already has them.
+    static let fillers: Set<String> = ["um", "uh", "er", "erm", "ah", "uhm", "hmm", "mm", "eh"]
+
+    /// A word as both sides can compare it: lower case, letters, digits and
+    /// apostrophes only.
+    static func core(_ word: String) -> String {
+        let kept = word.lowercased().replacingOccurrences(of: "’", with: "'")
+            .filter { $0.isLetter || $0.isNumber || $0 == "'" }
+        return kept.trimmingCharacters(in: CharacterSet(charactersIn: "'"))
+    }
+
+    /// The script cut into words with what follows each: a sentence end, a
+    /// clause break (comma, colon, dash), or nothing. A hyphenated word is
+    /// two words; a token that is only punctuation ("—") marks the word
+    /// before it.
+    static func referenceTokens(_ text: String) -> [RefToken] {
+        var out: [RefToken] = []
+        for raw in text.split(whereSeparator: \.isWhitespace) {
+            let token = String(raw)
+            let tail = token.trimmingCharacters(in: CharacterSet(charactersIn: "\"'”’)]»"))
+            let stop: Stop
+            if let c = tail.last, ".!?。！？…".contains(c) {
+                stop = .sentence
+            } else if let c = tail.last, ",;:—–-、，".contains(c) {
+                stop = .clause
+            } else {
+                stop = .none
+            }
+            let parts = token.lowercased().replacingOccurrences(of: "’", with: "'")
+                .split { !($0.isLetter || $0.isNumber || $0 == "'") }
+                .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: "'")) }
+                .filter { !$0.isEmpty }
+            if parts.isEmpty {
+                if var previous = out.popLast() {
+                    if previous.stop == .none { previous.stop = stop == .sentence ? .sentence : .clause }
+                    out.append(previous)
+                }
+                continue
+            }
+            for (i, part) in parts.enumerated() {
+                out.append(RefToken(core: part, stop: i == parts.count - 1 ? stop : .none))
+            }
+        }
+        return out
+    }
+
+    /// For each of `said`, the index in `ref` it lines up with (longest
+    /// common subsequence of equal words), or nil.
+    static func align(_ said: [String], _ ref: [String]) -> [Int?] {
+        let n = said.count, m = ref.count
+        guard n > 0, m > 0 else { return Array(repeating: nil, count: n) }
+        var table = Array(repeating: Array(repeating: 0, count: m + 1), count: n + 1)
+        for i in stride(from: n - 1, through: 0, by: -1) {
+            for j in stride(from: m - 1, through: 0, by: -1) {
+                table[i][j] = !said[i].isEmpty && said[i] == ref[j]
+                    ? table[i + 1][j + 1] + 1
+                    : max(table[i + 1][j], table[i][j + 1])
+            }
+        }
+        var out = [Int?](repeating: nil, count: n)
+        var i = 0, j = 0
+        while i < n && j < m {
+            if !said[i].isEmpty && said[i] == ref[j] {
+                out[i] = j; i += 1; j += 1
+            } else if table[i + 1][j] >= table[i][j + 1] {
+                i += 1
+            } else {
+                j += 1
+            }
+        }
+        return out
     }
 
     nonisolated static func pitch(of url: URL) -> PitchTracker.Stats? {

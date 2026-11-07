@@ -439,6 +439,7 @@ struct SpeechResultView: View {
         case .phrasing:
             var bits: [String] = []
             if !p.breaks.isEmpty { bits.append(breaksList(p.breaks)) }
+            if let s = p.stumbles, !s.isEmpty { bits.append(explain("Repeated or added: \(quoted(s))")) }
             if p.fillers > 0 { bits.append(explain("Fillers: \(p.fillers)")) }
             return bits.isEmpty ? explain("No breaks inside a phrase") : bits.joined(separator: " · ")
         case .expression:
@@ -458,8 +459,13 @@ struct SpeechResultView: View {
             return p.weakest.isEmpty ? explain("Make every sound as clear as the rest.")
                                      : explain("Work on these sounds: \(soundsList(p.weakest))")
         case .phrasing:
-            return p.breaks.isEmpty ? explain("Leave out the fillers: \(p.fillers) this take.")
-                                    : explain("Keep each phrase whole. You stopped at \(breaksList(p.breaks)).")
+            if !p.breaks.isEmpty {
+                return explain("Keep each phrase whole. You stopped at \(breaksList(p.breaks)).")
+            }
+            if let s = p.stumbles, !s.isEmpty {
+                return explain("Read straight through without going back: \(quoted(s))")
+            }
+            return explain("Leave out the fillers: \(p.fillers) this take.")
         case .expression:
             return explain("Let your voice move more: \(String(format: "%.1f", p.pitchRange)) semitones, where narrators move 7–9.")
         case .pace:

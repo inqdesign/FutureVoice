@@ -3,23 +3,25 @@ import XCTest
 
 final class SpeechScoreV4Tests: XCTestCase {
     private struct Row: Decodable {
-        let g: String, a: Int, s: Int, w: Int, p: Int, f: Double, r: Int, b: Int, t: Int
+        let g: String, a: Int, s: Int, w: Int, p: Int, f: Double, r: Int, b: Int, t: Int, i: Int
         let h: Double?
     }
 
     private func delivery(sound: Int, weak: Int, prosody: Int?, pitch: Double?, wpm: Int?,
-                          breaks: Int = 0, stalls: Int = 0) -> SpeechDelivery {
-        SpeechDelivery(prosody: prosody, fluency: nil, weakSounds: weak, midPauses: breaks,
+                          breaks: Int = 0, stalls: Int = 0, stumbles: Int = 0) -> SpeechDelivery {
+        var d = SpeechDelivery(prosody: prosody, fluency: nil, weakSounds: weak, midPauses: breaks,
                        midBoundaries: 20, wordsPerMinute: wpm, monotoneWords: 0,
                        pitchRange: pitch, pitchSD: nil, soundAccuracy: sound,
                        breaks: Array(repeating: .init(before: "a", after: "b", seconds: 0.4), count: breaks),
                        stalls: stalls, weakest: [])
+        d.stumbles = Array(repeating: "x", count: stumbles)
+        return d
     }
 
     private func score(_ r: Row) -> SpeechParts? {
         SpeechScoreV4.score(accuracy: r.a, coverage: 1, fillers: 0, missed: [],
                             delivery: delivery(sound: r.s, weak: r.w, prosody: r.p, pitch: r.f,
-                                               wpm: r.r, breaks: r.b, stalls: r.t),
+                                               wpm: r.r, breaks: r.b, stalls: r.t, stumbles: r.i),
                             language: "en")
     }
 
@@ -85,6 +87,18 @@ final class SpeechScoreV4Tests: XCTestCase {
         XCTAssertEqual(oneBreak.total, 98)
         XCTAssertEqual(oneBreak.focus, .phrasing)
         XCTAssertEqual(oneBreak.barsCleared, 4)
+    }
+
+    /// A take that went back over its words doesn't keep full phrasing.
+    func testStumblesCostPhrasing() {
+        var d = delivery(sound: 98, weak: 82, prosody: 90, pitch: 9, wpm: 170)
+        d.stumbles = ["the", "quick"]
+        let p = SpeechScoreV4.score(accuracy: 100, coverage: 1, fillers: 0, missed: [],
+                                    delivery: d, language: "en")!
+        XCTAssertEqual(p.phrasing, 84)
+        XCTAssertFalse(p.isPerfect)
+        XCTAssertEqual(p.focus, .phrasing)
+        XCTAssertEqual(p.stumbles, ["the", "quick"])
     }
 
     /// The part to work on is the one that cost the most points.

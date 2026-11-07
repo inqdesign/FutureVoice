@@ -38,10 +38,46 @@ final class SpeechDeliveryTests: XCTestCase {
             word("one", 0), word("um", 300, error: "Insertion"), word("two", 700), word("three", 1000),
         ]))
         XCTAssertEqual(SpeechDelivery.timing([lined], language: "en").midPauses, 1)
-        let off = SpeechDelivery.Piece(reference: "one two", result: result([
+        let off = SpeechDelivery.Piece(reference: "alpha beta", result: result([
             word("one", 0), word("two", 300), word("three", 600),
         ]))
         XCTAssertNil(SpeechDelivery.timing([off], language: "en").midPauses)
+    }
+
+    /// A real script splits differently from Azure's words: a dash is its
+    /// own token, a hyphenated word is two. They line up by content, a
+    /// dash is a phrase boundary, and nothing is thrown away (2026-11-07:
+    /// requiring equal counts skipped whole pieces, so a halting read got
+    /// full marks for phrasing).
+    func testDashesAndHyphensLineUp() {
+        let piece = SpeechDelivery.Piece(
+            reference: "We met — briefly — at a well-known café.",
+            result: result([
+                word("we", 0), word("met", 300),
+                word("briefly", 1100),               // after a dash: 0.5 s, fine
+                word("at", 1900),                    // after a dash: 0.5 s, fine
+                word("a", 2200),
+                word("well", 2900),                  // 0.4 s mid-phrase: counted
+                word("known", 3200), word("café", 3500),
+            ]))
+        let d = SpeechDelivery.timing([piece], language: "en")
+        XCTAssertEqual(d.midPauses, 1)
+        XCTAssertEqual(d.midBoundaries, 5)   // we|met at|a a|well well|known known|café
+        XCTAssertEqual(d.breaks.first?.before, "a")
+    }
+
+    /// A repeated or added word between script words is a stumble; at a
+    /// piece's edge it is the cut, and a filler is counted elsewhere.
+    func testStumblesAreInteriorInsertions() {
+        let piece = SpeechDelivery.Piece(reference: "the quick brown fox jumps", result: result([
+            word("so", 0, error: "Insertion"),       // before the first script word: the cut
+            word("the", 300), word("quick", 600),
+            word("quick", 900, error: "Insertion"),  // a repeat: a stumble
+            word("um", 1200, error: "Insertion"),    // a filler: counted elsewhere
+            word("brown", 1500), word("fox", 1800), word("jumps", 2100),
+            word("over", 2400, error: "Insertion"),  // after the last: the cut
+        ]))
+        XCTAssertEqual(SpeechDelivery.timing([piece], language: "en").stumbles, ["quick"])
     }
 
     func testWeakSoundsIsTheFifthPercentile() {

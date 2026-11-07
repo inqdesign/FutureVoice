@@ -52,6 +52,9 @@ enum SpeechScoreV4 {
     static let breakCost = 12.0
     static let stallCost = 10.0
     static let fillerCost = 8.0
+    /// A word heard between script words that the script doesn't have:
+    /// 4–8% of narrator pieces had one, 31% of learner pieces.
+    static let stumbleCost = 8.0
 
     /// Piecewise-linear through the anchors, flat beyond them, 0…100.
     static func curve(_ x: Double, _ anchors: [(Double, Double)]) -> Double {
@@ -77,7 +80,8 @@ enum SpeechScoreV4 {
         let sounds = 0.6 * curve(Double(soundAccuracy), soundAccuracyCurve)
             + 0.4 * curve(Double(weak), weakSoundsCurve)
         let phrasing = max(0, 100 - breakCost * Double(d.breaks.count)
-            - stallCost * Double(d.stalls) - fillerCost * Double(fillers))
+            - stallCost * Double(d.stalls) - fillerCost * Double(fillers)
+            - stumbleCost * Double(d.stumbles.count))
         let expression = 0.7 * curve(Double(prosody), prosodyCurve) + 0.3 * curve(pitch, pitchCurve)
         let pace: Double
         if paceBand.contains(wpm) {
@@ -100,7 +104,7 @@ enum SpeechScoreV4 {
                            pitchRange: pitch, soundAccuracy: soundAccuracy,
                            weakest: Array(d.weakest.filter { $0.score < 80 }.prefix(3)),
                            breaks: Array(d.breaks.prefix(3)), stalls: d.stalls, fillers: fillers,
-                           missed: Array(missed.prefix(3)))
+                           missed: Array(missed.prefix(3)), stumbles: Array(d.stumbles.prefix(5)))
     }
 }
 
@@ -128,10 +132,14 @@ struct SpeechParts: Codable, Hashable {
     var fillers: Int
     /// The first script words skipped or changed (at most 3).
     var missed: [String]
+    /// Words heard between script words that the script doesn't have (at
+    /// most 5). Optional: takes scored by build 134 have none on file.
+    var stumbles: [String]? = nil
 
     init(scores: [SpeechScoreV4.Part: Int], coverage: Double, wpm: Int, prosody: Int,
          pitchRange: Double, soundAccuracy: Int, weakest: [SpeechDelivery.Sound],
-         breaks: [SpeechDelivery.Break], stalls: Int, fillers: Int, missed: [String]) {
+         breaks: [SpeechDelivery.Break], stalls: Int, fillers: Int, missed: [String],
+         stumbles: [String] = []) {
         accuracy = scores[.accuracy] ?? 0
         sounds = scores[.sounds] ?? 0
         phrasing = scores[.phrasing] ?? 0
@@ -147,6 +155,7 @@ struct SpeechParts: Codable, Hashable {
         self.stalls = stalls
         self.fillers = fillers
         self.missed = missed
+        self.stumbles = stumbles
     }
 
     func score(_ part: SpeechScoreV4.Part) -> Int {
