@@ -83,6 +83,9 @@ final class SpeechTakeSession: ObservableObject {
     struct Piece {
         let text: String
         let pron: PronunciationResult?
+        /// What the piece was judged against (the script span, or the
+        /// read-back): `SpeechDelivery` lines Azure's words up with it.
+        var reference: String = ""
     }
     private var lastChunkAt: TimeInterval = 0
     /// The prompter cursor at the last cut: the script from here to the
@@ -352,10 +355,14 @@ final class SpeechTakeSession: ObservableObject {
         let readStart = Date()
         var texts: [String] = []
         var prons: [PronunciationResult] = []
+        var assessed: [SpeechDelivery.Piece] = []
         for piece in pieces {
-            guard let piece = await piece.value else { texts = []; prons = []; break }
+            guard let piece = await piece.value else { texts = []; prons = []; assessed = []; break }
             texts.append(piece.text)
-            if let pron = piece.pron { prons.append(pron) }
+            if let pron = piece.pron {
+                prons.append(pron)
+                assessed.append(.init(reference: piece.reference, result: pron))
+            }
         }
         let transcript: String
         let audioGrounded: Bool
@@ -372,7 +379,7 @@ final class SpeechTakeSession: ObservableObject {
             // each is read and assessed on its own, BESIDE the whole read, so
             // the sounds are still heard and the wait is the slower of the two.
             let language = script.language
-            let long: Task<[PronunciationResult], Never>? = duration > PronunciationAssessor.maxSeconds
+            let long: Task<[SpeechDelivery.Piece], Never>? = duration > PronunciationAssessor.maxSeconds
                 ? Task { await Self.assessInWindows(audioURL: audioURL, language: language) }
                 : nil
             let reading = await SpeechReader.read(audioURL: audioURL, liveText: liveText, language: script.language)
@@ -380,13 +387,18 @@ final class SpeechTakeSession: ObservableObject {
             audioGrounded = reading.audioGrounded
             path = "whole"
             prons = []
+            assessed = []
             if let long {
-                prons = await long.value
+                assessed = await long.value
+                prons = assessed.map(\.result)
             } else if reading.audioGrounded {
                 let whole = await PronunciationAssessor.assess(
                     audioURL: audioURL, reference: transcript,
                     language: script.language, surface: "speech")
-                if let r = whole.result { prons = [r] }
+                if let r = whole.result {
+                    prons = [r]
+                    assessed = [.init(reference: transcript, result: r)]
+                }
             }
         }
         let readMs = ms(readStart)
@@ -401,6 +413,12 @@ final class SpeechTakeSession: ObservableObject {
             SpeechAnalyzer.analyze(script: body, transcript: transcript, language: language,
                                    envelope: envelope, pronunciation: pronScore)
         }.value
+        // How it was delivered, for the record only (Season 2 calibration).
+        // Off the result's path: it is awaited where the take is reported.
+        let deliveryPieces = assessed
+        let delivery = Task.detached {
+            SpeechDelivery.measure(deliveryPieces, language: language, audioURL: audioURL)
+        }
 
         let take = SpeechTake(id: id, scriptId: script.id, createdAt: Date(),
                               durationSeconds: duration, audioFilename: audioName,
@@ -452,6 +470,7 @@ final class SpeechTakeSession: ObservableObject {
         }
         let coachMs = ms(coachStart)
         let hasVideo = await videoTask.value
+        let delivered = await delivery.value
         Analytics.capture("speech_take", [
             "built_in": script.isBuiltIn,
             "challenge": script.isChallenge,
@@ -472,6 +491,18 @@ final class SpeechTakeSession: ObservableObject {
             // take's number — the only record of whether the reader answers.
             "pron_pieces": prons.count,
             "pron": metrics.pronunciation ?? -1,
+            // How it was delivered (`SpeechDelivery`, 2026-11-07): where the
+            // app's readers stand against the Season 2 calibration. -1 = not
+            // measured.
+            "prosody": delivered.prosody ?? -1,
+            "fluency": delivered.fluency ?? -1,
+            "weak_sounds": delivered.weakSounds ?? -1,
+            "mid_pauses": delivered.midPauses ?? -1,
+            "mid_boundaries": delivered.midBoundaries ?? -1,
+            "wpm": delivered.wordsPerMinute ?? -1,
+            "monotone_words": delivered.monotoneWords,
+            "pitch_range": delivered.pitchRange ?? -1,
+            "pitch_sd": delivered.pitchSD ?? -1,
             "read_ms": readMs,
             "result_ms": resultMs,
             "coach_ms": coachMs,
@@ -516,14 +547,14 @@ final class SpeechTakeSession: ObservableObject {
                 async let pron = PronunciationAssessor.assess(
                     audioURL: url, reference: reference, language: language, surface: "speech")
                 guard let text = await read else { _ = await pron; return nil }
-                return Piece(text: text, pron: await pron.result)
+                return Piece(text: text, pron: await pron.result, reference: reference)
             }
             guard let text = await SpeechReader.readPiece(audioURL: url, language: language) else { return nil }
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { return Piece(text: text, pron: nil) }
             let pron = await PronunciationAssessor.assess(
                 audioURL: url, reference: trimmed, language: language, surface: "speech")
-            return Piece(text: text, pron: pron.result)
+            return Piece(text: text, pron: pron.result, reference: trimmed)
         }
     }
 
@@ -531,12 +562,12 @@ final class SpeechTakeSession: ObservableObject {
     /// ~20 s (`PronunciationAssessor.windows`), each read for its own words
     /// (the scripted reference, as for a live piece) and assessed, all at
     /// once. A window that can't be read or assessed is left out.
-    nonisolated private static func assessInWindows(audioURL: URL, language: String) async -> [PronunciationResult] {
+    nonisolated private static func assessInWindows(audioURL: URL, language: String) async -> [SpeechDelivery.Piece] {
         guard PronunciationAssessor.supports(language),
               let wav = await Task.detached(operation: { AudioLoudness.wav16kMono(fromFileAt: audioURL) }).value
         else { return [] }
         let windows = PronunciationAssessor.windows(ofWAV: wav)
-        return await withTaskGroup(of: (Int, PronunciationResult?).self) { group in
+        return await withTaskGroup(of: (Int, SpeechDelivery.Piece?).self) { group in
             for (index, piece) in windows.enumerated() {
                 group.addTask {
                     let url = FileManager.default.temporaryDirectory
@@ -547,10 +578,10 @@ final class SpeechTakeSession: ObservableObject {
                           !text.isEmpty else { return (index, nil) }
                     let assessed = await PronunciationAssessor.assess(
                         wav: piece, reference: text, language: language, surface: "speech")
-                    return (index, assessed.result)
+                    return (index, assessed.result.map { SpeechDelivery.Piece(reference: text, result: $0) })
                 }
             }
-            var got: [(Int, PronunciationResult)] = []
+            var got: [(Int, SpeechDelivery.Piece)] = []
             for await (index, result) in group { if let result { got.append((index, result)) } }
             return got.sorted { $0.0 < $1.0 }.map(\.1)
         }
