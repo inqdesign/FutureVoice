@@ -13,6 +13,8 @@ API=26
 build() {  # rust-target  clang-prefix  abi
   local up; up=$(echo "$1" | tr 'a-z-' 'A-Z_')
   export "CARGO_TARGET_${up}_LINKER=$BIN/$2$API-clang"
+  # Play refuses a 64-bit .so whose LOAD segments are 4 KB aligned (16 KB page sizes).
+  export "CARGO_TARGET_${up}_RUSTFLAGS=-C link-arg=-Wl,-z,max-page-size=16384"
   export "CC_$(echo "$1" | tr '-' '_')=$BIN/$2$API-clang"
   export "AR_$(echo "$1" | tr '-' '_')=$BIN/llvm-ar"
   cargo build --release --lib --target "$1"
