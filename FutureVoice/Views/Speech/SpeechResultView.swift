@@ -48,7 +48,7 @@ struct SpeechResultView: View {
 
     private func content(_ take: SpeechTake, _ script: SpeechScript) -> some View {
         let m = take.metrics
-        return List {
+        return ScrollViewReader { proxy in List {
             Section {
                 HStack(spacing: 18) {
                     // Drawn, not a Gauge: `.accessoryCircularCapacity` is a
@@ -107,6 +107,7 @@ struct SpeechResultView: View {
 
             if let reading = m.reading {
                 readingSections(reading, take: take, language: script.language)
+                    .id("reading")
             } else if let parts = m.parts {
                 seasonTwoSection(parts, take: take, language: script.language)
             } else {
@@ -198,6 +199,15 @@ struct SpeechResultView: View {
                     }
                 }
             }
+        }
+        #if DEBUG
+        // `-captureScrollTo reading`: a capture run can't scroll by hand.
+        .onAppear {
+            if let anchor = UserDefaults.standard.string(forKey: "captureScrollTo") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) { proxy.scrollTo(anchor, anchor: .top) }
+            }
+        }
+        #endif
         }
         .task(id: take.id) {
             // The diff is O(script × transcript), so it runs off the main thread.
