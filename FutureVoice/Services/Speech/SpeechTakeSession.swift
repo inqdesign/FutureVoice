@@ -409,15 +409,23 @@ final class SpeechTakeSession: ObservableObject {
         // of `overall` (2026-11-04).
         let pronunciation = Self.pronunciation(of: prons)
         let body = script.body, language = script.language, pronScore = pronunciation?.score
-        let metrics = await Task.detached {
-            SpeechAnalyzer.analyze(script: body, transcript: transcript, language: language,
-                                   envelope: envelope, pronunciation: pronScore)
-        }.value
-        // How it was delivered, for the record only (Season 2 calibration).
-        // Off the result's path: it is awaited where the take is reported.
+        // How it was delivered (`SpeechDelivery`): recorded on every take,
+        // and with Season 2's scoring on, what four of its five parts are.
         let deliveryPieces = assessed
         let delivery = Task.detached {
             SpeechDelivery.measure(deliveryPieces, language: language, audioURL: audioURL)
+        }
+        var metrics = await Task.detached {
+            SpeechAnalyzer.analyze(script: body, transcript: transcript, language: language,
+                                   envelope: envelope, pronunciation: pronScore)
+        }.value
+        if SpeechScoreV4.isEnabled, SpeechScoreV4.applies(to: language),
+           let parts = SpeechScoreV4.score(accuracy: metrics.accuracy, coverage: metrics.coverage ?? 1,
+                                           fillers: metrics.fillers, missed: metrics.missed,
+                                           delivery: await delivery.value, language: language) {
+            metrics.parts = parts
+            metrics.overall = parts.total
+            metrics.scoring = SpeechScoreV4.version
         }
 
         let take = SpeechTake(id: id, scriptId: script.id, createdAt: Date(),
@@ -503,6 +511,7 @@ final class SpeechTakeSession: ObservableObject {
             "monotone_words": delivered.monotoneWords,
             "pitch_range": delivered.pitchRange ?? -1,
             "pitch_sd": delivered.pitchSD ?? -1,
+            "scoring": metrics.scoring ?? 0,
             "read_ms": readMs,
             "result_ms": resultMs,
             "coach_ms": coachMs,

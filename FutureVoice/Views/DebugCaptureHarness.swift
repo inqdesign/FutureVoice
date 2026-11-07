@@ -338,6 +338,29 @@ enum DebugCapture {
         return scripts[0]
     }
 
+    /// Re-scores the seeded challenge take the Season 2 way.
+    static func seedSeasonTwoTake() {
+        let id = UUID(uuidString: "C4A11E00-0000-4000-8000-0000000000AA")!
+        guard var take = SpeechStore.shared.takes.first(where: { $0.id == id }) else { return }
+        let delivery = SpeechDelivery(
+            prosody: 84, fluency: 88, weakSounds: 58, midPauses: 1, midBoundaries: 64,
+            wordsPerMinute: 142, monotoneWords: 0, pitchRange: 6.1, pitchSD: 2.4, soundAccuracy: 93,
+            breaks: [.init(before: "this", after: "problem", seconds: 0.6)], stalls: 0,
+            weakest: [.init(phoneme: "θ", word: "think", score: 41),
+                      .init(phoneme: "ɹ", word: "read", score: 52),
+                      .init(phoneme: "v", word: "very", score: 63)])
+        guard let parts = SpeechScoreV4.score(accuracy: 96, coverage: 1, fillers: 0, missed: ["fraction"],
+                                              delivery: delivery, language: "en") else { return }
+        take.metrics.parts = parts
+        take.metrics.overall = parts.total
+        take.metrics.scoring = SpeechScoreV4.version
+        SpeechStore.shared.save(take)
+        SpeechChallenges.shared.seedPreview(
+            language: "en", scripts: SpeechChallenges.shared.scripts,
+            standings: SpeechChallenges.shared.standings, boards: [:],
+            entries: [id: .newScoring], overall: SpeechChallenges.shared.overall)
+    }
+
     /// The overall board: best per challenge, added up.
     static func sampleOverall(names: [String], faces: [SpeechChallenges.Face]) -> [SpeechChallenges.BoardRow] {
         let totals = [592, 589, 556, 486, 368, 262, 184, 163, 95, 93]
@@ -918,6 +941,14 @@ enum DebugCapture {
         case "speech-challenge-result":
             // A take that moved up the board.
             _ = seedSpeechChallenges(appState)
+            return AnyView(NavigationStack {
+                SpeechResultView(takeId: UUID(uuidString: "C4A11E00-0000-4000-8000-0000000000AA")!)
+            })
+        case "speech-result-v4":
+            // Season 2's scoring (scoring 4) on a learner's take: what to
+            // work on next, the five parts, and why it stays off the board.
+            _ = seedSpeechChallenges(appState)
+            seedSeasonTwoTake()
             return AnyView(NavigationStack {
                 SpeechResultView(takeId: UUID(uuidString: "C4A11E00-0000-4000-8000-0000000000AA")!)
             })

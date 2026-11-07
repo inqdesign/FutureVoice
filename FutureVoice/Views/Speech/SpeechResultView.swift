@@ -100,55 +100,59 @@ struct SpeechResultView: View {
 
             playbackSection(take)
 
-            Section("Measured") {
-                metricRow("Accuracy", icon: "text.badge.checkmark",
-                          value: "\(m.accuracy)%", score: m.accuracy)
-                // Measured per phoneme; a quarter of the overall since
-                // 2026-11-04 (the board's weighting is checked server-side).
-                if let pron = m.pronunciation {
-                    // What stood out: this take's low SOUNDS (English), or a
-                    // word low here that is low across recent takes. A word
-                    // low once is not said — see `PronunciationLedger`. The
-                    // whole assessment is a tap away when the take kept it.
-                    let row = metricRow("Pronunciation", icon: "waveform.badge.mic",
-                                        value: "\(pron)",
-                                        detail: pronunciationDetail(take, language: script.language),
-                                        score: pron)
-                    if let all = take.assessments, !all.isEmpty {
-                        Button { showingPronunciation = true } label: {
-                            HStack(spacing: 6) {
-                                row
-                                Image(systemName: "chevron.right")
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.tertiary)
+            if let parts = m.parts {
+                seasonTwoSection(parts, take: take, language: script.language)
+            } else {
+                Section("Measured") {
+                    metricRow("Accuracy", icon: "text.badge.checkmark",
+                              value: "\(m.accuracy)%", score: m.accuracy)
+                    // Measured per phoneme; a quarter of the overall since
+                    // 2026-11-04 (the board's weighting is checked server-side).
+                    if let pron = m.pronunciation {
+                        // What stood out: this take's low SOUNDS (English), or a
+                        // word low here that is low across recent takes. A word
+                        // low once is not said — see `PronunciationLedger`. The
+                        // whole assessment is a tap away when the take kept it.
+                        let row = metricRow("Pronunciation", icon: "waveform.badge.mic",
+                                            value: "\(pron)",
+                                            detail: pronunciationDetail(take, language: script.language),
+                                            score: pron)
+                        if let all = take.assessments, !all.isEmpty {
+                            Button { showingPronunciation = true } label: {
+                                HStack(spacing: 6) {
+                                    row
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(.tertiary)
+                                }
                             }
+                            .buttonStyle(.plain)
+                            .sheet(isPresented: $showingPronunciation) {
+                                PronunciationDetailSheet(results: all, language: script.language)
+                            }
+                        } else {
+                            row
                         }
-                        .buttonStyle(.plain)
-                        .sheet(isPresented: $showingPronunciation) {
-                            PronunciationDetailSheet(results: all, language: script.language)
-                        }
-                    } else {
-                        row
                     }
+                    metricRow("Pace", icon: "speedometer",
+                              value: SpeechFormat.rate(m.rate, language: script.language),
+                              detail: explain("Comfortable: \(m.rateLow)–\(m.rateHigh)"),
+                              // Outside the band is never shown as good, however
+                              // close: the band IS the target.
+                              score: (m.rateLow...m.rateHigh).contains(m.rate) ? 100 : min(m.paceScore, 80))
+                    metricRow("Pauses", icon: "pause.circle",
+                              value: explain("\(m.pausesAtBreaks) of \(m.breaks)"),
+                              detail: m.hesitations > 0
+                                  ? explain("Breaths at sentence ends · long stops: \(m.hesitations)")
+                                  : explain("Breaths at sentence ends"),
+                              score: m.pauseScore)
+                    metricRow("Fillers", icon: "ellipsis.bubble",
+                              value: "\(m.fillers)", score: m.fillerScore)
+                    metricRow("Steady voice", icon: "waveform.path",
+                              value: "\(m.steadiness)",
+                              detail: explain("Holding your volume to the end of each sentence"),
+                              score: m.steadiness)
                 }
-                metricRow("Pace", icon: "speedometer",
-                          value: SpeechFormat.rate(m.rate, language: script.language),
-                          detail: explain("Comfortable: \(m.rateLow)–\(m.rateHigh)"),
-                          // Outside the band is never shown as good, however
-                          // close: the band IS the target.
-                          score: (m.rateLow...m.rateHigh).contains(m.rate) ? 100 : min(m.paceScore, 80))
-                metricRow("Pauses", icon: "pause.circle",
-                          value: explain("\(m.pausesAtBreaks) of \(m.breaks)"),
-                          detail: m.hesitations > 0
-                              ? explain("Breaths at sentence ends · long stops: \(m.hesitations)")
-                              : explain("Breaths at sentence ends"),
-                          score: m.pauseScore)
-                metricRow("Fillers", icon: "ellipsis.bubble",
-                          value: "\(m.fillers)", score: m.fillerScore)
-                metricRow("Steady voice", icon: "waveform.path",
-                          value: "\(m.steadiness)",
-                          detail: explain("Holding your volume to the end of each sentence"),
-                          score: m.steadiness)
             }
 
             // The mistakes are marked where they are in the script, like a
@@ -386,6 +390,153 @@ struct SpeechResultView: View {
         let weak = (take.pronunciationWords ?? []).filter(\.isJudged).prefix(3).map(\.word)
         return weak.isEmpty ? explain("No sound stood out")
                             : explain("Work on: \(weak.joined(separator: " · "))")
+    }
+
+    // MARK: - Season 2 (scoring 4)
+
+    private func partTitle(_ part: SpeechScoreV4.Part) -> LocalizedStringKey {
+        switch part {
+        case .accuracy: return "Accuracy"
+        case .sounds: return "Pronunciation"
+        case .phrasing: return "Phrasing"
+        // Its own key: "Expression" is the vocabulary sense (표현).
+        case .expression: return "speech.part.expression"
+        case .pace: return "Pace"
+        }
+    }
+
+    private func partIcon(_ part: SpeechScoreV4.Part) -> String {
+        switch part {
+        case .accuracy: return "text.badge.checkmark"
+        case .sounds: return "waveform.badge.mic"
+        case .phrasing: return "text.line.first.and.arrowtriangle.forward"
+        case .expression: return "waveform.path.ecg"
+        case .pace: return "speedometer"
+        }
+    }
+
+    private func soundsList(_ sounds: [SpeechDelivery.Sound]) -> String {
+        sounds.map { s in s.phoneme.isEmpty ? "“\(s.word)” \(s.score)" : "\(s.phoneme) “\(s.word)” \(s.score)" }
+            .joined(separator: " · ")
+    }
+
+    private func breaksList(_ breaks: [SpeechDelivery.Break]) -> String {
+        breaks.map { "“\($0.before) / \($0.after)”" }.joined(separator: " · ")
+    }
+
+    private func quoted(_ words: [String]) -> String {
+        words.map { "“\($0)”" }.joined(separator: " ")
+    }
+
+    /// What one part measured, in a line under its number.
+    private func partDetail(_ part: SpeechScoreV4.Part, _ p: SpeechParts) -> String {
+        switch part {
+        case .accuracy:
+            return p.missed.isEmpty ? explain("Every word as written")
+                                    : explain("Skipped or changed: \(quoted(p.missed))")
+        case .sounds:
+            return p.weakest.isEmpty ? explain("Every sound clear") : soundsList(p.weakest)
+        case .phrasing:
+            var bits: [String] = []
+            if !p.breaks.isEmpty { bits.append(breaksList(p.breaks)) }
+            if p.fillers > 0 { bits.append(explain("Fillers: \(p.fillers)")) }
+            return bits.isEmpty ? explain("No breaks inside a phrase") : bits.joined(separator: " · ")
+        case .expression:
+            return explain("Pitch range \(String(format: "%.1f", p.pitchRange)) semitones · narrators 7–9")
+        case .pace:
+            return explain("\(p.wpm) words a minute · narrators 130–220")
+        }
+    }
+
+    /// The one thing to work on next, said as an instruction with its place.
+    private func focusLine(_ part: SpeechScoreV4.Part, _ p: SpeechParts) -> String {
+        switch part {
+        case .accuracy:
+            return p.missed.isEmpty ? explain("Read the whole script to the end.")
+                                    : explain("Read every word as written: \(quoted(p.missed))")
+        case .sounds:
+            return p.weakest.isEmpty ? explain("Make every sound as clear as the rest.")
+                                     : explain("Work on these sounds: \(soundsList(p.weakest))")
+        case .phrasing:
+            return p.breaks.isEmpty ? explain("Leave out the fillers: \(p.fillers) this take.")
+                                    : explain("Keep each phrase whole. You stopped at \(breaksList(p.breaks)).")
+        case .expression:
+            return explain("Let your voice move more: \(String(format: "%.1f", p.pitchRange)) semitones, where narrators move 7–9.")
+        case .pace:
+            return p.wpm < SpeechScoreV4.paceBand.lowerBound
+                ? explain("Read a little faster: \(p.wpm) words a minute, where narrators read 130–220.")
+                : explain("Read a little slower: \(p.wpm) words a minute, where narrators read 130–220.")
+        }
+    }
+
+    private func partRow(_ part: SpeechScoreV4.Part, _ p: SpeechParts) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            Label(partTitle(part), systemImage: partIcon(part))
+            Spacer()
+            VStack(alignment: .trailing, spacing: 2) {
+                HStack(spacing: 4) {
+                    if p.clears(part) {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.caption)
+                            .foregroundStyle(.green)
+                            .accessibilityLabel(Text("At a narrator's level"))
+                    }
+                    Text(verbatim: "\(p.score(part))")
+                        .font(.body.monospacedDigit())
+                        .foregroundStyle(SpeechScoreColor.color(p.score(part)))
+                }
+                Text(partDetail(part, p))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.trailing)
+            }
+        }
+    }
+
+    /// Season 2's result: what to work on next, then the five parts, each
+    /// with what it measured.
+    @ViewBuilder
+    private func seasonTwoSection(_ p: SpeechParts, take: SpeechTake, language: String) -> some View {
+        Section {
+            if let focus = p.focus {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label {
+                        Text("Next: \(Text(partTitle(focus)))").font(.headline)
+                    } icon: {
+                        Image(systemName: "scope")
+                    }
+                    Text(focusLine(focus, p))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 4)
+            } else {
+                Label("A narrator's read. Nothing left to fix.", systemImage: "checkmark.seal.fill")
+                    .foregroundStyle(.green)
+            }
+            ForEach(SpeechScoreV4.Part.allCases, id: \.self) { part in
+                if part == .sounds, let all = take.assessments, !all.isEmpty {
+                    Button { showingPronunciation = true } label: {
+                        HStack(spacing: 6) {
+                            partRow(part, p)
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .sheet(isPresented: $showingPronunciation) {
+                        PronunciationDetailSheet(results: all, language: language)
+                    }
+                } else {
+                    partRow(part, p)
+                }
+            }
+        } header: {
+            Text("Narrator level: \(p.barsCleared) of 5")
+        } footer: {
+            Text("100 takes every part at a skilled narrator's level, read to the end.")
+        }
     }
 
     private func metricRow(_ title: LocalizedStringKey, icon: String, value: String,

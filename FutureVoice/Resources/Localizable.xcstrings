@@ -8006,6 +8006,52 @@
         }
       }
     },
+    "Let your voice move more: %@ semitones, where narrators move 7–9." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lass deine Stimme mehr wandern: %@ Halbtöne, geübte Sprecher kommen auf 7–9."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mueve más la voz: %@ semitonos; los narradores llegan a 7–9."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fais davantage varier ta voix : %@ demi-tons, les narrateurs vont de 7 à 9."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "声の高低をもっと動かしましょう。今回は%@半音、ナレーターは7〜9半音です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목소리 높낮이를 더 살려요. 이번엔 %@반음, 낭독자는 7~9반음이에요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "让声音的高低更有起伏：这次 %@ 个半音，朗读者是 7–9 个。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "讓聲音的高低更有起伏：這次 %@ 個半音，朗讀者是 7–9 個。"
+          }
+        }
+      }
+    },
     "Let's make your routine" : {
       "localizations" : {
         "de" : {
@@ -8830,6 +8876,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "人名、地名和品牌名稱不能加入清單。"
+          }
+        }
+      }
+    },
+    "Narrator level: %lld of 5" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sprecher-Niveau: %lld von 5"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nivel de narrador: %lld de 5"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Niveau narrateur : %lld sur 5"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ナレーター水準：5項目中%lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "낭독자 수준: 5개 중 %lld개"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "朗读者水平：5 项中 %lld 项"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "朗讀者水準：5 項中 %lld 項"
           }
         }
       }
@@ -12191,6 +12283,52 @@
         }
       }
     },
+    "Next: %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Als Nächstes: %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lo siguiente: %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "À travailler : %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次は%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음엔 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下一步：%@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下一步：%@"
+          }
+        }
+      }
+    },
     "No pause" : {
       "localizations" : {
         "ko" : {
@@ -13760,6 +13898,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "兩邊的台詞都念"
+          }
+        }
+      }
+    },
+    "Read every word as written: %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lies jedes Wort wie im Text: %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lee cada palabra tal como está escrita: %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lis chaque mot tel qu’il est écrit : %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "台本どおりに読みましょう：%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대본 그대로 읽어 보세요: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "照稿念每个字：%@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "照稿念每個字：%@"
           }
         }
       }
@@ -26456,6 +26640,52 @@
         }
       }
     },
+    "%lld words a minute · narrators 130–220" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Wörter pro Minute · Sprecher 130–220"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld palabras por minuto · narradores 130–220"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld mots par minute · narrateurs 130–220"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1分あたり%lld語 · ナレーター130〜220"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "분당 %lld단어 · 낭독자 130~220"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每分钟 %lld 个词 · 朗读者 130–220"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每分鐘 %lld 個詞 · 朗讀者 130–220"
+          }
+        }
+      }
+    },
     "%lld words and lines mastered inside them" : {
       "localizations" : {
         "de" : {
@@ -28835,6 +29065,52 @@
         }
       }
     },
+    "100 takes every part at a skilled narrator's level, read to the end." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "100 gibt es nur, wenn alle fünf Teile auf dem Niveau geübter Sprecher sind und du bis zum Ende liest."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El 100 exige las cinco partes al nivel de un narrador experto y leer hasta el final."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pour avoir 100, les cinq critères doivent être au niveau d’un narrateur aguerri, et il faut lire jusqu’au bout."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5項目すべてが熟練ナレーターの水準で、最後まで読み切ると100点です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다섯 항목이 모두 숙련된 낭독자 수준이고 끝까지 읽어야 100점이에요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "五个项目都达到熟练朗读者的水平，并且读完全文，才是 100 分。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "五個項目都達到熟練朗讀者的水準，並且讀完全文，才是 100 分。"
+          }
+        }
+      }
+    },
     "A" : {
       "shouldTranslate" : false
     },
@@ -30814,6 +31090,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "更自然的說法"
+          }
+        }
+      }
+    },
+    "A narrator's read. Nothing left to fix." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie ein geübter Sprecher. Nichts mehr zu verbessern."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lectura de narrador. No hay nada que corregir."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une lecture de narrateur. Plus rien à corriger."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ナレーター並みです。直すところはありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "낭독자 수준이에요. 고칠 곳이 없어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "朗读者的水平，没有要改的地方。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "朗讀者的水準，沒有要改的地方。"
           }
         }
       }
@@ -39431,6 +39753,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在飯店"
+          }
+        }
+      }
+    },
+    "At a narrator's level" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sprecher-Niveau"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nivel de narrador"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Niveau narrateur"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ナレーター水準"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "낭독자 수준"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "朗读者水平"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "朗讀者水準"
           }
         }
       }
@@ -60708,6 +61076,52 @@
         }
       }
     },
+    "English speech takes are scored the new way and stay off the boards" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Englische Takes werden neu bewertet und landen auf keiner Rangliste."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las tomas en inglés se puntúan con el sistema nuevo y no entran en las clasificaciones."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les prises en anglais sont notées selon la nouvelle méthode et n’entrent dans aucun classement."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "英語のスピーチを新しい方式で採点します。ランキングには載りません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "영어 스피치를 새 방식으로 채점해요. 순위표에는 안 올라가요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "英文演讲改用新方式评分，不会上排行榜。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "英文演講改用新方式評分，不會上排行榜。"
+          }
+        }
+      }
+    },
     "Enough to keep the habit going" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -61828,6 +62242,52 @@
         }
       }
     },
+    "Every sound clear" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeder Laut klar"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todos los sonidos claros"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tous les sons nets"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "どの音もはっきり"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모든 소리가 또렷해요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每个音都清楚"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每個音都清楚"
+          }
+        }
+      }
+    },
     "Every take of a script is kept, so you can watch yourself get better." : {
       "localizations" : {
         "de" : {
@@ -62009,6 +62469,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "例行計畫裡有設定時間的對話就是一通電話。到時候即使靜音也會響。不方便接就拒接，不會有任何影響。"
+          }
+        }
+      }
+    },
+    "Every word as written" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jedes Wort wie im Text"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cada palabra tal como está escrita"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chaque mot tel qu’écrit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべて台本どおり"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모든 단어를 대본대로"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每个字都照稿念"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每個字都照稿念"
           }
         }
       }
@@ -66939,6 +67445,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "贅詞"
+          }
+        }
+      }
+    },
+    "Fillers: %lld" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Füllwörter: %lld"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Muletillas: %lld"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hésitations : %lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フィラー %lld回"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "군말 %lld번"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "赘词 %lld 次"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "贅詞 %lld 次"
           }
         }
       }
@@ -83938,6 +84490,52 @@
         }
       }
     },
+    "Keep each phrase whole. You stopped at %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lies jede Wortgruppe am Stück. Du hast bei %@ angehalten."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lee cada frase de un tirón. Te detuviste en %@."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lis chaque groupe de mots d’un seul souffle. Tu as marqué une pause à %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フレーズの途中で切らずに読みましょう。%@で止まりました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "구절은 끊지 말고 이어 읽어요. %@에서 멈췄어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每个词组要一口气念完。你在 %@ 停了下来。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每個詞組要一口氣念完。你在 %@ 停了下來。"
+          }
+        }
+      }
+    },
     "Keep going — %llds more" : {
       "localizations" : {
         "de" : {
@@ -85432,6 +86030,52 @@
         }
       }
     },
+    "Lab" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Labor"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Laboratorio"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Labo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ラボ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "실험실"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "实验室"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "實驗室"
+          }
+        }
+      }
+    },
     "Language" : {
       "localizations" : {
         "de" : {
@@ -86682,6 +87326,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "先不決定"
+          }
+        }
+      }
+    },
+    "Leave out the fillers: %lld this take." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lass die Füllwörter weg: diesmal %lld."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quita las muletillas: esta vez hubo %lld."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprime les hésitations : %lld cette fois."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フィラーをなくしましょう。今回は%lld回でした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "군말을 빼 보세요. 이번엔 %lld번 나왔어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "去掉赘词，这次有 %lld 次。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "去掉贅詞，這次有 %lld 次。"
           }
         }
       }
@@ -89723,6 +90413,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "寫下即將遇到的情境，就能看到流利的自己怎麼應對。要用的用語，就從那裡撿。"
+          }
+        }
+      }
+    },
+    "Make every sound as clear as the rest." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sprich jeden Laut so klar wie die übrigen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pronuncia cada sonido tan claro como el resto."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rends chaque son aussi net que les autres."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべての音を同じようにはっきり出しましょう。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모든 소리를 똑같이 또렷하게 내 보세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "让每个音都一样清楚。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "讓每個音都一樣清楚。"
           }
         }
       }
@@ -98269,6 +99005,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "不要用藍牙耳機。AirPods會以通話音質錄音，做出來的聲音不像你。"
+          }
+        }
+      }
+    },
+    "No breaks inside a phrase" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Pause mitten in einer Wortgruppe"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ninguna pausa a mitad de frase"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucune coupure au milieu d’un groupe"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フレーズの途中で切れていません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "구절 중간에 끊긴 곳 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "词组中间没有停顿"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "詞組中間沒有停頓"
           }
         }
       }
@@ -109076,6 +109858,52 @@
         }
       }
     },
+    "Phrasing" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phrasierung"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fraseo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Phrasé"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "区切り"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "끊어 읽기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "断句"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "斷句"
+          }
+        }
+      }
+    },
     "Pick a category" : {
       "localizations" : {
         "de" : {
@@ -110175,6 +111003,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "接小孩時"
+          }
+        }
+      }
+    },
+    "Pitch range %@ semitones · narrators 7–9" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tonumfang %@ Halbtöne · Sprecher 7–9"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rango de tono: %@ semitonos · narradores 7–9"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Amplitude %@ demi-tons · narrateurs 7–9"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "声の高さの幅 %@半音 · ナレーター7〜9"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "음높이 폭 %@반음 · 낭독자 7~9"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "音高幅度 %@ 个半音 · 朗读者 7–9"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "音高幅度 %@ 個半音 · 朗讀者 7–9"
           }
         }
       }
@@ -114933,6 +115807,98 @@
         }
       }
     },
+    "Read a little faster: %lld words a minute, where narrators read 130–220." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lies etwas schneller: %lld Wörter pro Minute, geübte Sprecher lesen 130–220."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lee un poco más rápido: %lld palabras por minuto; los narradores leen 130–220."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lis un peu plus vite : %lld mots par minute, les narrateurs en lisent 130 à 220."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "もう少し速く読みましょう。1分あたり%lld語、ナレーターは130〜220語です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "조금 더 빠르게 읽어 보세요. 분당 %lld단어, 낭독자는 130~220단어예요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可以读快一点：每分钟 %lld 个词，朗读者是 130–220。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可以讀快一點：每分鐘 %lld 個詞，朗讀者是 130–220。"
+          }
+        }
+      }
+    },
+    "Read a little slower: %lld words a minute, where narrators read 130–220." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lies etwas langsamer: %lld Wörter pro Minute, geübte Sprecher lesen 130–220."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lee un poco más despacio: %lld palabras por minuto; los narradores leen 130–220."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lis un peu plus lentement : %lld mots par minute, les narrateurs en lisent 130 à 220."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "もう少しゆっくり読みましょう。1分あたり%lld語、ナレーターは130〜220語です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "조금 더 천천히 읽어 보세요. 분당 %lld단어, 낭독자는 130~220단어예요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可以读慢一点：每分钟 %lld 个词，朗读者是 130–220。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可以讀慢一點：每分鐘 %lld 個詞，朗讀者是 130–220。"
+          }
+        }
+      }
+    },
     "Read a script out loud on camera and get a score for pronunciation and pace." : {
       "localizations" : {
         "de" : {
@@ -115849,6 +116815,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "像主播一樣，把講稿唸出來。"
+          }
+        }
+      }
+    },
+    "Read the whole script to the end." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lies den Text bis zum Ende."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lee el texto hasta el final."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lis le texte jusqu’au bout."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "台本を最後まで読みましょう。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대본을 끝까지 읽어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把稿子读到最后。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把稿子讀到最後。"
           }
         }
       }
@@ -125189,6 +126201,52 @@
         }
       }
     },
+    "Scored the Season 2 way, so it stays off this board." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nach den Regeln von Saison 2 bewertet, darum nicht auf dieser Rangliste."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Puntuada con el sistema de la temporada 2, así que no entra en esta clasificación."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notée selon la saison 2, elle n’entre donc pas dans ce classement."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "シーズン2の方式で採点したので、このランキングには載りません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "시즌 2 방식으로 채점해서 이 순위표에는 안 올라가요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用第 2 季的方式评分，所以不会上这个排行榜。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用第 2 季的方式評分，所以不會上這個排行榜。"
+          }
+        }
+      }
+    },
     "Scores come from Azure's pronunciation assessment against a native model of the language. Sound names are given for English only. Flow is the pauses between words, completeness how much of the line was said, intonation stress and rhythm. A word is red under 50 or with a sound under 35, orange under 70 or with a sound under 45; a native speaker's slip reads orange at most. One take's marks move with where the recording was cut, so what matters is a sound that stays low across takes." : {
       "localizations" : {
         "de" : {
@@ -125737,6 +126795,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在找你說過的話…"
+          }
+        }
+      }
+    },
+    "Season 2 scoring" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bewertung von Saison 2"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Puntuación de la temporada 2"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notation saison 2"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "シーズン2の採点"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "시즌 2 채점"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第 2 季评分"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第 2 季評分"
           }
         }
       }
@@ -129457,6 +130561,52 @@
         }
       }
     },
+    "Skipped or changed: %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausgelassen oder geändert: %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Omitidas o cambiadas: %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sautés ou changés : %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "抜けた・変わった語：%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "빠뜨리거나 바꾼 단어: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "漏掉或念错：%@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "漏掉或念錯：%@"
+          }
+        }
+      }
+    },
     "Skipping a day costs you nothing" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -131715,6 +132865,59 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "產品"
+          }
+        }
+      }
+    },
+    "speech.part.expression" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausdruck"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expression"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expresividad"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expressivité"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "表現力"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "표현력"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "表现力"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "表現力"
           }
         }
       }
@@ -166257,6 +167460,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "工作會議"
+          }
+        }
+      }
+    },
+    "Work on these sounds: %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Übe diese Laute: %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Practica estos sonidos: %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Travaille ces sons : %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この音を練習しましょう：%@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 소리를 연습해요: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "练习这几个音：%@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "練習這幾個音：%@"
           }
         }
       }

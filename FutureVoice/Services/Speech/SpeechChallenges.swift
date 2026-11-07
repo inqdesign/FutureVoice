@@ -83,6 +83,9 @@ final class SpeechChallenges: ObservableObject {
         /// Under `boardBar`: kept on the phone, never on the board.
         case belowBar
         case failed
+        /// Scored by Season 2's rules (`SpeechScoreV4`), which no board
+        /// checks yet: kept on the phone.
+        case newScoring
     }
 
     @Published private(set) var scripts: [SpeechScript] = []
@@ -237,6 +240,10 @@ final class SpeechChallenges: ObservableObject {
     /// Called by the take session once a take on a challenge is scored.
     func enter(take: SpeechTake, script: SpeechScript, recordedOnCamera: Bool) {
         guard let challengeId = script.challengeId else { return }
+        guard (take.metrics.scoring ?? 0) < SpeechScoreV4.version else {
+            entries[take.id] = .newScoring
+            return
+        }
         guard recordedOnCamera else {
             entries[take.id] = .cameraOff
             return
@@ -367,7 +374,8 @@ final class SpeechChallenges: ObservableObject {
             let onBoard = standings[challengeId]?.myBest ?? -1
             let candidates = SpeechStore.shared.takes(for: script.id)
                 .filter { $0.videoFilename != nil && $0.metrics.overall > onBoard
-                    && ($0.metrics.scoring ?? 1) >= SpeechAnalyzer.scoringWithoutPronunciation }
+                    && ($0.metrics.scoring ?? 1) >= SpeechAnalyzer.scoringWithoutPronunciation
+                    && ($0.metrics.scoring ?? 1) < SpeechScoreV4.version }
                 .sorted { $0.metrics.overall > $1.metrics.overall }
             guard !candidates.isEmpty else { continue }
             importing.insert(challengeId)

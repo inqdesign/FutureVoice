@@ -32,6 +32,28 @@ struct SpeechDelivery: Equatable {
     /// Pitch movement, semitones (`PitchTracker`).
     var pitchRange: Double?
     var pitchSD: Double?
+    /// Azure's sound accuracy, weighted by judged words (the take's
+    /// `soundScore`).
+    var soundAccuracy: Int? = nil
+    /// Where the mid-phrase pauses were, as the two words around each
+    /// ("this / problem"), in reading order, with their length.
+    var breaks: [Break] = []
+    /// Mid-phrase pauses of a second or more: the reader lost the line.
+    var stalls: Int = 0
+    /// The weakest sounds, worst first, each with the word it was in.
+    var weakest: [Sound] = []
+
+    struct Break: Equatable, Codable, Hashable {
+        var before: String
+        var after: String
+        var seconds: Double
+    }
+    struct Sound: Equatable, Codable, Hashable {
+        /// IPA (en-US); empty where Azure names no phonemes.
+        var phoneme: String
+        var word: String
+        var score: Int
+    }
 
     /// One assessed piece and the text it was judged against.
     struct Piece {
@@ -40,6 +62,7 @@ struct SpeechDelivery: Equatable {
     }
 
     static let pauseSeconds = 0.25
+    static let stallSeconds = 1.0
 
     static func measure(_ pieces: [Piece], language: String, audioURL: URL) -> SpeechDelivery {
         var d = timing(pieces, language: language)
@@ -72,6 +95,16 @@ struct SpeechDelivery: Equatable {
         let weak: Int? = sounds.isEmpty ? nil : sounds[Int(Double(sounds.count - 1) * 0.05)]
 
         var mid = 0, boundaries = 0, aligned = false
+        var breaks: [Break] = [], stalls = 0
+        var weakest: [Sound] = []
+        for p in pieces {
+            for word in p.result.judgedWords {
+                for ph in word.phonemes {
+                    if let a = ph.accuracy { weakest.append(Sound(phoneme: ph.phoneme, word: word.word, score: a)) }
+                }
+            }
+        }
+        weakest.sort { $0.score < $1.score }
         var words = 0, seconds = 0.0
         let spaced = LanguageCatalog.writesSpaces(language)
         for piece in pieces {
@@ -92,7 +125,12 @@ struct SpeechDelivery: Equatable {
                     sentenceGaps += max(0, gap)
                 } else if token.last.map({ ",;:—–、，".contains($0) }) != true {
                     boundaries += 1
-                    if gap >= pauseSeconds { mid += 1 }
+                    if gap >= pauseSeconds {
+                        mid += 1
+                        breaks.append(Break(before: a.element.word, after: b.element.word,
+                                            seconds: (gap * 10).rounded() / 10))
+                        if gap >= stallSeconds { stalls += 1 }
+                    }
                 }
             }
             if lined { aligned = true }
@@ -108,7 +146,9 @@ struct SpeechDelivery: Equatable {
         return SpeechDelivery(
             prosody: prosody, fluency: fluency, weakSounds: weak,
             midPauses: aligned ? mid : nil, midBoundaries: aligned ? boundaries : nil,
-            wordsPerMinute: wpm, monotoneWords: monotone, pitchRange: nil, pitchSD: nil)
+            wordsPerMinute: wpm, monotoneWords: monotone, pitchRange: nil, pitchSD: nil,
+            soundAccuracy: weighted { (r: PronunciationResult) -> Int? in r.soundScore },
+            breaks: breaks, stalls: stalls, weakest: Array(weakest.prefix(12)))
     }
 
     nonisolated static func pitch(of url: URL) -> PitchTracker.Stats? {

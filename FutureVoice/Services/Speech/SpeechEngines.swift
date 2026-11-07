@@ -108,6 +108,51 @@ enum SpeechCoach {
             case .characters: return "characters"
             }
         }()
+        // Season 2's scoring (`SpeechScoreV4`) is judged by five parts and
+        // names the one to work on next; the coach is given exactly that, so
+        // its words and the result screen point the same way. A take scored
+        // the older ways gets the prompt it always had.
+        let rules: String
+        let measured: String
+        if let p = metrics.parts {
+            let weakest = p.weakest.map { "\($0.phoneme.isEmpty ? "" : $0.phoneme + " in ")\"\($0.word)\" \($0.score)" }
+            let breaks = p.breaks.map { "\"\($0.before) / \($0.after)\" (\(String(format: "%.1f", $0.seconds))s)" }
+            let focus = p.focus.map { "\($0.rawValue)" } ?? "none: every part is at a narrator's level"
+            rules = """
+            - The score has five parts; 100 only when every part is at a
+              skilled native narrator's level. The headline and the first tip
+              are about THE PART TO WORK ON NEXT, using its details (the
+              sounds and their words, where the phrase broke, the numbers).
+              Then the next weakest part. Skip parts at 95 or more.
+            - Pace: the narrator range is 130–220 words/min; inside it is right.
+            - Expression: narrators' pitch moves 7–9 semitones; under that the
+              read sounds flat.
+            """
+            measured = """
+            - accuracy \(p.accuracy)/100; skipped or changed: \(p.missed.isEmpty ? "none" : p.missed.joined(separator: " | "))
+            - pronunciation \(p.sounds)/100; weakest sounds: \(weakest.isEmpty ? "none under 80" : weakest.joined(separator: ", "))
+            - phrasing \(p.phrasing)/100; pauses inside a phrase: \(breaks.isEmpty ? "none" : breaks.joined(separator: ", ")); stalls over 1s: \(p.stalls); fillers: \(p.fillers)
+            - expression \(p.expression)/100; prosody \(p.prosody)/100, pitch range \(String(format: "%.1f", p.pitchRange)) semitones
+            - pace \(p.pace)/100; \(p.wpm) words/min
+            - overall \(metrics.overall)/100; parts at a narrator's level: \(p.barsCleared) of 5
+            - the part to work on next: \(focus)
+            """
+        } else {
+            rules = """
+            - Pace band: \(metrics.rateLow)–\(metrics.rateHigh) \(unit)/min. Inside
+              is right; don't push a learner to go faster inside the band.
+            - Prioritise in this order: skipped/changed words, stalls, pace, fading
+              at sentence ends, fillers. Skip anything that is already fine.
+            """
+            measured = """
+            - accuracy \(metrics.accuracy)/100; skipped or changed: \(metrics.missed.isEmpty ? "none" : metrics.missed.joined(separator: " | "))
+            - pace \(metrics.rate) \(unit)/min (score \(metrics.paceScore))
+            - pauses: \(metrics.pausesAtBreaks) breaths for \(metrics.breaks) sentence breaks; \(metrics.hesitations) stalls over \(String(format: "%.1f", SpeechAnalyzer.hesitationSeconds))s (score \(metrics.pauseScore))
+            - fillers: \(metrics.fillers) (score \(metrics.fillerScore))
+            - voice steadiness / fading at sentence ends: \(metrics.steadiness)/100
+            - overall \(metrics.overall)/100
+            """
+        }
         let system = """
         You are a speech coach — think a broadcast voice trainer — reviewing ONE
         take of a learner (\(level.rawValue.uppercased())) reading a prepared
@@ -126,10 +171,7 @@ enum SpeechCoach {
         RULES
         - The numbers below were MEASURED. Use them; never state a number that
           is not given, never re-score.
-        - Pace band: \(metrics.rateLow)–\(metrics.rateHigh) \(unit)/min. Inside
-          is right; don't push a learner to go faster inside the band.
-        - Prioritise in this order: skipped/changed words, stalls, pace, fading
-          at sentence ends, fillers. Skip anything that is already fine.
+        \(rules)
         - Warm, direct, no filler praise, no scolding.
         """
         let user = """
@@ -140,12 +182,7 @@ enum SpeechCoach {
         \(transcript)
 
         MEASURED:
-        - accuracy \(metrics.accuracy)/100; skipped or changed: \(metrics.missed.isEmpty ? "none" : metrics.missed.joined(separator: " | "))
-        - pace \(metrics.rate) \(unit)/min (score \(metrics.paceScore))
-        - pauses: \(metrics.pausesAtBreaks) breaths for \(metrics.breaks) sentence breaks; \(metrics.hesitations) stalls over \(String(format: "%.1f", SpeechAnalyzer.hesitationSeconds))s (score \(metrics.pauseScore))
-        - fillers: \(metrics.fillers) (score \(metrics.fillerScore))
-        - voice steadiness / fading at sentence ends: \(metrics.steadiness)/100
-        - overall \(metrics.overall)/100
+        \(measured)
         """
         do {
             let p: Payload = try await GeminiClient.shared.sendJSON(

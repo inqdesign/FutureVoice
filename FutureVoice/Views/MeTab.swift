@@ -71,6 +71,8 @@ struct MeTab: View {
     /// The finished export, waiting to be shared.
     @State private var exportedBackup: URL?
     @State private var confirmingConsentWithdrawal = false
+    /// Season 2's speech scoring, before Season 2 opens (admin accounts).
+    @AppStorage(SpeechScoreV4.defaultsKey) private var speechScoring4 = false
     @State private var withdrawingConsent = false
     #if DEBUG
     @State private var confirmingOnboardingReset = false
@@ -271,6 +273,21 @@ struct MeTab: View {
                     .disabled(deletingAccount)
                 } footer: {
                     Text(explain("Deleting your account permanently removes your voice clone, talk time, and account data. Practice data on this device is erased too."))
+                }
+
+                // Admin accounts try Season 2's scoring on their own takes
+                // before it opens (2026-11-07). Takes scored this way stay
+                // off every board.
+                if account.unlimited {
+                    Section {
+                        Toggle(isOn: $speechScoring4) {
+                            row(icon: "flask",
+                                title: explain("Season 2 scoring"),
+                                subtitle: explain("English speech takes are scored the new way and stay off the boards"))
+                        }
+                    } header: {
+                        Text("Lab")
+                    }
                 }
 
                 #if DEBUG

@@ -2385,6 +2385,9 @@ struct SpeechMetrics: Codable, Hashable {
     /// challenge server re-checks (`submit_speech_challenge_take`).
     /// nil = not assessed; `overall` then uses the weighting without it.
     var pronunciation: Int? = nil
+    /// Season 2's five parts (`SpeechScoreV4`, `scoring` 4); `overall` is
+    /// their total. nil on every take scored the older ways.
+    var parts: SpeechParts? = nil
 }
 
 /// The model's notes on a take, in the NATIVE language, anchored to the

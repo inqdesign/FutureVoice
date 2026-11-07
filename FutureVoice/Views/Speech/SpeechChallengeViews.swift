@@ -724,6 +724,9 @@ struct SpeechChallengeEntrySection: View {
             case .failed:
                 Label("This take couldn't reach the board.", systemImage: "exclamationmark.triangle")
                     .foregroundStyle(.secondary)
+            case .newScoring:
+                Label("Scored the Season 2 way, so it stays off this board.", systemImage: "flask")
+                    .foregroundStyle(.secondary)
             case nil:
                 if let rank = standing?.myRank, let best = standing?.myBest {
                     Label("Your best on the board: \(best) · #\(rank)", systemImage: "trophy")
