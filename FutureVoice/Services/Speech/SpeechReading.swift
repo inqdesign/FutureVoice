@@ -111,7 +111,11 @@ enum SpeechReading {
         let ratios = both.map { log(take[$0]!.duration / reference[$0]!.duration) }
         let tempo = ratios.sorted()[ratios.count / 2]
         let held = zip(both, ratios)
-            .map { (i, r) in SpeechReadingScore.Held(word: script[i], times: (exp(r - tempo) * 10).rounded() / 10) }
+            .map { (i, r) in
+                SpeechReadingScore.Held(word: script[i], times: (exp(r - tempo) * 10).rounded() / 10,
+                                        seconds: (take[i]!.duration * 10).rounded() / 10,
+                                        nativeSeconds: (reference[i]!.duration * 10).rounded() / 10)
+            }
             .filter { $0.times >= 2 }
             .sorted { $0.times > $1.times }
 
@@ -187,7 +191,15 @@ struct SpeechReadingScore: Codable, Hashable {
     }
     enum Part: String, CaseIterable { case speed, rhythm, pauses, accuracy, pronunciation }
     struct Pause: Codable, Hashable { var after: String; var seconds: Double }
-    struct Held: Codable, Hashable { var word: String; var times: Double }
+    /// A word held far longer than the native reading holds it. `times` is
+    /// after the reader's own pace is taken out (what picks the word); the
+    /// seconds are what the page shows (founder: "4.6x means nothing to me").
+    struct Held: Codable, Hashable {
+        var word: String
+        var times: Double
+        var seconds: Double? = nil
+        var nativeSeconds: Double? = nil
+    }
 
     /// A narrator's level, part by part.
     static let bar = 95

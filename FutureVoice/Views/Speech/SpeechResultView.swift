@@ -444,11 +444,16 @@ struct SpeechResultView: View {
     }
 
     private func heldList(_ held: [SpeechReadingScore.Held]) -> String {
-        held.prefix(3).map { "“\($0.word)” \(String(format: "%.1f", $0.times))×" }.joined(separator: " · ")
+        // Seconds, yours beside the native reading's: a ratio meant nothing
+        // on screen (founder, 2026-11-08).
+        held.prefix(3).map { h in
+            guard let mine = h.seconds, let native = h.nativeSeconds else { return "“\(h.word)”" }
+            return explain("“\(h.word)” \(String(format: "%.1f", mine))s (native \(String(format: "%.1f", native))s)")
+        }.joined(separator: " · ")
     }
 
     private func extraPauseList(_ pauses: [SpeechReadingScore.Pause]) -> String {
-        pauses.prefix(3).map { "“\($0.after)” \(String(format: "%.1f", $0.seconds))s" }.joined(separator: " · ")
+        pauses.prefix(3).map { explain("after “\($0.after)” \(String(format: "%.1f", $0.seconds))s") }.joined(separator: " · ")
     }
 
     /// What one part measured, in one line, against the native reading.
@@ -464,7 +469,7 @@ struct SpeechResultView: View {
                                   : explain("Held too long: \(heldList(r.held))")
         case .pauses:
             return r.extraPauses.isEmpty ? explain("No pauses where the native reading has none")
-                                         : explain("Stopped after: \(extraPauseList(r.extraPauses))")
+                                         : explain("Stopped: \(extraPauseList(r.extraPauses))")
         case .accuracy:
             if r.slips == 0 { return explain("Every word as written") }
             return r.missed.isEmpty ? explain("Words read differently: \(r.slips)")

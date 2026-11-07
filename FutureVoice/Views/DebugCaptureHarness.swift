@@ -349,7 +349,9 @@ enum DebugCapture {
             speed: 0.76, rhythm: 0.79, pausesPer100: 7.6, slipsPer100: 2.6, soundAccuracy: 97, slips: 5,
             extraPauses: [.init(after: "running", seconds: 1.0), .init(after: "here's", seconds: 0.8),
                           .init(after: "thought", seconds: 0.7)],
-            held: [.init(word: "with", times: 4.6), .init(word: "then", times: 3.4), .init(word: "this", times: 2.7)],
+            held: [.init(word: "with", times: 4.6, seconds: 0.8, nativeSeconds: 0.1),
+                   .init(word: "then", times: 3.4, seconds: 0.5, nativeSeconds: 0.1),
+                   .init(word: "this", times: 2.7, seconds: 0.6, nativeSeconds: 0.2)],
             missed: ["the"], weakest: [])
         take.metrics.reading = reading
         take.metrics.overall = reading.total
