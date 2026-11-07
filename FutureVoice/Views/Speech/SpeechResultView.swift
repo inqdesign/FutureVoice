@@ -83,6 +83,11 @@ struct SpeechResultView: View {
                 }
                 .padding(.vertical, 6)
 
+                // Season 2: what the number means, right under it.
+                if let r = m.reading {
+                    levelRows(r)
+                }
+
                 if let tips = take.coaching?.tips, !tips.isEmpty {
                     ForEach(Array(tips.enumerated()), id: \.offset) { _, tip in
                         Label(tip, systemImage: "arrow.forward.circle")
@@ -100,7 +105,9 @@ struct SpeechResultView: View {
 
             playbackSection(take)
 
-            if let parts = m.parts {
+            if let reading = m.reading {
+                readingSections(reading, take: take, language: script.language)
+            } else if let parts = m.parts {
                 seasonTwoSection(parts, take: take, language: script.language)
             } else {
                 Section("Measured") {
@@ -390,6 +397,181 @@ struct SpeechResultView: View {
         let weak = (take.pronunciationWords ?? []).filter(\.isJudged).prefix(3).map(\.word)
         return weak.isEmpty ? explain("No sound stood out")
                             : explain("Work on: \(weak.joined(separator: " · "))")
+    }
+
+    // MARK: - Season 2: against a native reading (scoring 5)
+
+    private func levelTitle(_ level: SpeechReadingLevel) -> LocalizedStringKey {
+        switch level {
+        case .announcer: return "Announcer level"
+        case .narrator: return "Narrator level"
+        case .native: return "Native level"
+        case .nearNative: return "Close to native"
+        case .intermediate: return "Intermediate"
+        case .practicing: return "Still practicing"
+        }
+    }
+
+    private func levelNote(_ level: SpeechReadingLevel) -> LocalizedStringKey {
+        switch level {
+        case .announcer: return "Every part at a skilled narrator's level"
+        case .narrator: return "Skilled narrators average \(SpeechReading.narratorAverage)"
+        case .native: return "Native speakers reading average \(SpeechReading.nativeAverage)"
+        case .nearNative: return "Where the best learners reach"
+        case .intermediate: return "Learners average \(SpeechReading.learnerAverage)"
+        case .practicing: return "Below most learners"
+        }
+    }
+
+    private func readingTitle(_ part: SpeechReadingScore.Part) -> LocalizedStringKey {
+        switch part {
+        case .speed: return "Speaking speed"
+        case .rhythm: return "Rhythm"
+        case .pauses: return "Pauses"
+        case .accuracy: return "Accuracy"
+        case .pronunciation: return "Pronunciation"
+        }
+    }
+
+    private func readingIcon(_ part: SpeechReadingScore.Part) -> String {
+        switch part {
+        case .speed: return "speedometer"
+        case .rhythm: return "metronome"
+        case .pauses: return "pause.circle"
+        case .accuracy: return "text.badge.checkmark"
+        case .pronunciation: return "waveform.badge.mic"
+        }
+    }
+
+    private func heldList(_ held: [SpeechReadingScore.Held]) -> String {
+        held.prefix(3).map { "“\($0.word)” \(String(format: "%.1f", $0.times))×" }.joined(separator: " · ")
+    }
+
+    private func extraPauseList(_ pauses: [SpeechReadingScore.Pause]) -> String {
+        pauses.prefix(3).map { "“\($0.after)” \(String(format: "%.1f", $0.seconds))s" }.joined(separator: " · ")
+    }
+
+    /// What one part measured, in one line, against the native reading.
+    private func readingDetail(_ part: SpeechReadingScore.Part, _ r: SpeechReadingScore) -> String {
+        switch part {
+        case .speed:
+            let pct = Int((abs(1 - r.speed) * 100).rounded())
+            if r.speed < 0.97 { return explain("\(pct)% slower than the native reading") }
+            if r.speed > 1.15 { return explain("\(pct)% faster than the native reading") }
+            return explain("The native reading's pace")
+        case .rhythm:
+            return r.held.isEmpty ? explain("Words held as long as a native holds them")
+                                  : explain("Held too long: \(heldList(r.held))")
+        case .pauses:
+            return r.extraPauses.isEmpty ? explain("No pauses where the native reading has none")
+                                         : explain("Stopped after: \(extraPauseList(r.extraPauses))")
+        case .accuracy:
+            if r.slips == 0 { return explain("Every word as written") }
+            return r.missed.isEmpty ? explain("Words read differently: \(r.slips)")
+                                    : explain("Words read differently: \(r.slips) · \(quoted(r.missed))")
+        case .pronunciation:
+            return r.weakest.isEmpty ? explain("No clearly wrong sounds") : soundsList(r.weakest)
+        }
+    }
+
+    /// The one thing to work on next, as an instruction with its place.
+    private func readingFocus(_ part: SpeechReadingScore.Part, _ r: SpeechReadingScore) -> String {
+        switch part {
+        case .speed:
+            return explain("Read a little faster: \(Int((abs(1 - r.speed) * 100).rounded()))% slower than the native reading.")
+        case .rhythm:
+            return r.held.isEmpty ? explain("Keep an even flow from word to word.")
+                                  : explain("Don't hold these words: \(heldList(r.held))")
+        case .pauses:
+            return r.extraPauses.isEmpty ? explain("Read each phrase in one breath.")
+                                         : explain("Don't stop here: \(extraPauseList(r.extraPauses))")
+        case .accuracy:
+            return r.missed.isEmpty ? explain("Read every word as written.")
+                                    : explain("Read every word as written: \(quoted(r.missed))")
+        case .pronunciation:
+            return r.weakest.isEmpty ? explain("Make every sound as clear as the rest.")
+                                     : explain("Work on these sounds: \(soundsList(r.weakest))")
+        }
+    }
+
+    /// The level the score lands in, the averages beside it, and every band.
+    @ViewBuilder
+    private func levelRows(_ r: SpeechReadingScore) -> some View {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(levelTitle(r.level)).font(.title3.weight(.semibold))
+                Text("Native speakers average \(SpeechReading.nativeAverage) · 100 is an announcer's read")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 4)
+            DisclosureGroup("What the scores mean") {
+                ForEach(SpeechReadingLevel.allCases, id: \.self) { level in
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(verbatim: level.range.count == 1 ? "\(level.range.lowerBound)"
+                                                               : "\(level.range.lowerBound)–\(level.range.upperBound)")
+                            .font(.subheadline.monospacedDigit())
+                            .frame(width: 56, alignment: .leading)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(levelTitle(level)).font(.subheadline.weight(level == r.level ? .semibold : .regular))
+                            Text(levelNote(level)).font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        if level == r.level {
+                            Text("You").font(.caption.weight(.semibold)).foregroundStyle(.tint)
+                        }
+                    }
+                }
+            }
+    }
+
+    @ViewBuilder
+    private func readingSections(_ r: SpeechReadingScore, take: SpeechTake, language: String) -> some View {
+        Section {
+            if let focus = r.focus {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label {
+                        Text("Next: \(Text(readingTitle(focus)))").font(.headline)
+                    } icon: {
+                        Image(systemName: "scope")
+                    }
+                    Text(readingFocus(focus, r))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 4)
+            } else {
+                Label("A narrator's read. Nothing left to fix.", systemImage: "checkmark.seal.fill")
+                    .foregroundStyle(.green)
+            }
+            ForEach(SpeechReadingScore.Part.allCases, id: \.self) { part in
+                let score = r.parts.all.first { $0.0 == part }?.1 ?? 0
+                HStack(alignment: .firstTextBaseline) {
+                    Label(readingTitle(part), systemImage: readingIcon(part))
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 2) {
+                        HStack(spacing: 4) {
+                            if score >= SpeechReadingScore.bar {
+                                Image(systemName: "checkmark.seal.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(.green)
+                                    .accessibilityLabel(Text("At a narrator's level"))
+                            }
+                            Text(verbatim: "\(score)")
+                                .font(.body.monospacedDigit())
+                                .foregroundStyle(SpeechScoreColor.color(score))
+                        }
+                        Text(readingDetail(part, r))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.trailing)
+                    }
+                }
+            }
+        } header: {
+            Text("Compared with a native reading")
+        } footer: {
+            Text("Each word is compared with the same script read by a native voice (\(Text(r.gender == "female" ? "female" : "male"))). Intonation isn't scored yet: nothing measures it reliably.")
+        }
     }
 
     // MARK: - Season 2 (scoring 4)

@@ -114,7 +114,28 @@ enum SpeechCoach {
         // the older ways gets the prompt it always had.
         let rules: String
         let measured: String
-        if let p = metrics.parts {
+        if let r = metrics.reading {
+            let focus = r.focus.map { "\($0.rawValue)" } ?? "none: every part is at a narrator's level"
+            rules = """
+            - The take was compared word by word with a native reading of the
+              same script. Five parts; 100 only when every part is at a
+              skilled narrator's level. Native speakers reading average
+              \(SpeechReading.nativeAverage). The headline and the first tip are
+              about THE PART TO WORK ON NEXT, using its details (the words held
+              too long, where the reader stopped, the numbers). Then the next
+              weakest part. Skip parts at 95 or more. Intonation is not
+              measured: say nothing about it.
+            """
+            measured = """
+            - overall \(metrics.overall)/100 (\(String(describing: r.level)))
+            - speed \(r.parts.speed)/100: the reader took \(String(format: "%.0f", (1 / max(r.speed, 0.01) - 1) * 100))% longer to say the words than the native reading
+            - rhythm \(r.parts.rhythm)/100; words held far longer than the native reading holds them: \(r.held.isEmpty ? "none" : r.held.map { "\"\($0.word)\" \($0.times)x" }.joined(separator: ", "))
+            - pauses \(r.parts.pauses)/100; stopped where the native reading doesn't, after: \(r.extraPauses.isEmpty ? "none" : r.extraPauses.map { "\"\($0.after)\" \($0.seconds)s" }.joined(separator: ", "))
+            - accuracy \(r.parts.accuracy)/100; words read differently: \(r.slips); first ones: \(r.missed.isEmpty ? "none" : r.missed.joined(separator: " | "))
+            - pronunciation \(r.parts.pronunciation)/100 (only clearly wrong sounds count)
+            - the part to work on next: \(focus)
+            """
+        } else if let p = metrics.parts {
             let weakest = p.weakest.map { "\($0.phoneme.isEmpty ? "" : $0.phoneme + " in ")\"\($0.word)\" \($0.score)" }
             let breaks = p.breaks.map { "\"\($0.before) / \($0.after)\" (\(String(format: "%.1f", $0.seconds))s)" }
             let focus = p.focus.map { "\($0.rawValue)" } ?? "none: every part is at a narrator's level"

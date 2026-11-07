@@ -338,6 +338,29 @@ enum DebugCapture {
         return scripts[0]
     }
 
+    /// The seeded take scored against a native reading, with the measures
+    /// of the founder's take of 2026-11-07.
+    static func seedSeasonTwoReading() {
+        let id = UUID(uuidString: "C4A11E00-0000-4000-8000-0000000000AA")!
+        guard var take = SpeechStore.shared.takes.first(where: { $0.id == id }) else { return }
+        let parts = SpeechReading.parts(speed: 0.76, rhythm: 0.79, pausesPer100: 7.57, slipsPer100: 2.65, soundAccuracy: 96.6)
+        let reading = SpeechReadingScore(
+            version: SpeechReading.version, gender: "male", parts: parts, coverage: 1,
+            speed: 0.76, rhythm: 0.79, pausesPer100: 7.6, slipsPer100: 2.6, soundAccuracy: 97, slips: 5,
+            extraPauses: [.init(after: "running", seconds: 1.0), .init(after: "here's", seconds: 0.8),
+                          .init(after: "thought", seconds: 0.7)],
+            held: [.init(word: "with", times: 4.6), .init(word: "then", times: 3.4), .init(word: "this", times: 2.7)],
+            missed: ["the"], weakest: [])
+        take.metrics.reading = reading
+        take.metrics.overall = reading.total
+        take.metrics.scoring = SpeechReading.version
+        SpeechStore.shared.save(take)
+        SpeechChallenges.shared.seedPreview(
+            language: "en", scripts: SpeechChallenges.shared.scripts,
+            standings: SpeechChallenges.shared.standings, boards: [:],
+            entries: [id: .newScoring], overall: SpeechChallenges.shared.overall)
+    }
+
     /// Re-scores the seeded challenge take the Season 2 way.
     static func seedSeasonTwoTake() {
         let id = UUID(uuidString: "C4A11E00-0000-4000-8000-0000000000AA")!
@@ -941,6 +964,14 @@ enum DebugCapture {
         case "speech-challenge-result":
             // A take that moved up the board.
             _ = seedSpeechChallenges(appState)
+            return AnyView(NavigationStack {
+                SpeechResultView(takeId: UUID(uuidString: "C4A11E00-0000-4000-8000-0000000000AA")!)
+            })
+        case "speech-result-v5":
+            // Season 2 against a native reading, with the founder's own take
+            // of 2026-11-07 (Small Wins) as the numbers.
+            _ = seedSpeechChallenges(appState)
+            seedSeasonTwoReading()
             return AnyView(NavigationStack {
                 SpeechResultView(takeId: UUID(uuidString: "C4A11E00-0000-4000-8000-0000000000AA")!)
             })

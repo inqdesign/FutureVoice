@@ -23,6 +23,9 @@ enum PitchTracker {
         /// Standard deviation, same scale.
         var sdSemitones: Double
         var voicedFrames: Int
+        /// The voice's median pitch, Hz — what picks a reading's reference
+        /// (`SpeechReading.femaleAboveHz`).
+        var medianHz: Double = 0
     }
 
     static let floorHz = 75.0
@@ -139,6 +142,6 @@ enum PitchTracker {
         }
         let mean = st.reduce(0, +) / Double(st.count)
         let sd = (st.map { ($0 - mean) * ($0 - mean) }.reduce(0, +) / Double(st.count)).squareRoot()
-        return Stats(rangeSemitones: pct(0.9) - pct(0.1), sdSemitones: sd, voicedFrames: f0.count)
+        return Stats(rangeSemitones: pct(0.9) - pct(0.1), sdSemitones: sd, voicedFrames: f0.count, medianHz: median)
     }
 }

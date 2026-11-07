@@ -33,6 +33,8 @@ struct SpeechDelivery: Equatable {
     /// Pitch movement, semitones (`PitchTracker`).
     var pitchRange: Double?
     var pitchSD: Double?
+    /// The voice's median pitch, Hz.
+    var pitchMedianHz: Double? = nil
     /// Azure's sound accuracy, weighted by judged words (the take's
     /// `soundScore`).
     var soundAccuracy: Int? = nil
@@ -96,6 +98,7 @@ struct SpeechDelivery: Equatable {
         if let pitch = pitch(of: audioURL) {
             d.pitchRange = (pitch.rangeSemitones * 10).rounded() / 10
             d.pitchSD = (pitch.sdSemitones * 10).rounded() / 10
+            d.pitchMedianHz = pitch.medianHz.rounded()
         }
         return d
     }

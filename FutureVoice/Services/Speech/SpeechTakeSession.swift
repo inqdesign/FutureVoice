@@ -127,11 +127,19 @@ final class SpeechTakeSession: ObservableObject {
     private let native: String
     private let level_: CEFRLevel
 
+    /// The native reference reading, fetched as the screen opens so it is
+    /// there when the take ends (Season 2 scoring only).
+    private var referenceTask: Task<SpeechReference?, Never>?
+
     init(script: SpeechScript, native: String, level: CEFRLevel) {
         self.script = script
         self.native = native
         self.level_ = level
         self.track = SpeechPrompterTrack(script: script.body, language: script.language)
+        if SpeechScoreV4.isEnabled, SpeechReading.applies(to: script.language) {
+            let body = script.body, language = script.language
+            referenceTask = Task { await SpeechReferenceService.fetch(text: body, language: language) }
+        }
         let defaults = UserDefaults.standard
         cameraOn = defaults.object(forKey: Self.cameraKey) as? Bool ?? true
         speed = defaults.object(forKey: Self.speedKey) as? Double ?? 1.0
@@ -445,14 +453,19 @@ final class SpeechTakeSession: ObservableObject {
             SpeechAnalyzer.analyze(script: body, transcript: transcript, language: language,
                                    envelope: envelope, pronunciation: pronScore)
         }.value
-        if SpeechScoreV4.isEnabled, SpeechScoreV4.applies(to: language),
-           let parts = SpeechScoreV4.score(accuracy: metrics.accuracy, coverage: metrics.coverage ?? 1,
-                                           fillers: metrics.fillers, missed: metrics.missed,
-                                           slips: metrics.slips, scriptTokens: metrics.scriptTokens,
-                                           delivery: await delivery.value, language: language) {
-            metrics.parts = parts
-            metrics.overall = parts.total
-            metrics.scoring = SpeechScoreV4.version
+        // Season 2: compared with a native reading of this script in the
+        // reader's gender (`SpeechReading`). Without the reference (offline,
+        // the server not ready) the take keeps the scoring it already has.
+        if SpeechScoreV4.isEnabled, SpeechReading.applies(to: language) {
+            let delivered = await delivery.value
+            let refTask = referenceTask
+            if let reference = await Self.within(seconds: 45, { await refTask?.value ?? nil }),
+               let reading = Self.reading(pieces: assessed, reference: reference, script: body,
+                                          metrics: metrics, delivery: delivered) {
+                metrics.reading = reading
+                metrics.overall = reading.total
+                metrics.scoring = SpeechReading.version
+            }
         }
 
         let take = SpeechTake(id: id, scriptId: script.id, createdAt: Date(),
@@ -650,6 +663,41 @@ final class SpeechTakeSession: ObservableObject {
         let weak = pieces.flatMap(\.weakWords)
             .sorted { ($0.accuracy ?? 0) < ($1.accuracy ?? 0) }
         return (score, Array(weak.prefix(12)))
+    }
+
+    /// A take's Season 2 score from its assessed pieces (each piece's words
+    /// timed from its own start, so no pause is measured across pieces) and
+    /// the reference in the reader's gender, told by the voice's pitch.
+    nonisolated static func reading(pieces: [SpeechDelivery.Piece], reference: SpeechReference,
+                                    script: String, metrics: SpeechMetrics,
+                                    delivery: SpeechDelivery) -> SpeechReadingScore? {
+        let tokens = SpeechDelivery.referenceTokens(script).map(\.core)
+        var take: [(word: String, startMs: Int, endMs: Int, breakAfter: Bool)] = []
+        for piece in pieces {
+            let words = piece.result.words.filter { !$0.isOmission && $0.durationMs > 0 }
+            for (i, w) in words.enumerated() {
+                take.append((w.word, w.offsetMs, w.offsetMs + w.durationMs, i == words.count - 1))
+            }
+        }
+        let gender = (delivery.pitchMedianHz ?? 0) > SpeechReading.femaleAboveHz ? "female" : "male"
+        let ref = reference.words(for: gender).map { (word: $0.w, startMs: $0.s, endMs: $0.e, breakAfter: false) }
+        return SpeechReading.score(
+            take: SpeechReading.timeline(words: take, script: tokens),
+            reference: SpeechReading.timeline(words: ref, script: tokens),
+            script: tokens, slips: metrics.slips, scriptTokens: metrics.scriptTokens,
+            missed: metrics.missed, soundAccuracy: delivery.soundAccuracy, weakest: delivery.weakest,
+            coverage: metrics.coverage ?? 1, gender: gender)
+    }
+
+    /// The value, or nil if it takes longer than `seconds`.
+    nonisolated static func within<T: Sendable>(seconds: Double, _ value: @escaping @Sendable () async -> T?) async -> T? {
+        await withTaskGroup(of: T?.self) { group in
+            group.addTask { await value() }
+            group.addTask { try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000)); return nil }
+            let first = await group.next() ?? nil
+            group.cancelAll()
+            return first
+        }
     }
 
     /// Applies a change to the stored take and to the one on screen.

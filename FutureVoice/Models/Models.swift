@@ -2393,6 +2393,9 @@ struct SpeechMetrics: Codable, Hashable {
     /// scored before 2026-11-08.
     var slips: Int? = nil
     var scriptTokens: Int? = nil
+    /// Season 2's score against a native reference reading
+    /// (`SpeechReading`, `scoring` 5); `overall` is its total.
+    var reading: SpeechReadingScore? = nil
 }
 
 /// The model's notes on a take, in the NATIVE language, anchored to the
