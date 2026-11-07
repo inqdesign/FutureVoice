@@ -31,13 +31,16 @@ final class SpeechDeliveryTests: XCTestCase {
         XCTAssertEqual(d.prosody, 90)
     }
 
-    /// An inserted word is dropped before lining up with the script; a
-    /// piece whose words still don't match is not counted at all.
+    /// An inserted word is dropped before lining up with the script; the
+    /// silence around it is not judged as one pause (the filler is counted
+    /// on its own); a piece whose words still don't match is not counted.
     func testInsertionsAreSkippedAndMismatchesLeftOut() {
         let lined = SpeechDelivery.Piece(reference: "one two three", result: result([
-            word("one", 0), word("um", 300, error: "Insertion"), word("two", 700), word("three", 1000),
+            word("one", 0), word("um", 300, error: "Insertion"), word("two", 700), word("three", 1300),
         ]))
-        XCTAssertEqual(SpeechDelivery.timing([lined], language: "en").midPauses, 1)
+        let d = SpeechDelivery.timing([lined], language: "en")
+        XCTAssertEqual(d.midPauses, 1)        // two|three, 0.3 s
+        XCTAssertEqual(d.midBoundaries, 1)    // one|two is not judged
         let off = SpeechDelivery.Piece(reference: "alpha beta", result: result([
             word("one", 0), word("two", 300), word("three", 600),
         ]))
@@ -78,6 +81,41 @@ final class SpeechDeliveryTests: XCTestCase {
             word("over", 2400, error: "Insertion"),  // after the last: the cut
         ]))
         XCTAssertEqual(SpeechDelivery.timing([piece], language: "en").stumbles, ["quick"])
+    }
+
+    /// The founder's take, 2026-11-07: "the five-minute rule" read as "the
+    /// five minutes rule". Azure files "five minutes" as added and
+    /// "five-minute" as left out. That is one word said differently, not a
+    /// stumble, and the 0.8 s it took is not a pause between "the" and
+    /// "rule".
+    func testAWordSaidDifferentlyIsNotAStumbleOrAPause() {
+        let piece = SpeechDelivery.Piece(reference: "about the five-minute rule here", result: result([
+            word("about", 0), word("the", 300),
+            word("five", 600, error: "Insertion"), word("minutes", 900, error: "Insertion"),
+            word("five-minute", 0, 0, error: "Omission"),
+            word("rule", 1400), word("here", 1700),
+        ]))
+        let d = SpeechDelivery.timing([piece], language: "en")
+        XCTAssertEqual(d.stumbles, [])
+        XCTAssertEqual(d.midPauses, 0)
+        XCTAssertTrue(d.breaks.isEmpty)
+    }
+
+    /// A read-back that lost words Azure heard gives way to Azure's text;
+    /// one that kept them stands; with no Azure text nothing changes.
+    func testShortReadBackGivesWayToAzure() {
+        let azure = "And guess what? This morning I ran for half an hour and I didn't even notice."
+        let lost = SpeechTakeSession.pieceText(readBack: "And guess what? This morning I went for",
+                                               heard: azure, language: "en")
+        XCTAssertEqual(lost?.text, azure)
+        XCTAssertEqual(lost?.replaced, true)
+        XCTAssertEqual(SpeechTakeSession.pieceText(readBack: "", heard: azure, language: "en")?.text, azure)
+        let kept = SpeechTakeSession.pieceText(
+            readBack: "And guess what, this morning I went for half an hour and I did not even notice.",
+            heard: azure, language: "en")
+        XCTAssertEqual(kept?.replaced, false)
+        XCTAssertNil(SpeechTakeSession.pieceText(readBack: nil, heard: nil, language: "en"))
+        XCTAssertEqual(SpeechTakeSession.pieceText(readBack: "hi", heard: "", language: "en")?.text, "hi")
     }
 
     func testWeakSoundsIsTheFifthPercentile() {

@@ -119,9 +119,23 @@ struct SpeechDelivery: Equatable {
             // cut landing a word early or late, not the reader.
             let firstSaid = all.firstIndex { !$0.isInsertion && !$0.isOmission && $0.durationMs > 0 }
             let lastSaid = all.lastIndex { !$0.isInsertion && !$0.isOmission && $0.durationMs > 0 }
+            // A run of Insertions that comes WITH an Omission is one word
+            // heard differently, not a stumble: the script's "five-minute"
+            // read as "five minutes", or "I'll" heard as "are we" (both on
+            // the founder's take of 2026-11-07). That is accuracy's and the
+            // sounds' business. Only a run with nothing left out of the
+            // script is a word added — a repeat, a false start.
             if let f = firstSaid, let l = lastSaid, f < l {
-                for i in (f + 1)..<l where all[i].isInsertion && !Self.fillers.contains(core(all[i].word)) {
-                    stumbles.append(all[i].word)
+                var i = f + 1
+                while i < l {
+                    guard all[i].isInsertion || all[i].isOmission else { i += 1; continue }
+                    var j = i
+                    while j < l && (all[j].isInsertion || all[j].isOmission) { j += 1 }
+                    let run = all[i..<j]
+                    if !run.contains(where: \.isOmission) {
+                        for w in run where !Self.fillers.contains(core(w.word)) { stumbles.append(w.word) }
+                    }
+                    i = j
                 }
             }
 
@@ -130,7 +144,8 @@ struct SpeechDelivery: Equatable {
             // don't always split the way Azure's words do ("—", hyphens,
             // numbers), so the two are lined up by content, not by count: a
             // boundary is judged only where its word found its script token.
-            let said = all.filter { !$0.isInsertion }
+            let saidAt = all.indices.filter { !all[$0].isInsertion }
+            let said = saidAt.map { all[$0] }
             let ref = spaced ? referenceTokens(piece.reference) : []
             let match = align(said.map { core($0.word) }, ref.map(\.core))
             let matched = match.compactMap { $0 }.count
@@ -141,6 +156,11 @@ struct SpeechDelivery: Equatable {
             for (a, b) in zip(timed, timed.dropFirst()) {
                 let gap = Double(b.element.offsetMs - (a.element.offsetMs + a.element.durationMs)) / 1000
                 guard lined, let r = match[a.offset] else { continue }
+                // Something was said or left out between the two (an added
+                // word, a word heard differently): the silence between them
+                // is not one pause, so it isn't judged as one.
+                let between = (saidAt[a.offset] + 1)..<saidAt[b.offset]
+                if between.contains(where: { all[$0].isInsertion || all[$0].isOmission }) { continue }
                 switch ref[r].stop {
                 case .sentence:
                     sentenceGaps += max(0, gap)

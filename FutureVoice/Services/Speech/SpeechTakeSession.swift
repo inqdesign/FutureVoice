@@ -86,6 +86,30 @@ final class SpeechTakeSession: ObservableObject {
         /// What the piece was judged against (the script span, or the
         /// read-back): `SpeechDelivery` lines Azure's words up with it.
         var reference: String = ""
+        /// The read-back lost words Azure heard, and Azure's hearing stands
+        /// in for it (`pieceText`).
+        var readBackReplaced = false
+    }
+
+    /// A piece's words, from two witnesses. The read-back (Gemini) is the
+    /// text the take is scored on, but it can come back short: on
+    /// 2026-11-07 the founder's take read 139 words where Azure heard 193 —
+    /// the last piece and a half missing — so the end of the script counted
+    /// as skipped and the coverage scaled every other part down. When Azure
+    /// heard the piece and the read-back holds under 70% of its words (or
+    /// nothing), Azure's own text is the piece's text. With no Azure text
+    /// the read-back stands, nil included.
+    nonisolated static func pieceText(readBack: String?, heard: String?, language: String) -> (text: String, replaced: Bool)? {
+        let read = readBack?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let azure = heard?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !azure.isEmpty else { return readBack.map { ($0, false) } }
+        func size(_ s: String) -> Int {
+            LanguageCatalog.writesSpaces(language)
+                ? s.split(whereSeparator: \.isWhitespace).count
+                : s.filter { !$0.isWhitespace && !$0.isPunctuation }.count
+        }
+        if read.isEmpty || Double(size(read)) < 0.7 * Double(size(azure)) { return (azure, true) }
+        return (readBack ?? read, false)
     }
     private var lastChunkAt: TimeInterval = 0
     /// The prompter cursor at the last cut: the script from here to the
@@ -356,9 +380,11 @@ final class SpeechTakeSession: ObservableObject {
         var texts: [String] = []
         var prons: [PronunciationResult] = []
         var assessed: [SpeechDelivery.Piece] = []
+        var readBackFixed = 0
         for piece in pieces {
             guard let piece = await piece.value else { texts = []; prons = []; assessed = []; break }
             texts.append(piece.text)
+            if piece.readBackReplaced { readBackFixed += 1 }
             if let pron = piece.pron {
                 prons.append(pron)
                 assessed.append(.init(reference: piece.reference, result: pron))
@@ -512,6 +538,8 @@ final class SpeechTakeSession: ObservableObject {
             "pitch_range": delivered.pitchRange ?? -1,
             "pitch_sd": delivered.pitchSD ?? -1,
             "scoring": metrics.scoring ?? 0,
+            // Pieces whose read-back lost words Azure heard (`pieceText`).
+            "readback_fixed": readBackFixed,
             "read_ms": readMs,
             "result_ms": resultMs,
             "coach_ms": coachMs,
@@ -555,8 +583,12 @@ final class SpeechTakeSession: ObservableObject {
                 async let read = SpeechReader.readPiece(audioURL: url, language: language)
                 async let pron = PronunciationAssessor.assess(
                     audioURL: url, reference: reference, language: language, surface: "speech")
-                guard let text = await read else { _ = await pron; return nil }
-                return Piece(text: text, pron: await pron.result, reference: reference)
+                let readBack = await read
+                let result = await pron.result
+                guard let piece = Self.pieceText(readBack: readBack, heard: result?.recognized,
+                                                 language: language) else { return nil }
+                return Piece(text: piece.text, pron: result, reference: reference,
+                             readBackReplaced: piece.replaced)
             }
             guard let text = await SpeechReader.readPiece(audioURL: url, language: language) else { return nil }
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
