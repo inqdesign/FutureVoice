@@ -47,9 +47,6 @@ final class SpeechChallenges: ObservableObject {
         /// Set once the challenge is retired: the board is frozen, nobody can
         /// enter, and it is listed under past challenges.
         var retiredAt: Date? = nil
-        /// Which season it belongs to (20261107120000). nil from an older
-        /// server, or a cache written before seasons.
-        var season: Int? = nil
     }
 
     static func intro(_ standing: Standing?, native: String) -> String? {
@@ -93,9 +90,6 @@ final class SpeechChallenges: ObservableObject {
     /// The overall board's top of the loaded language (and the learner's own
     /// row), for the Speech tab's banner. nil until it loads.
     @Published private(set) var overall: [BoardRow]?
-    /// The season `overall` is the board of: the open one, or when none is
-    /// open, the last one, whose standings are final.
-    @Published private(set) var overallSeason: Int?
     /// By take id. In memory: the page that matters is the one the take
     /// opens on; later visits read the standing instead.
     @Published private(set) var entries: [UUID: Entry] = [:]
@@ -135,26 +129,10 @@ final class SpeechChallenges: ObservableObject {
     /// Retired challenges, newest first — boards frozen.
     var past: [SpeechScript] { scripts.filter { isPast($0.id) } }
 
-    func season(of id: UUID) -> Int? { standings[id]?.season }
-    /// The season taking entries, nil when none is open to this build. A
-    /// season that needs a newer scoring is never listed to an older build
-    /// (`speech_challenge_list(p_scoring:)`), so this is nil on such a
-    /// build too.
-    var openSeason: Int? { live.compactMap { season(of: $0.id) }.max() }
-    /// The newest season that has ended.
-    var lastEndedSeason: Int? {
-        past.compactMap { season(of: $0.id) }.filter { $0 != openSeason }.max()
-    }
-    /// The seasons past challenges belong to, newest first.
-    var pastSeasons: [Int] {
-        Array(Set(past.compactMap { season(of: $0.id) })).sorted(by: >)
-    }
-
     func loadCache(language: String) {
         guard loadedLanguage != language else { return }
         loadedLanguage = language
         overall = nil
-        overallSeason = nil
         let cache = (try? Data(contentsOf: cacheURL(language)))
             .flatMap { try? decoder.decode(Cache.self, from: $0) }
         scripts = cache?.scripts ?? []
@@ -174,7 +152,6 @@ final class SpeechChallenges: ObservableObject {
         let target_seconds: Int
         let published_at: Date
         let retired_at: Date?
-        let season: Int?
         let entrants: Int?
         let top_score: Int?
         let my_best: Int?
@@ -193,20 +170,19 @@ final class SpeechChallenges: ObservableObject {
         if !previewBoards.isEmpty { return }
         #endif
         loadCache(language: language)
-        // The scoring this build reads with: a season that asks for more is
-        // left out, since its board would refuse this build's takes.
-        struct ListParams: Encodable { let p_language: String; let p_scoring: Int }
+        async let overallRows = overallBoard(language: language)
         let rows: [ListRow]
         do {
             rows = try await SupabaseProvider.shared
-                .rpc("speech_challenge_list",
-                     params: ListParams(p_language: language, p_scoring: SpeechAnalyzer.scoringVersion))
+                .rpc("speech_challenge_list", params: ["p_language": language])
                 .execute()
                 .value
         } catch {
             return
         }
+        let board = await overallRows
         guard loadedLanguage == language else { return }
+        if let board { overall = board }
         scripts = rows.map { row in
             SpeechScript(id: row.id, title: row.title,
                          genre: SpeechGenre(rawValue: row.genre) ?? .explainer,
@@ -222,18 +198,9 @@ final class SpeechChallenges: ObservableObject {
                               myBest: row.my_best, myRank: row.my_rank,
                               myAttempts: row.my_attempts, topThree: row.top_three, attempts: row.attempts,
                               category: row.category, intro: row.intro,
-                              link: row.link.flatMap { URL(string: $0) }, retiredAt: row.retired_at,
-                              season: row.season))
+                              link: row.link.flatMap { URL(string: $0) }, retiredAt: row.retired_at))
         })
         writeCache(language)
-        // The overall board of the open season, or the last one's final
-        // standings while the next hasn't opened.
-        let boardSeason = openSeason ?? lastEndedSeason ?? 1
-        if let board = await overallBoard(language: language, season: boardSeason),
-           loadedLanguage == language {
-            overall = board
-            overallSeason = boardSeason
-        }
     }
 
     func board(_ challengeId: UUID, limit: Int = 10) async -> [BoardRow]? {
@@ -247,17 +214,16 @@ final class SpeechChallenges: ObservableObject {
             .value
     }
 
-    /// Every challenge of a language and season on one board (2026-11-05,
-    /// founder; per season since 2026-11-07): each learner's best score per
-    /// challenge, added up, so the way to the top is to take more of them.
-    /// The season's past challenges count.
-    func overallBoard(language: String, season: Int, limit: Int = 10) async -> [BoardRow]? {
+    /// Every challenge of a language on one board (2026-11-05, founder):
+    /// each learner's best score per challenge, added up, so the way to the
+    /// top is to take more of them. Past challenges count.
+    func overallBoard(language: String, limit: Int = 10) async -> [BoardRow]? {
         #if DEBUG
         if let rows = previewOverall { return rows }
         #endif
-        struct Params: Encodable { let p_language: String; let p_limit: Int; let p_season: Int }
+        struct Params: Encodable { let p_language: String; let p_limit: Int }
         return try? await SupabaseProvider.shared
-            .rpc("speech_overall_board", params: Params(p_language: language, p_limit: limit, p_season: season))
+            .rpc("speech_overall_board", params: Params(p_language: language, p_limit: limit))
             .execute()
             .value
     }
@@ -536,7 +502,6 @@ final class SpeechChallenges: ObservableObject {
         self.overall = overall
         self.scripts = scripts
         self.standings = standings
-        overallSeason = overall == nil ? nil : (openSeason ?? lastEndedSeason)
         previewBoards = boards
         self.entries.merge(entries) { $1 }
     }

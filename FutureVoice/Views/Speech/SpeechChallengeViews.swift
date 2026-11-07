@@ -592,22 +592,9 @@ struct SpeechChallengeListView: View {
                     ForEach(challenges.live) { row($0) }
                 }
             }
-            // Past challenges by season, newest first (2026-11-07): a season
-            // is closed with its winners, so each keeps its own section.
-            ForEach(challenges.pastSeasons, id: \.self) { season in
+            if !challenges.past.isEmpty {
                 Section {
-                    ForEach(challenges.past.filter { challenges.season(of: $0.id) == season }) { row($0) }
-                } header: {
-                    Text("Season \(season)")
-                } footer: {
-                    Text("Ended challenges keep their final standings.")
-                }
-            }
-            // From a cache written before seasons: no season on the rows.
-            let unseasoned = challenges.past.filter { challenges.season(of: $0.id) == nil }
-            if !unseasoned.isEmpty {
-                Section {
-                    ForEach(unseasoned) { row($0) }
+                    ForEach(challenges.past) { row($0) }
                 } header: {
                     Text("Past challenges")
                 } footer: {
@@ -950,10 +937,6 @@ struct SpeechBoardRowView: View {
 /// opens the whole board. Each learner's best score per challenge, added up.
 struct SpeechOverallBanner: View {
     let rows: [SpeechChallenges.BoardRow]
-    /// The season this board is, and whether it has ended (its standings are
-    /// then final). nil season: an older server, drawn as before.
-    var season: Int? = nil
-    var isFinal = false
 
     private var top: [SpeechChallenges.BoardRow] { Array(rows.prefix(3)) }
     private var me: SpeechChallenges.BoardRow? { rows.first { $0.is_me } }
@@ -961,16 +944,9 @@ struct SpeechOverallBanner: View {
     var body: some View {
         VStack(spacing: 14) {
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Label("Overall ranking", systemImage: "trophy.fill")
-                        .font(.headline)
-                        .foregroundStyle(.primary)
-                    if let season {
-                        Text(isFinal ? "Season \(season) · Final standings" : "Season \(season)")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                }
+                Label("Overall ranking", systemImage: "trophy.fill")
+                    .font(.headline)
+                    .foregroundStyle(.primary)
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.footnote.weight(.semibold))
@@ -1061,16 +1037,8 @@ struct SpeechOverallBoardView: View {
                 } else {
                     HStack { Spacer(); ProgressView(); Spacer() }
                 }
-            } header: {
-                if let season = challenges.overallSeason {
-                    Text(isFinal ? "Season \(season) · Final standings" : "Season \(season)")
-                }
             } footer: {
-                if isFinal {
-                    Text("This season has ended. These are the final standings.")
-                } else {
-                    Text("Your best score on each challenge, added up. Every challenge you take moves you up.")
-                }
+                Text("Your best score on each challenge, added up. Every challenge you take moves you up.")
             }
         }
         .navigationTitle("Overall ranking")
@@ -1080,16 +1048,8 @@ struct SpeechOverallBoardView: View {
         .task { await load() }
     }
 
-    /// The board's season has ended when it isn't the open one.
-    private var isFinal: Bool {
-        guard let season = challenges.overallSeason else { return false }
-        return season != challenges.openSeason
-    }
-
     private func load() async {
-        guard let season = challenges.overallSeason else { return }
-        if let fresh = await challenges.overallBoard(language: appState.targetLanguage,
-                                                     season: season, limit: 50) {
+        if let fresh = await challenges.overallBoard(language: appState.targetLanguage, limit: 50) {
             rows = fresh
         }
     }
@@ -1153,25 +1113,5 @@ struct SpeechOverallRow: View {
             Text("\(row.score)")
                 .font(.body.monospacedDigit().weight(.semibold))
         }
-    }
-}
-
-/// The Challenges page while no season is open to this build: the last one
-/// has ended with its winners, and the next is on its way. Positive first.
-struct SpeechSeasonBreakCard: View {
-    let ended: Int
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Label("Season \(ended + 1) is coming", systemImage: "flag.checkered")
-                .font(.headline)
-            Text("Season \(ended) has ended. Its winners stay on the boards.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemGroupedBackground)))
-        .accessibilityElement(children: .combine)
     }
 }
