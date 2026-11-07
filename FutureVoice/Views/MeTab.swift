@@ -73,6 +73,15 @@ struct MeTab: View {
     @State private var confirmingConsentWithdrawal = false
     /// Season 2's speech scoring, before Season 2 opens (admin accounts).
     @AppStorage(SpeechScoreV4.defaultsKey) private var speechScoring4 = false
+    /// The Lab section: admin accounts, and every development build (the
+    /// founder tests on the dev app, whose account may not be the admin one).
+    private var showsLab: Bool {
+        #if DEBUG
+        return true
+        #else
+        return account.unlimited
+        #endif
+    }
     @State private var withdrawingConsent = false
     #if DEBUG
     @State private var confirmingOnboardingReset = false
@@ -278,7 +287,7 @@ struct MeTab: View {
                 // Admin accounts try Season 2's scoring on their own takes
                 // before it opens (2026-11-07). Takes scored this way stay
                 // off every board.
-                if account.unlimited {
+                if showsLab {
                     Section {
                         Toggle(isOn: $speechScoring4) {
                             row(icon: "flask",
