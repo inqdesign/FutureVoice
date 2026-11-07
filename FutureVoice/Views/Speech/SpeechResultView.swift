@@ -424,6 +424,10 @@ struct SpeechResultView: View {
         breaks.map { "“\($0.before) / \($0.after)”" }.joined(separator: " · ")
     }
 
+    private func pausesList(_ pauses: [SpeechDelivery.Break]) -> String {
+        pauses.map { "“\($0.before)” \(String(format: "%.1f", $0.seconds))s" }.joined(separator: " · ")
+    }
+
     private func quoted(_ words: [String]) -> String {
         words.map { "“\($0)”" }.joined(separator: " ")
     }
@@ -432,6 +436,10 @@ struct SpeechResultView: View {
     private func partDetail(_ part: SpeechScoreV4.Part, _ p: SpeechParts) -> String {
         switch part {
         case .accuracy:
+            if let slips = p.slips, slips > 0 {
+                return p.missed.isEmpty ? explain("Words read differently: \(slips)")
+                                        : explain("Words read differently: \(slips) · \(quoted(p.missed))")
+            }
             return p.missed.isEmpty ? explain("Every word as written")
                                     : explain("Skipped or changed: \(quoted(p.missed))")
         case .sounds:
@@ -440,6 +448,8 @@ struct SpeechResultView: View {
             var bits: [String] = []
             if !p.breaks.isEmpty { bits.append(breaksList(p.breaks)) }
             if let s = p.stumbles, !s.isEmpty { bits.append(explain("Repeated or added: \(quoted(s))")) }
+            if let r = p.repeats, !r.isEmpty { bits.append(explain("Said again: \(quoted(r))")) }
+            if let l = p.longPauses, !l.isEmpty { bits.append(explain("Long pauses: \(pausesList(l))")) }
             if p.fillers > 0 { bits.append(explain("Fillers: \(p.fillers)")) }
             return bits.isEmpty ? explain("No breaks inside a phrase") : bits.joined(separator: " · ")
         case .expression:
@@ -462,8 +472,12 @@ struct SpeechResultView: View {
             if !p.breaks.isEmpty {
                 return explain("Keep each phrase whole. You stopped at \(breaksList(p.breaks)).")
             }
-            if let s = p.stumbles, !s.isEmpty {
-                return explain("Read straight through without going back: \(quoted(s))")
+            let again = (p.repeats ?? []) + (p.stumbles ?? [])
+            if !again.isEmpty {
+                return explain("Read straight through without going back: \(quoted(again))")
+            }
+            if let l = p.longPauses, !l.isEmpty {
+                return explain("Shorten these pauses: \(pausesList(l))")
             }
             return explain("Leave out the fillers: \(p.fillers) this take.")
         case .expression:

@@ -36,7 +36,7 @@ enum SpeechScoreV4 {
     ]
     /// A part's narrator bar. Every part at or above its bar is a 100.
     static let bars: [Part: Int] = [
-        .accuracy: 98, .sounds: 95, .phrasing: 100, .expression: 95, .pace: 100,
+        .accuracy: 98, .sounds: 95, .phrasing: 95, .expression: 95, .pace: 100,
     ]
     /// The professional reading range, words per minute without the
     /// sentence-end pauses (the ten narrators read 142–213; ordinary natives
@@ -49,17 +49,29 @@ enum SpeechScoreV4 {
     static let prosodyCurve: [(Double, Double)] = [(41, 20), (73, 50), (88.6, 90), (89.4, 100)]
     static let pitchCurve: [(Double, Double)] = [(3.2, 20), (5.2, 50), (6.6, 90), (8.6, 100)]
 
-    static let breakCost = 12.0
-    static let stallCost = 10.0
-    static let fillerCost = 8.0
-    /// A word heard between script words that the script doesn't have:
-    /// 4–8% of narrator pieces had one, 31% of learner pieces.
-    static let stumbleCost = 8.0
+    /// Phrasing is a RATE: everything that broke the flow (a pause inside
+    /// a phrase, a long pause at punctuation, a stumble, a repeat, a filler;
+    /// a stall counts twice) per 100 words heard, so a long script isn't
+    /// punished for being long. Per speaker (2026-11-08): the ten Hi-Fi
+    /// narrators read at 1.2 per 100 words (90th percentile 2.4, LJSpeech
+    /// 1.8); learners pooled 9.6, their 90th percentile 42. The founder's
+    /// take of 2026-11-07 read 4.1.
+    static let phrasingCurve: [(Double, Double)] = [(0, 100), (2.4, 95), (9.6, 50), (42, 20), (80, 0)]
+    /// Accuracy is SLIPS per 100 script words (a word changed, left out or
+    /// added within the reading), never above the share of the script read
+    /// as written. Narrators: none in 92-96% of pieces (95th percentile
+    /// 2.5); learners' 75th percentile 8, 90th 21 (2026-11-08).
+    static let slipCurve: [(Double, Double)] = [(0, 100), (2.5, 90), (8, 50), (21, 20), (40, 0)]
 
-    /// Piecewise-linear through the anchors, flat beyond them, 0…100.
+    /// Piecewise-linear through the anchors, 0…100. Below the first anchor
+    /// a rising curve falls to 0 at 0 (a raw value under every learner's is
+    /// worse than their 10th percentile); a falling one stays at its top.
     static func curve(_ x: Double, _ anchors: [(Double, Double)]) -> Double {
         guard let first = anchors.first, let last = anchors.last else { return 0 }
-        if x <= first.0 { return max(0, first.1 * x / max(first.0, 1e-9)) }
+        if x <= first.0 {
+            let rising = last.1 >= first.1
+            return rising ? max(0, first.1 * x / max(first.0, 1e-9)) : min(100, first.1)
+        }
         if x >= last.0 { return min(100, last.1) }
         for (a, b) in zip(anchors, anchors.dropFirst()) where x <= b.0 {
             return a.1 + (b.1 - a.1) * (x - a.0) / (b.0 - a.0)
@@ -71,6 +83,7 @@ enum SpeechScoreV4 {
     /// measure is missing (the assessment failed, no prosody, too little
     /// voiced audio for a pitch). The take then keeps scoring 3.
     static func score(accuracy: Int, coverage: Double, fillers: Int, missed: [String],
+                      slips: Int? = nil, scriptTokens: Int? = nil,
                       delivery d: SpeechDelivery, language: String) -> SpeechParts? {
         guard applies(to: language),
               let soundAccuracy = d.soundAccuracy, let weak = d.weakSounds,
@@ -79,9 +92,9 @@ enum SpeechScoreV4 {
 
         let sounds = 0.6 * curve(Double(soundAccuracy), soundAccuracyCurve)
             + 0.4 * curve(Double(weak), weakSoundsCurve)
-        let phrasing = max(0, 100 - breakCost * Double(d.breaks.count)
-            - stallCost * Double(d.stalls) - fillerCost * Double(fillers)
-            - stumbleCost * Double(d.stumbles.count))
+        let irregular = Double(d.irregularities + d.stalls + fillers)
+        let rate = 100 * irregular / Double(max(d.spokenWords, 1))
+        let phrasing = d.spokenWords > 0 ? curve(rate, phrasingCurve) : 100
         let expression = 0.7 * curve(Double(prosody), prosodyCurve) + 0.3 * curve(pitch, pitchCurve)
         let pace: Double
         if paceBand.contains(wpm) {
@@ -93,8 +106,12 @@ enum SpeechScoreV4 {
             let hi = Double(paceBand.upperBound)
             pace = max(0, 100 - 2 * (Double(wpm) - hi) / hi * 100)
         }
+        var accuracyPart = Double(accuracy)
+        if let slips, let tokens = scriptTokens, tokens > 0 {
+            accuracyPart = min(accuracyPart, curve(100 * Double(slips) / Double(tokens), slipCurve))
+        }
         let scores: [Part: Int] = [
-            .accuracy: accuracy,
+            .accuracy: Int(accuracyPart.rounded(.down)),
             .sounds: Int(sounds.rounded(.down)),
             .phrasing: Int(phrasing.rounded(.down)),
             .expression: Int(expression.rounded(.down)),
@@ -104,7 +121,9 @@ enum SpeechScoreV4 {
                            pitchRange: pitch, soundAccuracy: soundAccuracy,
                            weakest: Array(d.weakest.filter { $0.score < 80 }.prefix(3)),
                            breaks: Array(d.breaks.prefix(3)), stalls: d.stalls, fillers: fillers,
-                           missed: Array(missed.prefix(3)), stumbles: Array(d.stumbles.prefix(5)))
+                           missed: Array(missed.prefix(3)), stumbles: Array(d.stumbles.prefix(5)),
+                           repeats: Array(d.repeats.prefix(5)), longPauses: Array(d.longPauses.prefix(3)),
+                           slips: slips)
     }
 }
 
@@ -135,11 +154,18 @@ struct SpeechParts: Codable, Hashable {
     /// Words heard between script words that the script doesn't have (at
     /// most 5). Optional: takes scored by build 134 have none on file.
     var stumbles: [String]? = nil
+    /// A word said again or restarted ("with with", "quiet quietly").
+    var repeats: [String]? = nil
+    /// Pauses at punctuation longer than a narrator's (at most 3).
+    var longPauses: [SpeechDelivery.Break]? = nil
+    /// Words changed, left out or added within the reading.
+    var slips: Int? = nil
 
     init(scores: [SpeechScoreV4.Part: Int], coverage: Double, wpm: Int, prosody: Int,
          pitchRange: Double, soundAccuracy: Int, weakest: [SpeechDelivery.Sound],
          breaks: [SpeechDelivery.Break], stalls: Int, fillers: Int, missed: [String],
-         stumbles: [String] = []) {
+         stumbles: [String] = [], repeats: [String] = [], longPauses: [SpeechDelivery.Break] = [],
+         slips: Int? = nil) {
         accuracy = scores[.accuracy] ?? 0
         sounds = scores[.sounds] ?? 0
         phrasing = scores[.phrasing] ?? 0
@@ -156,6 +182,9 @@ struct SpeechParts: Codable, Hashable {
         self.fillers = fillers
         self.missed = missed
         self.stumbles = stumbles
+        self.repeats = repeats
+        self.longPauses = longPauses
+        self.slips = slips
     }
 
     func score(_ part: SpeechScoreV4.Part) -> Int {

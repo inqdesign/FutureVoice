@@ -44,6 +44,7 @@ enum SpeechAnalyzer {
         let diff = ShadowEngine.analyze(target: script, learner: spoken, language: language)
         let accuracy = Self.accuracy(diff)
         let missed = missedRuns(diff.steps, script: script, language: language)
+        let slips = Self.slips(diff.steps, language: language)
 
         // Pace.
         let band = SpeechLibrary.rateBand(language)
@@ -93,7 +94,9 @@ enum SpeechAnalyzer {
             overall: overall,
             coverage: coverage,
             scoring: pronunciation == nil ? scoringWithoutPronunciation : scoringVersion,
-            pronunciation: pronunciation
+            pronunciation: pronunciation,
+            slips: slips,
+            scriptTokens: diff.targetTokenCount
         )
     }
 
@@ -164,6 +167,25 @@ enum SpeechAnalyzer {
     /// The 2026-10-14 rules, which a take with no pronunciation is still
     /// scored by.
     static let scoringWithoutPronunciation = 2
+
+    /// Words read differently from the script WITHIN the reading: a word
+    /// changed, left out or added (a filler is the filler count's), between
+    /// the first and the last word read as written. Stopping early is
+    /// coverage's, so a run of deletions at the end isn't slips.
+    /// Season 2's accuracy is built on it (`SpeechScoreV4`): narrators read
+    /// 92-96% of pieces with none.
+    static func slips(_ steps: [ShadowEngine.DiffStep], language: String) -> Int {
+        guard let first = steps.firstIndex(where: { $0.op == .match }),
+              let last = steps.lastIndex(where: { $0.op == .match }), first < last else { return 0 }
+        let fillerWords = Set(SpeechLibrary.fillers(language).map { $0.lowercased() })
+        return steps[first...last].filter { step in
+            switch step.op {
+            case .match: return false
+            case .sub, .del: return true
+            case .ins: return !fillerWords.contains((step.learner ?? "").lowercased())
+            }
+        }.count
+    }
 
     /// The plain share of the script said as written, 0–100.
     static func accuracy(_ diff: ShadowEngine.ShadowAnalysis) -> Int {

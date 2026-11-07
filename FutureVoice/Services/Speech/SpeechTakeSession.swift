@@ -448,6 +448,7 @@ final class SpeechTakeSession: ObservableObject {
         if SpeechScoreV4.isEnabled, SpeechScoreV4.applies(to: language),
            let parts = SpeechScoreV4.score(accuracy: metrics.accuracy, coverage: metrics.coverage ?? 1,
                                            fillers: metrics.fillers, missed: metrics.missed,
+                                           slips: metrics.slips, scriptTokens: metrics.scriptTokens,
                                            delivery: await delivery.value, language: language) {
             metrics.parts = parts
             metrics.overall = parts.total
@@ -565,7 +566,16 @@ final class SpeechTakeSession: ObservableObject {
         let lo = max(0, lastCutCursor - 2)
         lastCutCursor = hi
         let joiner = LanguageCatalog.writesSpaces(script.language) ? " " : ""
-        return track.words[lo..<hi].map(\.text).joined(separator: joiner)
+        // A line break where a paragraph ends, so `SpeechDelivery` knows a
+        // paragraph's pause from a sentence's.
+        var text = ""
+        for (i, w) in track.words[lo..<hi].enumerated() {
+            if i > 0 {
+                text += w.paragraph != track.words[lo + i - 1].paragraph && !joiner.isEmpty ? "\n" : joiner
+            }
+            text += w.text
+        }
+        return text
     }
 
     private func readPiece(_ url: URL, reference: String) -> Task<Piece?, Never> {

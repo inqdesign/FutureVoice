@@ -18,11 +18,12 @@ struct SpeechDelivery: Equatable {
     /// The 5th percentile of every judged sound's score: how bad the worst
     /// few sounds were. A professional read sits near 80, a learner's at 40.
     var weakSounds: Int?
-    /// Pauses of 0.25 s or more between two words with no punctuation
-    /// between them — a phrase broken in the middle — and how many such word
-    /// boundaries were measured. nil when the words couldn't be lined up with
-    /// the script (a language without spaces, or a piece whose words don't
-    /// match the reference one for one).
+    /// Pauses of `pauseSeconds` or more between two words with no
+    /// punctuation between them — a phrase broken in the middle — and how
+    /// many such word boundaries were measured. nil when the words couldn't
+    /// be lined up with the script (a language without spaces, or a piece
+    /// whose words don't find their place in it). 0.25 s until 2026-11-07
+    /// evening, 0.15 s since.
     var midPauses: Int?
     var midBoundaries: Int?
     /// Words per minute of reading, sentence-end pauses left out.
@@ -45,6 +46,21 @@ struct SpeechDelivery: Equatable {
     /// Words heard between script words that the script doesn't have —
     /// repeats, false starts, a word slipped in — in reading order.
     var stumbles: [String] = []
+    /// A word said again, or started and said again whole ("with with",
+    /// "quiet quietly"), seen in what was HEARD — so it shows even when a
+    /// piece was judged against the read-back instead of the script.
+    var repeats: [String] = []
+    /// Pauses at punctuation longer than a narrator takes there: over
+    /// `commaPauseMax` at a comma, `sentencePauseMax` at a sentence end,
+    /// `paragraphPauseMax` at a paragraph end.
+    var longPauses: [Break] = []
+    /// Words heard and timed, for rates.
+    var spokenWords: Int = 0
+
+    /// Everything that broke the flow, per 100 words heard: mid-phrase
+    /// pauses, long pauses at punctuation, stumbles and repeats (fillers are
+    /// the transcript's and are added by the score).
+    var irregularities: Int { breaks.count + longPauses.count + stumbles.count + repeats.count }
 
     struct Break: Equatable, Codable, Hashable {
         var before: String
@@ -64,8 +80,16 @@ struct SpeechDelivery: Equatable {
         let result: PronunciationResult
     }
 
-    static let pauseSeconds = 0.25
+    /// Calibrated 2026-11-07 on 36 un-joined narrator clips and the joined
+    /// set: narrators stop 0.15 s or more inside a phrase at 1–2% of word
+    /// boundaries, learners at 9%; narrators never paused longer than 0.38 s
+    /// at a comma; at a sentence end the longest was 0.75 s (only 5 seen, so
+    /// that limit is generous, and a paragraph's more so).
+    static let pauseSeconds = 0.15
     static let stallSeconds = 1.0
+    static let commaPauseMax = 0.45
+    static let sentencePauseMax = 1.0
+    static let paragraphPauseMax = 1.6
 
     static func measure(_ pieces: [Piece], language: String, audioURL: URL) -> SpeechDelivery {
         var d = timing(pieces, language: language)
@@ -99,6 +123,7 @@ struct SpeechDelivery: Equatable {
 
         var mid = 0, boundaries = 0, aligned = false
         var breaks: [Break] = [], stalls = 0
+        var repeats: [String] = [], longPauses: [Break] = [], spoken = 0
         var weakest: [Sound] = []
         for p in pieces {
             for word in p.result.judgedWords {
@@ -139,6 +164,30 @@ struct SpeechDelivery: Equatable {
                 }
             }
 
+            // Repeats and restarts, in what was heard (Insertions included,
+            // Omissions are words nobody said). A word said twice counts
+            // unless the script itself says it twice there; a restart is a
+            // word of four letters or more followed by a longer word that
+            // begins with it ("quiet quietly"), so "the there" never is.
+            let heard = all.filter { !$0.isOmission && $0.durationMs > 0 }
+            let scriptPairs = Set(zip(referenceTokens(piece.reference), referenceTokens(piece.reference).dropFirst())
+                .map { "\($0.core) \($1.core)" })
+            for (a, b) in zip(heard, heard.dropFirst()) {
+                let ca = core(a.word), cb = core(b.word)
+                guard !ca.isEmpty, !Self.fillers.contains(ca) else { continue }
+                // An Insertion is the stumble rule's: counted there, or one
+                // word heard differently. Only words judged as the
+                // reference's own are looked at here — which is where a
+                // repeat hides when a piece was judged against its
+                // read-back ("with with" in the reference itself).
+                if a.isInsertion || b.isInsertion { continue }
+                if ca == cb, !scriptPairs.contains("\(ca) \(cb)") {
+                    repeats.append(b.word)
+                } else if ca.count >= 4, cb.count > ca.count, cb.hasPrefix(ca) {
+                    repeats.append(a.word)
+                }
+            }
+
             // With miscue on, Azure returns the reference's words in order
             // (Omissions included) plus Insertions. The script's own tokens
             // don't always split the way Azure's words do ("—", hyphens,
@@ -162,10 +211,18 @@ struct SpeechDelivery: Equatable {
                 let between = (saidAt[a.offset] + 1)..<saidAt[b.offset]
                 if between.contains(where: { all[$0].isInsertion || all[$0].isOmission }) { continue }
                 switch ref[r].stop {
-                case .sentence:
+                case .sentence, .paragraph:
                     sentenceGaps += max(0, gap)
+                    let limit = ref[r].stop == .paragraph ? paragraphPauseMax : sentencePauseMax
+                    if gap > limit {
+                        longPauses.append(Break(before: a.element.word, after: b.element.word,
+                                                seconds: (gap * 10).rounded() / 10))
+                    }
                 case .clause:
-                    break
+                    if gap > commaPauseMax {
+                        longPauses.append(Break(before: a.element.word, after: b.element.word,
+                                                seconds: (gap * 10).rounded() / 10))
+                    }
                 case .none:
                     boundaries += 1
                     if gap >= pauseSeconds {
@@ -179,6 +236,7 @@ struct SpeechDelivery: Equatable {
             if lined { aligned = true }
             let span = Double(last.offsetMs + last.durationMs - first.offsetMs) / 1000
             words += timed.count
+            spoken += timed.count
             seconds += max(0, span - sentenceGaps)
         }
         var monotone = 0
@@ -191,13 +249,14 @@ struct SpeechDelivery: Equatable {
             midPauses: aligned ? mid : nil, midBoundaries: aligned ? boundaries : nil,
             wordsPerMinute: wpm, monotoneWords: monotone, pitchRange: nil, pitchSD: nil,
             soundAccuracy: weighted { (r: PronunciationResult) -> Int? in r.soundScore },
-            breaks: breaks, stalls: stalls, weakest: Array(weakest.prefix(12)), stumbles: stumbles)
+            breaks: breaks, stalls: stalls, weakest: Array(weakest.prefix(12)), stumbles: stumbles,
+            repeats: repeats, longPauses: longPauses, spokenWords: spoken)
     }
 
     // MARK: - Lining Azure's words up with the script
 
     /// What the boundary after a script token is.
-    enum Stop { case none, clause, sentence }
+    enum Stop { case none, clause, sentence, paragraph }
     struct RefToken: Equatable {
         let core: String
         var stop: Stop
@@ -221,8 +280,22 @@ struct SpeechDelivery: Equatable {
     /// before it.
     static func referenceTokens(_ text: String) -> [RefToken] {
         var out: [RefToken] = []
-        for raw in text.split(whereSeparator: \.isWhitespace) {
-            let token = String(raw)
+        // A line break after a token ends a paragraph (the take session
+        // joins a piece's script across paragraphs with one).
+        var tokens: [(String, Bool)] = []
+        var current = "", sawNewline = false
+        for ch in text {
+            if ch.isWhitespace {
+                if ch.isNewline { sawNewline = true }
+                if !current.isEmpty { tokens.append((current, false)); current = "" }
+                if sawNewline, let last = tokens.indices.last { tokens[last].1 = true }
+                sawNewline = false
+            } else {
+                current.append(ch)
+            }
+        }
+        if !current.isEmpty { tokens.append((current, false)) }
+        for (token, endsParagraph) in tokens {
             let tail = token.trimmingCharacters(in: CharacterSet(charactersIn: "\"'”’)]»"))
             let stop: Stop
             if let c = tail.last, ".!?。！？…".contains(c) {
@@ -239,12 +312,14 @@ struct SpeechDelivery: Equatable {
             if parts.isEmpty {
                 if var previous = out.popLast() {
                     if previous.stop == .none { previous.stop = stop == .sentence ? .sentence : .clause }
+                    if endsParagraph, previous.stop == .sentence { previous.stop = .paragraph }
                     out.append(previous)
                 }
                 continue
             }
             for (i, part) in parts.enumerated() {
-                out.append(RefToken(core: part, stop: i == parts.count - 1 ? stop : .none))
+                let last = i == parts.count - 1
+                out.append(RefToken(core: part, stop: last ? (endsParagraph && stop != .none ? .paragraph : stop) : .none))
             }
         }
         return out

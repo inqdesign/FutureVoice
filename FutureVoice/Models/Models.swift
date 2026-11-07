@@ -2388,6 +2388,11 @@ struct SpeechMetrics: Codable, Hashable {
     /// Season 2's five parts (`SpeechScoreV4`, `scoring` 4); `overall` is
     /// their total. nil on every take scored the older ways.
     var parts: SpeechParts? = nil
+    /// Words changed, left out or added within the reading
+    /// (`SpeechAnalyzer.slips`), and the script's token count. nil on takes
+    /// scored before 2026-11-08.
+    var slips: Int? = nil
+    var scriptTokens: Int? = nil
 }
 
 /// The model's notes on a take, in the NATIVE language, anchored to the

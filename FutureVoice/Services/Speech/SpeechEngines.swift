@@ -131,7 +131,7 @@ enum SpeechCoach {
             measured = """
             - accuracy \(p.accuracy)/100; skipped or changed: \(p.missed.isEmpty ? "none" : p.missed.joined(separator: " | "))
             - pronunciation \(p.sounds)/100; weakest sounds: \(weakest.isEmpty ? "none under 80" : weakest.joined(separator: ", "))
-            - phrasing \(p.phrasing)/100; pauses inside a phrase: \(breaks.isEmpty ? "none" : breaks.joined(separator: ", ")); stalls over 1s: \(p.stalls); repeated or added words: \((p.stumbles ?? []).isEmpty ? "none" : (p.stumbles ?? []).joined(separator: ", ")); fillers: \(p.fillers)
+            - phrasing \(p.phrasing)/100; pauses inside a phrase: \(breaks.isEmpty ? "none" : breaks.joined(separator: ", ")); stalls over 1s: \(p.stalls); repeated or added words: \((p.stumbles ?? []).isEmpty ? "none" : (p.stumbles ?? []).joined(separator: ", ")); said again or restarted: \((p.repeats ?? []).isEmpty ? "none" : (p.repeats ?? []).joined(separator: ", ")); pauses at punctuation longer than a narrator's: \((p.longPauses ?? []).isEmpty ? "none" : (p.longPauses ?? []).map { "after \"\($0.before)\" \(String(format: "%.1f", $0.seconds))s" }.joined(separator: ", ")); fillers: \(p.fillers)
             - expression \(p.expression)/100; prosody \(p.prosody)/100, pitch range \(String(format: "%.1f", p.pitchRange)) semitones
             - pace \(p.pace)/100; \(p.wpm) words/min
             - overall \(metrics.overall)/100; parts at a narrator's level: \(p.barsCleared) of 5
