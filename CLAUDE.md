@@ -3438,10 +3438,21 @@ call time." `PronunciationCall.swift`, `PronunciationCallViews.swift`.
   word"). The learner's bubble shows the word or sentence ON SCREEN, not
   the transcript ("기수전", or "think" beside a "Good" for "thank"), and the
   gateway never treats a pron-call line as the native language (the voice
-  said "just try a short English phrase" to an accented reading). Open:
-  minimal pairs (thank → think, leaving → living passed at 96 / 94);
-  scripted Azure forgives a swapped vowel, and NBest isn't used for it
-  yet. `PronunciationJudgeTests`.
+  said "just try a short English phrase" to an accented reading).
+  `PronunciationJudgeTests`.
+- **A drilled word is judged by what Azure HEARD, not only its scores**
+  (2026-11-07, founder: "it says well done when what I said was
+  different"). Scripted Azure scores against the word it was told, and its
+  `recognized` text just ECHOES the reference ("think" said against
+  "thank" comes back "Thank."), so it is no transcript. Probed with macOS
+  voices: "sink" for "think" kept θ at 73, "ship" for "sheep" i at 50,
+  and both drills passed. The phoneme NBest list knew (s at 100, θ
+  absent). In a word drill (`verdict(wordDrill:)`) a sound under 75 whose
+  list puts another sound on top and its own at 50 or below is "not yet"
+  (`swappedTo`), except a word-final stop and a schwa; the card says what
+  it came out as. Natives kept their own sound above 50 or scored 75+.
+  Sentences keep their rules. Still missed: "think" for "thank" (æ 82)
+  and "tree" for "three" on one voice (θ 93). Real takes not measured yet.
 - **The sentence's score is the one that counts** (same day, founder). A
   word right on its own and missed in the sentence again ("rather" at
   96/92/90 alone, "not yet" three times in the sentence) keeps its bar;

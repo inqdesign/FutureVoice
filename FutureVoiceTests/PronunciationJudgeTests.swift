@@ -98,4 +98,65 @@ final class PronunciationJudgeTests: XCTestCase {
         XCTAssertEqual(j.flowText(for: "mother", in: "This is my mother."), "is my mother")
         XCTAssertEqual(j.flowText(for: "that", in: "Not that."), "Not that")
     }
+
+    // MARK: - A word on its own: a sound heard as another (2026-11-07)
+
+    private typealias Heard = (String, Int, [(String, Int)])
+
+    private func drillWord(_ w: String, _ ps: [Heard], accuracy: Int) -> PronunciationResult {
+        let phonemes = ps.map { p in
+            PronunciationResult.Phoneme(phoneme: p.0, accuracy: p.1,
+                                        heard: p.2.map { .init(phoneme: $0.0, score: $0.1) })
+        }
+        return take([.init(word: w, accuracy: accuracy, error: "None", offsetMs: 0,
+                           durationMs: 400, phonemes: phonemes)])
+    }
+
+    private func drill(_ r: PronunciationResult, _ text: String, lesson: [String] = ["θ"]) -> PronunciationJudge.Verdict {
+        PronunciationJudge.verdict(result: r, line: line(text), said: "", phonemes: lesson,
+                                   language: "en", wordDrill: true)
+    }
+
+    func testSinkReadAsThinkIsNotYet() {
+        // Measured: "sink" against "think" — θ 73 (over the lesson bar) with
+        // s on top and θ not in the list.
+        let r = drillWord("think", [("θ", 73, [("s", 100), ("z", 54), ("ɪ", 45)]),
+                                    ("ɪ", 68, [("ɪ", 100), ("æ", 100)]),
+                                    ("ŋ", 100, [("ŋ", 100)]), ("k", 93, [("k", 100)])], accuracy: 86)
+        guard case .notYet(_, let sound, _, _) = drill(r, "think") else { return XCTFail("sink is not think") }
+        XCTAssertEqual(sound, "θ")
+        // The same take inside a sentence keeps the sentence rules.
+        XCTAssertEqual(PronunciationJudge.verdict(result: r, line: line("think"), said: "", phonemes: th,
+                                                  language: "en"), .pass(score: 90))
+    }
+
+    func testShipReadAsSheepIsNotYet() {
+        // Daniel's "ship" against "sheep": i 50 with ɪ on top, i absent.
+        let r = drillWord("sheep", [("ʃ", 72, [("ʃ", 100)]), ("i", 50, [("ɪ", 99), ("eɪ", 92), ("ɛ", 60)]),
+                                    ("p", 61, [("t", 100), ("d", 85), ("p", 85)])], accuracy: 71)
+        guard case .notYet(_, let sound, _, _) = drill(r, "sheep", lesson: ["i"]) else { return XCTFail() }
+        XCTAssertEqual(sound, "i")
+        XCTAssertEqual(PronunciationJudge.heardAs(result: r, word: "sheep", sound: "i"), .sound("ɪ"))
+    }
+
+    func testANativeWordStillPasses() {
+        // Native "thank": s on top of θ, but θ itself at 94 in the list.
+        let thank = drillWord("thank", [("θ", 98, [("s", 100), ("θ", 94)]), ("æ", 100, [("æ", 100)]),
+                                        ("ŋ", 100, [("ŋ", 100)]), ("k", 85, [("k", 100)])], accuracy: 98)
+        XCTAssertEqual(drill(thank, "thank"), .pass(score: 90))
+        // Native "bad": m on top of b at 78 — over the swap bar.
+        let bad = drillWord("bad", [("b", 78, [("m", 100), ("b", 46)]), ("æ", 99, [("æ", 100)]),
+                                    ("d", 100, [("d", 100)])], accuracy: 96)
+        XCTAssertEqual(drill(bad, "bad", lesson: []), .pass(score: 90))
+        // Native "sheep": its final p heard as g — a final stop never counts.
+        let sheep = drillWord("sheep", [("ʃ", 100, [("ʃ", 100)]), ("i", 98, [("i", 100)]),
+                                        ("p", 44, [("g", 100), ("k", 93), ("i", 42)])], accuracy: 94)
+        XCTAssertEqual(drill(sheep, "sheep", lesson: []), .pass(score: 90))
+    }
+
+    func testASchwaSaidAnotherWayIsNotASwap() {
+        let r = drillWord("decision", [("d", 92, [("d", 100)]), ("ə", 40, [("ɪ", 100)]),
+                                       ("s", 90, [("s", 100)])], accuracy: 85)
+        XCTAssertEqual(drill(r, "decision", lesson: []), .pass(score: 90))
+    }
 }

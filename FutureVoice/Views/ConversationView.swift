@@ -5626,7 +5626,8 @@ struct ConversationView: View {
         var verdict = noReader
             ? PronunciationJudge.fallback(line: probe, said: said, language: appState.targetLanguage)
             : PronunciationJudge.verdict(result: result, line: probe, said: said,
-                                         phonemes: now.topic.phonemes, language: appState.targetLanguage)
+                                         phonemes: now.topic.phonemes, language: appState.targetLanguage,
+                                         wordDrill: true)
         // One word has no rhythm to judge: its sounds are the take.
         if case .notSmooth(let score) = verdict { verdict = .pass(score: score) }
         // A word read on its own that Azure couldn't match is that word not

@@ -555,9 +555,13 @@ enum PronunciationJudge {
     /// a miss is judged on what was wrong the first time, never on a word
     /// that already came out (`Line.watch`). `excluding`: skip these words,
     /// for listing every word that missed (`missedWords`).
+    /// `wordDrill`: a word (or a short chunk) practiced on its own — every sound of it is the
+    /// take, so a sound Azure heard as ANOTHER sound is "not yet" even when
+    /// its score clears the bars (`swappedTo`).
     static func verdict(result: PronunciationResult?, line: PronunciationRound.Line,
                         said: String, phonemes: [String], language: String,
-                        only: Set<String>? = nil, excluding: Set<String> = []) -> Verdict {
+                        only: Set<String>? = nil, excluding: Set<String> = [],
+                        wordDrill: Bool = false) -> Verdict {
         guard let result else { return .unheard }
         if (result.completeness ?? 100) < completenessBar { return .offScript }
         func inScope(_ w: PronunciationResult.Word) -> Bool {
@@ -609,6 +613,27 @@ enum PronunciationJudge {
         if let (w, p) = soundHits.min(by: { $0.1.accuracy! < $1.1.accuracy! }) {
             return .notYet(word: w.word, sound: p.phoneme.isEmpty ? nil : p.phoneme,
                            score: result.soundScore, heard: nil)
+        }
+        // 2b. A word on its own: a sound that came out as ANOTHER sound,
+        //     whatever its score. Scripted Azure scores a sound against the
+        //     word it was told to expect, so "sink" read as "think" kept θ at
+        //     73 and "think" read as "thank" kept æ at 82, and both drills
+        //     passed (2026-11-07, founder: "it says well done when I said
+        //     something else"). Its list of what it heard does not forgive:
+        //     s at 100 with θ absent, ɪ at 100 over æ.
+        if wordDrill {
+            let swaps = judged.compactMap { w -> (PronunciationResult.Word, PronunciationResult.Phoneme)? in
+                let named = w.phonemes.filter { $0.accuracy != nil }
+                let off = named.enumerated().filter { i, p in
+                    let finalStop = i == named.count - 1 && ["p", "t", "k", "b", "d", "g"].contains(p.phoneme)
+                    return !finalStop && swappedTo(p) != nil
+                }.map(\.element)
+                guard let worst = off.min(by: { $0.accuracy! < $1.accuracy! }) else { return nil }
+                return (w, worst)
+            }
+            if let (w, p) = swaps.min(by: { $0.1.accuracy! < $1.1.accuracy! }) {
+                return .notYet(word: w.word, sound: p.phoneme, score: result.soundScore, heard: nil)
+            }
         }
         // 3. Any word that came out badly, or a word left out.
         if let w = result.referenceWords.filter({ inScope($0) && ($0.isOmission || ($0.isJudged && ($0.accuracy ?? 100) < wordBar)) })
@@ -738,7 +763,36 @@ enum PronunciationJudge {
 
     static let vowelChars = Set("aeiouɪʊəɛæʌɔɑɒɐɜɝɚy")
 
+    /// A sound under this whose list puts another sound on top and its own
+    /// at `swapOwnMax` or below (or not at all) came out as that other sound.
+    /// Measured 2026-11-07 (macOS voices, en-US, single words): every
+    /// minimal-pair swap the bars missed sat at 50–82 with its own sound at
+    /// 38 or absent (sink→think θ 73/69, ship→sheep i 50, pin→bin b 57,
+    /// think→thank æ 50); every native word kept its own sound above 50 in
+    /// the list or scored 75+ (a native "bad"'s b at 78 had m on top, b 46).
+    static let swapBar = 75
+    static let swapOwnMax = 50
+
+    /// The sound `p` came out as, when Azure heard it as another one.
+    /// Reduced vowels don't count: a schwa said as ɪ or ʌ is a dialect, not
+    /// another word.
+    static func swappedTo(_ p: PronunciationResult.Phoneme) -> String? {
+        guard !p.phoneme.isEmpty, let list = p.heard, let top = list.first,
+              top.phoneme != p.phoneme, top.score >= 70,
+              (p.accuracy ?? 100) < swapBar,
+              (list.first(where: { $0.phoneme == p.phoneme })?.score ?? 0) <= swapOwnMax else { return nil }
+        let loose: Set<String> = ["ə", "ɚ"]
+        if loose.contains(p.phoneme) || loose.contains(top.phoneme)
+            || Set([p.phoneme, top.phoneme]) == ["ɝ", "ɚ"] { return nil }
+        return top.phoneme
+    }
+
     static func heardAs(_ p: PronunciationResult.Phoneme) -> HeardAs? {
+        if let other = swappedTo(p), (p.accuracy ?? 100) >= 70 {
+            let isConsonant = !p.phoneme.contains(where: { vowelChars.contains($0) })
+            let otherIsVowel = other.contains(where: { vowelChars.contains($0) })
+            return isConsonant && otherIsVowel ? .vowelAdded : .sound(other)
+        }
         guard let list = p.heard, !list.isEmpty, (p.accuracy ?? 100) < 70 else { return nil }
         let isConsonant = !p.phoneme.contains(where: { vowelChars.contains($0) })
         if let top = list.first, top.phoneme != p.phoneme, top.score >= 70 {
