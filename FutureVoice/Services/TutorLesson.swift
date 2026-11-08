@@ -194,7 +194,8 @@ enum TutorPlanner {
         introducing myself" is a lesson on introducing yourself, not on \
         saying what you'd like). If they agree to a topic the tutor \
         proposed ("yes", "sure", "the second one"), it's that topic.
-        Return {"topic": false} when it names no topic ("I don't know", \
+        Something picked on screen is always a topic: never {"topic": false}.
+        For what they SAID, return {"topic": false} when it names no topic ("I don't know", \
         "anything", a greeting), when they turn something down, and when \
         it reads like a refusal of the very thing it names ("I don't like \
         to practice introducing myself") — it was transcribed from speech, \
@@ -203,12 +204,24 @@ enum TutorPlanner {
 
         \(levelLadder(level))
 
+        A GRAMMAR POINT they ask for is a topic too ("a / an", "past tense", \
+        "a / an with my job and project"). Then the lesson IS that point, and \
+        it outranks the level list above on what to talk about (a job is \
+        fine at any level); the sentences still sound like their level. \
+        Every challenge is one real thing to say that cannot be said without \
+        that point, in the situation they named, or everyday ones if they \
+        named none. Every "example" uses the point. "task" names it, so a \
+        reader can check it ("says what their job is, with a or an before \
+        it"). "title" names the point. Never swap it for a general lesson \
+        about the situation.
+
         Otherwise write 3 or 4 CHALLENGES that build to the goal in order, \
         each ONE part of it they must be able to say, small enough to nail \
         in a few tries at their level. No challenge that puts it all \
         together: after the challenges the app runs a final check where \
         they say the whole thing in one go. Practical and concrete, the way \
-        the situation really goes — not grammar topics, not quizzes.
+        the situation really goes — no quizzes, and no grammar topics unless \
+        they asked for one.
 
         Fields:
         - "title": the lesson's name, 2–6 words, in \(native).
