@@ -22,7 +22,13 @@ enum LevelTagger {
     /// runs after the talk and nobody waits on it, so the extra thinking is
     /// free time.
     static let thinkingLevel = "medium"
-    static let maxTokens = 4096
+    /// Thinking spends from this ceiling. At 4096, 16 of 16 talks of 25 to
+    /// 140 learner lines came back cut off (2026-11-09); at 8192, the server's
+    /// own limit, 2 of 16 did. Those two go to `fallbackThinkingLevel`.
+    static let maxTokens = 8192
+    /// For a run that still hit the ceiling: 20 of 20 long talks finished.
+    /// A slightly lower recall is better than no verdicts for that talk.
+    static let fallbackThinkingLevel = "low"
 
     // MARK: - Prompt (read by scripts/level-tag-probe.py — keep the shape)
 
@@ -290,6 +296,15 @@ enum LevelTagger {
         var dropped: Int
     }
 
+    /// A fresh key per request. The server treats a repeated key as a retry
+    /// only for ten minutes and answers 409 after that, so a key made from
+    /// the talk alone refused every later attempt, and each refusal counted
+    /// as a failure of the talk. The `level-tag:` prefix is what the server
+    /// reads; the daily cap still counts every request.
+    static func requestKey(sessionId: UUID, fingerprint: String) -> String {
+        "level-tag:\(sessionId.uuidString):\(fingerprint):\(UUID().uuidString.prefix(8))"
+    }
+
     /// Tags one talk. Nil when the language has no map or the learner said
     /// nothing that counts; throws only on the network/decode.
     static func tag(_ session: Session) async throws -> Outcome? {
@@ -302,14 +317,22 @@ enum LevelTagger {
         // `longRunning`: medium thinking over a long talk can pass the 60 s
         // ceiling the other sessions have, and a run nobody waits on has no
         // reason to give up there. It is also not the live call's pool.
-        let payload: Payload = try await GeminiClient.longRunning.sendJSON(
-            system: system,
-            messages: [.init(role: .user, content: userMessage(for: session))],
-            model: .flash36,
-            maxTokens: maxTokens,
-            purpose: purpose,
-            idempotencyKey: "level-tag:\(session.id.uuidString):\(fingerprint)",
-            thinkingLevel: thinkingLevel)
+        func send(thinking: String) async throws -> Payload {
+            try await GeminiClient.longRunning.sendJSON(
+                system: system,
+                messages: [.init(role: .user, content: userMessage(for: session))],
+                model: .flash36,
+                maxTokens: maxTokens,
+                purpose: purpose,
+                idempotencyKey: requestKey(sessionId: session.id, fingerprint: fingerprint),
+                thinkingLevel: thinking)
+        }
+        let payload: Payload
+        do {
+            payload = try await send(thinking: thinkingLevel)
+        } catch GeminiError.truncated {
+            payload = try await send(thinking: fallbackThinkingLevel)
+        }
         let (items, dropped) = verify(payload, map: map, evidence: evidence)
         let talkDate = session.turns.last?.timestamp ?? session.endedAt ?? session.startedAt
         let tag = LearnerState.SessionTag(talkDate: talkDate, taggedAt: Date(),

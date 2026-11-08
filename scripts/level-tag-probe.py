@@ -70,7 +70,7 @@ URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generate
 def call(transcript):
     body = {"systemInstruction": {"parts": [{"text": SYSTEM}]},
             "contents": [{"role": "user", "parts": [{"text": transcript}]}],
-            "generationConfig": {"maxOutputTokens": 4096, "responseMimeType": "application/json",
+            "generationConfig": {"maxOutputTokens": 8192, "responseMimeType": "application/json",
                                  "thinkingConfig": {"thinkingLevel": THINKING}}}
     req = urllib.request.Request(URL, data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
     for attempt in range(4):

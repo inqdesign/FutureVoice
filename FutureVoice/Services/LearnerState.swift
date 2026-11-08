@@ -20,8 +20,24 @@ struct LearnerState: Codable {
     /// times is not tried again — a decode that always fails would otherwise
     /// be one paid call per launch, forever.
     var failures: [String: Int] = [:]
+    /// Which `failuresEpoch` the counts above belong to. Nil on a file from
+    /// before the epochs.
+    var failuresEpoch: Int?
 
     static let maxFailures = 2
+    /// Bump when a fix makes old failures meaningless. 1 (2026-11-09): talks
+    /// given up on because of the 4096 ceiling and the refused retries.
+    static let failuresEpoch = 1
+
+    /// The same state with failure counts from an older epoch dropped, so
+    /// those talks are tried again.
+    func clearingOldFailures() -> LearnerState {
+        guard failuresEpoch != Self.failuresEpoch else { return self }
+        var copy = self
+        copy.failures = [:]
+        copy.failuresEpoch = Self.failuresEpoch
+        return copy
+    }
 
     struct SessionTag: Codable, Equatable {
         /// When the talk happened (its last line) — the dates on an item.
@@ -204,7 +220,8 @@ final class LearnerStateStore {
     private func loadLocked(_ language: String) -> LearnerState {
         if let hit = cache[key(language)] { return hit }
         let state = (try? Data(contentsOf: url(language)))
-            .flatMap { try? decoder.decode(LearnerState.self, from: $0) } ?? LearnerState()
+            .flatMap { try? decoder.decode(LearnerState.self, from: $0) }?
+            .clearingOldFailures() ?? LearnerState().clearingOldFailures()
         cache[key(language)] = state
         return state
     }

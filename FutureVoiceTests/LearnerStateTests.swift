@@ -178,6 +178,24 @@ final class LearnerStateTests: XCTestCase {
         XCTAssertEqual(store.state(language: "en").sessions.keys.sorted(), [kept.uuidString])
     }
 
+    func testFailuresFromBeforeTheFixAreForgivenOnce() throws {
+        let json = #"{"version":1,"sessions":{},"failures":{"talk":2}}"#
+        let old = try JSONDecoder().decode(LearnerState.self, from: Data(json.utf8))
+        XCTAssertEqual(old.failures["talk"], 2)
+        var cleared = old.clearingOldFailures()
+        XCTAssertTrue(cleared.failures.isEmpty)
+        XCTAssertEqual(cleared.failuresEpoch, LearnerState.failuresEpoch)
+        cleared.failures["talk"] = 1
+        XCTAssertEqual(cleared.clearingOldFailures().failures["talk"], 1)
+    }
+
+    func testEveryTaggingRequestHasItsOwnKey() {
+        let id = UUID()
+        let first = LevelTagger.requestKey(sessionId: id, fingerprint: "f")
+        XCTAssertNotEqual(first, LevelTagger.requestKey(sessionId: id, fingerprint: "f"))
+        XCTAssertTrue(first.hasPrefix("level-tag:\(id.uuidString):f:"))
+    }
+
     // MARK: - Prompt block
 
     func testPromptLinesOrderPrerequisitesFirstThenShakyBeforeUnseen() {
