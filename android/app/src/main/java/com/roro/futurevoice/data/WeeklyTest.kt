@@ -1422,11 +1422,15 @@ object WeeklyTestEngine {
 
     /**
      * What a finished test does to the review loop. Runs once per test (the
-     * caller stamps `appliedAt`); an answer is a CLAIM, so nothing retires:
+     * caller stamps `appliedAt`). A right answer is the deck's own "Got it"
+     * (iOS, 2026-11-08): the item is KNOWN, leaves the deck and ticks off in
+     * every book that teaches it (the books read the same stores). A right
+     * answer used to push it 3 days on, so it stayed put off and came back
+     * in every week's test.
      *
-     *   meaning  right → the word waits 3 days · wrong → back in the notebook, due now
-     *   gap      right → the phrase waits 3 days · wrong → bookmarked, due now
-     *   rewrite  right → one Leitner rung up · wrong → one rung down (build alike)
+     *   meaning  right → known, out of the deck · wrong → back in the notebook, due now
+     *   gap      right → known, out of the deck · wrong → bookmarked, due now
+     *   rewrite  right → the card retires (Got it) · wrong → one rung down (build, translate alike)
      *   listen / speak → nothing (a spoken take is already a shadow attempt)
      *   grammar  nothing (its corrections already carry cards)
      *   upgrade  wrong → the better word in the notebook, due now
@@ -1436,7 +1440,6 @@ object WeeklyTestEngine {
         val vocab = VocabStore.shared(context)
         val drills = DrillStore.shared(context)
         val cards = drills.load(language).associateBy { it.id }
-        val threeDays = 3 * 86_400_000L
         val byId = test.items.associateBy { it.id }
         for (answer in test.answers) {
             val item = byId[answer.itemId] ?: continue
@@ -1444,10 +1447,8 @@ object WeeklyTestEngine {
                 WeeklyTestItem.Kind.MEANING -> {
                     val word = item.answer
                     if (answer.correct) {
-                        PracticeLog.record(context, PracticeLog.Kind.WORD)
-                        if (vocab.isStudying(word, language)) {
-                            ReviewQueue.snooze(context, StudyScheduleStore.Kind.WORD, word, language, threeDays)
-                        }
+                        vocab.markKnown(word, language, now)       // logs the rep, leaves the notebook
+                        ReviewQueue.retire(context, StudyScheduleStore.Kind.WORD, word, language)
                     } else {
                         vocab.addStudying(word, language)          // records the rep itself
                         ReviewQueue.retire(context, StudyScheduleStore.Kind.WORD, word, language)
@@ -1456,10 +1457,12 @@ object WeeklyTestEngine {
                 WeeklyTestItem.Kind.GAP -> {
                     val phrase = item.answer
                     if (answer.correct) {
-                        PracticeLog.record(context, PracticeLog.Kind.EXPRESSION)
-                        if (vocab.isStudyingExpression(phrase, language)) {
-                            ReviewQueue.snooze(context, StudyScheduleStore.Kind.EXPRESSION, phrase, language, threeDays)
-                        }
+                        // Already known, or said in a talk (which outranks
+                        // known): nothing to claim, never step it down.
+                        if (vocab.hasUsedExpression(phrase, language)) {
+                            PracticeLog.record(context, PracticeLog.Kind.EXPRESSION)
+                        } else vocab.setKnownExpression(phrase, true, language, now)   // logs the rep
+                        ReviewQueue.retire(context, StudyScheduleStore.Kind.EXPRESSION, phrase, language)
                     } else {
                         if (!vocab.isStudyingExpression(phrase, language)) {
                             vocab.setStudyingExpression(phrase, true, language)
@@ -1470,7 +1473,7 @@ object WeeklyTestEngine {
                 WeeklyTestItem.Kind.BUILD, WeeklyTestItem.Kind.REWRITE, WeeklyTestItem.Kind.TRANSLATE -> {
                     val card = item.cardId?.let { cards[it] } ?: continue
                     // Both log the drill rep themselves.
-                    if (answer.correct) drills.markCorrect(card, language, now)
+                    if (answer.correct) drills.markKnown(card, language, now)
                     else drills.markIncorrect(card, language, now)
                 }
                 WeeklyTestItem.Kind.UPGRADE -> {
