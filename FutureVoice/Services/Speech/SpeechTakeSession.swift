@@ -65,6 +65,8 @@ final class SpeechTakeSession: ObservableObject {
     let composer = SpeechVideoComposer()
     /// The screen handed the composer its layout and script images.
     private var videoPrepared = false
+    /// The take's script layout; the movement is filled in when it ends.
+    private var prompterBase: SpeechPrompterRecord?
     /// Host-clock seconds when the voice recording began — the same clock
     /// the screen frames are stamped on.
     private var voiceStartHost: Double?
@@ -239,12 +241,11 @@ final class SpeechTakeSession: ObservableObject {
         reset()
     }
 
-    /// Called by the screen right before a take: where everything is, and
-    /// the script drawn for the video.
-    func prepareVideo(layout: SpeechVideoComposer.Layout, column: SpeechVideoComposer.Column?) {
-        guard let column else { videoPrepared = false; return }
-        composer.prepare(layout: layout, column: column)
-        videoPrepared = true
+    /// Called by the screen right before a take: how the script is laid out
+    /// (nil: no video this take).
+    func prepareVideo(_ record: SpeechPrompterRecord?) {
+        prompterBase = record
+        videoPrepared = record != nil
     }
 
     private var isFailed: Bool { if case .failed = phase { return true } else { return false } }
@@ -353,10 +354,11 @@ final class SpeechTakeSession: ObservableObject {
         let fromCamera = recordingVideo
         let voiceHost = voiceStartHost
         recordingVideo = false
-        // (movie, seconds the picture started before the voice)
-        let videoStop: Task<(URL, Double)?, Never> = Task { [composer] in
+        // (movie, seconds the picture started before the voice, the script's
+        // movement)
+        let videoStop: Task<(URL, Double, [Double])?, Never> = Task { [composer] in
             guard fromCamera, let r = await composer.finish() else { return nil }
-            return (r.url, voiceHost.map { $0 - r.firstFrameHost } ?? 0)
+            return (r.url, voiceHost.map { $0 - r.firstFrameHost } ?? 0, r.offsets)
         }
 
         guard let recorded else {
@@ -493,7 +495,7 @@ final class SpeechTakeSession: ObservableObject {
         // Picture and voice, put together behind the result.
         let videoTask = Task {
             defer { SpeechStore.shared.markVideoPending(id, false) }
-            guard let (raw, leadIn) = await videoStop.value else { return false }
+            guard let (raw, leadIn, offsets) = await videoStop.value else { return false }
             let name = "take-\(id.uuidString).mov"
             var url = SpeechStore.mediaURL(name)
             let merged = await SpeechMediaMerger.merge(video: raw, audio: audioURL, to: url,
@@ -505,7 +507,14 @@ final class SpeechTakeSession: ObservableObject {
             var values = URLResourceValues()
             values.isExcludedFromBackup = true
             try? url.setResourceValues(values)
-            self.update(id) { $0.videoFilename = name }
+            // The merge cut any picture before the voice, so the script's
+            // movement starts there too.
+            var record = self.prompterBase
+            record?.offsets = Array(offsets.dropFirst(Int((max(0, leadIn) / SpeechPrompterRecord.step).rounded())))
+            self.update(id) {
+                $0.videoFilename = name
+                $0.prompter = record
+            }
             // Its iCloud copy, if the learner picked a quality.
             SpeechVideoSync.shared.ensureCopies()
             return true
@@ -671,7 +680,8 @@ final class SpeechTakeSession: ObservableObject {
     nonisolated static func reading(pieces: [SpeechDelivery.Piece], reference: SpeechReference,
                                     script: String, metrics: SpeechMetrics,
                                     delivery: SpeechDelivery) -> SpeechReadingScore? {
-        let tokens = SpeechDelivery.referenceTokens(script).map(\.core)
+        let scriptTokens = SpeechDelivery.referenceTokens(script)
+        let tokens = scriptTokens.map(\.core)
         var take: [(word: String, startMs: Int, endMs: Int, breakAfter: Bool)] = []
         for piece in pieces {
             let words = piece.result.words.filter { !$0.isOmission && $0.durationMs > 0 }
@@ -684,7 +694,7 @@ final class SpeechTakeSession: ObservableObject {
         return SpeechReading.score(
             take: SpeechReading.timeline(words: take, script: tokens),
             reference: SpeechReading.timeline(words: ref, script: tokens),
-            script: tokens, slips: metrics.slips, scriptTokens: metrics.scriptTokens,
+            script: tokens, stops: scriptTokens.map(\.stop), slips: metrics.slips, scriptTokens: metrics.scriptTokens,
             missed: metrics.missed, soundAccuracy: delivery.soundAccuracy, weakest: delivery.weakest,
             coverage: metrics.coverage ?? 1, gender: gender)
     }

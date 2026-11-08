@@ -343,6 +343,27 @@ enum DebugCapture {
     static func seedSeasonTwoReading() {
         let id = UUID(uuidString: "C4A11E00-0000-4000-8000-0000000000AA")!
         guard var take = SpeechStore.shared.takes.first(where: { $0.id == id }) else { return }
+        // A clip put in the simulator's Documents/Speech by hand: a capture
+        // run has no camera.
+        if FileManager.default.fileExists(atPath: SpeechStore.mediaURL("take-capture.mov").path) {
+            take.videoFilename = "take-capture.mov"
+            let body = SpeechStore.shared.script(id: take.scriptId)?.body ?? ""
+            let record = SpeechPrompterRecord(width: 390, textSize: 28, dark: false, text: body, language: "en",
+                                              offsets: (0..<300).map { Double($0) * 1.5 })
+            take.prompter = record
+            if UserDefaults.standard.bool(forKey: "captureExport") {
+                let url = SpeechStore.mediaURL("take-capture.mov")
+                Task {
+                    let start = Date()
+                    let style = SpeechVideoStyle(rawValue: UserDefaults.standard.string(forKey: "captureExportStyle") ?? "") ?? .split
+                    let made = await SpeechVideoExporter.render(video: url, record: record, style: style) { _ in }
+                    let bytes = (made.flatMap { try? FileManager.default.attributesOfItem(atPath: $0.path)[.size] as? Int }) ?? -1
+                    let line = "ms=\(Int(Date().timeIntervalSince(start) * 1000)) bytes=\(bytes) ok=\(made != nil)"
+                    if let made { try? FileManager.default.removeItem(at: SpeechStore.mediaURL("export-result.mov")); try? FileManager.default.copyItem(at: made, to: SpeechStore.mediaURL("export-result.mov")) }
+                    try? line.write(to: SpeechStore.mediaURL("export-result.txt"), atomically: true, encoding: .utf8)
+                }
+            }
+        }
         let parts = SpeechReading.parts(speed: 0.76, rhythm: 0.79, pausesPer100: 7.57, slipsPer100: 2.65, soundAccuracy: 96.6)
         let reading = SpeechReadingScore(
             version: SpeechReading.version, gender: "male", parts: parts, coverage: 1,

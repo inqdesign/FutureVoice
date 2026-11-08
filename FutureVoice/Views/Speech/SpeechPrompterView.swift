@@ -77,45 +77,17 @@ struct SpeechPrompterView: View {
         .interactiveDismissDisabled()
     }
 
-    /// Hands the composer this screen's layout and the script drawn for the
-    /// video. Once per take, at the tap, before the countdown hides the cost.
+    /// Tells the take how the script is laid out on this screen, so it can
+    /// be drawn over the camera later, the way the reader saw it.
     private func prepareVideo() {
         preparedKey = videoKey
         guard session.cameraOn, prompterRect.width > 0 else {
-            session.prepareVideo(layout: .init(canvas: .zero, prompter: .zero, card: .zero,
-                                               cardRadius: 0, background: .clear), column: nil)
+            session.prepareVideo(nil)
             return
         }
-        let background = UIColor.systemBackground.resolvedColor(
-            with: UITraitCollection(userInterfaceStyle: colorScheme == .dark ? .dark : .light))
-        // The video is 9:16 whatever the phone: the take screen's layout in
-        // a standard frame, script on the top half, the camera card on the
-        // bottom. Its width is the screen's, so the script wraps exactly as
-        // the reader saw it.
-        let width = prompterRect.width
-        let height = (width * 16 / 9).rounded()
-        let half = height / 2
-        let layout = SpeechVideoComposer.Layout(
-            canvas: CGSize(width: width, height: height),
-            prompter: CGRect(x: 0, y: 0, width: width, height: half - 6),
-            card: CGRect(x: 12, y: half + 6, width: width - 24, height: half - 18),
-            cardRadius: 24, background: background)
-        let scale = SpeechVideoComposer.scale(for: layout)
-        func draw() -> CGImage? {
-            let renderer = ImageRenderer(content:
-                SpeechPrompterColumn(track: session.track, cursor: 0, language: session.script.language,
-                                     textSize: textSize, width: prompterRect.width, measures: false,
-                                     onCurrentWord: { _ in })
-                    .environment(\.colorScheme, colorScheme))
-            renderer.scale = scale
-            renderer.isOpaque = false
-            return renderer.cgImage
-        }
-        guard let text = draw() else {
-            session.prepareVideo(layout: layout, column: nil)
-            return
-        }
-        session.prepareVideo(layout: layout, column: .init(text: text, scale: scale))
+        session.prepareVideo(SpeechPrompterRecord(
+            width: Double(prompterRect.width), textSize: textSize, dark: colorScheme == .dark,
+            text: session.script.body, language: session.script.language, offsets: []))
     }
 
     /// Shows `text` over the controls for a moment.
@@ -614,7 +586,11 @@ struct SpeechTeleprompter: View {
                 (recording, follow, CGFloat(speed), voiceActive())
             }
             scroller.start()
+            // The take may start before the text first moves, and the
+            // composer's own default is a place the script isn't.
+            publish()
         }
+        .onChange(of: textSize) { _, _ in publish() }
         .onChange(of: recording) { _, isRecording in
             scroller.inputs = { [voiceActive] in (isRecording, follow, CGFloat(speed), voiceActive()) }
             // A take that ended (or was cancelled) leaves the script where it

@@ -2347,6 +2347,34 @@ struct SpeechTake: Codable, Identifiable, Hashable {
     /// detail sheet can show every word and sound of the take. nil on takes
     /// made before it or not assessed.
     var assessments: [PronunciationResult]? = nil
+    /// How the script moved during the take (2026-11-08). Set: `videoFilename`
+    /// is the camera alone and the script is drawn when it is wanted. nil on
+    /// earlier takes, whose video has the script burned into it.
+    var prompter: SpeechPrompterRecord? = nil
+}
+
+/// Everything needed to draw the rolling script over a camera-only take, on
+/// screen or into an exported video.
+struct SpeechPrompterRecord: Codable, Hashable {
+    /// The script column's width on the screen it was read on, in points.
+    var width: Double
+    var textSize: Double
+    var dark: Bool
+    /// The script as it was read: it can be edited afterwards.
+    var text: String
+    var language: String
+    /// Column y at the top of the prompter, every `step` seconds of the video.
+    var offsets: [Double]
+
+    static let step = 0.1
+
+    func offset(at seconds: Double) -> Double {
+        guard let last = offsets.last else { return 0 }
+        let position = max(0, seconds) / Self.step
+        let i = Int(position)
+        guard i + 1 < offsets.count else { return last }
+        return offsets[i] + (offsets[i + 1] - offsets[i]) * (position - Double(i))
+    }
 }
 
 struct SpeechMetrics: Codable, Hashable {

@@ -17,17 +17,35 @@ import Foundation
 ///
 /// Each measure is placed by where the groups actually sit — learner median
 /// 50, ordinary-native median 90, narrator median 100 — and the five parts
-/// count equally: an equal split agreed with the experts (0.84, held out)
-/// better than weights fitted to them (0.81). 100 needs every part at a
-/// narrator's level. On the validation set: narrators median 97 (22% at
-/// 100), ordinary natives median 91 (average 89), learners median 67.
+/// count equally: an equal split agreed with the experts (0.85) better than
+/// weights fitted to them. 100 needs every part at a narrator's level. On
+/// the validation set: narrators median 97 (average 96), ordinary natives
+/// median 96 (average 94), learners median 73 (average 63). Those natives
+/// are volunteer audiobook readers, and on clips of 24-38 words they read as
+/// well as the narrators, so the two are not told apart by this score.
+///
+/// Version 6 (2026-11-08): a stop after punctuation is not a fault. Version 5
+/// counted every pause the reference lacks, and the first real take showed
+/// 11 of its 12 "extra" pauses were after a period or comma: the reference
+/// pauses at only 14 of that script's 22 sentence ends and none of its 15
+/// commas. The calibration had hidden it (narrators' clips hold 0.4 sentence
+/// ends per 100 words, the natives' text had no punctuation; that script has
+/// 12). With the natives' punctuation restored and their references remade
+/// from it, pauses after punctuation say nothing about the reader (Spearman
+/// with the experts 0.11) and mid-sentence ones say more than the old count
+/// (0.83 against 0.77). Long pauses at a sentence end are NOT scored: the
+/// learners' clips join separate recordings (gaps of 1.3-1.5 s every time),
+/// and natives and narrators hold only 21 sentence ends between them.
 enum SpeechReading {
-    static let version = 5
+    static let version = 6
 
     /// The calibration's group medians (learner, native, narrator).
-    static let speedCurve: [(Double, Double)] = [(0.2185, 0), (0.6517, 50), (0.8683, 90), (0.9702, 100)]
-    static let rhythmCurve: [(Double, Double)] = [(0.6135, 0), (0.8227, 50), (0.9273, 90), (0.9352, 100)]
-    static let pausesCurve: [(Double, Double)] = [(0, 100), (3.2574, 90), (7.4074, 50), (15.7074, 0)]
+    static let speedCurve: [(Double, Double)] = [(0.1131, 0), (0.6517, 50), (0.921, 90), (0.9702, 100)]
+    static let rhythmCurve: [(Double, Double)] = [(0.6001, 0), (0.8227, 50), (0.934, 90), (0.9352, 100)]
+    /// Mid-sentence stops per 100 words. None at every group's median, so
+    /// the 75th percentile places it, the first where any group has some:
+    /// natives' 1.6 is 90, learners' 17.4 is 50, learners' 90th 36.8 is 20.
+    static let pausesCurve: [(Double, Double)] = [(0, 100), (1.5957, 90), (17.3913, 50), (36.8421, 20), (40, 0)]
     /// Slips are none at every group's median, so their curve is set by the
     /// tails: narrators' 95th percentile 2.5 per 100 words, learners' 75th 8,
     /// 90th 21.
@@ -41,9 +59,9 @@ enum SpeechReading {
     static let femaleAboveHz = 165.0
 
     /// The averages the result page quotes, from the validation set.
-    static let nativeAverage = 89
-    static let narratorAverage = 95
-    static let learnerAverage = 57
+    static let nativeAverage = 94
+    static let narratorAverage = 96
+    static let learnerAverage = 63
 
     static func applies(to language: String) -> Bool { language.hasPrefix("en") }
 
@@ -87,7 +105,7 @@ enum SpeechReading {
     // MARK: - Scoring
 
     static func score(take: [Int: Timed], reference: [Int: Timed], script: [String],
-                      slips: Int?, scriptTokens: Int?, missed: [String],
+                      stops: [SpeechDelivery.Stop], slips: Int?, scriptTokens: Int?, missed: [String],
                       soundAccuracy: Int?, weakest: [SpeechDelivery.Sound],
                       coverage: Double, gender: String) -> SpeechReadingScore? {
         let both = take.keys.filter { reference[$0] != nil }.sorted()
@@ -97,9 +115,10 @@ enum SpeechReading {
         let speed = refSum / takeSum
         let rhythm = pearson(both.map { log(reference[$0]!.duration) }, both.map { log(take[$0]!.duration) }) ?? 0
 
-        // Pauses the native reading doesn't have.
+        // Stops inside a sentence that the native reading doesn't make. A
+        // stop after punctuation is the script asking for one.
         var extra: [SpeechReadingScore.Pause] = []
-        for i in both {
+        for i in both where i < stops.count && stops[i] == .none {
             guard let gap = take[i]!.gapAfter, gap >= pauseSeconds else { continue }
             if let r = reference[i]?.gapAfter, r >= pauseSeconds { continue }
             extra.append(.init(after: script[i], seconds: (gap * 10).rounded() / 10, index: i))
@@ -117,7 +136,13 @@ enum SpeechReading {
                                         nativeSeconds: (reference[i]!.duration * 10).rounded() / 10,
                                         index: i)
             }
-            .filter { $0.times >= 2 }
+            // On screen a held word reads "0.1s (native 0s)" if a tenth of a
+            // second is enough to name it. 0.2 s is a choice about what is
+            // worth showing, not a measurement; it doesn't touch the score.
+            .filter { (h: SpeechReadingScore.Held) -> Bool in
+                let over: Double = (h.seconds ?? 0) - (h.nativeSeconds ?? 0)
+                return h.times >= 2 && over >= 0.15
+            }
             .sorted { $0.times > $1.times }
 
         let slipsPer100 = (slips != nil && (scriptTokens ?? 0) > 0)
@@ -226,34 +251,6 @@ struct SpeechReadingScore: Codable, Hashable {
         return parts.all.min { $0.1 < $1.1 }?.0
     }
 
-    var level: SpeechReadingLevel { SpeechReadingLevel(total: total) }
-}
-
-/// What a score means, from where the validation readings landed.
-enum SpeechReadingLevel: CaseIterable {
-    case announcer, narrator, native, nearNative, intermediate, practicing
-
-    init(total: Int) {
-        switch total {
-        case 100: self = .announcer
-        case 95...: self = .narrator
-        case 88...: self = .native
-        case 78...: self = .nearNative
-        case 60...: self = .intermediate
-        default: self = .practicing
-        }
-    }
-
-    var range: ClosedRange<Int> {
-        switch self {
-        case .announcer: return 100...100
-        case .narrator: return 95...99
-        case .native: return 88...94
-        case .nearNative: return 78...87
-        case .intermediate: return 60...77
-        case .practicing: return 0...59
-        }
-    }
 }
 
 // MARK: - The reference reading

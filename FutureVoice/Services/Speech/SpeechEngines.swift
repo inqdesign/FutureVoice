@@ -127,7 +127,7 @@ enum SpeechCoach {
               measured: say nothing about it.
             """
             measured = """
-            - overall \(metrics.overall)/100 (\(String(describing: r.level)))
+            - overall \(metrics.overall)/100
             - speed \(r.parts.speed)/100: the reader took \(String(format: "%.0f", (1 / max(r.speed, 0.01) - 1) * 100))% longer to say the words than the native reading
             - rhythm \(r.parts.rhythm)/100; words held far longer than the native reading holds them: \(r.held.isEmpty ? "none" : r.held.map { "\"\($0.word)\" \($0.times)x" }.joined(separator: ", "))
             - pauses \(r.parts.pauses)/100; stopped where the native reading doesn't, after: \(r.extraPauses.isEmpty ? "none" : r.extraPauses.map { "\"\($0.after)\" \($0.seconds)s" }.joined(separator: ", "))

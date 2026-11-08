@@ -20,11 +20,20 @@ struct SpeechResultView: View {
     @ObservedObject private var sync = SyncEngine.shared
     @ObservedObject private var videoSync = SpeechVideoSync.shared
     @StateObject private var audio = AudioPlayer()
-    @State private var player: AVPlayer?
-    /// The video's own width ÷ height, read from the file, so the player is
-    /// exactly the picture's shape — no black bars.
-    @State private var videoAspect: CGFloat?
-    @State private var savedToPhotos = false
+    /// The reader on the whole page: a few seconds looping without sound,
+    /// the whole take with sound behind the play button.
+    @StateObject private var hero = SpeechHeroPlayer()
+    /// A take from before the camera was kept: its video has the script in it.
+    @State private var watchingScriptVideo: URL?
+    /// The script rolling over the camera while the take plays.
+    @AppStorage("speech.replayShowsScript") private var showScript = false
+    /// How the script sits in a saved video.
+    @AppStorage("speech.exportStyle") private var exportStyle: SpeechVideoStyle = .fullScreen
+    /// Save, send to iCloud, delete: behind the header's button.
+    @State private var showingVideoOptions = false
+    @State private var savedToPhotos: Set<URL> = []
+    /// How far the video with the script has been made, while it is.
+    @State private var exporting: Double?
     @State private var photoError: String?
     @State private var confirmDeleteVideo = false
     /// The script with the take's misreadings marked on it, by take id.
@@ -40,9 +49,153 @@ struct SpeechResultView: View {
 
     var body: some View {
         if let take, let script = store.script(id: take.scriptId) {
-            content(take, script)
+            page(take, script)
         } else {
             ContentUnavailableView("Take not found", systemImage: "waveform")
+        }
+    }
+
+    // MARK: - The page: the reader, the score, and a sheet of details
+
+    /// The camera on its own, for a take recorded that way.
+    private func cameraVideo(_ take: SpeechTake) -> URL? {
+        guard take.prompter != nil, take.videoFilename != nil else { return nil }
+        return SpeechVideoSync.playableURL(take)
+    }
+
+    /// What is behind the score: the camera and nothing else (founder,
+    /// 2026-11-08). A take whose video has the script burned into it has a
+    /// plain ground.
+    private func heroVideo(_ take: SpeechTake) -> URL? {
+        guard !store.videoPending.contains(take.id) else { return nil }
+        return cameraVideo(take)
+    }
+
+    private func page(_ take: SpeechTake, _ script: SpeechScript) -> some View {
+        let video = heroVideo(take)
+        // Playing, everything but the reader steps aside.
+        let immersive = hero.isPlaying || audio.isPlaying
+        let stored = take.videoFilename != nil ? SpeechVideoSync.playableURL(take) : nil
+        return SpeechResultSheetPage(immersive: immersive, onTapWhilePlaying: {
+            if hero.isPlaying { hero.toggle() } else { audio.stop() }
+        }) {
+            heroBackground(take, immersive: immersive)
+        } overlay: {
+            if showScript, hero.isFull, let record = take.prompter, let player = hero.player {
+                // Kept while paused, unseen: drawing the column takes a moment.
+                SpeechScriptOverlay(record: record, player: player, rolling: hero.isPlaying)
+                    .opacity(hero.isPlaying ? 1 : 0)
+            }
+        } hero: {
+            heroContent(take, hasVideo: video != nil)
+        } playing: {
+            if take.prompter != nil, hero.isFull { scriptToggle }
+        } details: {
+            content(take, script)
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+        .toolbar(immersive ? .hidden : .visible, for: .navigationBar)
+        .statusBarHidden(immersive)
+        .toolbar {
+            if stored != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showingVideoOptions = true
+                    } label: {
+                        Label("Save to Photos", systemImage: "square.and.arrow.down")
+                    }
+                }
+            }
+        }
+        .task(id: video) { await hero.show(video) }
+        .sheet(item: $watchingScriptVideo) { SpeechScriptVideoSheet(url: $0) }
+        .sheet(isPresented: $showingVideoOptions) {
+            if let stored { videoOptions(take, url: stored) }
+        }
+        #if DEBUG
+        .onAppear {
+            if UserDefaults.standard.bool(forKey: "captureImmersive") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { showScript = true; hero.toggle() }
+                if UserDefaults.standard.bool(forKey: "capturePaused") {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 6) { hero.toggle() }
+                }
+            }
+            if UserDefaults.standard.bool(forKey: "captureVideoOptions") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { showingVideoOptions = true }
+            }
+        }
+        #endif
+    }
+
+    private func heroBackground(_ take: SpeechTake, immersive: Bool) -> some View {
+        let tint = SpeechScoreColor.color(take.metrics.overall)
+        return ZStack {
+            Color.black
+            if let player = hero.player {
+                PlayerLayerView(player: player, fill: true)
+            } else {
+                LinearGradient(colors: [tint.opacity(0.75), .black], startPoint: .top, endPoint: .bottom)
+            }
+            // Keeps the white text readable on any picture.
+            LinearGradient(colors: [.clear, .black.opacity(0.7)],
+                           startPoint: UnitPoint(x: 0.5, y: 0.45), endPoint: .bottom)
+                .opacity(immersive ? 0 : 1)
+        }
+        .ignoresSafeArea()
+    }
+
+    private func heroContent(_ take: SpeechTake, hasVideo: Bool) -> some View {
+        let m = take.metrics
+        let playing = hero.isPlaying || audio.isPlaying
+        return HStack(alignment: .bottom, spacing: 16) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("\(m.overall)")
+                    .font(.system(size: 96, weight: .bold).monospacedDigit())
+                if let r = m.reading {
+                    Text(SpeechVerdict.line(total: r.total, take: take.id))
+                        .font(.title2.weight(.semibold))
+                    Text("Native speakers average \(SpeechReading.nativeAverage) · 100 is an announcer's read")
+                        .font(.footnote)
+                        .opacity(0.85)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Button {
+                if hasVideo {
+                    preparePlayback()
+                    hero.toggle()
+                } else if audio.isPlaying {
+                    audio.stop()
+                } else {
+                    playAudio(take)
+                }
+            } label: {
+                Image(systemName: playing ? "pause.fill" : "play.fill")
+                    .font(.system(size: 26, weight: .semibold))
+                    .frame(width: 64, height: 64)
+                    .background(.ultraThinMaterial, in: Circle())
+                    .environment(\.colorScheme, .dark)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(playing ? Text("Pause") : Text("Play"))
+        }
+        .foregroundStyle(.white)
+        .shadow(color: .black.opacity(0.35), radius: 8, y: 2)
+    }
+
+    @ViewBuilder
+    private func coachHeadline(_ take: SpeechTake) -> some View {
+        if let coaching = take.coaching {
+            Text(coaching.headline)
+                .font(.body.weight(.medium))
+        } else {
+            HStack(spacing: 8) {
+                ProgressView()
+                Text("Writing feedback…")
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -50,43 +203,12 @@ struct SpeechResultView: View {
         let m = take.metrics
         return ScrollViewReader { proxy in List {
             Section {
-                HStack(spacing: 18) {
-                    // Drawn, not a Gauge: `.accessoryCircularCapacity` is a
-                    // lock-screen style, and on a device it carries the
-                    // widget's drop shadow (the 1.3× scale made it heavier).
-                    let tint = SpeechScoreColor.color(m.overall)
-                    ZStack {
-                        Circle().stroke(tint.opacity(0.25), lineWidth: 7)
-                        Circle()
-                            .trim(from: 0, to: CGFloat(max(0, min(100, m.overall))) / 100)
-                            .stroke(tint, style: StrokeStyle(lineWidth: 7, lineCap: .round))
-                            .rotationEffect(.degrees(-90))
-                        Text("\(m.overall)").font(.title2.monospacedDigit().weight(.bold))
-                    }
-                    .padding(4)
-                    .frame(width: 80, height: 80)
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(Text("\(m.overall)"))
-
-                    VStack(alignment: .leading, spacing: 6) {
-                        if let coaching = take.coaching {
-                            Text(coaching.headline)
-                                .font(.body.weight(.medium))
-                        } else {
-                            HStack(spacing: 8) {
-                                ProgressView()
-                                Text("Writing feedback…")
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
+                if m.reading != nil {
+                    Text("Like a karaoke score: how close this reading came to the reference. It doesn't grade your English.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
-                .padding(.vertical, 6)
-
-                // Season 2: what the number means, right under it.
-                if let r = m.reading {
-                    levelRows(r)
-                }
+                coachHeadline(take)
 
                 if let tips = take.coaching?.tips, !tips.isEmpty {
                     ForEach(Array(tips.enumerated()), id: \.offset) { _, tip in
@@ -95,7 +217,11 @@ struct SpeechResultView: View {
                     }
                 }
             } header: {
-                Text(script.title)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(script.title)
+                    Text(take.createdAt, format: .dateTime.month().day().hour().minute())
+                        .font(.caption)
+                }
             }
 
             if script.isChallenge {
@@ -223,29 +349,13 @@ struct SpeechResultView: View {
             }.value
             scriptMarks = (take.id, marks)
         }
-        .navigationTitle(Text(take.createdAt, format: .dateTime.month().day().hour().minute()))
-        .navigationBarTitleDisplayMode(.inline)
         .onDisappear {
-            player?.pause()
+            hero.stop()
             audio.stop()
         }
         .sheet(item: Binding(get: { challenges.moments[take.id] },
                              set: { if $0 == nil { challenges.dismissMoment(for: take.id) } })) { moment in
             SpeechChallengeMomentSheet(moment: moment, onSeeBoard: onSeeBoard ?? {})
-        }
-        .confirmationDialog("Delete the video? Your voice and score stay.",
-                            isPresented: $confirmDeleteVideo, titleVisibility: .visible) {
-            Button("Delete video", role: .destructive) {
-                player?.pause()
-                player = nil
-                store.deleteVideo(takeId: take.id)
-            }
-        } message: {
-            // The take record syncs whatever the video setting, so a
-            // deletion here reaches the device that recorded it.
-            if sync.isEnabled {
-                Text("It's deleted on your other devices too.")
-            }
         }
         .alert("Couldn't save to Photos", isPresented: Binding(
             get: { photoError != nil }, set: { if !$0 { photoError = nil } })) {
@@ -257,38 +367,8 @@ struct SpeechResultView: View {
 
     @ViewBuilder
     private func playbackSection(_ take: SpeechTake) -> some View {
-        if take.videoFilename != nil, let url = SpeechVideoSync.playableURL(take) {
-            Section {
-                SpeechTakeVideo(player: player)
-                    .aspectRatio(videoAspect ?? 9 / 19.5, contentMode: .fit)
-                    .frame(maxHeight: 520)
-                    .frame(maxWidth: .infinity)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
-                    // Keyed on the file: when the original lands in place of
-                    // the standard copy, the player moves to it.
-                    .task(id: url) {
-                        preparePlayback()
-                        player?.pause()
-                        player = AVPlayer(url: url)
-                        videoAspect = await Self.aspect(of: url)
-                    }
-                Button {
-                    saveToPhotos(url)
-                } label: {
-                    Label(savedToPhotos ? "Saved to Photos" : "Save to Photos",
-                          systemImage: savedToPhotos ? "checkmark" : "square.and.arrow.down")
-                }
-                .disabled(savedToPhotos)
-                cloudRow(take)
-                Button(role: .destructive) {
-                    confirmDeleteVideo = true
-                } label: {
-                    Label("Delete video", systemImage: "trash")
-                }
-            } footer: {
-                Text(videoFooter(take))
-            }
+        if take.videoFilename != nil, SpeechVideoSync.playableURL(take) != nil {
+            EmptyView()
         } else if store.videoPending.contains(take.id) {
             Section {
                 HStack(spacing: 10) {
@@ -298,12 +378,6 @@ struct SpeechResultView: View {
             }
         } else {
             Section {
-                Button {
-                    if audio.isPlaying { audio.stop() } else { playAudio(take) }
-                } label: {
-                    Label(audio.isPlaying ? "Stop" : "Play your take",
-                          systemImage: audio.isPlaying ? "stop.fill" : "play.fill")
-                }
                 if take.videoFilename != nil {
                     remoteVideoRow(take)
                 }
@@ -417,28 +491,6 @@ struct SpeechResultView: View {
 
     // MARK: - Season 2: against a native reading (scoring 5)
 
-    private func levelTitle(_ level: SpeechReadingLevel) -> LocalizedStringKey {
-        switch level {
-        case .announcer: return "Announcer level"
-        case .narrator: return "Narrator level"
-        case .native: return "Native level"
-        case .nearNative: return "Close to native"
-        case .intermediate: return "Intermediate"
-        case .practicing: return "Still practicing"
-        }
-    }
-
-    private func levelNote(_ level: SpeechReadingLevel) -> LocalizedStringKey {
-        switch level {
-        case .announcer: return "Every part at a skilled narrator's level"
-        case .narrator: return "Skilled narrators average \(SpeechReading.narratorAverage)"
-        case .native: return "Native speakers reading average \(SpeechReading.nativeAverage)"
-        case .nearNative: return "Where the best learners reach"
-        case .intermediate: return "Learners average \(SpeechReading.learnerAverage)"
-        case .practicing: return "Below most learners"
-        }
-    }
-
     private func readingTitle(_ part: SpeechReadingScore.Part) -> LocalizedStringKey {
         switch part {
         case .speed: return "Speaking speed"
@@ -513,36 +565,6 @@ struct SpeechResultView: View {
             return r.weakest.isEmpty ? explain("Make every sound as clear as the rest.")
                                      : explain("Work on these sounds: \(soundsList(r.weakest))")
         }
-    }
-
-    /// The level the score lands in, the averages beside it, and every band.
-    @ViewBuilder
-    private func levelRows(_ r: SpeechReadingScore) -> some View {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(levelTitle(r.level)).font(.title3.weight(.semibold))
-                Text("Native speakers average \(SpeechReading.nativeAverage) · 100 is an announcer's read")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.vertical, 4)
-            DisclosureGroup("What the scores mean") {
-                ForEach(SpeechReadingLevel.allCases, id: \.self) { level in
-                    HStack(alignment: .firstTextBaseline) {
-                        Text(verbatim: level.range.count == 1 ? "\(level.range.lowerBound)"
-                                                               : "\(level.range.lowerBound)–\(level.range.upperBound)")
-                            .font(.subheadline.monospacedDigit())
-                            .frame(width: 56, alignment: .leading)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(levelTitle(level)).font(.subheadline.weight(level == r.level ? .semibold : .regular))
-                            Text(levelNote(level)).font(.caption).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        if level == r.level {
-                            Text("You").font(.caption.weight(.semibold)).foregroundStyle(.tint)
-                        }
-                    }
-                }
-            }
     }
 
     @ViewBuilder
@@ -779,13 +801,148 @@ struct SpeechResultView: View {
         }
     }
 
-    private static func aspect(of url: URL) async -> CGFloat? {
-        guard let track = try? await AVURLAsset(url: url).loadTracks(withMediaType: .video).first,
-              let size = try? await track.load(.naturalSize),
-              let transform = try? await track.load(.preferredTransform) else { return nil }
-        let shown = size.applying(transform)
-        let w = abs(shown.width), h = abs(shown.height)
-        return h > 0 ? w / h : nil
+
+    private func saveRow(_ url: URL, title: LocalizedStringKey) -> some View {
+        let saved = savedToPhotos.contains(url)
+        return Button {
+            Task { await saveToPhotos(url) }
+        } label: {
+            if saved {
+                Label("Saved to Photos", systemImage: "checkmark")
+            } else {
+                Label(title, systemImage: "square.and.arrow.down")
+            }
+        }
+        .disabled(saved)
+    }
+
+    /// Shown only while the take plays.
+    private var scriptToggle: some View {
+        Button {
+            showScript.toggle()
+        } label: {
+            Image(systemName: "text.alignleft")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(showScript ? Color.black : Color.white)
+                .frame(width: 48, height: 48)
+                .background {
+                    if showScript {
+                        Circle().fill(.white)
+                    } else {
+                        Circle().fill(.ultraThinMaterial).environment(\.colorScheme, .dark)
+                    }
+                }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(showScript ? Text("Hide script") : Text("Show script"))
+    }
+
+    /// What can be done with the take's video, from the header's button.
+    private func videoOptions(_ take: SpeechTake, url: URL) -> some View {
+        NavigationStack {
+            List {
+                if let record = take.prompter {
+                    Section {
+                        saveRow(url, title: "Save camera video")
+                    }
+                    Section {
+                        Picker(selection: $exportStyle) {
+                            Text("Full screen").tag(SpeechVideoStyle.fullScreen)
+                            Text("Split").tag(SpeechVideoStyle.split)
+                        } label: {
+                            Text("Video layout")
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .disabled(exporting != nil)
+                        exportRow(url, record: record)
+                    }
+                }
+                Section {
+                    if take.prompter == nil {
+                        Button {
+                            preparePlayback()
+                            showingVideoOptions = false
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { watchingScriptVideo = url }
+                        } label: {
+                            Label("Watch script video", systemImage: "play.rectangle")
+                        }
+                        saveRow(url, title: "Save to Photos")
+                    }
+                    cloudRow(take)
+                    Button(role: .destructive) {
+                        confirmDeleteVideo = true
+                    } label: {
+                        Label("Delete video", systemImage: "trash")
+                    }
+                } footer: {
+                    Text(videoFooter(take))
+                }
+            }
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { showingVideoOptions = false }
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .confirmationDialog("Delete the video? Your voice and score stay.",
+                                isPresented: $confirmDeleteVideo, titleVisibility: .visible) {
+                Button("Delete video", role: .destructive) {
+                    hero.stop()
+                    store.deleteVideo(takeId: take.id)
+                    showingVideoOptions = false
+                }
+            } message: {
+                // The take record syncs whatever the video setting, so a
+                // deletion here reaches the device that recorded it.
+                if sync.isEnabled {
+                    Text("It's deleted on your other devices too.")
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    /// The video with the script in it, made when it is asked for.
+    private func exportRow(_ url: URL, record: SpeechPrompterRecord) -> some View {
+        let style = exportStyle
+        let mark = url.appendingPathExtension("with-script-\(style.rawValue)")
+        let saved = savedToPhotos.contains(mark)
+        return Button {
+            exportWithScript(url, record: record, style: style, mark: mark)
+        } label: {
+            if let exporting {
+                HStack(spacing: 10) {
+                    ProgressView(value: exporting).frame(width: 44)
+                    Text("Preparing your video…").foregroundStyle(.secondary)
+                }
+            } else if saved {
+                Label("Saved to Photos", systemImage: "checkmark")
+            } else {
+                Label("Save script video", systemImage: "square.and.arrow.down")
+            }
+        }
+        .disabled(saved || exporting != nil)
+    }
+
+    private func exportWithScript(_ url: URL, record: SpeechPrompterRecord, style: SpeechVideoStyle, mark: URL) {
+        exporting = 0
+        Task {
+            let started = Date()
+            let made = await SpeechVideoExporter.render(video: url, record: record, style: style) { value in
+                Task { @MainActor in if exporting != nil { exporting = value } }
+            }
+            Analytics.capture("speech_video_export", ["ok": made != nil, "ms": Int(Date().timeIntervalSince(started) * 1000),
+                                                      "seconds": Int(record.offsets.count) / 10, "style": style.rawValue])
+            exporting = nil
+            guard let made else {
+                showingVideoOptions = false
+                photoError = explain("Couldn't make the video. Try again.")
+                return
+            }
+            await saveToPhotos(made, mark: mark)
+            try? FileManager.default.removeItem(at: made)
+        }
     }
 
     private func preparePlayback() {
@@ -799,29 +956,25 @@ struct SpeechResultView: View {
         try? audio.play(data, source: "speech_take")
     }
 
-    private func saveToPhotos(_ url: URL) {
-        Task {
-            let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
-            guard status == .authorized || status == .limited else {
-                photoError = explain("Photos access is off. Turn it on in Settings to save videos.")
-                return
+    private func saveToPhotos(_ url: URL, mark: URL? = nil) async {
+        let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+        guard status == .authorized || status == .limited else {
+            showingVideoOptions = false
+            photoError = explain("Photos access is off. Turn it on in Settings to save videos.")
+            return
+        }
+        do {
+            try await PHPhotoLibrary.shared().performChanges {
+                PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: url)
             }
-            do {
-                try await PHPhotoLibrary.shared().performChanges {
-                    PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: url)
-                }
-                savedToPhotos = true
-            } catch {
-                photoError = error.localizedDescription
-            }
+            savedToPhotos.insert(mark ?? url)
+        } catch {
+            showingVideoOptions = false
+            photoError = error.localizedDescription
         }
     }
 }
 
-/// The take's video: the picture, and one tap to play or pause — no control
-/// bar to bring up first (founder, 2026-10-05: the system player's first tap
-/// only showed its controls). A play glyph shows while it is stopped; at the
-/// end a tap plays it again from the start.
 /// The script as one flowing text, each misread word in red: underlined
 /// with what the mic heard written small beside it, or struck through when
 /// it was skipped.
@@ -910,63 +1063,10 @@ private struct SpeechMarkedScript: View {
     }
 }
 
-private struct SpeechTakeVideo: View {
-    let player: AVPlayer?
-    @State private var playing = false
-
-    var body: some View {
-        ZStack {
-            Color.black
-            if let player {
-                PlayerLayerView(player: player)
-            }
-            if !playing {
-                Image(systemName: "play.fill")
-                    .font(.system(size: 30, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 68, height: 68)
-                    .background(.ultraThinMaterial, in: Circle())
-                    .environment(\.colorScheme, .dark)
-                    .transition(.opacity)
-            }
-        }
-        .contentShape(Rectangle())
-        .onTapGesture { toggle() }
-        .animation(.easeOut(duration: 0.15), value: playing)
-        // Scrolled out of sight, the take keeps playing (founder, 2026-11-04:
-        // play it, then scroll down to read the script along with it). The
-        // row's state is read off the player, so a row scrolled back in shows
-        // the truth; the page itself pauses when it is left.
-        .onReceive(player?.publisher(for: \.timeControlStatus).receive(on: RunLoop.main).eraseToAnyPublisher()
-                   ?? Empty().eraseToAnyPublisher()) { status in
-            playing = status != .paused
-        }
-        .accessibilityElement()
-        .accessibilityLabel(playing ? Text("Pause") : Text("Play"))
-        .accessibilityAddTraits(.isButton)
-        .accessibilityAction { toggle() }
-    }
-
-    private func toggle() {
-        guard let player else { return }
-        if playing {
-            player.pause()
-            playing = false
-        } else {
-            if let item = player.currentItem,
-               item.duration.isNumeric,
-               player.currentTime().seconds >= item.duration.seconds - 0.1 {
-                player.seek(to: .zero)
-            }
-            player.play()
-            playing = true
-        }
-    }
-}
-
-/// An `AVPlayerLayer`, aspect-fit, with no controls of its own.
 private struct PlayerLayerView: UIViewRepresentable {
     let player: AVPlayer
+    /// Fills the view, cropping the picture's edges.
+    var fill = false
 
     final class LayerView: UIView {
         override class var layerClass: AnyClass { AVPlayerLayer.self }
@@ -976,12 +1076,336 @@ private struct PlayerLayerView: UIViewRepresentable {
     func makeUIView(context: Context) -> LayerView {
         let view = LayerView()
         view.playerLayer.player = player
-        view.playerLayer.videoGravity = .resizeAspect
+        view.playerLayer.videoGravity = fill ? .resizeAspectFill : .resizeAspect
         view.backgroundColor = .black
         return view
     }
 
     func updateUIView(_ view: LayerView, context: Context) {
         if view.playerLayer.player !== player { view.playerLayer.player = player }
+    }
+}
+
+/// The one line a Season 2 score comes with, the way a karaoke machine says
+/// something about yours (founder, 2026-11-08). An overall remark and only
+/// that: it reads no part of the take, and the score bands it switches at are
+/// chosen for the fun of it, not measured. One byte of the take's id picks
+/// the line, so a take keeps its line when it is reopened.
+enum SpeechVerdict {
+    static func line(total: Int, take: UUID) -> LocalizedStringKey {
+        let lines = self.lines(total: total)
+        return lines[Int(take.uuid.15) % lines.count]
+    }
+
+    private static func lines(total: Int) -> [LocalizedStringKey] {
+        switch total {
+        case 100...:
+            return ["Are you a news anchor?", "Wait, is this the evening news?", "I thought the radio was on.",
+                    "Not a thing to fix.", "Perfect. Nothing to add."]
+        case 95...:
+            return ["Anchors should be worried!", "Do you work in broadcasting?", "You could do voice work.",
+                    "Every word lands.", "One hair short of 100."]
+        case 88...:
+            return ["You could record audiobooks.", "So easy to listen to.", "I'd hand you the presentation.",
+                    "Go on, brag a little.", "That just flowed."]
+        case 78...:
+            return ["Oh, not bad at all!", "You've got my attention.", "You've been hiding this?",
+                    "Starting to sound like the real thing.", "A little more and you're on air."]
+        case 60...:
+            return ["Nice, you've got the feel of it.", "Already sounding good.", "One more go and that's a record.",
+                    "It only gets better from here.", "You've got it. Go again."]
+        default:
+            return ["Nobody nails it on the first try.", "You read it to the end. That counts.", "Consider that a warm-up.",
+                    "The next round is the real one.", "Practice pays off."]
+        }
+    }
+}
+
+/// A pull down from the top of the open sheet closes it, as a system sheet
+/// does. Needs the scroll position, which iOS 18 gives; before it the handle
+/// still closes the sheet.
+private struct PullDownCloses: ViewModifier {
+    @Binding var isOpen: Bool
+
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y + $0.contentInsets.top } action: { _, offset in
+                if isOpen, offset < -70 {
+                    withAnimation(.smooth(duration: 0.3)) { isOpen = false }
+                }
+            }
+        } else {
+            content
+        }
+    }
+}
+
+/// The picture behind the score: six seconds looping without sound, or the
+/// whole take with sound once play is pressed, back to the loop at its end.
+@MainActor
+final class SpeechHeroPlayer: ObservableObject {
+    @Published private(set) var player: AVPlayer?
+    @Published private(set) var isPlaying = false
+    /// The whole take is loaded, playing or paused, not the silent loop.
+    @Published private(set) var isFull = false
+
+    private static let loopSeconds = 6.0
+    /// Skips the first breath of the take when there is enough of it.
+    private static let loopStart = 3.0
+
+    private var url: URL?
+    private var looper: AVPlayerLooper?
+    private var endObserver: NSObjectProtocol?
+    private var generation = 0
+
+    func show(_ url: URL?) async {
+        guard url != self.url else { return }
+        // Switching videos while the take plays keeps its place.
+        let resume = isFull ? (time: player?.currentTime() ?? .zero, playing: isPlaying) : nil
+        self.url = url
+        guard let url else { reset(); player = nil; return }
+        if let resume {
+            startFull(url, at: resume.time, playing: resume.playing)
+        } else {
+            await startLoop(url)
+        }
+    }
+
+    func toggle() {
+        guard let url else { return }
+        if isFull, let player {
+            if isPlaying { player.pause() } else { player.play() }
+            isPlaying.toggle()
+        } else {
+            startFull(url, at: .zero, playing: true)
+        }
+    }
+
+    func stop() {
+        reset()
+        player = nil
+        url = nil
+    }
+
+    private func reset() {
+        generation += 1
+        player?.pause()
+        looper?.disableLooping()
+        looper = nil
+        if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
+        endObserver = nil
+        isFull = false
+        isPlaying = false
+    }
+
+    private func startLoop(_ url: URL) async {
+        reset()
+        let mine = generation
+        let asset = AVURLAsset(url: url)
+        let duration = (try? await asset.load(.duration))?.seconds ?? 0
+        guard mine == generation, duration > 0 else { return }
+        let start = duration > Self.loopStart + Self.loopSeconds ? Self.loopStart : 0
+        let range = CMTimeRange(start: CMTime(seconds: start, preferredTimescale: 600),
+                                duration: CMTime(seconds: min(Self.loopSeconds, duration - start), preferredTimescale: 600))
+        let queue = AVQueuePlayer()
+        queue.isMuted = true
+        looper = AVPlayerLooper(player: queue, templateItem: AVPlayerItem(asset: asset), timeRange: range)
+        queue.play()
+        player = queue
+    }
+
+    private func startFull(_ url: URL, at time: CMTime, playing: Bool) {
+        reset()
+        let item = AVPlayerItem(url: url)
+        let full = AVPlayer(playerItem: item)
+        full.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero)
+        endObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self, let url = self.url else { return }
+                await self.startLoop(url)
+            }
+        }
+        isFull = true
+        isPlaying = playing
+        player = full
+        if playing { full.play() }
+    }
+}
+
+extension URL: @retroactive Identifiable {
+    public var id: String { absoluteString }
+}
+
+/// The script rolling over the camera while a take plays: drawn here, not
+/// stored in the video, always white on the picture.
+private struct SpeechScriptOverlay: View {
+    let record: SpeechPrompterRecord
+    let player: AVPlayer
+    let rolling: Bool
+    @State private var column: (image: CGImage, scale: CGFloat)?
+
+    var body: some View {
+        let layout = SpeechVideoComposer.Layout.standard(width: CGFloat(record.width), background: .clear)
+        GeometryReader { geo in
+            let k: CGFloat = geo.size.width / layout.canvas.width
+            if let column {
+                TimelineView(.animation(minimumInterval: nil, paused: !rolling)) { _ in
+                    Image(decorative: column.image, scale: column.scale)
+                        .resizable()
+                        .frame(width: geo.size.width, height: CGFloat(column.image.height) / column.scale * k)
+                        .offset(y: -CGFloat(record.offset(at: player.currentTime().seconds)) * k)
+                }
+                .frame(width: geo.size.width, height: layout.prompter.height * k, alignment: .topLeading)
+                .clipped()
+                .mask {
+                    LinearGradient(stops: [.init(color: .clear, location: 0),
+                                           .init(color: .black, location: layout.topFade),
+                                           .init(color: .black, location: 1 - layout.bottomFade),
+                                           .init(color: .clear, location: 1)],
+                                   startPoint: .top, endPoint: .bottom)
+                }
+            }
+        }
+        .background(alignment: .top) {
+            LinearGradient(colors: [.black.opacity(0.6), .black.opacity(0.35), .clear], startPoint: .top, endPoint: .bottom)
+                .frame(height: 520)
+                .ignoresSafeArea()
+        }
+        .allowsHitTesting(false)
+        .task {
+            var white = record
+            white.dark = true
+            if let drawn = SpeechVideoExporter.column(for: white) {
+                column = (drawn.column.text, drawn.column.scale)
+            }
+        }
+    }
+}
+
+/// The take's video with the script in it, on its own screen.
+private struct SpeechScriptVideoSheet: View {
+    @State private var player: AVPlayer
+
+    init(url: URL) { _player = State(initialValue: AVPlayer(url: url)) }
+
+    var body: some View {
+        VideoPlayer(player: player)
+            .ignoresSafeArea()
+            .onAppear { player.play() }
+            .onDisappear { player.pause() }
+    }
+}
+
+/// The picture with a sheet over it. The drag lives here, in its own view,
+/// on purpose: a finger moves the sheet 120 times a second, and held by the
+/// result page each move rebuilt the page's whole list of details.
+private struct SpeechResultSheetPage<Background: View, Overlay: View, Hero: View, Playing: View, Details: View>: View {
+    private let peek: CGFloat = 112
+    /// Leaves a strip of the blurred reader above the open sheet.
+    private let top: CGFloat = 56
+
+    let immersive: Bool
+    let onTapWhilePlaying: () -> Void
+    let background: Background
+    let overlay: Overlay
+    let hero: Hero
+    let playing: Playing
+    let details: Details
+
+    @State private var open = false
+    @State private var drag: CGFloat = 0
+
+    init(immersive: Bool, onTapWhilePlaying: @escaping () -> Void,
+         @ViewBuilder background: () -> Background, @ViewBuilder overlay: () -> Overlay,
+         @ViewBuilder hero: () -> Hero, @ViewBuilder playing: () -> Playing,
+         @ViewBuilder details: () -> Details) {
+        self.immersive = immersive
+        self.onTapWhilePlaying = onTapWhilePlaying
+        self.background = background()
+        self.overlay = overlay()
+        self.hero = hero()
+        self.playing = playing()
+        self.details = details()
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            let closedY: CGFloat = geo.size.height - peek
+            let restY: CGFloat = open ? top : closedY
+            let y: CGFloat = Swift.min(closedY, Swift.max(top, restY + drag))
+            let progress: Double = Double((closedY - y) / Swift.max(1, closedY - top))
+            ZStack(alignment: .top) {
+                background
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                    .environment(\.colorScheme, .dark)
+                    .opacity(progress)
+                    .ignoresSafeArea()
+                overlay
+                hero
+                    .padding(.horizontal, 20)
+                    .frame(maxWidth: .infinity)
+                    // Measured from the top: the sheet makes this stack taller
+                    // than the screen, so its bottom edge is below the sheet's.
+                    .frame(height: closedY - 20, alignment: .bottom)
+                    .opacity(immersive ? 0 : Swift.max(0, 1 - progress * 1.8))
+                    .allowsHitTesting(progress < 0.5 && !immersive)
+                sheet
+                    .frame(height: geo.size.height - top + geo.safeAreaInsets.bottom, alignment: .top)
+                    .offset(y: y)
+                    .opacity(immersive ? 0 : 1)
+                    .allowsHitTesting(!immersive)
+                if immersive {
+                    // A tap on the picture pauses it, and everything comes back.
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .ignoresSafeArea()
+                        .onTapGesture(perform: onTapWhilePlaying)
+                    playing
+                        .padding(20)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                        .frame(height: geo.size.height)
+                }
+            }
+            .animation(.easeOut(duration: 0.3), value: immersive)
+        }
+        #if DEBUG
+        .onAppear { if UserDefaults.standard.bool(forKey: "capturePanelOpen") { open = true } }
+        #endif
+    }
+
+    /// Global coordinates: measured in the sheet's own, the distance changes
+    /// as the sheet moves under the finger, and the sheet shakes.
+    private var dragGesture: some Gesture {
+        DragGesture(minimumDistance: 6, coordinateSpace: .global)
+            .onChanged { drag = $0.translation.height }
+            .onEnded { value in
+                let moved = value.predictedEndTranslation.height
+                withAnimation(.smooth(duration: 0.3)) {
+                    if moved < -60 { open = true } else if moved > 60 { open = false }
+                    drag = 0
+                }
+            }
+    }
+
+    private var sheet: some View {
+        VStack(spacing: 0) {
+            Capsule()
+                .fill(.tertiary)
+                .frame(width: 40, height: 5)
+                .frame(maxWidth: .infinity, minHeight: 24)
+                .contentShape(Rectangle())
+                .onTapGesture { withAnimation(.smooth(duration: 0.3)) { open.toggle() } }
+                .gesture(dragGesture)
+            details
+                .scrollDisabled(!open)
+                .modifier(PullDownCloses(isOpen: $open))
+                // Closed, the whole sheet is the handle.
+                .simultaneousGesture(dragGesture, including: open ? .subviews : .all)
+        }
+        .background(Color(.systemGroupedBackground))
+        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 24, topTrailingRadius: 24))
+        .ignoresSafeArea(edges: .bottom)
     }
 }

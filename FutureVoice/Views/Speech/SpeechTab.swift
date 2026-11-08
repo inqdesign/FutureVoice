@@ -707,6 +707,9 @@ struct SpeechTakesSheet: View {
     let scriptId: UUID
     @ObservedObject private var store = SpeechStore.shared
     @Environment(\.dismiss) private var dismiss
+    /// A result is a page of its own, full screen: its sheet of details is
+    /// dragged, and inside this sheet the drag pulled the whole sheet down.
+    @State private var opened: SpeechTake?
 
     var body: some View {
         let takes = store.takes(for: scriptId)
@@ -718,11 +721,18 @@ struct SpeechTakesSheet: View {
                 } else {
                     List {
                         ForEach(takes) { take in
-                            NavigationLink {
-                                SpeechResultView(takeId: take.id)
+                            Button {
+                                opened = take
                             } label: {
-                                SpeechTakeRow(take: take)
+                                HStack {
+                                    SpeechTakeRow(take: take)
+                                    Image(systemName: "chevron.right")
+                                        .font(.footnote.weight(.semibold))
+                                        .foregroundStyle(.tertiary)
+                                }
+                                .contentShape(Rectangle())
                             }
+                            .buttonStyle(.plain)
                             .macDeleteMenu { store.deleteTake(id: take.id) }
                         }
                         .onDelete { offsets in
@@ -737,6 +747,16 @@ struct SpeechTakesSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
+            }
+        }
+        .fullScreenCover(item: $opened) { take in
+            NavigationStack {
+                SpeechResultView(takeId: take.id)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            BarCloseButton(title: "Done") { opened = nil }
+                        }
+                    }
             }
         }
     }
