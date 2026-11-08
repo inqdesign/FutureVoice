@@ -90,6 +90,25 @@ struct SpeechResultView: View {
             heroContent(take, hasVideo: video != nil)
         } playing: {
             if take.prompter != nil, hero.isFull { scriptToggle }
+        } summary: {
+            VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(script.title)
+                        .font(.headline)
+                        .lineLimit(1)
+                    HStack(spacing: 4) {
+                        if script.isChallenge {
+                            Text("Challenge")
+                            Text(verbatim: "·")
+                        }
+                        Text(take.createdAt, format: .dateTime.month().day().hour().minute())
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 20)
+                scoreStrip(take.metrics)
+            }
         } details: {
             content(take, script)
         }
@@ -151,14 +170,15 @@ struct SpeechResultView: View {
         let playing = hero.isPlaying || audio.isPlaying
         return HStack(alignment: .bottom, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
+                if let r = m.reading {
+                    Text(levelTitle(r.level))
+                        .font(.title3.weight(.semibold))
+                }
                 Text("\(m.overall)")
                     .font(.system(size: 96, weight: .bold).monospacedDigit())
                 if let r = m.reading {
                     Text(SpeechVerdict.line(total: r.total, take: take.id))
                         .font(.title2.weight(.semibold))
-                    Text("Native speakers average \(SpeechReading.nativeAverage) · 100 is an announcer's read")
-                        .font(.footnote)
-                        .opacity(0.85)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -203,11 +223,6 @@ struct SpeechResultView: View {
         let m = take.metrics
         return ScrollViewReader { proxy in List {
             Section {
-                if m.reading != nil {
-                    Text("Like a karaoke score: how close this reading came to the reference. It doesn't grade your English.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
                 coachHeadline(take)
 
                 if let tips = take.coaching?.tips, !tips.isEmpty {
@@ -215,12 +230,6 @@ struct SpeechResultView: View {
                         Label(tip, systemImage: "arrow.forward.circle")
                             .font(.subheadline)
                     }
-                }
-            } header: {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(script.title)
-                    Text(take.createdAt, format: .dateTime.month().day().hour().minute())
-                        .font(.caption)
                 }
             }
 
@@ -332,6 +341,8 @@ struct SpeechResultView: View {
                 }
             }
         }
+        // The first section sits right under the sheet's score strip.
+        .contentMargins(.top, 4, for: .scrollContent)
         #if DEBUG
         // `-captureScrollTo reading`: a capture run can't scroll by hand.
         .onAppear {
@@ -491,6 +502,50 @@ struct SpeechResultView: View {
 
     // MARK: - Season 2: against a native reading (scoring 5)
 
+    private func levelTitle(_ level: SpeechReadingLevel) -> LocalizedStringKey {
+        switch level {
+        case .announcer: return "Announcer level"
+        case .narrator: return "Narrator level"
+        case .native: return "Native level"
+        case .nearNative: return "Close to native"
+        case .intermediate: return "Intermediate"
+        case .practicing: return "Still practicing"
+        }
+    }
+
+    private func levelNote(_ level: SpeechReadingLevel) -> LocalizedStringKey {
+        switch level {
+        case .announcer: return "Every part at a skilled narrator's level"
+        case .narrator: return "Skilled narrators average \(SpeechReading.narratorAverage)"
+        case .native: return "Native speakers reading average \(SpeechReading.nativeAverage)"
+        case .nearNative: return "Where the best learners reach"
+        case .intermediate: return "Learners average \(SpeechReading.learnerAverage)"
+        case .practicing: return "Below most learners"
+        }
+    }
+
+    /// Every band, with the reader's own marked.
+    private func levelBands(_ r: SpeechReadingScore) -> some View {
+        DisclosureGroup("What the scores mean") {
+            ForEach(SpeechReadingLevel.allCases, id: \.self) { level in
+                HStack(alignment: .firstTextBaseline) {
+                    Text(verbatim: level.range.count == 1 ? "\(level.range.lowerBound)"
+                                                           : "\(level.range.lowerBound)–\(level.range.upperBound)")
+                        .font(.subheadline.monospacedDigit())
+                        .frame(width: 56, alignment: .leading)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(levelTitle(level)).font(.subheadline.weight(level == r.level ? .semibold : .regular))
+                        Text(levelNote(level)).font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if level == r.level {
+                        Text("You").font(.caption.weight(.semibold)).foregroundStyle(.tint)
+                    }
+                }
+            }
+        }
+    }
+
     private func readingTitle(_ part: SpeechReadingScore.Part) -> LocalizedStringKey {
         switch part {
         case .speed: return "Speaking speed"
@@ -588,32 +643,18 @@ struct SpeechResultView: View {
             }
             ForEach(SpeechReadingScore.Part.allCases, id: \.self) { part in
                 let score = r.parts.all.first { $0.0 == part }?.1 ?? 0
-                HStack(alignment: .firstTextBaseline) {
-                    Label(readingTitle(part), systemImage: readingIcon(part))
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 2) {
-                        HStack(spacing: 4) {
-                            if score >= SpeechReadingScore.bar {
-                                Image(systemName: "checkmark.seal.fill")
-                                    .font(.caption)
-                                    .foregroundStyle(.green)
-                                    .accessibilityLabel(Text("At a narrator's level"))
-                            }
-                            Text(verbatim: "\(score)")
-                                .font(.body.monospacedDigit())
-                                .foregroundStyle(SpeechScoreColor.color(score))
-                        }
-                        Text(readingDetail(part, r))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                }
+                partDetailRow(title: readingTitle(part), icon: readingIcon(part),
+                              detail: readingDetail(part, r), atBar: score >= SpeechReadingScore.bar)
             }
+            levelBands(r)
         } header: {
             Text("Compared with a native reading")
         } footer: {
-            Text("Each word is compared with the same script read by a native voice (\(Text(r.gender == "female" ? "female" : "male"))). Intonation isn't scored yet: nothing measures it reliably.")
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Native speakers average \(SpeechReading.nativeAverage) · 100 is an announcer's read")
+                Text("Like a karaoke score: how close this reading came to the reference. It doesn't grade your English.")
+                Text("Each word is compared with the same script read by a native voice (\(Text(r.gender == "female" ? "female" : "male"))). Intonation isn't scored yet: nothing measures it reliably.")
+            }
         }
     }
 
@@ -715,27 +756,73 @@ struct SpeechResultView: View {
     }
 
     private func partRow(_ part: SpeechScoreV4.Part, _ p: SpeechParts) -> some View {
-        HStack(alignment: .firstTextBaseline) {
-            Label(partTitle(part), systemImage: partIcon(part))
-            Spacer()
-            VStack(alignment: .trailing, spacing: 2) {
-                HStack(spacing: 4) {
-                    if p.clears(part) {
-                        Image(systemName: "checkmark.seal.fill")
-                            .font(.caption)
-                            .foregroundStyle(.green)
-                            .accessibilityLabel(Text("At a narrator's level"))
-                    }
-                    Text(verbatim: "\(p.score(part))")
-                        .font(.body.monospacedDigit())
-                        .foregroundStyle(SpeechScoreColor.color(p.score(part)))
+        partDetailRow(title: partTitle(part), icon: partIcon(part),
+                      detail: partDetail(part, p), atBar: p.clears(part))
+    }
+
+    /// What one part measured. Its number is in the strip at the top of the
+    /// sheet, which stays on screen above this list.
+    private func partDetailRow(title: LocalizedStringKey, icon: String, detail: String, atBar: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack {
+                Label(title, systemImage: icon)
+                Spacer()
+                if atBar {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.caption)
+                        .foregroundStyle(.green)
+                        .accessibilityLabel(Text("At a narrator's level"))
                 }
-                Text(partDetail(part, p))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.trailing)
+            }
+            Text(detail)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    /// The parts of the score, what the sheet shows before it is opened
+    /// (founder, 2026-11-09). A take from before either scoring has no parts
+    /// of its own, so it shows the sub-scores its old total was made of.
+    private func scoreTiles(_ m: SpeechMetrics) -> [(title: LocalizedStringKey, score: Int)] {
+        if let r = m.reading {
+            return SpeechReadingScore.Part.allCases.map { part in
+                (readingTitle(part), r.parts.all.first { $0.0 == part }?.1 ?? 0)
             }
         }
+        if let p = m.parts {
+            return SpeechScoreV4.Part.allCases.map { (partTitle($0), p.score($0)) }
+        }
+        var tiles: [(title: LocalizedStringKey, score: Int)] = [("Accuracy", m.accuracy)]
+        if let pron = m.pronunciation { tiles.append(("Pronunciation", pron)) }
+        tiles += [("Pace", m.paceScore), ("Pauses", m.pauseScore), ("Fillers", m.fillerScore),
+                  ("Steady voice", m.steadiness)]
+        return tiles
+    }
+
+    private func scoreStrip(_ m: SpeechMetrics) -> some View {
+        let tiles = scoreTiles(m)
+        return HStack(alignment: .top, spacing: 2) {
+            ForEach(tiles.indices, id: \.self) { index in
+                VStack(spacing: 3) {
+                    Text(verbatim: "\(tiles[index].score)")
+                        .font(.title.weight(.bold).monospacedDigit())
+                        .foregroundStyle(SpeechScoreColor.color(tiles[index].score))
+                    ProgressView(value: Double(min(100, max(0, tiles[index].score))), total: 100)
+                        .tint(SpeechScoreColor.color(tiles[index].score))
+                        .padding(.horizontal, 10)
+                        .accessibilityHidden(true)
+                    Text(tiles[index].title)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                .frame(maxWidth: .infinity)
+                .accessibilityElement(children: .combine)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 14)
     }
 
     /// Season 2's result: what to work on next, then the five parts, each
@@ -1243,7 +1330,21 @@ private struct SpeechScriptOverlay: View {
     let record: SpeechPrompterRecord
     let player: AVPlayer
     let rolling: Bool
-    @State private var column: (image: CGImage, scale: CGFloat)?
+    @State private var column: SpeechVideoComposer.Column?
+
+    /// The part of the column already said.
+    private struct LitArea: Shape {
+        let boxes: [CGRect]
+        let k: CGFloat
+
+        func path(in _: CGRect) -> Path {
+            var path = Path()
+            for box in boxes {
+                path.addRect(CGRect(x: box.minX * k, y: box.minY * k, width: box.width * k, height: box.height * k))
+            }
+            return path
+        }
+    }
 
     var body: some View {
         let layout = SpeechVideoComposer.Layout.standard(width: CGFloat(record.width), background: .clear)
@@ -1251,10 +1352,18 @@ private struct SpeechScriptOverlay: View {
             let k: CGFloat = geo.size.width / layout.canvas.width
             if let column {
                 TimelineView(.animation(minimumInterval: nil, paused: !rolling)) { _ in
-                    Image(decorative: column.image, scale: column.scale)
+                    let seconds = player.currentTime().seconds
+                    let reached = column.words.isEmpty ? nil : record.reached(at: seconds)
+                    let script = Image(decorative: column.text, scale: column.scale)
                         .resizable()
-                        .frame(width: geo.size.width, height: CGFloat(column.image.height) / column.scale * k)
-                        .offset(y: -CGFloat(record.offset(at: player.currentTime().seconds)) * k)
+                        .frame(width: geo.size.width, height: CGFloat(column.text.height) / column.scale * k)
+                    ZStack(alignment: .topLeading) {
+                        script.opacity(reached == nil ? 1 : SpeechPrompterRecord.unreadOpacity)
+                        if let reached {
+                            script.clipShape(LitArea(boxes: column.lit(reached), k: k))
+                        }
+                    }
+                    .offset(y: -CGFloat(record.offset(at: seconds)) * k)
                 }
                 .frame(width: geo.size.width, height: layout.prompter.height * k, alignment: .topLeading)
                 .clipped()
@@ -1276,9 +1385,7 @@ private struct SpeechScriptOverlay: View {
         .task {
             var white = record
             white.dark = true
-            if let drawn = SpeechVideoExporter.column(for: white) {
-                column = (drawn.column.text, drawn.column.scale)
-            }
+            column = SpeechVideoExporter.column(for: white)?.column
         }
     }
 }
@@ -1297,13 +1404,38 @@ private struct SpeechScriptVideoSheet: View {
     }
 }
 
+/// The sheet's outline, inset from the sides and cut off above the screen's
+/// bottom while it floats. Animatable, so a release glides with the offset.
+private struct FloatingSheetShape: Shape {
+    var inset: CGFloat
+    var visibleHeight: CGFloat
+    var radius: CGFloat
+
+    var animatableData: AnimatablePair<AnimatablePair<CGFloat, CGFloat>, CGFloat> {
+        get { AnimatablePair(AnimatablePair(inset, visibleHeight), radius) }
+        set {
+            inset = newValue.first.first
+            visibleHeight = newValue.first.second
+            radius = newValue.second
+        }
+    }
+
+    func path(in rect: CGRect) -> Path {
+        let card = CGRect(x: rect.minX + inset, y: rect.minY,
+                          width: rect.width - inset * 2, height: visibleHeight)
+        return RoundedRectangle(cornerRadius: radius, style: .continuous).path(in: card)
+    }
+}
+
 /// The picture with a sheet over it. The drag lives here, in its own view,
 /// on purpose: a finger moves the sheet 120 times a second, and held by the
 /// result page each move rebuilt the page's whole list of details.
-private struct SpeechResultSheetPage<Background: View, Overlay: View, Hero: View, Playing: View, Details: View>: View {
-    private let peek: CGFloat = 112
+private struct SpeechResultSheetPage<Background: View, Overlay: View, Hero: View, Playing: View, Summary: View, Details: View>: View {
+    private let peek: CGFloat = 166
     /// Leaves a strip of the blurred reader above the open sheet.
     private let top: CGFloat = 56
+    /// Closed, the sheet floats this far off the edges; open, it fills them.
+    private let floatInset: CGFloat = 8
 
     let immersive: Bool
     let onTapWhilePlaying: () -> Void
@@ -1311,6 +1443,7 @@ private struct SpeechResultSheetPage<Background: View, Overlay: View, Hero: View
     let overlay: Overlay
     let hero: Hero
     let playing: Playing
+    let summary: Summary
     let details: Details
 
     @State private var open = false
@@ -1319,13 +1452,14 @@ private struct SpeechResultSheetPage<Background: View, Overlay: View, Hero: View
     init(immersive: Bool, onTapWhilePlaying: @escaping () -> Void,
          @ViewBuilder background: () -> Background, @ViewBuilder overlay: () -> Overlay,
          @ViewBuilder hero: () -> Hero, @ViewBuilder playing: () -> Playing,
-         @ViewBuilder details: () -> Details) {
+         @ViewBuilder summary: () -> Summary, @ViewBuilder details: () -> Details) {
         self.immersive = immersive
         self.onTapWhilePlaying = onTapWhilePlaying
         self.background = background()
         self.overlay = overlay()
         self.hero = hero()
         self.playing = playing()
+        self.summary = summary()
         self.details = details()
     }
 
@@ -1351,7 +1485,8 @@ private struct SpeechResultSheetPage<Background: View, Overlay: View, Hero: View
                     .frame(height: closedY - 20, alignment: .bottom)
                     .opacity(immersive ? 0 : Swift.max(0, 1 - progress * 1.8))
                     .allowsHitTesting(progress < 0.5 && !immersive)
-                sheet
+                sheet(progress: progress,
+                      visibleHeight: geo.size.height + geo.safeAreaInsets.bottom - y)
                     .frame(height: geo.size.height - top + geo.safeAreaInsets.bottom, alignment: .top)
                     .offset(y: y)
                     .opacity(immersive ? 0 : 1)
@@ -1389,23 +1524,43 @@ private struct SpeechResultSheetPage<Background: View, Overlay: View, Hero: View
             }
     }
 
-    private var sheet: some View {
-        VStack(spacing: 0) {
-            Capsule()
-                .fill(.tertiary)
-                .frame(width: 40, height: 5)
-                .frame(maxWidth: .infinity, minHeight: 24)
-                .contentShape(Rectangle())
-                .onTapGesture { withAnimation(.smooth(duration: 0.3)) { open.toggle() } }
-                .gesture(dragGesture)
+    /// Glass floating off the edges when closed; opaque and edge to edge when
+    /// open. The inset is a clip, not padding, for the details: narrowing the
+    /// list would lay out every row 120 times a second under the finger.
+    private func sheet(progress: Double, visibleHeight: CGFloat) -> some View {
+        let inset = floatInset * CGFloat(1 - progress)
+        return VStack(spacing: 0) {
+            VStack(spacing: 0) {
+                Capsule()
+                    .fill(.tertiary)
+                    .frame(width: 40, height: 5)
+                    .frame(maxWidth: .infinity, minHeight: 24)
+                summary
+            }
+            .padding(.horizontal, inset)
+            .contentShape(Rectangle())
+            .onTapGesture { withAnimation(.smooth(duration: 0.3)) { open.toggle() } }
+            .gesture(dragGesture)
             details
+                // The sheet's own ground shows through, glass or opaque.
+                .scrollContentBackground(.hidden)
+                // Closed, the summary is all the sheet shows.
+                .opacity(Swift.min(1, progress * 5))
                 .scrollDisabled(!open)
                 .modifier(PullDownCloses(isOpen: $open))
                 // Closed, the whole sheet is the handle.
                 .simultaneousGesture(dragGesture, including: open ? .subviews : .all)
         }
-        .background(Color(.systemGroupedBackground))
-        .clipShape(UnevenRoundedRectangle(topLeadingRadius: 24, topTrailingRadius: 24))
+        .background {
+            ZStack {
+                Rectangle().fill(.regularMaterial)
+                Color(.systemGroupedBackground).opacity(Swift.min(1, progress * 1.5))
+            }
+        }
+        .clipShape(FloatingSheetShape(inset: inset,
+                                      // Open, the bottom corners go below the screen.
+                                      visibleHeight: visibleHeight - inset + 48 * CGFloat(progress),
+                                      radius: 24 + 10 * CGFloat(1 - progress)))
         .ignoresSafeArea(edges: .bottom)
     }
 }

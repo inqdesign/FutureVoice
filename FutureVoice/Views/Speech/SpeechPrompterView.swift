@@ -688,6 +688,8 @@ struct SpeechPrompterColumn: View, Equatable {
     /// Reports where the current word is (the scroll follows it). Off for
     /// the copy drawn into the video.
     var measures: Bool = true
+    /// Told where every word landed, for the copy drawn as one image.
+    var map: SpeechColumnMap? = nil
     let onCurrentWord: (SpeechTeleprompter.WordFrame) -> Void
 
     static func == (a: Self, b: Self) -> Bool {
@@ -700,9 +702,10 @@ struct SpeechPrompterColumn: View, Equatable {
 
     var body: some View {
         VStack(alignment: .leading, spacing: textSize * 0.9) {
-            ForEach(Array(track.paragraphs.enumerated()), id: \.offset) { _, paragraph in
+            ForEach(Array(track.paragraphs.enumerated()), id: \.offset) { index, paragraph in
                 SpeechWordWrap(spacing: LanguageCatalog.writesSpaces(language) ? textSize * 0.28 : 0,
-                               lineSpacing: textSize * 0.35) {
+                               lineSpacing: textSize * 0.35,
+                               onPlaced: map.map { map in { map.set(paragraph: index, words: $0, height: $1) } }) {
                     ForEach(paragraph) { word in
                         Text(word.text)
                             .font(.system(size: textSize, weight: .semibold))
@@ -733,11 +736,36 @@ struct SpeechPrompterColumn: View, Equatable {
 
 }
 
+/// Where the words of a drawn column landed. An image of the column can't
+/// report geometry, so its layout writes here as it places them.
+final class SpeechColumnMap: @unchecked Sendable {
+    private var paragraphs: [Int: (words: [CGRect], height: CGFloat)] = [:]
+
+    func set(paragraph: Int, words: [CGRect], height: CGFloat) {
+        paragraphs[paragraph] = (words, height)
+    }
+
+    /// Every word's box in column points, in reading order: paragraphs stack
+    /// `gap` apart inside the column's side `inset`.
+    func wordFrames(inset: CGFloat, gap: CGFloat) -> [CGRect] {
+        var y: CGFloat = 0
+        var out: [CGRect] = []
+        for key in paragraphs.keys.sorted() {
+            guard let paragraph = paragraphs[key] else { continue }
+            out += paragraph.words.map { $0.offsetBy(dx: inset, dy: y) }
+            y += paragraph.height + gap
+        }
+        return out
+    }
+}
+
 /// Lays words out left to right and wraps them — SwiftUI has no flow layout,
 /// and the prompter needs each word as its own view to scroll to it.
 struct SpeechWordWrap: Layout {
     var spacing: CGFloat
     var lineSpacing: CGFloat
+    /// Each word's box from this block's top-left, and the block's height.
+    var onPlaced: (([CGRect], CGFloat) -> Void)? = nil
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let width = proposal.width ?? .infinity
@@ -758,6 +786,7 @@ struct SpeechWordWrap: Layout {
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         var x = bounds.minX, y = bounds.minY, lineHeight: CGFloat = 0
+        var placed: [CGRect] = []
         for view in subviews {
             let size = view.sizeThatFits(.unspecified)
             if x > bounds.minX && x + size.width > bounds.maxX {
@@ -766,9 +795,13 @@ struct SpeechWordWrap: Layout {
                 lineHeight = 0
             }
             view.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+            if onPlaced != nil {
+                placed.append(CGRect(x: x - bounds.minX, y: y - bounds.minY, width: size.width, height: size.height))
+            }
             x += size.width + spacing
             lineHeight = max(lineHeight, size.height)
         }
+        onPlaced?(placed, bounds.height)
     }
 }
 

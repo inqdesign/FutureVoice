@@ -251,6 +251,35 @@ struct SpeechReadingScore: Codable, Hashable {
         return parts.all.min { $0.1 < $1.1 }?.0
     }
 
+    var level: SpeechReadingLevel { SpeechReadingLevel(total: total) }
+}
+
+/// What a score means, from where the validation readings landed. Back on the
+/// reader's page since 2026-11-09 (founder: the bands were useful to have).
+enum SpeechReadingLevel: CaseIterable {
+    case announcer, narrator, native, nearNative, intermediate, practicing
+
+    init(total: Int) {
+        switch total {
+        case 100...: self = .announcer
+        case 95...: self = .narrator
+        case 88...: self = .native
+        case 78...: self = .nearNative
+        case 60...: self = .intermediate
+        default: self = .practicing
+        }
+    }
+
+    var range: ClosedRange<Int> {
+        switch self {
+        case .announcer: return 100...100
+        case .narrator: return 95...99
+        case .native: return 88...94
+        case .nearNative: return 78...87
+        case .intermediate: return 60...77
+        case .practicing: return 0...59
+        }
+    }
 }
 
 // MARK: - The reference reading

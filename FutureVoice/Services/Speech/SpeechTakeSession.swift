@@ -91,6 +91,9 @@ final class SpeechTakeSession: ObservableObject {
         /// The read-back lost words Azure heard, and Azure's hearing stands
         /// in for it (`pieceText`).
         var readBackReplaced = false
+        /// Where this piece begins in the take (negative: it opened during
+        /// the countdown).
+        var startMs = 0
     }
 
     /// A piece's words, from two witnesses. The read-back (Gemini) is the
@@ -307,7 +310,7 @@ final class SpeechTakeSession: ObservableObject {
            atSentenceEnd || clock - lastChunkAt >= Self.chunkHardSeconds,
            let piece = live.rotateCaptureChunk() {
             lastChunkAt = clock
-            chunkReads.append(readPiece(piece, reference: scriptSpan(upTo: cursor)))
+            chunkReads.append(readPiece(piece, reference: scriptSpan(upTo: cursor), endedAt: clock))
         }
         // Finished = the LAST word was heard, then a second of quiet. Being
         // ON the last word isn't finished: a breath before it ("…바로 그 첫,
@@ -344,7 +347,8 @@ final class SpeechTakeSession: ObservableObject {
         let meterVoiced = live.fluencyStats().speakingSeconds
         let liveText = await live.stopAndFinalize()
         if let tail = live.lastChunkRecordingURL {
-            chunkReads.append(readPiece(tail, reference: scriptSpan(upTo: track.words.count)))
+            chunkReads.append(readPiece(tail, reference: scriptSpan(upTo: track.words.count),
+                                        endedAt: startedAt.map { stoppedAt.timeIntervalSince($0) } ?? clock))
         }
         let pieces = chunkReads
         chunkReads = []
@@ -397,7 +401,7 @@ final class SpeechTakeSession: ObservableObject {
             if piece.readBackReplaced { readBackFixed += 1 }
             if let pron = piece.pron {
                 prons.append(pron)
-                assessed.append(.init(reference: piece.reference, result: pron))
+                assessed.append(.init(reference: piece.reference, result: pron, startMs: piece.startMs))
             }
         }
         let transcript: String
@@ -511,6 +515,12 @@ final class SpeechTakeSession: ObservableObject {
             // movement starts there too.
             var record = self.prompterBase
             record?.offsets = Array(offsets.dropFirst(Int((max(0, leadIn) / SpeechPrompterRecord.step).rounded())))
+            let cutFromVoice = Int(max(0, -leadIn) * 1000)
+            if let times = SpeechPrompterTrack.wordTimes(of: self.track.words.map(\.text), language: language,
+                                                         pieces: deliveryPieces) {
+                record?.wordStarts = times.starts.map { $0 - cutFromVoice }
+                record?.wordEnds = times.ends.map { $0 - cutFromVoice }
+            }
             self.update(id) {
                 $0.videoFilename = name
                 $0.prompter = record
@@ -600,8 +610,13 @@ final class SpeechTakeSession: ObservableObject {
         return text
     }
 
-    private func readPiece(_ url: URL, reference: String) -> Task<Piece?, Never> {
+    /// - Parameter endedAt: the take's clock when this piece was cut. Its
+    ///   start is counted back from there by the file's own length, so the
+    ///   time the words are placed at never adds up across pieces.
+    private func readPiece(_ url: URL, reference: String, endedAt: TimeInterval) -> Task<Piece?, Never> {
         let language = script.language
+        let seconds = (try? AVAudioFile(forReading: url)).map { Double($0.length) / $0.fileFormat.sampleRate } ?? 0
+        let startMs = Int((endedAt - seconds) * 1000)
         return Task {
             defer { try? FileManager.default.removeItem(at: url) }
             // The script sentences the prompter walked are the reference:
@@ -620,14 +635,14 @@ final class SpeechTakeSession: ObservableObject {
                 guard let piece = Self.pieceText(readBack: readBack, heard: result?.recognized,
                                                  language: language) else { return nil }
                 return Piece(text: piece.text, pron: result, reference: reference,
-                             readBackReplaced: piece.replaced)
+                             readBackReplaced: piece.replaced, startMs: startMs)
             }
             guard let text = await SpeechReader.readPiece(audioURL: url, language: language) else { return nil }
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { return Piece(text: text, pron: nil) }
             let pron = await PronunciationAssessor.assess(
                 audioURL: url, reference: trimmed, language: language, surface: "speech")
-            return Piece(text: text, pron: pron.result, reference: trimmed)
+            return Piece(text: text, pron: pron.result, reference: trimmed, startMs: startMs)
         }
     }
 
@@ -640,6 +655,13 @@ final class SpeechTakeSession: ObservableObject {
               let wav = await Task.detached(operation: { AudioLoudness.wav16kMono(fromFileAt: audioURL) }).value
         else { return [] }
         let windows = PronunciationAssessor.windows(ofWAV: wav)
+        // The windows cut the file end to end: 16-bit, 16 kHz, a 44-byte header.
+        var starts: [Int] = [], bytes = 0
+        for window in windows {
+            starts.append(bytes / 32)
+            bytes += max(0, window.count - 44)
+        }
+        let windowStarts = starts
         return await withTaskGroup(of: (Int, SpeechDelivery.Piece?).self) { group in
             for (index, piece) in windows.enumerated() {
                 group.addTask {
@@ -651,7 +673,9 @@ final class SpeechTakeSession: ObservableObject {
                           !text.isEmpty else { return (index, nil) }
                     let assessed = await PronunciationAssessor.assess(
                         wav: piece, reference: text, language: language, surface: "speech")
-                    return (index, assessed.result.map { SpeechDelivery.Piece(reference: text, result: $0) })
+                    return (index, assessed.result.map {
+                        SpeechDelivery.Piece(reference: text, result: $0, startMs: windowStarts[index])
+                    })
                 }
             }
             var got: [(Int, SpeechDelivery.Piece)] = []

@@ -2365,8 +2365,17 @@ struct SpeechPrompterRecord: Codable, Hashable {
     var language: String
     /// Column y at the top of the prompter, every `step` seconds of the video.
     var offsets: [Double]
+    /// When each script word was said, in milliseconds of the video: what
+    /// the replay and the saved video light up (2026-11-08, founder). Ends
+    /// where the reader stopped; nil on an older take or one too little of
+    /// was heard.
+    var wordStarts: [Int]? = nil
+    var wordEnds: [Int]? = nil
 
     static let step = 0.1
+    /// How much of the script's colour a word not said yet keeps. Chosen by
+    /// eye, not measured.
+    static let unreadOpacity = 0.45
 
     func offset(at seconds: Double) -> Double {
         guard let last = offsets.last else { return 0 }
@@ -2374,6 +2383,28 @@ struct SpeechPrompterRecord: Codable, Hashable {
         let i = Int(position)
         guard i + 1 < offsets.count else { return last }
         return offsets[i] + (offsets[i + 1] - offsets[i]) * (position - Double(i))
+    }
+
+    /// How far the reading had got: every word before `word` is said, and
+    /// `fraction` of `word` itself.
+    struct Reached: Equatable, Sendable {
+        var word: Int
+        var fraction: Double
+    }
+
+    /// nil when this take has no word times.
+    func reached(at seconds: Double) -> Reached? {
+        guard let starts = wordStarts, let ends = wordEnds, !starts.isEmpty, starts.count == ends.count else { return nil }
+        let ms = Int(seconds * 1000)
+        var low = 0, high = starts.count
+        while low < high {
+            let middle = (low + high) / 2
+            if starts[middle] <= ms { low = middle + 1 } else { high = middle }
+        }
+        guard low > 0 else { return Reached(word: 0, fraction: 0) }
+        let current = low - 1
+        guard ms < ends[current] else { return Reached(word: low, fraction: 0) }
+        return Reached(word: current, fraction: Double(ms - starts[current]) / Double(max(1, ends[current] - starts[current])))
     }
 }
 

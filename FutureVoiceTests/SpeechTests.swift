@@ -271,8 +271,68 @@ import CoreImage
 final class SpeechVideoComposerTests: XCTestCase {
     /// Draws one frame from a fake camera picture and writes it out, so the
     /// video's layout can be looked at (`[speech-frame] <path>` in the log).
-    @MainActor
-    func testComposesTheTakeScreen() throws {
+    private func assessed(_ words: [(String, Int, Int, String?)], startMs: Int) -> SpeechDelivery.Piece {
+        let text = words.map(\.0).joined(separator: " ")
+        let items = words.map { word, start, end, error in
+            #"{"word":"\#(word)","error":"\#(error ?? "None")","offsetMs":\#(start),"durationMs":\#(end - start),"phonemes":[]}"#
+        }
+        let json = """
+        {"score":90,"accuracy":90,"fluency":90,"locale":"en-US","recognized":"\(text)","words":[\(items.joined(separator: ","))]}
+        """
+        let result = try! JSONDecoder().decode(PronunciationResult.self, from: Data(json.utf8))
+        return .init(reference: text, result: result, startMs: startMs)
+    }
+
+    func testWordTimesAddThePieceStartAndPassThroughAMissedWord() throws {
+        let pieces = [
+            assessed([("hello", 1000, 1200, nil), ("well", 1300, 1400, nil), ("known", 1400, 1600, nil)], startMs: 0),
+            // Said again from the last piece's overlap: not said in this one.
+            assessed([("known", 0, 0, "Omission"), ("again", 500, 700, nil), ("friend", 800, 1000, nil)], startMs: 1500),
+        ]
+        let words = ["Hello,", "well-known", "world", "again", "friend.", "never", "reached."]
+        let times = try XCTUnwrap(SpeechPrompterTrack.wordTimes(of: words, language: "en", pieces: pieces))
+        // Times are the take's; "world" was missed and passes between its
+        // neighbours; the words after the last one heard get no time at all.
+        XCTAssertEqual(times.starts, [1000, 1300, 1600, 2000, 2300])
+        XCTAssertEqual(times.ends, [1200, 1600, 2000, 2200, 2500])
+    }
+
+    func testWordTimesGiveUpWhenLittleWasHeard() {
+        let words = (0..<20).map { "w\($0)" }
+        let pieces = [assessed([("w0", 0, 100, nil), ("w1", 100, 200, nil), ("w19", 300, 400, nil)], startMs: 0)]
+        XCTAssertNil(SpeechPrompterTrack.wordTimes(of: words, language: "en", pieces: pieces))
+    }
+
+    func testReachedWalksTheWords() {
+        var record = SpeechPrompterRecord(width: 390, textSize: 28, dark: true, text: "a b", language: "en", offsets: [0])
+        XCTAssertNil(record.reached(at: 1))
+        record.wordStarts = [1000, 2000]
+        record.wordEnds = [1500, 2500]
+        XCTAssertEqual(record.reached(at: 0.5), .init(word: 0, fraction: 0))
+        XCTAssertEqual(record.reached(at: 1.25), .init(word: 0, fraction: 0.5))
+        XCTAssertEqual(record.reached(at: 1.75), .init(word: 1, fraction: 0))
+        XCTAssertEqual(record.reached(at: 3), .init(word: 2, fraction: 0))
+    }
+
+    /// The boxes come from the layout that drew the image, so they must add
+    /// up to that image, or the light goes on over the wrong words.
+    @MainActor func testDrawnColumnKnowsWhereEveryWordIs() throws {
+        let script = SpeechLibrary.builtIn(for: "en")!
+        let record = SpeechPrompterRecord(width: 390, textSize: 28, dark: true, text: script.body, language: "en", offsets: [0])
+        let drawn = try XCTUnwrap(SpeechVideoExporter.column(for: record))
+        let words = SpeechPrompterTrack(script: script.body, language: "en").words
+        XCTAssertEqual(drawn.column.words.count, words.count)
+        let bottom = try XCTUnwrap(drawn.column.words.map(\.maxY).max())
+        XCTAssertEqual(bottom, CGFloat(drawn.column.text.height) / drawn.column.scale, accuracy: 1)
+        XCTAssertEqual(drawn.column.words[0].minX, 24)
+        // Nothing said: nothing lit. Past the last word: the column above
+        // it, and all of its line up to its end.
+        XCTAssertEqual(drawn.column.lit(.init(word: 0, fraction: 0)), [])
+        let last = drawn.column.words[words.count - 1]
+        XCTAssertEqual(drawn.column.lit(.init(word: words.count, fraction: 0))[1].maxX, last.maxX, accuracy: 0.5)
+    }
+
+    @MainActor func testComposesTheTakeScreen() throws {
         let script = SpeechLibrary.builtIn(for: "en")!
         let track = SpeechPrompterTrack(script: script.body, language: "en")
         let layout = SpeechVideoComposer.Layout(

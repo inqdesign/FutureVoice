@@ -76,12 +76,33 @@ final class SpeechVideoComposer: @unchecked Sendable {
     struct Column: @unchecked Sendable {
         let text: CGImage
         let scale: CGFloat
+        /// Every word's box, in column points. Empty: nothing can be lit.
+        var words: [CGRect] = []
+        /// `SpeechPrompterRecord.unreadOpacity` for Core Image, which blends
+        /// in linear light where SwiftUI blends in sRGB.
+        var unreadAlpha: CGFloat = 1
+
+        /// The boxes of the column already said: everything above the line
+        /// being read, and that line up to where the reading has got.
+        func lit(_ reached: SpeechPrompterRecord.Reached) -> [CGRect] {
+            guard !words.isEmpty, reached.word > 0 || reached.fraction > 0 else { return [] }
+            let index = min(reached.word, words.count - 1)
+            let fraction = reached.word >= words.count ? 1 : CGFloat(reached.fraction)
+            let word = words[index]
+            let width = CGFloat(text.width) / scale
+            return [CGRect(x: 0, y: 0, width: width, height: word.minY),
+                    CGRect(x: 0, y: word.minY, width: word.minX + word.width * fraction, height: word.height)]
+        }
     }
 
     /// The prompter at this instant, in column points.
     struct Prompter: Sendable {
         /// Column y drawn at the top of the prompter area.
         var offset: CGFloat = 0
+        /// The parts of the column already said, the rest dimmed to
+        /// `unreadAlpha`. nil: the whole script at full strength.
+        var lit: [CGRect]? = nil
+        var unreadAlpha: CGFloat = 1
     }
 
     struct Result {
@@ -199,12 +220,15 @@ final class SpeechVideoComposer: @unchecked Sendable {
 
     /// One decoded camera frame, drawn with the script at `offset`. Blocks
     /// until the encoder can take it: an export has no frame to spare.
-    func exportFrame(_ frame: CVPixelBuffer, at pts: CMTime, offset: CGFloat) {
+    func exportFrame(_ frame: CVPixelBuffer, at pts: CMTime, offset: CGFloat,
+                     reached: SpeechPrompterRecord.Reached? = nil) {
         lock.lock()
         let layout = self.layout, column = self.column
         lock.unlock()
         guard let layout, let column else { return }
-        let at = Prompter(offset: offset)
+        let at = Prompter(offset: offset,
+                          lit: column.words.isEmpty ? nil : reached.map(column.lit),
+                          unreadAlpha: column.unreadAlpha)
         let image = compose(camera: CIImage(cvPixelBuffer: frame), layout: layout,
                             column: visible(column, layout: layout, prompter: at), prompter: at)
         while let waiting = writeQueue.sync(execute: { failed ? nil : input }), !waiting.isReadyForMoreMediaData {
@@ -344,6 +368,17 @@ final class SpeechVideoComposer: @unchecked Sendable {
         let tx = layout.prompter.minX * k
         let ty = H - (layout.prompter.minY - prompter.offset) * k - imgH
         text = text.transformed(by: CGAffineTransform(translationX: tx, y: ty)).cropped(to: area)
+        if let lit = prompter.lit {
+            let full = text
+            text = full.applyingFilter("CIColorMatrix", parameters: [
+                "inputAVector": CIVector(x: 0, y: 0, z: 0, w: prompter.unreadAlpha),
+            ])
+            for box in lit where !box.isEmpty {
+                let placed = CGRect(x: tx + box.minX * k, y: ty + imgH - box.maxY * k,
+                                    width: box.width * k, height: box.height * k)
+                text = full.cropped(to: placed.intersection(area)).composited(over: text)
+            }
+        }
 
         // The prompter's top and bottom fades.
         let top = CIFilter.linearGradient()
@@ -437,15 +472,21 @@ enum SpeechVideoExporter {
             ? .fullScreen(width: CGFloat(record.width))
             : .standard(width: CGFloat(record.width), background: background)
         let scale = SpeechVideoComposer.scale(for: layout)
+        let map = SpeechColumnMap()
         let renderer = ImageRenderer(content:
             SpeechPrompterColumn(track: SpeechPrompterTrack(script: record.text, language: record.language),
                                  cursor: 0, language: record.language, textSize: record.textSize,
-                                 width: CGFloat(record.width), measures: false, onCurrentWord: { _ in })
+                                 width: CGFloat(record.width), measures: false, map: map, onCurrentWord: { _ in })
                 .environment(\.colorScheme, scheme))
         renderer.scale = scale
         renderer.isOpaque = false
         guard let text = renderer.cgImage else { return nil }
-        return (layout, .init(text: text, scale: scale))
+        // White text fades against a dark picture, black against a light one.
+        let unread = SpeechPrompterRecord.unreadOpacity
+        let unreadAlpha = dark ? pow(unread, 2.2) : 1 - pow(1 - unread, 2.2)
+        return (layout, .init(text: text, scale: scale,
+                              words: map.wordFrames(inset: 24, gap: CGFloat(record.textSize) * 0.9),
+                              unreadAlpha: CGFloat(unreadAlpha)))
     }
 
     /// A temporary movie (the caller removes it), or nil if it couldn't be made.
@@ -472,7 +513,8 @@ enum SpeechVideoExporter {
                     guard let sample = output.copyNextSampleBuffer(),
                           let frame = CMSampleBufferGetImageBuffer(sample) else { return false }
                     let pts = CMSampleBufferGetPresentationTimeStamp(sample)
-                    composer.exportFrame(frame, at: pts, offset: CGFloat(record.offset(at: pts.seconds)))
+                    composer.exportFrame(frame, at: pts, offset: CGFloat(record.offset(at: pts.seconds)),
+                                         reached: record.reached(at: pts.seconds))
                     progress(min(0.98, pts.seconds / duration.seconds))
                     return true
                 }

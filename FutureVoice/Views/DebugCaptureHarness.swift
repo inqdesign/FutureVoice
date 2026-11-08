@@ -348,8 +348,12 @@ enum DebugCapture {
         if FileManager.default.fileExists(atPath: SpeechStore.mediaURL("take-capture.mov").path) {
             take.videoFilename = "take-capture.mov"
             let body = SpeechStore.shared.script(id: take.scriptId)?.body ?? ""
-            let record = SpeechPrompterRecord(width: 390, textSize: 28, dark: false, text: body, language: "en",
+            var record = SpeechPrompterRecord(width: 390, textSize: 28, dark: false, text: body, language: "en",
                                               offsets: (0..<300).map { Double($0) * 1.5 })
+            // Three words a second, so a capture shows the words lit.
+            let wordCount = SpeechPrompterTrack(script: body, language: "en").words.count
+            record.wordStarts = (0..<wordCount).map { 500 + $0 * 333 }
+            record.wordEnds = (0..<wordCount).map { 500 + $0 * 333 + 280 }
             take.prompter = record
             if UserDefaults.standard.bool(forKey: "captureExport") {
                 let url = SpeechStore.mediaURL("take-capture.mov")

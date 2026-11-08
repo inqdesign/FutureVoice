@@ -191,3 +191,71 @@ struct SpeechPrompterTrack {
         return rate / max(0.5, unitsPerWord)
     }
 }
+
+extension SpeechPrompterTrack {
+    /// When each display word was said, in milliseconds of the take, from
+    /// the assessed pieces. A word nobody timed (a slip, a word the reader
+    /// skipped) passes between its neighbours; words after the last one
+    /// heard get no time, so what wasn't read is never lit. nil when under
+    /// half the words up to there were heard: lighting a guess is worse than
+    /// the plain script.
+    nonisolated static func wordTimes(of words: [String], language: String,
+                                      pieces: [SpeechDelivery.Piece]) -> (starts: [Int], ends: [Int])? {
+        let spaced = LanguageCatalog.writesSpaces(language)
+        func parts(_ text: String) -> [String] {
+            spaced ? SpeechDelivery.referenceTokens(text).map(\.core) : SpeechDelivery.core(text).map(String.init)
+        }
+        var script: [String] = [], owner: [Int] = []
+        for (index, word) in words.enumerated() {
+            for part in parts(word) {
+                script.append(part)
+                owner.append(index)
+            }
+        }
+        var said: [(text: String, start: Int, end: Int)] = []
+        for piece in pieces {
+            for word in piece.result.words where word.isJudged && word.durationMs > 0 {
+                let cut = parts(word.word)
+                for (i, part) in cut.enumerated() {
+                    let start = piece.startMs + word.offsetMs
+                    said.append((part, start + word.durationMs * i / cut.count,
+                                 start + word.durationMs * (i + 1) / cut.count))
+                }
+            }
+        }
+        var heardStart = [Int?](repeating: nil, count: words.count)
+        var heardEnd = [Int?](repeating: nil, count: words.count)
+        for (i, target) in SpeechDelivery.align(said.map(\.text), script).enumerated() {
+            guard let target else { continue }
+            let word = owner[target]
+            heardStart[word] = min(heardStart[word] ?? .max, said[i].start)
+            heardEnd[word] = max(heardEnd[word] ?? .min, said[i].end)
+        }
+        guard let last = heardStart.lastIndex(where: { $0 != nil }), let first = heardStart.first(where: { $0 != nil }) ?? nil,
+              heardStart.compactMap({ $0 }).count * 2 >= last + 1 else { return nil }
+        var starts: [Int] = [], ends: [Int] = []
+        var clock = first
+        var index = 0
+        while index <= last {
+            if let start = heardStart[index], let end = heardEnd[index] {
+                let from = max(clock, start)
+                starts.append(from)
+                ends.append(max(from, end))
+                clock = ends[index]
+                index += 1
+            } else {
+                var next = index
+                while heardStart[next] == nil { next += 1 }
+                let target = max(clock, heardStart[next] ?? clock)
+                let share = (target - clock) / (next - index)
+                for step in 0..<(next - index) {
+                    starts.append(clock + share * step)
+                    ends.append(clock + share * (step + 1))
+                }
+                clock = target
+                index = next
+            }
+        }
+        return (starts, ends)
+    }
+}

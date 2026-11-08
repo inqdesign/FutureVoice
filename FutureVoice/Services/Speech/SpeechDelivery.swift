@@ -80,6 +80,9 @@ struct SpeechDelivery: Equatable {
     struct Piece {
         let reference: String
         let result: PronunciationResult
+        /// Where this piece begins in the whole take: its words are timed
+        /// from the piece's own start.
+        var startMs = 0
     }
 
     /// Calibrated 2026-11-07 on 36 un-joined narrator clips and the joined
