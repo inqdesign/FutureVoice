@@ -3,6 +3,7 @@ package com.roro.futurevoice.talk
 import android.content.Context
 import com.roro.futurevoice.BuildConfig
 import com.roro.futurevoice.core.Analytics
+import com.roro.futurevoice.data.AuthError
 import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.data.LanguageScope
 import com.roro.futurevoice.data.LearnerState
@@ -120,6 +121,10 @@ object LevelTagging {
             ))
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
+        } catch (_: AuthError) {
+            // Not signed in yet: nothing is wrong with this talk, and counting
+            // it would give up on the talk before anyone could tag it.
+            return
         } catch (e: Throwable) {
             store.recordFailure(sessionId = session.id, language = session.targetLanguage)
             Analytics.capture("level_tag_failed", mapOf(

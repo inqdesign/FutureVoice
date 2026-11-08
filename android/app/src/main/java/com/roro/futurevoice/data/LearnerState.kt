@@ -28,7 +28,16 @@ data class LearnerState(
      *  times is not tried again — a decode that always fails would otherwise
      *  be one paid call per launch, forever. */
     val failures: Map<String, Int> = emptyMap(),
+    /** Which [FAILURES_EPOCH] the counts above belong to. Null on a file from
+     *  before the epochs. */
+    val failuresEpoch: Int? = null,
 ) {
+    /** The same state with failure counts from an older epoch dropped, so
+     *  those talks are tried again. */
+    fun clearingOldFailures(): LearnerState =
+        if (failuresEpoch == FAILURES_EPOCH) this
+        else copy(failures = emptyMap(), failuresEpoch = FAILURES_EPOCH)
+
     @Serializable
     data class SessionTag(
         /** When the talk happened (its last line) — the dates on an item. */
@@ -143,6 +152,10 @@ data class LearnerState(
 
     companion object {
         const val MAX_FAILURES = 2
+        /** Bump when a fix makes old failures meaningless. 1 (2026-11-09):
+         *  talks given up on because of the 4096 ceiling, the refused
+         *  retries, and tagging before sign-in. */
+        const val FAILURES_EPOCH = 1
 
         /** SOLID takes three right uses spread over at least two talks, with
          *  at most one error in five. One good talk is not command of a
@@ -317,7 +330,7 @@ class LearnerStateStore(
         cache[key(language)]?.let { return it }
         val state = runCatching {
             json.decodeFromString(LearnerState.serializer(), file(language).readText())
-        }.getOrNull() ?: LearnerState()
+        }.getOrNull()?.clearingOldFailures() ?: LearnerState().clearingOldFailures()
         cache[key(language)] = state
         return state
     }

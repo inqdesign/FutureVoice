@@ -226,4 +226,19 @@ class LearnerStateTest {
         assertEquals(-1, at("there_is"))
         assertTrue(text.contains("Can do: introduce yourself"))
     }
+
+    @Test fun failuresFromBeforeTheFixAreForgivenOnce() {
+        val old = LearnerState(failures = mapOf("talk" to 2))
+        val cleared = old.clearingOldFailures()
+        assertTrue(cleared.failures.isEmpty())
+        assertEquals(LearnerState.FAILURES_EPOCH, cleared.failuresEpoch)
+        val again = cleared.copy(failures = mapOf("talk" to 1)).clearingOldFailures()
+        assertEquals(1, again.failures["talk"])
+    }
+
+    @Test fun everyTaggingRequestHasItsOwnKey() {
+        val first = LevelTagger.requestKey("id", "f")
+        assertTrue(first != LevelTagger.requestKey("id", "f"))
+        assertTrue(first.startsWith("level-tag:id:f:"))
+    }
 }

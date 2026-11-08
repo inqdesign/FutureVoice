@@ -4,6 +4,7 @@ import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.data.LearnerState
 import com.roro.futurevoice.data.LevelMap
+import com.roro.futurevoice.net.EdgeError
 import com.roro.futurevoice.net.GeminiClient
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -32,7 +33,12 @@ object LevelTagger {
      *  runs after the talk and nobody waits on it, so the extra thinking is
      *  free time. */
     const val THINKING_LEVEL = "medium"
-    const val MAX_TOKENS = 4096
+    /** Thinking spends from this ceiling. At 4096, 16 of 16 talks of 25 to
+     *  140 learner lines came back cut off (2026-11-09); at 8192, the
+     *  server's own limit, 2 of 16 did. Those go to [FALLBACK_THINKING_LEVEL]. */
+    const val MAX_TOKENS = 8192
+    /** For a run that still hit the ceiling: 20 of 20 long talks finished. */
+    const val FALLBACK_THINKING_LEVEL = "low"
 
     // MARK: - Input
 
@@ -262,6 +268,12 @@ object LevelTagger {
 
     data class Outcome(val tag: LearnerState.SessionTag, val dropped: Int)
 
+    /** A fresh key per request. The server treats a repeated key as a retry
+     *  only for ten minutes and answers 409 after that, so a key made from
+     *  the talk alone refused every later attempt. */
+    fun requestKey(sessionId: String, fingerprint: String): String =
+        "level-tag:$sessionId:$fingerprint:${java.util.UUID.randomUUID().toString().take(8)}"
+
     /** Tags one talk. Null when the language has no map or the learner said
      *  nothing that counts; throws only on the network/decode. */
     suspend fun tag(session: Session): Outcome? {
@@ -272,16 +284,21 @@ object LevelTagger {
         val system = LevelTagPrompts.systemPrompt(map, LanguageCatalog.englishName(session.targetLanguage))
         // iOS runs this on `GeminiClient.longRunning` (no 60 s ceiling): the
         // shared OkHttp client has none either — only its per-read guard.
-        val raw = GeminiClient(AuthRepository()).sendJson(
+        suspend fun send(thinking: String): JsonObject = GeminiClient(AuthRepository()).sendJson(
             system = system,
             messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER, userMessage(session))),
             serializer = JsonObject.serializer(),
             model = GeminiClient.Model.FLASH_36,
             maxTokens = MAX_TOKENS,
             purpose = PURPOSE,
-            idempotencyKey = "level-tag:${session.id}:$fingerprint",
-            thinkingLevel = THINKING_LEVEL,
+            idempotencyKey = requestKey(session.id.toString(), fingerprint),
+            thinkingLevel = thinking,
         )
+        val raw = try {
+            send(THINKING_LEVEL)
+        } catch (_: EdgeError.Truncated) {
+            send(FALLBACK_THINKING_LEVEL)
+        }
         val (items, dropped) = verify(Payload.from(raw), map, evidence)
         val talkDate = session.turns.lastOrNull()?.timestamp ?: session.endedAt ?: session.startedAt
         val tag = LearnerState.SessionTag(talkDate = talkDate, taggedAt = System.currentTimeMillis(),
