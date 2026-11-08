@@ -102,7 +102,7 @@ enum SpeechReading {
         for i in both {
             guard let gap = take[i]!.gapAfter, gap >= pauseSeconds else { continue }
             if let r = reference[i]?.gapAfter, r >= pauseSeconds { continue }
-            extra.append(.init(after: script[i], seconds: (gap * 10).rounded() / 10))
+            extra.append(.init(after: script[i], seconds: (gap * 10).rounded() / 10, index: i))
         }
         let pausesPer100 = 100 * Double(extra.count) / Double(both.count)
 
@@ -114,7 +114,8 @@ enum SpeechReading {
             .map { (i, r) in
                 SpeechReadingScore.Held(word: script[i], times: (exp(r - tempo) * 10).rounded() / 10,
                                         seconds: (take[i]!.duration * 10).rounded() / 10,
-                                        nativeSeconds: (reference[i]!.duration * 10).rounded() / 10)
+                                        nativeSeconds: (reference[i]!.duration * 10).rounded() / 10,
+                                        index: i)
             }
             .filter { $0.times >= 2 }
             .sorted { $0.times > $1.times }
@@ -129,8 +130,9 @@ enum SpeechReading {
             speed: (speed * 100).rounded() / 100, rhythm: (rhythm * 100).rounded() / 100,
             pausesPer100: (pausesPer100 * 10).rounded() / 10, slipsPer100: (slipsPer100 * 10).rounded() / 10,
             soundAccuracy: soundAccuracy, slips: slips ?? 0,
-            extraPauses: Array(extra.sorted { $0.seconds > $1.seconds }.prefix(5)),
-            held: Array(held.prefix(5)), missed: Array(missed.prefix(5)),
+            // All of them: the script on the result page marks every one.
+            extraPauses: extra.sorted { $0.seconds > $1.seconds },
+            held: held, missed: Array(missed.prefix(5)),
             weakest: parts.pronunciation < 100 ? Array(weakest.filter { $0.score < 80 }.prefix(3)) : [])
     }
 
@@ -190,7 +192,9 @@ struct SpeechReadingScore: Codable, Hashable {
         }
     }
     enum Part: String, CaseIterable { case speed, rhythm, pauses, accuracy, pronunciation }
-    struct Pause: Codable, Hashable { var after: String; var seconds: Double }
+    /// `index` is the script token it follows (nil on takes scored before
+    /// the script showed them, 2026-11-08).
+    struct Pause: Codable, Hashable { var after: String; var seconds: Double; var index: Int? = nil }
     /// A word held far longer than the native reading holds it. `times` is
     /// after the reader's own pace is taken out (what picks the word); the
     /// seconds are what the page shows (founder: "4.6x means nothing to me").
@@ -199,6 +203,7 @@ struct SpeechReadingScore: Codable, Hashable {
         var times: Double
         var seconds: Double? = nil
         var nativeSeconds: Double? = nil
+        var index: Int? = nil
     }
 
     /// A narrator's level, part by part.

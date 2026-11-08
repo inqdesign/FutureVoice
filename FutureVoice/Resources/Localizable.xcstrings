@@ -21848,6 +21848,52 @@
       },
       "shouldTranslate" : false
     },
+    "%@: read differently or left out · %@: not in the script · %@: held longer than the native reading · %@: a stop where the native reading has none" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: anders gelesen oder ausgelassen · %2$@: nicht im Text · %3$@: länger gezogen als in der muttersprachlichen Lesung · %4$@: Pause, wo die muttersprachliche Lesung keine macht"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: leído distinto u omitido · %2$@: no está en el texto · %3$@: alargado más que en la lectura nativa · %4$@: pausa donde la lectura nativa no se detiene"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ : lu autrement ou oublié · %2$@ : absent du texte · %3$@ : tenu plus longtemps que dans la lecture native · %4$@ : arrêt là où la lecture native n’en fait pas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@：違う読み・抜けた語 · %2$@：台本にない語 · %3$@：ネイティブより長く伸ばした語 · %4$@：ネイティブが止まらない所で止まった"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: 다르게 읽거나 빠뜨린 말 · %2$@: 대본에 없는 말 · %3$@: 원어민보다 길게 끈 단어 · %4$@: 원어민이 쉬지 않는 곳에서 멈춤"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@：读得不同或漏掉 · %2$@：稿子里没有的词 · %3$@：比母语人士拖得长 · %4$@：在母语人士不停的地方停下"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@：讀得不同或漏掉 · %2$@：稿子裡沒有的字 · %3$@：比母語人士拖得長 · %4$@：在母語人士不停的地方停下"
+          }
+        }
+      }
+    },
     "%@. Level %@" : {
       "localizations" : {
         "de" : {
@@ -21896,6 +21942,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@。等級%2$@"
+          }
+        }
+      }
+    },
+    "%@s" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ s"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ s"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ s"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@秒"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@초"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 秒"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 秒"
           }
         }
       }
@@ -28594,6 +28686,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "+還有1個意思"
+          }
+        }
+      }
+    },
+    "+word" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+Wort"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+palabra"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+mot"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+語"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+단어"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+词"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+字"
           }
         }
       }
@@ -108468,6 +108606,52 @@
         }
       }
     },
+    "Orange" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Orange"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Naranja"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Orange"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "オレンジ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "주황"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "橙色"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "橘色"
+          }
+        }
+      }
+    },
     "Ordering at a café" : {
       "localizations" : {
         "de" : {
@@ -120466,6 +120650,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "垃圾分類與住戶規定"
+          }
+        }
+      }
+    },
+    "Red" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rot"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rojo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rouge"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "赤"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "빨강"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "红色"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "紅色"
           }
         }
       }

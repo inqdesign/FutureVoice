@@ -314,6 +314,9 @@ enum SpeechAnalyzer {
         let word: String
         let op: ShadowEngine.DiffOp
         let heard: String?
+        /// Words said after this one that the script doesn't have
+        /// (2026-11-08: shown on the script, they were dropped before).
+        var added: [String] = []
     }
 
     /// The script, paragraph by paragraph, every word marked against the
@@ -335,12 +338,15 @@ enum SpeechAnalyzer {
         var wordOfSlot: [Int] = []
         for (i, span) in spans.enumerated() { wordOfSlot += Array(repeating: i, count: span.count) }
         var heard = Array(repeating: [String](), count: words.count)
+        var added = Array(repeating: [String](), count: words.count)
         var next = 0
         for step in steps {
             if step.op == .ins {
                 if next > 0, next < wordOfSlot.count, wordOfSlot[next - 1] == wordOfSlot[next],
                    let l = step.learner {
                     heard[wordOfSlot[next]].append(l)
+                } else if next > 0, next - 1 < wordOfSlot.count, let l = step.learner {
+                    added[wordOfSlot[next - 1]].append(l)
                 }
                 continue
             }
@@ -359,7 +365,8 @@ enum SpeechAnalyzer {
                 else if slice.allSatisfy({ $0 == .del }) { op = .del }
                 else { op = .sub }
                 line.append(ScriptMark(word: word, op: op,
-                                       heard: op == .sub ? heard[w].joined(separator: joiner) : nil))
+                                       heard: op == .sub ? heard[w].joined(separator: joiner) : nil,
+                                       added: added[w]))
                 w += 1
             }
             out.append(line)

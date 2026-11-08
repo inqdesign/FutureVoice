@@ -347,12 +347,13 @@ enum DebugCapture {
         let reading = SpeechReadingScore(
             version: SpeechReading.version, gender: "male", parts: parts, coverage: 1,
             speed: 0.76, rhythm: 0.79, pausesPer100: 7.6, slipsPer100: 2.6, soundAccuracy: 97, slips: 5,
-            extraPauses: [.init(after: "running", seconds: 1.0), .init(after: "here's", seconds: 0.8),
-                          .init(after: "thought", seconds: 0.7)],
-            held: [.init(word: "with", times: 4.6, seconds: 0.8, nativeSeconds: 0.1),
-                   .init(word: "then", times: 3.4, seconds: 0.5, nativeSeconds: 0.1),
-                   .init(word: "this", times: 2.7, seconds: 0.6, nativeSeconds: 0.2)],
+            // Positions are the sample script's tokens: "microphone" 21,
+            // "exact" 31, a stop after "builds" 29 and "voice" 60.
+            extraPauses: [.init(after: "voice", seconds: 0.7, index: 60), .init(after: "builds", seconds: 0.6, index: 29)],
+            held: [.init(word: "microphone", times: 2.4, seconds: 0.9, nativeSeconds: 0.4, index: 21),
+                   .init(word: "exact", times: 2.6, seconds: 0.8, nativeSeconds: 0.3, index: 31)],
             missed: ["the"], weakest: [])
+        take.transcript = "Good evening. Tonight, a question most of us never stop to ask: how do the noise-cancelling headphones actually work? A tiny microphone listen to the world outside. A chip builds the exact opposite of that sound wave, and the two cancel each other out, in a fraction of millisecond. That's why the hum of a plane disappears, but a voice right next to you still gets through."
         take.metrics.reading = reading
         take.metrics.overall = reading.total
         take.metrics.scoring = SpeechReading.version

@@ -167,13 +167,19 @@ struct SpeechResultView: View {
             // teacher's red pen (2026-10-25, founder) — a list of loose
             // words gave no place to find them.
             if let marks = scriptMarks?.takeId == take.id ? scriptMarks?.marks : nil {
+                let timing = m.reading.map { SpeechMarkedScript.timing($0, marks: marks) }
                 Section {
-                    SpeechMarkedScript(paragraphs: marks, language: script.language)
+                    SpeechMarkedScript(paragraphs: marks, language: script.language,
+                                       held: timing?.held ?? [:], pauses: timing?.pauses ?? [:])
                         .padding(.vertical, 4)
+                        .id("script")
                 } header: {
                     Text("Script")
                 } footer: {
-                    if !m.missed.isEmpty {
+                    if m.reading != nil {
+                        // One legend for everything the script shows.
+                        Text("\(Text("Red").foregroundStyle(.red)): read differently or left out · \(Text("+word").foregroundStyle(.red)): not in the script · \(Text("Orange").foregroundStyle(.orange)): held longer than the native reading · \(Text("⏸︎").foregroundStyle(.orange)): a stop where the native reading has none")
+                    } else if !m.missed.isEmpty {
                         Text("Red: skipped or read differently. The small red words are what the mic heard.")
                     }
                 }
@@ -822,12 +828,33 @@ struct SpeechResultView: View {
 private struct SpeechMarkedScript: View {
     let paragraphs: [[SpeechAnalyzer.ScriptMark]]
     let language: String
+    /// By the script word's index across paragraphs: seconds a word was held
+    /// (longer than the native reading) and seconds of a stop after it
+    /// (where the native reading has none). Season 2 takes only.
+    var held: [Int: Double] = [:]
+    var pauses: [Int: Double] = [:]
+
+    /// Season 2's per-token findings laid onto the script's words: a word
+    /// owns as many scoring tokens as `SpeechDelivery.referenceTokens` makes
+    /// of it (a hyphenated word two, a lone dash none).
+    static func timing(_ r: SpeechReadingScore, marks: [[SpeechAnalyzer.ScriptMark]])
+    -> (held: [Int: Double], pauses: [Int: Double]) {
+        var wordOfToken: [Int: Int] = [:]
+        var t = 0
+        for (w, mark) in marks.flatMap({ $0 }).enumerated() {
+            for _ in SpeechDelivery.referenceTokens(mark.word) { wordOfToken[t] = w; t += 1 }
+        }
+        var held: [Int: Double] = [:], pauses: [Int: Double] = [:]
+        for h in r.held { if let i = h.index, let w = wordOfToken[i], let s = h.seconds { held[w] = s } }
+        for p in r.extraPauses { if let i = p.index, let w = wordOfToken[i] { pauses[w] = p.seconds } }
+        return (held, pauses)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, line in
+            ForEach(Array(paragraphs.enumerated()), id: \.offset) { p, line in
                 if !line.isEmpty {
-                    Text(attributed(line))
+                    Text(attributed(line, first: paragraphs[..<p].reduce(0) { $0 + $1.count }))
                         .font(.body)
                         .lineSpacing(6)
                         .textSelection(.enabled)
@@ -836,12 +863,24 @@ private struct SpeechMarkedScript: View {
         }
     }
 
-    private func attributed(_ line: [SpeechAnalyzer.ScriptMark]) -> AttributedString {
+    private func note(_ text: String, _ color: Color) -> AttributedString {
+        var n = AttributedString(text)
+        n.foregroundColor = color
+        n.font = .caption2.weight(.semibold)
+        n.baselineOffset = 6
+        return n
+    }
+
+    private func attributed(_ line: [SpeechAnalyzer.ScriptMark], first: Int) -> AttributedString {
         let gap = LanguageCatalog.writesSpaces(language) ? " " : ""
         var out = AttributedString()
         for (i, mark) in line.enumerated() {
             if i > 0 { out += AttributedString(gap) }
             var word = AttributedString(mark.word)
+            if let s = held[first + i] {
+                word.backgroundColor = .orange.opacity(0.25)
+                word += note(" " + explain("\(String(format: "%.1f", s))s"), .orange)
+            }
             switch mark.op {
             case .match, .ins:
                 break
@@ -859,6 +898,12 @@ private struct SpeechMarkedScript: View {
                 note.font = .caption2.italic()
                 note.baselineOffset = 6
                 out += note
+            }
+            for extra in mark.added {
+                out += note(" +" + extra, .red)
+            }
+            if let s = pauses[first + i] {
+                out += note(" ⏸︎" + explain("\(String(format: "%.1f", s))s"), .orange)
             }
         }
         return out
