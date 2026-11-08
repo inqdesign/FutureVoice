@@ -387,4 +387,51 @@ final class WeeklyTestTests: XCTestCase {
         XCTAssertNil(test.nextItem)
         XCTAssertEqual(test.score, 1)
     }
+    // MARK: - Write-back
+
+    /// A right answer is the deck's "Got it": the word, the phrase and the
+    /// sentence card leave everything put off, so next week's test can't
+    /// deal them again and the books tick them off. A wrong one stays.
+    @MainActor
+    func testRightAnswerMarksKnownAcrossDeckAndBooks() {
+        let vocab = VocabStore.shared
+        let word = "zqweeklyword", phrase = "zq weekly phrase here", missed = "zqmissedword"
+        let now = Date()
+        vocab.addStudying(word); ReviewQueue.snooze(.word, word, for: 3 * 86_400)
+        vocab.addStudying(missed); ReviewQueue.snooze(.word, missed, for: 3 * 86_400)
+        vocab.setStudyingExpression(phrase, true); ReviewQueue.snooze(.expression, phrase, for: 3 * 86_400)
+        let card = DrillCard(sourcePhrase: "I very like zq", targetPhrase: "I really like zq", reason: "",
+                             createdAt: now, lastReviewedAt: now, nextReviewAt: now.addingTimeInterval(86_400), box: 1)
+        DrillStore.shared.save(card)
+        defer {
+            vocab.unmark(word); vocab.unmark(missed); vocab.removeStudying(missed)
+            vocab.setStudyingExpression(phrase, false)
+            StudyScheduleStore.shared.clear(.word, missed)
+            DrillStore.shared.delete(id: card.id)
+        }
+
+        let a = item(.meaning, answer: word)
+        let b = item(.gap, answer: phrase)
+        let c = WeeklyTestItem(id: UUID(), kind: .translate, prompt: "", answer: "I really like it",
+                               options: [], cardId: card.id)
+        let d = item(.meaning, answer: missed)
+        var t = WeeklyTest(id: UUID(), targetLanguage: "en", periodStart: now, periodEnd: now,
+                           createdAt: now, items: [a, b, c, d])
+        for (it, right) in [(a, true), (b, true), (c, true), (d, false)] {
+            t.answers.append(WeeklyTestAnswer(itemId: it.id, given: "", correct: right, at: now))
+        }
+        WeeklyTestEngine.apply(t, now: now)
+
+        XCTAssertEqual(vocab.state(of: word), .known)
+        XCTAssertFalse(vocab.isStudying(word))
+        XCTAssertTrue(vocab.isKnownExpression(phrase))
+        let put = StudyScheduleStore.shared.dueItems() + StudyScheduleStore.shared.upcoming()
+        XCTAssertFalse(put.contains { $0.text == word || $0.text == phrase })
+        let saved = DrillStore.shared.load().first { $0.id == card.id }
+        XCTAssertEqual(saved?.box, DrillStore.maxBox)
+        XCTAssertFalse(DrillStore.putOffCards().contains { $0.id == card.id })
+        // The miss is still being studied, due now.
+        XCTAssertTrue(vocab.isStudying(missed))
+        XCTAssertTrue(StudyScheduleStore.shared.isDue(.word, missed))
+    }
 }

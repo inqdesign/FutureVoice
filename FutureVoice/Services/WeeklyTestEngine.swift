@@ -1363,19 +1363,24 @@ enum WeeklyTestEngine {
     // MARK: - Writing back
 
     /// What a finished test does to the review loop. Runs once per test
-    /// (the store stamps `appliedAt`); an answer is a claim, so nothing here
-    /// retires anything — see CLAUDE.md "USED outranks KNOWN".
+    /// (the store stamps `appliedAt`). A right answer is the deck's own
+    /// "Got it" (2026-11-08, founder: the test, the deck and the books are
+    /// one thing): the item is KNOWN, leaves the deck and ticks off in every
+    /// book that teaches it — Talk books read the same stores, Watch books
+    /// are refreshed by the caller. Before this a right answer only pushed
+    /// the item 3 days on, so it stayed put off and was asked again every
+    /// week. Known is still a claim; a talk is what confirms it (CLAUDE.md
+    /// "USED outranks KNOWN").
     ///
-    ///   meaning  right → the word waits 3 days · wrong → back in the notebook, due now
-    ///   gap      right → the phrase waits 3 days · wrong → bookmarked, due now
-    ///   rewrite  right → one Leitner rung up · wrong → one rung down (build alike)
+    ///   meaning  right → known, out of the deck · wrong → back in the notebook, due now
+    ///   gap      right → known, out of the deck · wrong → bookmarked, due now
+    ///   rewrite  right → the card retires (Got it) · wrong → one rung down (build, translate alike)
     ///   listen   nothing to write; recognition is not production
     ///   grammar  nothing to write; its corrections already carry cards
     ///   upgrade  wrong → the better word in the notebook, due now
     static func apply(_ test: WeeklyTest, now: Date = Date()) {
         let vocab = VocabStore.shared
         let cards = Dictionary(uniqueKeysWithValues: DrillStore.shared.load().map { ($0.id, $0) })
-        let threeDays: TimeInterval = 3 * 86_400
         let byId = Dictionary(uniqueKeysWithValues: test.items.map { ($0.id, $0) })
         for answer in test.answers {
             guard let item = byId[answer.itemId] else { continue }
@@ -1383,8 +1388,8 @@ enum WeeklyTestEngine {
             case .meaning:
                 let word = item.answer
                 if answer.correct {
-                    PracticeLog.shared.record(.word)
-                    if vocab.isStudying(word) { ReviewQueue.snooze(.word, word, for: threeDays) }
+                    vocab.markKnown(word)                // logs the rep, leaves the notebook
+                    ReviewQueue.retire(.word, word)
                 } else {
                     vocab.addStudying(word)              // records the rep itself
                     ReviewQueue.retire(.word, word)      // clears the return date → due now
@@ -1392,10 +1397,11 @@ enum WeeklyTestEngine {
             case .gap:
                 let phrase = item.answer
                 if answer.correct {
-                    PracticeLog.shared.record(.expression)
-                    if vocab.isStudyingExpression(phrase) {
-                        ReviewQueue.snooze(.expression, phrase, for: threeDays)
-                    }
+                    // Already known, or said in a talk (which outranks known):
+                    // nothing to claim, never step it down.
+                    if vocab.hasUsedExpression(phrase) { PracticeLog.shared.record(.expression) }
+                    else { vocab.setKnownExpression(phrase, true) }   // logs the rep
+                    ReviewQueue.retire(.expression, phrase)
                 } else {
                     if !vocab.isStudyingExpression(phrase) { vocab.setStudyingExpression(phrase, true) }
                     else { PracticeLog.shared.record(.expression) }
@@ -1403,8 +1409,10 @@ enum WeeklyTestEngine {
                 }
             case .build, .rewrite, .translate:
                 guard let id = item.cardId, let card = cards[id] else { continue }
-                if answer.correct { DrillStore.shared.markCorrect(card, at: now) }
-                else { DrillStore.shared.markIncorrect(card, at: now) }
+                if answer.correct {
+                    DrillStore.shared.markKnown(card, at: now)
+                    ItemReminder.cancel(.sentence(card.id))
+                } else { DrillStore.shared.markIncorrect(card, at: now) }
                 PracticeLog.shared.record(.drill)
             case .upgrade:
                 // Missed: the better word goes in the notebook, due now. Right

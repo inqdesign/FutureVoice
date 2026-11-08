@@ -2180,12 +2180,19 @@ Practice Today card, settings section in `StudyGoalsSheet`, route
   remembered as thin so the tab doesn't rebuild on every
   appearance. Settings are device-local like the daily call (two synced
   devices must not both ring); the tests themselves sync (`ArrayKind`, LWW).
-- **Write-back is a CLAIM, never a verdict** (see "USED outranks KNOWN"):
-  meaning right → the word waits 3 days, wrong → back in the notebook, due
-  now; gap the same for the phrase (wrong bookmarks it); build right → one
-  Leitner rung up (`DrillStore.markCorrect`, which never retires), wrong →
-  one down; listen writes nothing. Applied once (`appliedAt`) when the test
-  finishes; answers are saved as they land so a closed sheet resumes.
+- **A right answer is the deck's "Got it"** (2026-11-08, founder: "link
+  the test, the cards and the books — answered right, it is known
+  everywhere"; it was a 3-day snooze, so a word answered right stayed put
+  off and the same few items came back in every week's test). Meaning
+  right → `markKnown` + out of the schedule; gap right → known expression
+  (one already known or said in a talk is left alone); translate / rewrite
+  / build right → the card retires (`DrillStore.markKnown`). Talk books
+  read those stores, Watch books are refreshed after the test. Wrong is
+  unchanged: back in the notebook, due now; a card one rung down. Known is
+  still a claim a talk confirms ("USED outranks KNOWN"); listen, speak,
+  grammar and a right upgrade write nothing. Applied once (`appliedAt`)
+  when the test finishes; answers are saved as they land so a closed sheet
+  resumes.
 - **Sound + haptic per answer, and nothing else invented.** `SoundEffects`
   plays four synthesized WAVs (`scripts/make-ui-sounds.py`, -12 dBFS) with
   `AVAudioPlayer` on the app's playback route — NOT a system sound: under

@@ -1258,6 +1258,11 @@ struct WeeklyTestView: View {
         if t.finishedAt == nil { t.finishedAt = Date() }
         if t.appliedAt == nil {
             WeeklyTestEngine.apply(t)
+            // A right answer is known now; the Watch books keep their own
+            // ticks, so they are told (Talk books read the stores live).
+            for s in appState.scenarios where s.curriculum != nil {
+                appState.refreshScenarioMastery(id: s.id)
+            }
             t.appliedAt = Date()
             Analytics.capture("weekly_test_finished", [
                 "score": t.score, "total": t.total, "best_streak": t.bestStreak,
