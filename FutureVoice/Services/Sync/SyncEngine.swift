@@ -787,7 +787,7 @@ final class SyncEngine: ObservableObject {
                 ?? existing.flatMap { $0.isDeleted ? SyncSide(payload: nil, at: $0.deletedAt ?? .distantPast, deleted: true) : nil }
             let remoteSide = SyncSide(payload: record.payload, at: record.deletedAt ?? record.modifiedAt,
                                       deleted: record.isTombstone)
-            let frozen = record.schema > SyncSchema.version
+            let frozen = record.schema > SyncSchema.readable
             if frozen { needsAppUpdate = true }
             let result = handler.merge(local: localSide, remote: remoteSide)
 
@@ -926,6 +926,7 @@ final class SyncEngine: ObservableObject {
                 diff(prepared, handler: handler, lang: lang, index: index, now: now)
                 for entry in index.entries(kind: handler.kind, lang: lang) where entry.needsPush && !entry.frozen {
                     var record = SyncRecord(kind: entry.kind, key: entry.key, lang: entry.lang,
+                                            schema: SyncSchema.stamp(for: entry.kind),
                                             modifiedAt: entry.observedAt, deletedAt: entry.deletedAt,
                                             systemFields: entry.systemFields)
                     if !entry.isDeleted {

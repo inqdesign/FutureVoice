@@ -137,14 +137,31 @@ enum SyncKind: String, Codable, CaseIterable, Hashable {
 /// One app-wide version of "what a payload looks like". Bump it on any
 /// change to a synced type that an older build could NOT read harmlessly —
 /// a new enum case, a renamed key, a field the old build would drop and then
-/// push back without. Adding an optional field the old build may lose is
-/// NOT a bump: the merge is idempotent and the newer device rewrites it.
+/// push back without. An optional field the old build may lose is NOT a bump
+/// on a kind whose merge the newer device wins; on a last-writer-wins kind
+/// the old build's copy IS the newer one, so it needs a per-kind stamp below.
 ///
-/// A record carrying a higher schema than this build's is applied if it
-/// decodes and FROZEN in the index either way (never pushed back, never
+/// A record carrying a higher schema than this build can read is applied if
+/// it decodes and FROZEN in the index either way (never pushed back, never
 /// tombstoned), so an old phone can't quietly delete what a new one wrote.
 enum SyncSchema {
     static let version = 1
+    /// The newest stamp this build understands. Above `version` because a
+    /// single kind may be stamped ahead of the rest, without touching the
+    /// others or dropping anyone's change token (`thawIfUpgraded`).
+    static let readable = 2
+
+    /// What a record of this kind is stamped with on push.
+    ///
+    /// A speech take is 2 (2026-11-09): macOS launches a Catalyst app for a
+    /// silent push, window or no window, and a Mac on 1.3.0 (132) decoded the
+    /// phone's take without `reading` / `prompter`, rewrote it and pushed it.
+    /// Last writer won, so the phone lost its Season 2 result and its video
+    /// on the result page six minutes after the take. Every build already
+    /// shipped freezes a record stamped above 1, so none can do that again.
+    static func stamp(for kind: SyncKind) -> Int {
+        kind == .speechTake ? 2 : version
+    }
 }
 
 /// One record as the transport sees it — the only shape `CKRecord` is ever

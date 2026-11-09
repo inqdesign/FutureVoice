@@ -78,6 +78,15 @@ final class SpeechReadingTests: XCTestCase {
         XCTAssertFalse(r.isPerfect)
     }
 
+    /// Only a speech take is stamped ahead, this build reads it, and a build
+    /// that only knows schema 1 is the one that freezes it.
+    func testOnlySpeechTakesAreStampedAhead() {
+        XCTAssertEqual(SyncSchema.stamp(for: .speechTake), 2)
+        XCTAssertEqual(SyncSchema.stamp(for: .speechScript), SyncSchema.version)
+        XCTAssertEqual(SyncSchema.version, 1)
+        XCTAssertLessThanOrEqual(SyncSchema.stamp(for: .speechTake), SyncSchema.readable)
+    }
+
     private func spearman(_ x: [Double], _ y: [Double]) -> Double {
         func ranks(_ v: [Double]) -> [Double] {
             let order = v.indices.sorted { v[$0] < v[$1] }

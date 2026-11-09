@@ -59,7 +59,7 @@ struct SpeechResultView: View {
 
     /// The camera on its own, for a take recorded that way.
     private func cameraVideo(_ take: SpeechTake) -> URL? {
-        guard take.prompter != nil, take.videoFilename != nil else { return nil }
+        guard take.videoIsCameraOnly, take.videoFilename != nil else { return nil }
         return SpeechVideoSync.playableURL(take)
     }
 
@@ -144,6 +144,7 @@ struct SpeechResultView: View {
             }
         }
         .task(id: video) { await hero.show(video) }
+        .task(id: take.id) { await SpeechReadingRepair.restore(take, script: script) }
         // Here, on the page: the details live in the system sheet, which goes
         // away while the take plays, and this must not stop the take.
         .onDisappear {

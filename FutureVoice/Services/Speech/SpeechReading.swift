@@ -293,6 +293,53 @@ enum SpeechReadingLevel: CaseIterable {
 
 // MARK: - The reference reading
 
+/// Puts back the Season 2 result of a take an older build rewrote without it
+/// (see `SyncSchema.stamp`). Everything it was computed from survives on the
+/// take: the assessments carry every word's timing, and the reference is kept
+/// per script. Checked on the founder's take of 2026-11-09: speed 76, rhythm
+/// 75, pauses 97, the numbers its board entry was made with. The board is
+/// not touched.
+enum SpeechReadingRepair {
+    static func needsRepair(_ take: SpeechTake) -> Bool {
+        take.metrics.reading == nil && (take.metrics.scoring ?? 0) >= 5
+            && !(take.assessments ?? []).isEmpty
+    }
+
+    @MainActor
+    static func restore(_ take: SpeechTake, script: SpeechScript) async {
+        guard needsRepair(take), SpeechReading.applies(to: script.language),
+              let reference = await SpeechReferenceService.fetch(text: script.body, language: script.language)
+        else { return }
+        let pieces = (take.assessments ?? []).map { SpeechDelivery.Piece(reference: "", result: $0) }
+        let language = script.language, body = script.body, transcript = take.transcript
+        let audio = SpeechStore.mediaURL(take.audioFilename)
+        var metrics = take.metrics
+        let pronunciation = metrics.pronunciation
+        let delivered = await Task.detached { SpeechDelivery.measure(pieces, language: language, audioURL: audio) }.value
+        let scored = await Task.detached {
+            SpeechAnalyzer.analyze(script: body, transcript: transcript, language: language,
+                                   envelope: nil, pronunciation: pronunciation)
+        }.value
+        metrics.slips = scored.slips
+        metrics.scriptTokens = scored.scriptTokens
+        guard let reading = SpeechTakeSession.reading(pieces: pieces, reference: reference, script: body,
+                                                      metrics: metrics, delivery: delivered),
+              var current = SpeechStore.shared.takes.first(where: { $0.id == take.id }),
+              current.metrics.reading == nil else { return }
+        metrics.reading = reading
+        metrics.overall = reading.total
+        current.metrics = metrics
+        SpeechStore.shared.save(current)
+    }
+}
+
+extension SpeechTake {
+    /// Whether the video is the camera alone, with the script drawn on top
+    /// when wanted. `prompter` says so; a take scored 7 or later always was,
+    /// even if an older build has since dropped that record.
+    var videoIsCameraOnly: Bool { prompter != nil || (metrics.scoring ?? 0) >= 7 }
+}
+
 /// The native reference reading of a script, both genders, word-timed
 /// (`speech-reference` edge function). Kept on the phone per script text.
 struct SpeechReference: Codable {
