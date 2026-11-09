@@ -2,57 +2,41 @@ import Foundation
 
 /// Builds and grades the weekly test.
 ///
-/// The test is the learner's own week turned into questions — nothing is
-/// drawn from a generic bank. Four kinds, each from one shelf of the review
-/// loop (see CLAUDE.md "The learning loop"):
+/// The test is ONE WEEK of the learner's own practice, the same week "Your
+/// week" reports on: from one opening of the test to the next
+/// (`WeekRecapBuilder.lastWeek`). Nothing older is dealt, and a thin week is
+/// not padded with old material (2026-11-08, founder). Until then most of
+/// the paper was "everything ever put off in the deck", and the test's week
+/// and the report's week were two different clocks.
 ///
-/// The test is what the learner STUDIED; the quick quiz is what they have
-/// not learned yet (2026-10-21, founder). "Studied" is one thing the app can
-/// see: a card the learner put off in the deck — 10 min · tomorrow · 3 days
-/// (`StudyScheduleStore` for words and expressions, `DrillStore.putOffCards`
-/// for sentences) — and words and expressions must also be at the learner's
-/// LEVEL or above (a word by the graded list, a phrase by
-/// `QuickQuizStock.rateMissing`, the quiz's own rating). Before this the
-/// gap item took the whole "To study" list, so a test asked "So ______?"
-/// about a phrase nobody had studied.
+/// "Studied" is a card the learner put off in the deck this week. The paper
+/// is at most `maxPaper` items, in this order:
 ///
-///   meaning  ← the words put off in the deck
-///   gap      ← the expressions put off in the deck, in the line they were
-///              heard in, kept only when the blank leaves real context and
-///              the answer alone fits (`QuickQuizStock.keepOnlyAnswer`)
-///   translate← the sentence cards put off in the deck, asked in a NEW
-///              sentence: a native-language
-///              line to say in the target language, graded in code against
-///              the pattern's required spans and the learner's own wrong
-///              forms (replaced `build`, 2026-10-08 — founder: "a mistake is
-///              learned by using its pattern again, not by re-reading the
-///              sentence it was in")
-///   listen   ← the fluent self's saved lines (`TurnAudioStore`), heard and
-///              rebuilt from tiles — dictation, not a pick from three
-///   speak    ← the fluent self's lines, said out loud and scored like a
-///              shadow take (`ShadowTranscriber` + `ShadowEngine`)
+///   translate ← this week's mistakes: the report's recurring grammar first,
+///               then sentence cards reviewed this week, each asked in a NEW
+///               sentence laid from tiles
+///   gap       ← expressions put off this week, in a line they were heard in
+///   meaning   ← words put off this week, and the report's better words
+///   listen    ← a line the fluent self said this week, rebuilt from tiles
+///   speak     ← another such line, said out loud
+///   retakes   ← last week's paper's misses only, once: a second miss leaves
+///               the test and stays with the deck
 ///
-/// listen and speak take only lines that carry a put-off expression, and
-/// never a call's opening line. A learner reported (2026-10-08) that the
-/// test "felt random": the opener's greeting came up to be repeated, and a
-/// correction card — one clause since 2026-09-27 — was shuffled into four
-/// tiles that rebuilt nothing worth knowing. Every item now has a reason the
-/// learner can see: a phrase they are studying, or a sentence they got wrong.
-///   grammar  ← the week report's recurring grammar points (`WeekRecap.Coach`),
-///              else the profile's recurring mistakes — rule + one of the
-///              learner's own lines, rebuilt right from tiles
-///   upgrade  ← the week report's leaned-on words — the learner's line with
-///              the word marked, pick the better one
+/// `grammar`, `upgrade`, `build` and `rewrite` are no longer dealt; old
+/// papers on disk still play them.
 ///
-/// The last few weeks' wrong answers come back in this week's paper
-/// (`maxRetake`, from `retakeWeeks` tests) until they are answered right.
-/// There is ONE test: a separate monthly paper gathered the same misses
-/// and was removed on 2026-10-05 (founder: "don't keep a weekly and a
-/// monthly test apart").
+/// **Nothing reaches the paper unchecked.** A reader that took no part in
+/// writing an item passes it: `verifyTranslate` (a blind solver finds every
+/// right sentence the tiles can build, and a reviewer asks whether the
+/// mistake was a rule and this sentence tests it), `onlyAnswerFits` (gap)
+/// and `onlyMeaningFits` (meaning). A failed check keeps nothing.
 ///
-/// Every grade is computed in code — the only model call is the dictionary
-/// lookup that writes a word's meaning, which is free and cached. No LLM
-/// ever decides whether an answer was right.
+/// **A right answer is code's to accept; a wrong one is not code's alone to
+/// declare.** Tiles that match are right. Translate tiles that don't match
+/// get a second read before they are called wrong (`laidStands`), a failed
+/// read removes the question from the score, and every wrong answer can be
+/// appealed on the spot. Choice items are graded in code, against choices
+/// already checked to have one answer.
 ///
 /// The paper is shuffled from the test's own id, so the same test reads the
 /// same on every open, and a build on two devices from the same material
@@ -63,25 +47,23 @@ enum WeeklyTestEngine {
 
     // MARK: - Sizing
 
-    static let maxMeaning = 4
+    /// The whole paper, about five minutes.
+    static let maxPaper = 12
+    static let maxTranslate = 4
+    /// More are written than can be dealt: the gate drops about half.
+    static let translateDrafts = 6
     static let maxGap = 3
-    static let maxRewrite = 3
-    static let maxTranslate = 3
+    static let maxMeaning = 3
+    static let maxListen = 1
+    static let maxSpeak = 1
+    /// Last week's misses dealt again this week.
+    static let maxRetake = 2
     /// How long a paper waits for its translate items to be written.
     static let translateWait: TimeInterval = 30
-    static let maxListen = 2
-    static let maxSpeak = 2
-    static let maxGrammar = 2
-    static let maxUpgrade = 2
     /// How long a paper waits for the week report's coach to be written
     /// when the deck hasn't been opened yet. The writing carries on past it
     /// (and lands in the report); the paper just goes without.
     static let coachWait: TimeInterval = 25
-    /// Wrong answers of recent tests dealt again this week.
-    static let maxRetake = 5
-    /// How many finished weekly papers the retakes are drawn from — about a
-    /// month, which is what the monthly paper used to gather.
-    static let retakeWeeks = 4
     /// Ceiling for a paper of one test's own misses (`retryPaper`).
     static let maxRetry = 20
     /// A spoken line passes at the shadow browser's own retry bar.
@@ -94,28 +76,50 @@ enum WeeklyTestEngine {
     /// version — the words the correction removed are the tempting ones.
     static let maxDecoyTiles = 2
 
-    /// How far back the window reaches with no previous test: one week.
-    static let defaultWindow: TimeInterval = 7 * 86_400
+    /// The longest a card can be put off (the deck's "3 days"), with room
+    /// for the day it was pressed.
+    static let longestPutOff: TimeInterval = 3 * 86_400 + 3_600
 
-    // MARK: - Window
+    // MARK: - Week
 
-    /// The material window: since the last WEEKLY test was built, else one
-    /// week. A monthly paper is never the anchor — it is built from the
-    /// weeklies, minutes before or after one, and anchoring on it would
-    /// start the week's window at that moment (a Saturday that opened the
-    /// monthly first then found the weekly "thin").
-    static func window(lastTest: WeeklyTest?, now: Date) -> (start: Date, end: Date) {
-        let anchor = lastTest.flatMap { $0.isMonthly ? nil : $0 }
-        let start = anchor?.periodEnd ?? now.addingTimeInterval(-defaultWindow)
-        return (min(start, now), now)
+    /// The week this paper is about: the one "Your week" reports on.
+    static func week(now: Date) -> (start: Date, end: Date) {
+        WeekRecapBuilder.lastWeek(now: now)
+    }
+
+    /// Whether something waiting to come back at `returnAt` was put off this
+    /// week. The schedule keeps only the return date, and a put-off is at
+    /// most `longestPutOff`, so the date places it to within three days.
+    static func wasPutOff(returningAt returnAt: Date, start: Date, end: Date) -> Bool {
+        returnAt > start && returnAt <= end.addingTimeInterval(longestPutOff)
+    }
+
+    /// The paper in its fixed order, inside `maxPaper`: last week's misses
+    /// and the two heard lines keep their seats, then mistakes, then
+    /// expressions and words share what is left.
+    static func paper(translate: [WeeklyTestItem], gap: [WeeklyTestItem], meaning: [WeeklyTestItem],
+                      listen: [WeeklyTestItem], speak: [WeeklyTestItem],
+                      retakes: [WeeklyTestItem]) -> [WeeklyTestItem] {
+        let heard = Array(listen.prefix(maxListen)) + Array(speak.prefix(maxSpeak))
+        let again = Array(retakes.prefix(maxRetake))
+        var room = maxPaper - heard.count - again.count
+        let mistakes = Array(translate.prefix(min(maxTranslate, room)))
+        room -= mistakes.count
+        let gaps = Array(gap.prefix(maxGap)), words = Array(meaning.prefix(maxMeaning))
+        var keptGaps: [WeeklyTestItem] = [], keptWords: [WeeklyTestItem] = []
+        var g = 0, w = 0
+        while room > 0, g < gaps.count || w < words.count {
+            if g < gaps.count { keptGaps.append(gaps[g]); g += 1; room -= 1 }
+            if room > 0, w < words.count { keptWords.append(words[w]); w += 1; room -= 1 }
+        }
+        return mistakes + keptGaps + keptWords + heard + again
     }
 
     // MARK: - Build
 
-    /// Builds this week's test, or nil when the window holds fewer than
+    /// Builds this week's test, or nil when the week holds fewer than
     /// `minItems` gradable things. Reads the active language's stores.
-    /// `lastTest` is the latest WEEKLY paper (`WeeklyTestStore.latestWeekly`);
-    /// `recentTests` the finished weekly papers the retakes come from.
+    /// `lastTest` is the latest WEEKLY paper (`WeeklyTestStore.latestWeekly`).
     /// A paper over a window of the caller's choosing instead of the week's
     /// — the trial report's test (`TrialReport`): from the first talk to now,
     /// its own coach, and a lower floor, since twenty minutes is a small week.
@@ -127,12 +131,11 @@ enum WeeklyTestEngine {
 
     static func build(
         lastTest: WeeklyTest?,
-        recentTests: [WeeklyTest] = [],
         appState: AppState,
         scope: Scope? = nil,
         now: Date = Date()
     ) async -> WeeklyTest? {
-        let (start, end) = scope.map { (min($0.start, now), now) } ?? window(lastTest: lastTest, now: now)
+        let (start, end) = scope.map { (min($0.start, now), now) } ?? week(now: now)
         let id = UUID()
         var rng = WeeklyTestRandom(seed: id)
 
@@ -140,83 +143,90 @@ enum WeeklyTestEngine {
             .filter { $0.archivedAt == nil && $0.mode == .conversation }
         let windowSessions = allSessions.filter {
             guard let ended = $0.endedAt else { return false }
-            return ended > start && ended <= end
+            return ended >= start && ended <= end
         }
         let fluentTurns = windowSessions.flatMap { s in
             s.turns.filter { $0.role == .fluentSelf && !$0.excludedFromScoring }
                 .map { (session: s, turn: $0) }
         }
-        let userTurns = windowSessions.flatMap { s in
-            s.turns.filter { $0.role == .user && !$0.excludedFromScoring }
-                .map { (session: s, turn: $0) }
-        }
-
-        var items: [WeeklyTestItem] = []
-        let studied = await studiedMaterial(appState: appState)
-        items += await meaningItems(words: studied.words, appState: appState, rng: &rng)
-        let studyPhrases = studied.expressions.map { $0.lowercased() }
         // A call's first fluent-self line is its greeting — the same few
         // words every call, never the material.
         let openers = Set(allSessions.compactMap { s in s.turns.first { $0.role == .fluentSelf }?.id })
         let teachingTurns = fluentTurns.filter { !openers.contains($0.turn.id) }
-        let gaps = gapItems(phrases: studied.expressions, sessions: windowSessions, fluentTurns: teachingTurns,
-                            allSessions: allSessions, openers: openers, appState: appState,
-                            limit: maxGap * 2, rng: &rng)
-        items += Array(await onlyAnswerFits(gaps, appState: appState, testId: id).prefix(maxGap))
-        items += await translateItems(start: start, end: end, now: now, sessions: allSessions,
-                                      windowSessions: windowSessions, appState: appState, testId: id)
-        let listens = listenItems(fluentTurns: teachingTurns, studyPhrases: studyPhrases, rng: &rng)
-        items += listens
-        items += speakItems(fluentTurns: teachingTurns, studyPhrases: studyPhrases,
-                            excluding: Set(listens.map { CarryoverDetector.normalized($0.answer) }),
-                            rng: &rng)
-        // What the week's report found: grammar that keeps going wrong and
-        // words leaned on too often (user, 2026-10-03).
+
         let coach = scope != nil ? scope?.coach : await weekCoach(appState: appState, now: now)
-        items += await grammarItems(coach: coach, userTurns: userTurns, appState: appState, now: now, rng: &rng)
-        items += upgradeItems(coach: coach, userTurns: userTurns, appState: appState, rng: &rng)
-        // What recent weeks got wrong is asked again — the test is a
-        // review, and a miss is the most certain material there is.
-        let sources = (recentTests + [lastTest].compactMap { $0 })
-            .filter { $0.isFinished && !$0.isMonthly }
-        var unique: [UUID: WeeklyTest] = [:]
-        for t in sources { unique[t.id] = t }
-        let recent = unique.values.sorted { $0.createdAt > $1.createdAt }.prefix(retakeWeeks)
-        if !recent.isEmpty {
-            let fresh = Set(items.map { itemKey($0) })
-            items += retakes(from: Array(recent), limit: maxRetake, excluding: fresh,
-                             language: appState.targetLanguage, rng: &rng)
+        let studied = await studiedMaterial(appState: appState, start: start, end: end)
+        let betterWords = (coach?.upgrades ?? []).map(\.better)
+            .filter { WordSplitter.count($0) == 1 && isInTargetScript($0) }
+        var seenWords = Set<String>()
+        let words = (studied.words + betterWords).filter { seenWords.insert($0.lowercased()).inserted }
+        let meaningDrafts = await meaningItems(words: words, appState: appState, limit: maxMeaning * 2, rng: &rng)
+        let gapDrafts = gapItems(phrases: studied.expressions, sessions: windowSessions, fluentTurns: teachingTurns,
+                                 allSessions: allSessions, openers: openers, appState: appState,
+                                 limit: maxGap * 2, rng: &rng)
+
+        // A heard line is about what the week taught: a phrase put off this
+        // week, or one the fluent self offered in this week's talks.
+        let offered = windowSessions.flatMap { $0.summary?.expressionsOffered ?? [] }
+        let lowered: [String] = (studied.expressions + offered).map { $0.lowercased() }
+        let heardPhrases: [String] = Array(Set(lowered)).filter { !$0.isEmpty }
+        let listens = listenItems(fluentTurns: teachingTurns, studyPhrases: heardPhrases, rng: &rng)
+        let speaks = speakItems(fluentTurns: teachingTurns, studyPhrases: heardPhrases,
+                                excluding: Set(listens.map { CarryoverDetector.normalized($0.answer) }),
+                                rng: &rng)
+
+        // Last week's misses, once. A retake is checked like anything else:
+        // it was written before the gate or before today's rules.
+        var retakeDrafts: [WeeklyTestItem] = []
+        if let last = lastTest, last.isFinished, !last.isMonthly, last.createdAt >= start {
+            let fresh = Set((meaningDrafts + gapDrafts + listens + speaks).map { itemKey($0) })
+            retakeDrafts = retakes(from: [last], limit: maxRetake * 2, excluding: fresh,
+                                   language: appState.targetLanguage, firstMissOnly: true, rng: &rng)
         }
+        func again(_ kind: WeeklyTestItem.Kind) -> [WeeklyTestItem] { retakeDrafts.filter { $0.kind == kind } }
+        let askedLastWeek = Set((lastTest?.items ?? []).compactMap(\.cardId))
+
+        async let meaningChecked = onlyMeaningFits(meaningDrafts + again(.meaning), appState: appState, testId: id)
+        async let gapChecked = onlyAnswerFits(gapDrafts + again(.gap), appState: appState, testId: id)
+        async let translateChecked = translateItems(start: start, end: end, windowSessions: windowSessions,
+                                                    coach: coach, excludingCards: askedLastWeek,
+                                                    retakes: again(.translate), appState: appState, testId: id)
+        let meaningKept = await meaningChecked, gapKept = await gapChecked, translateKept = await translateChecked
+
+        func fresh(_ list: [WeeklyTestItem]) -> [WeeklyTestItem] { list.filter { $0.isRetake != true } }
+        // Heard lines need no check: the answer is the line itself.
+        let checkedAgain: [WeeklyTestItem] = (translateKept + gapKept + meaningKept).filter { $0.isRetake == true }
+        let keptAgain: [WeeklyTestItem] = checkedAgain + again(.listen) + again(.speak)
+        var items = paper(translate: fresh(translateKept), gap: fresh(gapKept), meaning: fresh(meaningKept),
+                          listen: listens, speak: speaks, retakes: keptAgain)
 
         // The trial report's test is never refused for being small
         // (2026-10-28, founder: "make the test even if the amount is small,
         // even from related things"). Twenty minutes rarely leave anything
-        // put off in the deck, which is where the paper's words and phrases
-        // come from, so the card offered a test and the test then said there
-        // was too little. Filled from the window's own talks instead: the
-        // words and phrases their books teach, then their lines to hear and
-        // say. Any count is a test.
+        // put off in the deck, so it is filled from the window's own talks:
+        // the words and phrases their books teach, then their lines to hear
+        // and say. Any count is a test.
         if let scope, items.count < scope.minimum {
             let books = windowSessions.map {
                 TalkCurriculum.build(session: $0, proficiency: appState.proficiency,
                                      shadowAttempts: [], drillCards: [])
             }
-            var seenWord = Set(studied.words.map { $0.lowercased() })
+            var seenWord = Set(words.map { $0.lowercased() })
             let bookWords = books.flatMap { $0.words.map(\.text) }.filter { seenWord.insert($0.lowercased()).inserted }
-            var seenPhrase = Set(studyPhrases)
+            var seenPhrase = Set(studied.expressions.map { $0.lowercased() })
             let bookPhrases = books.flatMap { $0.expressions.map(\.text) }
                 .filter { isInTargetScript($0) && seenPhrase.insert($0.lowercased()).inserted }
             let have = Set(items.map { itemKey($0) })
             var more: [WeeklyTestItem] = []
-            more += await meaningItems(words: bookWords, appState: appState, rng: &rng)
+            let moreWords = await meaningItems(words: bookWords, appState: appState, limit: maxMeaning * 2, rng: &rng)
+            more += Array(await onlyMeaningFits(moreWords, appState: appState, testId: id).prefix(maxMeaning))
             let moreGaps = gapItems(phrases: bookPhrases, sessions: windowSessions, fluentTurns: teachingTurns,
                                     allSessions: allSessions, openers: openers, appState: appState,
                                     limit: maxGap * 2, rng: &rng)
             more += Array(await onlyAnswerFits(moreGaps, appState: appState, testId: id).prefix(maxGap))
             // Lines carrying one of those phrases first; with still too few,
             // any of their own talk's lines (every line contains "").
-            let used = items + more
-            let phrases = used.count < scope.minimum
+            let phrases = items.count + more.count < scope.minimum
                 ? [""] : bookPhrases.map { $0.lowercased() }
             let heard = listenItems(fluentTurns: teachingTurns, studyPhrases: phrases, rng: &rng)
             more += heard
@@ -226,12 +236,21 @@ enum WeeklyTestEngine {
             items += more.filter { !have.contains(itemKey($0)) }
         }
 
+        var enough = items.count >= (scope == nil ? minItems : 1)
         #if DEBUG
-        let counts = Dictionary(grouping: items, by: \.kind).mapValues(\.count)
-        print("WEEKLYTEST built: sessions=\(windowSessions.count) items=\(counts)")
+        if DebugCapture.weeklyTestKind != nil { enough = true } // a capture opens on one seeded kind
         #endif
-        guard items.count >= (scope == nil ? minItems : 1) else { return nil }
-        items.shuffle(using: &rng)
+        var counts: [String: Any] = [:]
+        for item in items { counts["n_" + item.kind.rawValue] = (counts["n_" + item.kind.rawValue] as? Int ?? 0) + 1 }
+        counts["items"] = items.count
+        counts["retakes"] = items.filter { $0.isRetake == true }.count
+        counts["talks"] = windowSessions.count
+        counts["enough"] = enough
+        Analytics.capture("weekly_test_built", counts)
+        #if DEBUG
+        print("WEEKLYTEST built: sessions=\(windowSessions.count) items=\(items.count) enough=\(enough)")
+        #endif
+        guard enough else { return nil }
         // A test opens on something you can answer by reading — never on the
         // one item that needs the speaker on.
         if let first = items.first, first.kind == .listen,
@@ -243,11 +262,13 @@ enum WeeklyTestEngine {
     }
 
     /// Wrong answers of `tests`, newest test first, one per distinct answer,
-    /// as fresh items with their choices reshuffled. A miss that a NEWER test
-    /// asked again is that test's to report: answered right there, it is
-    /// done and never comes back; wrong again, the newer miss is the one dealt.
+    /// as fresh items with their choices reshuffled. `firstMissOnly` is the
+    /// weekly paper's rule: a miss comes back once, in a kind still dealt, so
+    /// a question can't chase the learner week after week.
     static func retakes(from tests: [WeeklyTest], limit: Int, excluding: Set<String>,
-                                language: String, rng: inout WeeklyTestRandom) -> [WeeklyTestItem] {
+                                language: String, firstMissOnly: Bool = false,
+                                rng: inout WeeklyTestRandom) -> [WeeklyTestItem] {
+        let dealt: Set<WeeklyTestItem.Kind> = [.meaning, .gap, .translate, .listen, .speak]
         var out: [WeeklyTestItem] = []
         var seen = excluding
         for test in tests.sorted(by: { $0.createdAt > $1.createdAt }) {
@@ -256,6 +277,7 @@ enum WeeklyTestEngine {
             defer { seen.formUnion(asked) }
             for stored in test.items where wrong.contains(stored.id) && isValid(stored, language: language) {
                 guard out.count < limit else { return out }
+                if firstMissOnly, stored.isRetake == true || !dealt.contains(stored.kind) { continue }
                 // A missed tile item comes back as the rewrite it is now.
                 guard let item = stored.kind == .build ? asRewrite(stored) : stored else { continue }
                 let key = itemKey(item)
@@ -272,7 +294,8 @@ enum WeeklyTestEngine {
                 out.append(WeeklyTestItem(id: UUID(), kind: item.kind, prompt: item.prompt, answer: item.answer,
                                           options: options, sessionId: item.sessionId, turnId: item.turnId,
                                           cardId: item.cardId, note: item.note, isRetake: true,
-                                          rule: item.rule, focus: item.focus, example: item.example))
+                                          rule: item.rule, focus: item.focus, example: item.example,
+                                          orders: item.orders))
             }
         }
         return out
@@ -410,13 +433,19 @@ enum WeeklyTestEngine {
 
     // MARK: meaning
 
-    /// What the learner studied: the words and expressions put off in the
-    /// deck and still on their lists, at their level or above, longest
-    /// waiting first. A word the graded list can't place keeps its seat.
-    static func studiedMaterial(appState: AppState) async -> (words: [String], expressions: [String]) {
+    /// What the learner studied this week: the words and expressions put off
+    /// in the deck between `start` and `end` and still on their lists, at
+    /// their level or above. A word the graded list can't place keeps its seat.
+    static func studiedMaterial(appState: AppState, start: Date, end: Date) async -> (words: [String], expressions: [String]) {
         let vocab = VocabStore.shared
         let schedule = StudyScheduleStore.shared
-        let put = schedule.dueItems() + schedule.upcoming()
+        var put = schedule.dueItems() + schedule.upcoming()
+        #if DEBUG
+        let capturing = DebugCapture.weeklyTestKind != nil // seeded "now", not in last week
+        #else
+        let capturing = false
+        #endif
+        if !capturing { put = put.filter { wasPutOff(returningAt: $0.at, start: start, end: end) } }
         let levelIndex = CEFRLevel.allCases.firstIndex(of: appState.proficiency) ?? 0
         var seen = Set<String>()
         let words = put.filter { $0.kind == .word }.map(\.text).filter { w in
@@ -440,12 +469,9 @@ enum WeeklyTestEngine {
     }
 
     private static func meaningItems(
-        words: [String], appState: AppState, rng: inout WeeklyTestRandom
+        words: [String], appState: AppState, limit: Int, rng: inout WeeklyTestRandom
     ) async -> [WeeklyTestItem] {
         let vocab = VocabStore.shared
-        // The words put off in the deck (`studiedMaterial`) — what the learner
-        // studied. The talk books' Words chapter fed this until 2026-10-21;
-        // the notebook and "words used this week" before that.
         let seen = Set(words.map { $0.lowercased() })
         let candidates = words.shuffled(using: &rng)
 
@@ -471,7 +497,7 @@ enum WeeklyTestEngine {
 
         var out: [WeeklyTestItem] = []
         for word in candidates {
-            guard out.count < maxMeaning else { break }
+            guard out.count < limit else { break }
             guard let entry = await WordLore.entry(for: word, native: appState.nativeLanguage,
                                                    target: appState.targetLanguage),
                   let sense = entry.senses.first?.meaning.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -488,6 +514,47 @@ enum WeeklyTestEngine {
                                       answer: word, options: options))
         }
         return out
+    }
+
+    private struct MeaningVerdicts: Decodable {
+        struct Result: Decodable { let n: Int; let fit: [String] }
+        let results: [Result]
+    }
+
+    /// The meaning items whose gloss fits only the answer, as read by a call
+    /// that is never told which word was meant. Decoys share a word class,
+    /// so a near-synonym can be one of them and two choices would be right.
+    /// Nothing when the check can't run.
+    static func onlyMeaningFits(_ items: [WeeklyTestItem], appState: AppState, testId: UUID) async -> [WeeklyTestItem] {
+        guard !items.isEmpty else { return [] }
+        #if DEBUG
+        if DebugCapture.weeklyTestKind != nil { return items } // a capture run has no model
+        #endif
+        let target = LanguageCatalog.englishName(appState.targetLanguage)
+        let native = LanguageCatalog.englishName(appState.nativeLanguage)
+        let system = """
+            You check vocabulary questions for \(target) learners whose own language is \(native). \
+            Each numbered question has a meaning in \(native) and four \(target) words. \
+            List EVERY word the meaning correctly describes, in any common sense of \
+            the word. Judge each word on its own; more than one may fit.
+            Return {"results":[{"n":1,"fit":["word", ...]}]}. JSON only.
+            """
+        let user = items.enumerated().map { i, item in
+            "\(i + 1). \(item.prompt)\n   words: \(item.options.sorted().joined(separator: " | "))"
+        }.joined(separator: "\n")
+        let v: MeaningVerdicts
+        do {
+            v = try await GeminiClient.shared.sendJSON(
+                system: system, messages: [.init(role: .user, content: user)],
+                maxTokens: 3000, purpose: "weekly-test",
+                idempotencyKey: "weekly-test-meaning:\(testId.uuidString)", requestTimeout: 30)
+        } catch { return [] }
+        let norm = CarryoverDetector.normalized
+        return v.results.compactMap { r in
+            guard items.indices.contains(r.n - 1) else { return nil }
+            let item = items[r.n - 1]
+            return r.fit.map(norm) == [norm(item.answer)] ? item : nil
+        }
     }
 
     /// The learner's level and its two neighbours, nearest first.
@@ -640,6 +707,9 @@ enum WeeklyTestEngine {
     /// with four phrases that all fit is the bug this exists for.
     static func onlyAnswerFits(_ items: [WeeklyTestItem], appState: AppState, testId: UUID) async -> [WeeklyTestItem] {
         guard !items.isEmpty else { return [] }
+        #if DEBUG
+        if DebugCapture.weeklyTestKind != nil { return items } // a capture run has no model
+        #endif
         let stored = items.map { item in
             QuickQuizStock.Stored(kind: .expression, point: "", tip: "", sentence: item.prompt,
                                   answer: item.answer, wrong: item.options.filter { $0 != item.answer },
@@ -662,35 +732,6 @@ enum WeeklyTestEngine {
     }
 
     // MARK: build
-
-    /// The corrections touched this window, due first then newest, each as
-    /// the learner's WHOLE sentence to say or type again the right way.
-    private static func rewriteItems(
-        start: Date, end: Date, now: Date, sessions: [Session]
-    ) -> [WeeklyTestItem] {
-        let cards = DrillStore.shared.load().filter { card in
-            guard card.box < DrillStore.maxBox,
-                  !card.sourcePhrase.trimmingCharacters(in: .whitespaces).isEmpty,
-                  isInTargetScript(card.targetPhrase), isInTargetScript(card.sourcePhrase) else { return false }
-            let touched = [card.createdAt, card.lastReviewedAt].compactMap { $0 }
-            return touched.contains(where: { $0 > start && $0 <= end })
-        }
-        let ordered = cards.sorted {
-            let aDue = $0.nextReviewAt <= now, bDue = $1.nextReviewAt <= now
-            if aDue != bDue { return aDue }
-            return $0.createdAt > $1.createdAt
-        }
-        let byId = Dictionary(sessions.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
-        var out: [WeeklyTestItem] = []
-        var seen = Set<String>()
-        for card in ordered {
-            guard out.count < maxRewrite else { break }
-            guard let item = rewriteItem(from: card, sessions: byId) else { continue }
-            guard seen.insert(itemKey(item)).inserted else { continue }
-            out.append(item)
-        }
-        return out
-    }
 
     /// One correction card as a rewrite item. What the learner reads is
     /// what they said around the slip: the sentence it sits in, or — when
@@ -794,16 +835,52 @@ enum WeeklyTestEngine {
     /// should be, why, and the card it came from (for write-back).
     struct Slip { let was: String; let now: String; let why: String; let cardId: UUID? }
 
-    /// The mistakes to build on: the sentence cards the learner put off in
-    /// the deck (`DrillStore.putOffCards`), soonest return first — what they
-    /// studied. Until 2026-10-21 it was every card touched this window plus
-    /// the profile's recurring mistakes.
-    static func slips() -> [Slip] {
+    /// A "fix" that only takes the last words off a sentence: the speaker
+    /// stopped mid-thought ("I'm very excited about." → "I'm very excited.").
+    /// No rule was broken, and a question built on it has nothing to test.
+    static func isBrokenOff(was: String, now: String) -> Bool {
+        let before = was.split(whereSeparator: \.isWhitespace).map(String.init)
+        let after = now.split(whereSeparator: \.isWhitespace).map(String.init)
+        guard !before.isEmpty, after.count < before.count else { return false }
+        func bare(_ w: String) -> String { tileKey(w) }
+        var i = 0, j = 0
+        var last: String?
+        while i < before.count {
+            if j < after.count, bare(before[i]) == bare(after[j]) { i += 1; j += 1 }
+            else { last = before[i]; i += 1 }
+        }
+        guard j == after.count, let last else { return false }
+        return before.last == last || ".!?。！？".contains(last.last ?? " ")
+    }
+
+    /// The week's mistakes to build on: the report's recurring grammar first,
+    /// then the sentence cards reviewed this week and still put off, newest
+    /// first. A card last week's paper asked about stays out: a miss returns
+    /// as last week's retake, not again in a new sentence.
+    static func slips(start: Date, end: Date, coach: WeekRecap.Coach?, excludingCards: Set<UUID>) -> [Slip] {
+        let cards = DrillStore.putOffCards().filter { c in
+            !excludingCards.contains(c.id)
+                && !c.sourcePhrase.trimmingCharacters(in: .whitespaces).isEmpty
+                && isInTargetScript(c.targetPhrase) && isInTargetScript(c.sourcePhrase)
+        }
         var out: [Slip] = []
         var seen = Set<String>()
-        for c in DrillStore.putOffCards() where !c.sourcePhrase.trimmingCharacters(in: .whitespaces).isEmpty
-            && isInTargetScript(c.targetPhrase) && isInTargetScript(c.sourcePhrase) {
-            guard seen.insert(CarryoverDetector.normalized(c.sourcePhrase)).inserted else { continue }
+        for pattern in coach?.grammar ?? [] {
+            for example in pattern.examples where isInTargetScript(example.was) && isInTargetScript(example.now)
+                && !isBrokenOff(was: example.was, now: example.now) {
+                let key = CarryoverDetector.normalized(example.was)
+                guard seen.insert(key).inserted else { continue }
+                let card = cards.first { CarryoverDetector.normalized($0.sourcePhrase).contains(key) }
+                if let card { seen.insert(CarryoverDetector.normalized(card.sourcePhrase)) }
+                out.append(Slip(was: example.was, now: example.now, why: pattern.rule, cardId: card?.id))
+            }
+        }
+        let reviewed = cards.filter { c in
+            guard let at = c.lastReviewedAt else { return false }
+            return at >= start && at < end
+        }.sorted { ($0.lastReviewedAt ?? .distantPast) > ($1.lastReviewedAt ?? .distantPast) }
+        for c in reviewed where !isBrokenOff(was: c.sourcePhrase, now: c.targetPhrase)
+            && seen.insert(CarryoverDetector.normalized(c.sourcePhrase)).inserted {
             out.append(Slip(was: c.sourcePhrase, now: c.targetPhrase, why: c.reason, cardId: c.id))
         }
         return Array(out.prefix(10))
@@ -813,8 +890,9 @@ enum WeeklyTestEngine {
         struct Item: Decodable {
             let source: Int
             let point: String
-            let native: String
             let answer: String
+            let native: String
+            let wrong: String?
             let orders: [String]?
             let decoys: [String]?
             let tip: String?
@@ -823,88 +901,243 @@ enum WeeklyTestEngine {
     }
 
     /// New sentences that need the grammar the learner got wrong, laid from
-    /// word tiles. One model call writes each sentence, the other word orders
-    /// that are just as right, and trap words built from the learner's own
-    /// mistake; code grades the laid tiles against that closed set. A free
-    /// answer (typed or said) was tried first and could not be graded
-    /// exactly: a slip elsewhere passed and a synonym failed (founder,
-    /// 2026-10-08: "that limit can't be there"). Nothing when the target IS
-    /// the native language (there is nothing to translate from) or the call
+    /// word tiles, then passed through `verifyTranslate` beside last week's
+    /// translate misses. The writer has to produce the sentence with the
+    /// mistake made again (`wrong`): a sentence where it can't write that
+    /// doesn't test the mistake (2026-11-08: "excited about." was a sentence
+    /// broken off, and the question built on it made "excited about an
+    /// interview", which is right, the wrong answer). A free answer (typed or
+    /// said) was tried first and could not be graded exactly (2026-10-08).
+    /// Scripts/weekly-test-probe.py measures this; re-run it before changing
+    /// a prompt. Nothing when the target IS the native language, or a call
     /// fails.
     private static func translateItems(
-        start: Date, end: Date, now: Date, sessions: [Session], windowSessions: [Session],
-        appState: AppState, testId: UUID
+        start: Date, end: Date, windowSessions: [Session], coach: WeekRecap.Coach?,
+        excludingCards: Set<UUID>, retakes: [WeeklyTestItem], appState: AppState, testId: UUID
     ) async -> [WeeklyTestItem] {
         let target = appState.targetLanguage, native = appState.nativeLanguage
         guard !LanguageCatalog.sameLanguage(target, native) else { return [] }
-        let list = slips()
-        guard !list.isEmpty else { return [] }
+        let list = slips(start: start, end: end, coach: coach, excludingCards: excludingCards)
         let topics = windowSessions.compactMap { $0.topic }
             .filter { !$0.isEmpty }.prefix(6)
         let targetName = LanguageCatalog.englishName(target)
         let nativeName = LanguageCatalog.englishName(native)
+        let notARule = notARuleLine(target)
         let system = """
             You write a short translation quiz for a \(targetName) learner whose own \
             language is \(nativeName), level \(appState.proficiency.rawValue.uppercased()). \
-            They answer by laying word tiles in order. You get mistakes they really \
-            made. Pick up to \(maxTranslate) of them, each a DIFFERENT grammar point \
-            (skip pure word choice or a slip with no rule behind it), and for each \
-            write ONE new everyday sentence that cannot be said right without that \
-            grammar point.
+            They answer by laying word tiles in order. You get mistakes they really made.
 
-            Return {"items":[{"source":n,"point":"...","native":"...","answer":"...",\
-            "orders":["..."],"decoys":["..."],"tip":"..."}]}
+            First decide which mistakes can be asked about at all. One qualifies only \
+            when a grammar RULE of \(targetName) was broken and the same rule could be \
+            broken again in a different sentence. Leave out word choice, a sentence the \
+            speaker broke off or restarted, words lost to hesitation, and anything a \
+            speech recognizer could have caused.\(notARule)
+
+            Pick up to \(translateDrafts) that qualify, each a DIFFERENT grammar point, and \
+            for each write ONE new everyday sentence in which a learner who still has \
+            that habit would make THE SAME mistake again.
+
+            Return {"items":[{"source":n,"point":"...","answer":"...","native":"...",\
+            "wrong":"...","orders":["..."],"decoys":["..."],"tip":"..."}]}, keys in that order.
             - source: the number of the mistake it is built on.
-            - native: the sentence in \(nativeName), casual and spoken, the way they'd \
-              say it to a friend, 6–12 words, about ordinary life (these were their \
-              topics: \(topics.joined(separator: "; "))). NOT their original sentence.
-            - answer: the most natural \(targetName) way to say it, at their level, \
-              5–12 words. Its words are the tiles, so there must be ONE wording: no \
-              optional words, nothing a learner could naturally say differently \
-              with other words. It means EXACTLY what native says: every idea in \
-              one is in the other ("finally" is not "only", "my situation" is not \
-              "the situation"). Write native from the answer if that is easier.
+            - answer: the \(targetName) sentence, the most natural way to say it, at their \
+              level, 5–12 words, about ordinary life (these were their topics: \
+              \(topics.joined(separator: "; "))), correctly punctuated. NOT their original \
+              sentence. Its words are the tiles, so there must be ONE wording: no \
+              optional words, nothing a learner could naturally say differently with \
+              other words.
+            - native: that sentence in \(nativeName), casual and spoken, the way they'd \
+              say it to a friend. Translate the answer and add nothing: no idea in \
+              native that is missing from answer, none in answer that is missing from \
+              native, the same tense and time.
+            - wrong: the answer with THAT mistake made again and nothing else changed. \
+              If you cannot write it, this sentence does not test the mistake: write \
+              another.
             - orders: every OTHER order of exactly the same words that is just as \
-              correct. Go through each time, place and duration phrase ("for two \
-              years", "yesterday", "at midnight") and each adverb, and list the \
-              sentence with it at the front too wherever that is natural — a \
-              learner who lays a right order and is marked wrong stops trusting \
-              the test. [] only if the order is truly fixed.
-            - decoys: 2–3 single words built from their mistake (e.g. "since", "am" \
-              for "I am working here since 2020") that make the sentence WRONG \
-              wherever they go, and are not in answer.
+              correct. Go through each time, place and duration phrase and each \
+              adverb, and list the sentence with it at the front too wherever that \
+              is natural. [] only if the order is truly fixed.
+            - decoys: 1–3 single words from wrong that are not in answer. Before \
+              keeping one, try to build a correct sentence of the same meaning with \
+              it, in any position, using the other words: if you can, it is not a \
+              decoy.
             - point: the grammar point in \(nativeName), 2–5 words. tip: one line in \
-              \(nativeName), at most 14 words, that a teacher would sign: TRUE, and \
-              showing the pattern as the answer uses it (e.g. "explain + what + to \
-              + whom"). Never a rule you are unsure of. Write it in the polite \
-              everyday register an app speaks in (Korean 해요체, never 합니다체; \
-              Japanese です・ます).
+              \(nativeName), at most 14 words, that a teacher would sign: TRUE for THIS \
+              sentence, showing the pattern as the answer uses it. Never a rule you \
+              are unsure of. Write it in the polite everyday register an app speaks \
+              in (Korean 해요체, never 합니다체; Japanese です・ます).
             JSON only.
             """
-        let user = list.enumerated().map { i, s in
-            "\(i + 1). said \"\(s.was)\" → should be \"\(s.now)\"\(s.why.isEmpty ? "" : " (\(s.why))")"
-        }.joined(separator: "\n")
-        let task = Task { @MainActor () -> TranslatePayload? in
-            try? await GeminiClient.shared.sendJSON(
+        var drafts: [WeeklyTestItem] = []
+        if !list.isEmpty {
+            let user = list.enumerated().map { i, s in
+                "\(i + 1). said \"\(s.was)\" → should be \"\(s.now)\"\(s.why.isEmpty ? "" : " (\(s.why))")"
+            }.joined(separator: "\n")
+            let payload: TranslatePayload? = try? await GeminiClient.shared.sendJSON(
                 system: system, messages: [.init(role: .user, content: user)],
-                maxTokens: 3000, purpose: "weekly-test",
+                maxTokens: 5000, purpose: "weekly-test",
                 idempotencyKey: "weekly-test-translate:\(testId.uuidString)",
                 requestTimeout: translateWait)
+            var rng = WeeklyTestRandom(seed: testId)
+            var points = Set<String>()
+            for it in payload?.items ?? [] {
+                guard list.indices.contains(it.source - 1),
+                      let wrong = it.wrong, CarryoverDetector.normalized(wrong) != CarryoverDetector.normalized(it.answer)
+                else { continue }
+                guard let item = translateItem(it.native, answer: it.answer, orders: it.orders ?? [],
+                                               decoys: it.decoys ?? [], point: it.point, tip: it.tip,
+                                               slip: list[it.source - 1], target: target, rng: &rng),
+                      points.insert(it.point.lowercased()).inserted else { continue }
+                drafts.append(item)
+            }
         }
-        guard let payload = await task.value else { return [] }
-        var rng = WeeklyTestRandom(seed: testId)
-        var out: [WeeklyTestItem] = []
-        var points = Set<String>()
-        for it in payload.items {
-            guard out.count < maxTranslate, list.indices.contains(it.source - 1) else { continue }
-            let slip = list[it.source - 1]
-            guard let item = translateItem(it.native, answer: it.answer, orders: it.orders ?? [],
-                                           decoys: it.decoys ?? [], point: it.point, tip: it.tip,
-                                           slip: slip, target: target, rng: &rng),
-                  points.insert(it.point.lowercased()).inserted else { continue }
-            out.append(item)
+        return await verifyTranslate(drafts + retakes, target: target, native: native, testId: testId)
+    }
+
+    /// What sounds like a slip and is not one in this language: naming it
+    /// took Korean and Japanese items from half good. Empty for the rest, so
+    /// their prompts stay as measured.
+    static func notARuleLine(_ language: String) -> String {
+        switch language {
+        case "ko": return " In Korean, a particle left out in speech and 이/가 on the object of -고 싶다 are normal, not mistakes."
+        case "ja": return " In Japanese, choosing は or が before a negative is nuance, and a particle left out in casual speech is normal: neither is a mistake."
+        default: return ""
         }
-        return out
+    }
+
+    struct TranslateReview: Decodable {
+        var n: Int
+        var rule: Bool?
+        var repeats: Bool?
+        var sameMeaning: Bool?
+        var correct: Bool?
+        var tipTrue: Bool?
+        enum CodingKeys: String, CodingKey {
+            case n, rule, repeats, correct
+            case sameMeaning = "same_meaning"
+            case tipTrue = "tip_true"
+        }
+        var passes: Bool { rule == true && repeats == true && sameMeaning == true && correct == true && tipTrue == true }
+    }
+
+    private struct ReviewVerdicts: Decodable { let results: [TranslateReview] }
+    private struct SolveVerdicts: Decodable {
+        struct Result: Decodable { let n: Int; let sentences: [String]? }
+        let results: [Result]
+    }
+
+    /// The gate every translate item passes before it reaches a paper. Two
+    /// readers that did not write it: one is never told the answer and lists
+    /// every right sentence the tiles can build, the other reviews the item.
+    /// Probe, 2026-11-08 (`scripts/weekly-test-probe.py`, Claude Opus as the
+    /// judge, five languages): 66% of items good with the old prompt, 72%
+    /// with the new prompt alone, 90% through this gate.
+    static func verifyTranslate(_ items: [WeeklyTestItem], target: String, native: String,
+                                testId: UUID) async -> [WeeklyTestItem] {
+        guard !items.isEmpty else { return [] }
+        #if DEBUG
+        if DebugCapture.weeklyTestKind != nil { return items } // a capture run has no model
+        #endif
+        let t = LanguageCatalog.englishName(target), n = LanguageCatalog.englishName(native)
+        let solveSystem = """
+            A learner sees a sentence in \(n) and word tiles in \(t). Not every tile has \
+            to be used, and each can be used only as many times as it appears. For each \
+            numbered item, list EVERY sentence that can be built from the tiles and is \
+            correct, natural \(t) saying what the \(n) sentence says. Try each tile: \
+            casual everyday speech counts, and a different word order or construction \
+            counts. List nothing that is wrong.
+
+            Return {"results":[{"n":1,"sentences":["..."]}]}. JSON only.
+            """
+        let reviewSystem = """
+            You review translation quiz items for \(t) learners whose own language is \
+            \(n), built on a mistake the learner really made. You did not write them. \
+            Be strict.
+
+            For each numbered item decide:
+            - rule: was the earlier mistake a broken grammar rule of \(t)? false when \
+              the earlier wording is also acceptable (casual speech, an optional \
+              particle, a matter of nuance or preference), and for word choice, a \
+              sentence the speaker broke off, hesitation, or a recognizer's error.\(notARuleLine(target))
+            - repeats: could a learner with that same habit make the SAME mistake in \
+              this new sentence?
+            - same_meaning: does the answer say exactly what the \(n) sentence says, \
+              nothing left out or added, the same tense?
+            - correct: is the answer correct, natural \(t), in every word form?
+            - tip_true: is the tip true as written, for this sentence and in general? \
+              true when there is no tip.
+
+            Return {"results":[{"n":1,"rule":true,"repeats":true,"same_meaning":true,\
+            "correct":true,"tip_true":true}]}. JSON only.
+            """
+        let blind = items.enumerated().map { i, item in
+            "\(i + 1). Sentence: \(item.prompt)\n   Tiles: \(item.options.joined(separator: " | "))"
+        }.joined(separator: "\n")
+        let open = items.enumerated().map { i, item in
+            let traps = decoyTiles(of: item).joined(separator: ", ")
+            return "\(i + 1). Sentence: \(item.prompt)\n   Answer: \(item.answer)\n   Traps: \(traps.isEmpty ? "none" : traps)\n"
+                + "   Earlier mistake: \"\(item.focus ?? "")\" → \"\(item.example ?? "")\"\n"
+                + "   Point: \(item.rule ?? "")\n   Tip: \(item.note ?? "none")"
+        }.joined(separator: "\n")
+        async let solving: SolveVerdicts? = try? GeminiClient.shared.sendJSON(
+            system: solveSystem, messages: [.init(role: .user, content: blind)],
+            maxTokens: 6000, purpose: "weekly-test",
+            idempotencyKey: "weekly-test-solve:\(testId.uuidString)", requestTimeout: translateWait)
+        async let reviewing: ReviewVerdicts? = try? GeminiClient.shared.sendJSON(
+            system: reviewSystem, messages: [.init(role: .user, content: open)],
+            maxTokens: 4000, purpose: "weekly-test",
+            idempotencyKey: "weekly-test-review:\(testId.uuidString)", requestTimeout: translateWait)
+        guard let solved = await solving, let reviewed = await reviewing else { return [] }
+        let sentences = Dictionary(solved.results.map { ($0.n, $0.sentences ?? []) }, uniquingKeysWith: { a, _ in a })
+        let reviews = Dictionary(reviewed.results.map { ($0.n, $0) }, uniquingKeysWith: { a, _ in a })
+        return items.enumerated().compactMap { i, item in
+            guard let review = reviews[i + 1] else { return nil }
+            return passing(item, solved: sentences[i + 1] ?? [], review: review)
+        }
+    }
+
+    /// Code's half of the gate. Out when the review failed or the blind
+    /// reader could not reach the answer from the tiles. A trap that built
+    /// a right sentence leaves the table; with no trap left, nothing tests
+    /// the mistake and the item goes. Other orders it found join `orders`.
+    static func passing(_ item: WeeklyTestItem, solved: [String], review: TranslateReview) -> WeeklyTestItem? {
+        guard review.passes else { return nil }
+        let answer = tileBag(item.answer)
+        let said = solved.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        guard said.contains(where: { tileBag($0) == answer }) else { return nil }
+        let traps = decoyTiles(of: item)
+        let others = said.filter { tileBag($0) != answer }
+        func builtWith(_ trap: String) -> Bool {
+            let key = tileKey(trap)
+            return others.contains { sentence in
+                WordSplitter.spaced ? WordSplitter.words(sentence).map(tileKey).contains(key)
+                    : CarryoverDetector.normalized(sentence).contains(key)
+            }
+        }
+        let working = Set(traps.filter(builtWith).map(tileKey))
+        guard working.count < Set(traps.map(tileKey)).count else { return nil }
+        let keys = WordSplitter.words(item.answer).map(tileKey)
+        let moreOrders = said.filter {
+            tileBag($0) == answer && WordSplitter.words($0).map(tileKey) != keys
+        }
+        var known = Set((item.orders ?? []).map { WordSplitter.words($0).map(tileKey) })
+        var orders = item.orders ?? []
+        for order in moreOrders where known.insert(WordSplitter.words(order).map(tileKey)).inserted { orders.append(order) }
+        return WeeklyTestItem(id: item.id, kind: item.kind, prompt: item.prompt, answer: item.answer,
+                              options: item.options.filter { !working.contains(tileKey($0)) },
+                              sessionId: item.sessionId, turnId: item.turnId, cardId: item.cardId,
+                              note: item.note, isRetake: item.isRetake, rule: item.rule,
+                              focus: item.focus, example: item.example, orders: orders)
+    }
+
+    /// A sentence as the things it is made of, order aside. Words where
+    /// spaces mark them; letters where they don't, because a tokenizer can
+    /// cut the same Japanese sentence differently once it is reordered.
+    static func tileBag(_ text: String) -> String {
+        WordSplitter.spaced
+            ? WordSplitter.words(text).map(tileKey).sorted().joined(separator: " ")
+            : String(CarryoverDetector.normalized(text).filter { !$0.isWhitespace }.sorted())
     }
 
     /// A model-written translate item, or nil. Kept only when the answer is a
@@ -1013,112 +1246,6 @@ enum WeeklyTestEngine {
         return box.coach
     }
 
-    /// The first sentence of the window's learner lines that QUOTES `span`
-    /// (the report's quotes were checked against every language's lines; this
-    /// keeps them to the active one), with the span's range in it.
-    private static func learnerSentence(
-        quoting span: String, in userTurns: [(session: Session, turn: Turn)], maxWords: Int
-    ) -> (sentence: String, range: Range<String.Index>, session: Session, turn: Turn)? {
-        let needle = span.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !needle.isEmpty else { return nil }
-        for entry in userTurns {
-            for sentence in TalkCurriculum.sentences(in: entry.turn.transcript) {
-                guard let range = DrillStore.wholeWordRange(of: needle, in: sentence) else { continue }
-                let n = WordSplitter.count(sentence)
-                guard n >= 3, n <= maxWords, isInTargetScript(sentence) else { continue }
-                return (sentence, range, entry.session, entry.turn)
-            }
-        }
-        return nil
-    }
-
-    /// One item per recurring grammar point: the rule, one of the learner's
-    /// own lines with the mistake in it, rebuilt right from tiles (the wrong
-    /// words ride along as decoys — `buildTiles`). The report's points come
-    /// first; when it has none (or none found this week's lines) the
-    /// profile's recurring mistakes stand in, named by `GrammarFocus`.
-    private static func grammarItems(
-        coach: WeekRecap.Coach?, userTurns: [(session: Session, turn: Turn)],
-        appState: AppState, now: Date, rng: inout WeeklyTestRandom
-    ) async -> [WeeklyTestItem] {
-        let maxWords = WordSplitter.spaced ? 12 : 18
-        var out: [WeeklyTestItem] = []
-        var seen = Set<String>()
-        func make(rule: String, tip: String, was: String, now fixed: String) -> WeeklyTestItem? {
-            guard let hit = learnerSentence(quoting: was, in: userTurns, maxWords: maxWords) else { return nil }
-            let answer = hit.sentence.replacingCharacters(in: hit.range, with: fixed)
-            guard isInTargetScript(answer),
-                  CarryoverDetector.normalized(answer) != CarryoverDetector.normalized(hit.sentence),
-                  seen.insert(CarryoverDetector.normalized(answer)).inserted else { return nil }
-            return WeeklyTestItem(id: UUID(), kind: .grammar, prompt: hit.sentence, answer: answer,
-                                  options: buildTiles(target: answer, source: hit.sentence, rng: &rng),
-                                  sessionId: hit.session.id, turnId: hit.turn.id,
-                                  note: tip.isEmpty ? nil : tip, rule: rule, focus: was)
-        }
-        for pattern in coach?.grammar ?? [] {
-            guard out.count < maxGrammar else { break }
-            for example in pattern.examples.shuffled(using: &rng) {
-                if let item = make(rule: pattern.rule, tip: pattern.tip, was: example.was, now: example.now) {
-                    out.append(item); break
-                }
-            }
-        }
-        guard out.count < maxGrammar else { return out }
-        let fresh = now.addingTimeInterval(-Double(GrammarFocus.freshDays) * 86_400)
-        let patterns = appState.learnerProfile.recurringMistakes
-            .filter { $0.frequency >= GrammarFocus.minFrequency && $0.lastSeenAt >= fresh }
-        for pattern in patterns {
-            guard out.count < maxGrammar else { break }
-            guard learnerSentence(quoting: pattern.mistake, in: userTurns, maxWords: maxWords) != nil,
-                  let named = await GrammarFocus.describe(pattern, target: appState.targetLanguage,
-                                                          native: appState.nativeLanguage),
-                  let item = make(rule: named.label, tip: named.tip, was: pattern.mistake, now: pattern.correction)
-            else { continue }
-            out.append(item)
-        }
-        return out
-    }
-
-    /// One item per leaned-on word: the learner's line with it marked, and
-    /// the report's better word among three that don't belong — the week's
-    /// other better words first, then graded words of the same class one
-    /// band above the learner (the band the report reaches for).
-    private static func upgradeItems(
-        coach: WeekRecap.Coach?, userTurns: [(session: Session, turn: Turn)],
-        appState: AppState, rng: inout WeeklyTestRandom
-    ) -> [WeeklyTestItem] {
-        guard let upgrades = coach?.upgrades, !upgrades.isEmpty else { return [] }
-        let language = appState.targetLanguage
-        let all = CEFRLevel.allCases
-        let level = appState.proficiency
-        let oneUp = all.firstIndex(of: level).map { all[min($0 + 1, all.count - 1)] } ?? level
-        var graded: [String] = []
-        for band in decoyBands(around: oneUp) {
-            graded += CoreVocabulary.entries.filter { $0.level == band }.map(\.word).shuffled(using: &rng)
-        }
-        var out: [WeeklyTestItem] = []
-        for u in upgrades.shuffled(using: &rng) {
-            guard out.count < maxUpgrade else { break }
-            guard isInTargetScript(u.better), isInTargetScript(u.instead),
-                  let hit = learnerSentence(quoting: u.instead, in: userTurns,
-                                            maxWords: WordSplitter.spaced ? 25 : 35) else { continue }
-            let taken = Set(([u.better, u.instead] + WordSplitter.words(hit.sentence)).map { $0.lowercased() })
-            func fits(_ w: String) -> Bool { !taken.contains(w.lowercased()) && isInTargetScript(w) }
-            let week = upgrades.map(\.better).filter(fits).shuffled(using: &rng)
-            let sameClass = graded.lazy.filter(fits)
-                .filter { WordClass.sameClass(u.better, $0, language: language) }.prefix(30)
-            let decoys = dedupe(week + Array(sameClass).shuffled(using: &rng) + graded.filter(fits),
-                                key: { $0.lowercased() }).prefix(choiceCount - 1)
-            guard decoys.count == choiceCount - 1 else { continue }
-            out.append(WeeklyTestItem(id: UUID(), kind: .upgrade, prompt: hit.sentence, answer: u.better,
-                                      options: ([u.better] + decoys).shuffled(using: &rng),
-                                      sessionId: hit.session.id, turnId: hit.turn.id,
-                                      note: u.note.isEmpty ? nil : u.note, focus: u.instead,
-                                      example: u.rewritten.isEmpty ? nil : u.rewritten))
-        }
-        return out
-    }
-
     // MARK: listen
 
     private static func listenItems(
@@ -1162,52 +1289,41 @@ enum WeeklyTestEngine {
         CarryoverDetector.normalized(chosen) == CarryoverDetector.normalized(item.answer)
     }
 
-    /// A build item: the tiles in the order the learner laid them.
-    /// Laid tiles that are exactly the answer's words — no trap, none left
-    /// out — in an order the item doesn't list. The one case code can't
-    /// settle: the grammar point is already proved (every word of the right
-    /// form, no wrong one), and only whether the ORDER is natural is open.
-    static func isReorder(_ item: WeeklyTestItem, tiles: [String]) -> Bool {
-        let laid = tiles.map(tileKey)
-        return laid.sorted() == WordSplitter.words(item.answer).map(tileKey).sorted()
-            && !isCorrect(item, tiles: tiles)
-    }
+    private struct SecondRead: Decodable { let right: Bool }
 
-    private struct OrderVerdict: Decodable { let natural: Bool }
-
-    /// Is `laid` a natural order of the answer's words, meaning the same?
-    /// The model generating the item lists the orders it can think of and
-    /// measurably misses one in about twelve ("For two years I have worked
-    /// here" unlisted beside "I have worked here for two years", probe
-    /// 2026-10-08). Asked only for `isReorder` answers, so it judges word
-    /// order and nothing else; a failed call is the old verdict, wrong.
-    static func orderIsNatural(_ item: WeeklyTestItem, laid: String, language: String) async -> Bool {
+    /// Tiles the code did not accept, read once more before they are called
+    /// wrong: an answer can be right in words the item never listed. nil when
+    /// the read failed, and the question then doesn't count at all.
+    ///
+    /// Told the point and the learner's slip, or it accepts the slip itself
+    /// as "understandable". On the default model: 48 of 54 on the probe's 18
+    /// cases, against 45 on flash-lite, which called the reported answer
+    /// ("excited about an interview") wrong three times out of three.
+    static func laidStands(_ item: WeeklyTestItem, laid: String, language: String) async -> Bool? {
+        #if DEBUG
+        if DebugCapture.weeklyTestKind != nil { return false } // a capture run has no model
+        #endif
         let name = LanguageCatalog.englishName(language)
-        // Told the point and the learner's slip, or it accepts the slip
-        // itself as "understandable" ("I explained to the landlord the
-        // situation", 2 of 6 on the default model without them; 0 of 3 on
-        // flash-lite with them, which then misses only a debatable order —
-        // 33/36 over 12 cases, probe 2026-10-08).
         let system = """
-            A learner laid word tiles to say a \(name) sentence. They used exactly \
-            the words of the model answer, in a different order. Judge only the \
-            order: is it grammatical and natural, meaning the same — something a \
-            careful teacher would accept? Unusual but correct emphasis (a time \
-            phrase moved to the front) is fine. The quiz tests one grammar point, \
-            given below with the learner's earlier mistake; an order that repeats \
-            that mistake is NOT acceptable, even if a listener would understand it.
-            Return {"natural": true} or {"natural": false}.
+            A learner laid word tiles to say a \(name) sentence, and it is not the \
+            model answer. Decide whether what they laid is ALSO a right answer: \
+            correct, natural \(name) that says what the sentence asks, something a \
+            careful teacher would accept. Another wording or order is fine. The quiz \
+            tests one grammar point, given below with the learner's earlier mistake: \
+            a sentence that makes that same mistake again is NOT right, even if a \
+            listener would understand it.
+            Return {"right": true} or {"right": false}. JSON only.
             """
         var user = ""
         if let rule = item.rule { user += "Grammar point: \(rule)\n" }
         if let was = item.focus, let now = item.example { user += "Their earlier mistake: \(was) → \(now)\n" }
-        user += "Model answer: \(item.answer)\nTheir order: \(laid)"
-        let v: OrderVerdict? = try? await GeminiClient.shared.sendJSON(
+        user += "The sentence asked for: \(item.prompt)\nModel answer: \(item.answer)\nWhat they laid: \(laid)"
+        let v: SecondRead? = try? await GeminiClient.shared.sendJSON(
             system: system, messages: [.init(role: .user, content: user)],
-            model: .flashLite31, maxTokens: 400, purpose: "weekly-test",
-            idempotencyKey: "weekly-test-order:\(item.id.uuidString):\(CarryoverDetector.normalized(laid))",
-            requestTimeout: 10, fastThinking: true)
-        return v?.natural ?? false
+            maxTokens: 1500, purpose: "weekly-test",
+            idempotencyKey: "weekly-test-second:\(item.id.uuidString):\(CarryoverDetector.normalized(laid))",
+            requestTimeout: 12)
+        return v?.right
     }
 
     /// A tile item: the tiles in the order the learner laid them — the
@@ -1376,8 +1492,7 @@ enum WeeklyTestEngine {
     ///   gap      right → known, out of the deck · wrong → bookmarked, due now
     ///   rewrite  right → the card retires (Got it) · wrong → one rung down (build, translate alike)
     ///   listen   nothing to write; recognition is not production
-    ///   grammar  nothing to write; its corrections already carry cards
-    ///   upgrade  wrong → the better word in the notebook, due now
+    ///   grammar, upgrade  old papers only; as they always were
     static func apply(_ test: WeeklyTest, now: Date = Date()) {
         let vocab = VocabStore.shared
         let cards = Dictionary(uniqueKeysWithValues: DrillStore.shared.load().map { ($0.id, $0) })

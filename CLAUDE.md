@@ -2053,7 +2053,50 @@ six pooled ≈A2 interviews read B2 197 times in 200, twelve native ones C1.
   classes in context, so its English read counts list words minus the same
   stop words.
 
-## The weekly test (2026-09-23)
+## The weekly test (2026-09-23, redesigned 2026-11-08)
+
+**Redesigned 2026-11-08 (founder: "focus on the week, including the scope").
+This block outranks the older bullets below, which stay for how each kind is
+drawn and graded.** Two false "wrong" reports led here, and reading the paper
+showed it was mostly not about the week: 15 of its 23 seats were "everything
+ever put off", and the test and "Your week" ran on two clocks.
+
+- **The week is the report's week** (`WeekRecapBuilder.lastWeek`, one opening
+  to the next). Nothing older is dealt, a thin week is not padded (under
+  `minItems` it doesn't open; the trial paper keeps its own `Scope`). "Studied"
+  = put off in the deck this week. Words and expressions have only a return
+  date, and a put-off is at most 3 days, so `wasPutOff` reads it from that.
+- **At most 12 items, in a fixed order** (`paper`): translate ≤4 (the report's
+  grammar first, then cards reviewed this week) · gap ≤3 · meaning ≤3 (with the
+  report's better words) · listen 1 · speak 1 · last week's misses ≤2. The
+  heard lines carry a phrase put off this week or offered in this week's talks.
+- **A miss returns once** (`retakes(firstMissOnly:)`): last week's paper only.
+  The second miss stays with the deck. `grammar`, `upgrade`, `build`, `rewrite`
+  are not dealt any more; papers on disk still play them.
+- **Nothing reaches the paper unchecked, and the writer is never the checker.**
+  `verifyTranslate`: a reader who is never told the answer lists every right
+  sentence the tiles can build, and a reviewer asks whether the mistake was a
+  rule and this sentence tests it. A trap that built a right sentence leaves
+  the table; none left, the item goes. `onlyAnswerFits` (gap) and
+  `onlyMeaningFits` (meaning) likewise; a failed check keeps nothing. The
+  writer must produce `wrong`, the sentence with the mistake made again.
+  `isBrokenOff` drops a "fix" that only cuts a sentence's last words: "I'm very
+  excited about." → "I'm very excited." became a question whose right answer
+  ("excited about an interview") was marked wrong, with `about` as a trap.
+- **Code accepts a right answer; it does not alone declare a wrong one.**
+  Translate tiles that don't match get `laidStands` (default model, told the
+  point and the slip); a failed read removes the question from the score
+  ("Couldn't check that one"). Every wrong answer has "My answer is right too"
+  (`WeeklyTestAnswer.appealed`, counted right, and the review loop is only
+  written at the end). Choice and dictation stay in code.
+- Measured with `scripts/weekly-test-probe.py` (Claude Opus reads every item;
+  re-run before touching a prompt): 66% of items good on the old prompt, 81%
+  through the gate over 5 languages, then ja/ko 10/11 after `notARuleLine`.
+  It rests on written test mistakes, not real learners'. The second read: 48/54
+  on the probe's cases against flash-lite's 45, which missed the reported one.
+  Telemetry: `weekly_test_built` (per kind, `enough`), `weekly_test_appeal`,
+  `weekly_test_unjudged`, and `n_`/`right_` per kind on `weekly_test_finished`.
+  Unknown: how many learners now reach `minItems`; read `weekly_test_built`.
 
 One sit-down a week, built from THAT learner's own week: the words the talks
 taught, the phrases the fluent self used, the sentences that were corrected,

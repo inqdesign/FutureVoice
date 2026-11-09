@@ -2750,7 +2750,7 @@ enum DebugCapture {
         WeeklyTestStore.shared.removeAll()
         seedVocab()
         let uid = UUID()
-        let ended = Date().addingTimeInterval(-2 * 3600)
+        let ended = WeekRecapBuilder.lastWeek().end.addingTimeInterval(-2 * 3600)  // the week the paper is about
         let started = ended.addingTimeInterval(-900)
         let lines: [(TurnRole, String)] = [
             (.fluentSelf, "So how did the move go? Did you end up hiring movers?"),

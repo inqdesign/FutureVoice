@@ -143,12 +143,6 @@ final class WeeklyTestTests: XCTestCase {
         XCTAssertTrue(WeeklyTestEngine.isCorrect(it, tiles: lay("Yesterday we finished unpacking at midnight.")))
         XCTAssertFalse(WeeklyTestEngine.isCorrect(it, tiles: lay("We finish unpacking at midnight yesterday.")))
         XCTAssertFalse(WeeklyTestEngine.isCorrect(it, tiles: lay("We finished unpacking at midnight.")))
-        // Only an unlisted order of exactly the answer's words goes to the
-        // order check — never one with a trap in it or a word left out.
-        XCTAssertTrue(WeeklyTestEngine.isReorder(it, tiles: lay("At midnight yesterday we finished unpacking.")))
-        XCTAssertFalse(WeeklyTestEngine.isReorder(it, tiles: lay("Yesterday we finished unpacking at midnight.")))
-        XCTAssertFalse(WeeklyTestEngine.isReorder(it, tiles: lay("We finish unpacking at midnight yesterday.")))
-        XCTAssertFalse(WeeklyTestEngine.isReorder(it, tiles: lay("We finished unpacking at midnight.")))
     }
 
     func testItemsRequireTheTargetScript() {
@@ -343,18 +337,106 @@ final class WeeklyTestTests: XCTestCase {
         // Week 2 asked "chore" again and got it right, and missed d.
         let week2 = finished([item(.meaning, answer: "Chore", options: a.options), d], wrong: [1], daysAgo: 7)
         var rng = WeeklyTestRandom(seed: UUID())
-        let items = WeeklyTestEngine.retakes(from: [week1, week2], limit: WeeklyTestEngine.maxRetake,
+        let items = WeeklyTestEngine.retakes(from: [week1, week2], limit: 5,
                                              excluding: [], language: "en", rng: &rng)
         XCTAssertEqual(Set(items.map(\.answer)), ["Give yourself a day off.", "end up", "I really like it"])
         XCTAssertEqual(items.first?.answer, "Give yourself a day off.")
         XCTAssertTrue(items.allSatisfy { $0.isRetake == true })
     }
 
-    /// A monthly paper saved before 2026-10-05 must not become the
-    /// weekly's window anchor — the week's material would shrink to those
-    /// minutes and the week read as thin. The window starts at the last
-    /// WEEKLY paper, and so does the store's pick.
-    func testMonthlyPaperNeverAnchorsTheWeeklyWindow() {
+    /// The paper's retakes: a miss comes back once, and only in a kind still
+    /// dealt. The second miss stays with the deck; nothing chases the learner.
+    func testAWeeklyRetakeComesBackOnce() {
+        let at = Date()
+        var once = item(.meaning, answer: "chore", options: ["chore", "errand", "hobby", "shift"])
+        once.isRetake = true
+        let first = item(.meaning, answer: "errand", options: ["errand", "chore", "hobby", "shift"])
+        let oldKind = WeeklyTestItem(id: UUID(), kind: .rewrite, prompt: "I very like it", answer: "I really like it",
+                                     options: [], focus: "very like", example: "really like")
+        var test = WeeklyTest(id: UUID(), targetLanguage: "en", periodStart: at, periodEnd: at, createdAt: at,
+                              items: [once, first, oldKind])
+        for it in test.items { test.answers.append(WeeklyTestAnswer(itemId: it.id, given: "", correct: false, at: at)) }
+        var rng = WeeklyTestRandom(seed: UUID())
+        let dealt = WeeklyTestEngine.retakes(from: [test], limit: 5, excluding: [], language: "en",
+                                             firstMissOnly: true, rng: &rng)
+        XCTAssertEqual(dealt.map(\.answer), ["errand"])
+    }
+
+    /// Order is fixed, and the budget keeps last week's misses and the heard
+    /// lines, gives mistakes theirs, and shares the rest.
+    func testThePaperIsSectionedInsideItsBudget() {
+        func many(_ kind: WeeklyTestItem.Kind, _ n: Int) -> [WeeklyTestItem] {
+            (0..<n).map { self.item(kind, answer: "\(kind.rawValue) \($0)") }
+        }
+        let full = WeeklyTestEngine.paper(translate: many(.translate, 6), gap: many(.gap, 6), meaning: many(.meaning, 6),
+                                          listen: many(.listen, 3), speak: many(.speak, 3), retakes: many(.meaning, 4))
+        XCTAssertEqual(full.count, WeeklyTestEngine.maxPaper)
+        XCTAssertEqual(full.map(\.kind), Array(repeating: .translate, count: 4) + [.gap, .gap, .meaning, .meaning,
+                                                                                   .listen, .speak, .meaning, .meaning])
+        let thin = WeeklyTestEngine.paper(translate: [], gap: many(.gap, 6), meaning: many(.meaning, 6),
+                                          listen: [], speak: [], retakes: [])
+        XCTAssertEqual(thin.count, 6, "no section grows past its own ceiling to fill the paper")
+    }
+
+    /// The week is the report's, and "put off this week" reads the return date.
+    func testPutOffIsReadFromTheReturnDate() {
+        let start = Date(timeIntervalSince1970: 1_000_000)
+        let end = start.addingTimeInterval(7 * 86_400)
+        XCTAssertTrue(WeeklyTestEngine.wasPutOff(returningAt: start.addingTimeInterval(600), start: start, end: end))
+        XCTAssertTrue(WeeklyTestEngine.wasPutOff(returningAt: end.addingTimeInterval(2 * 86_400), start: start, end: end))
+        XCTAssertFalse(WeeklyTestEngine.wasPutOff(returningAt: start.addingTimeInterval(-60), start: start, end: end),
+                       "came back before the week began")
+        XCTAssertFalse(WeeklyTestEngine.wasPutOff(returningAt: end.addingTimeInterval(5 * 86_400), start: start, end: end))
+    }
+
+    private let allGood = WeeklyTestEngine.TranslateReview(n: 1, rule: true, repeats: true, sameMeaning: true,
+                                                           correct: true, tipTrue: true)
+    private let reported = WeeklyTestItem(
+        id: UUID(), kind: .translate, prompt: "다음 주에 면접이 있어서 정말 너무 설레요.",
+        answer: "I am really excited because I have an interview next week.",
+        options: ["about", "I", "am", "really", "excited", "because", "I", "have", "an", "interview", "next", "week.", "for"],
+        rule: "excited 전치사 유무", focus: "I'm very excited about.", example: "I'm very excited.")
+
+    /// The reported question: both traps built right sentences, so with none
+    /// left it tests nothing and never reaches the paper.
+    func testATrapThatBuildsARightSentenceLeavesTheItem() {
+        UserDefaults.standard.set("en", forKey: LanguageCatalog.targetLanguageDefaultsKey)
+        defer { UserDefaults.standard.removeObject(forKey: LanguageCatalog.targetLanguageDefaultsKey) }
+        let answer = reported.answer
+        XCTAssertNil(WeeklyTestEngine.passing(reported, solved: [
+            answer, "I am really excited about an interview next week.", "I am really excited for an interview next week.",
+        ], review: allGood))
+        let oneWorks = WeeklyTestEngine.passing(reported, solved: [answer, "I am really excited about an interview next week."],
+                                                review: allGood)
+        XCTAssertEqual(oneWorks.map { WeeklyTestEngine.decoyTiles(of: $0) }, ["for"])
+    }
+
+    func testASentenceBrokenOffIsNotAMistakeToAskAbout() {
+        XCTAssertTrue(WeeklyTestEngine.isBrokenOff(
+            was: "Hi, thanks for inviting me. I'm very excited about. Thank you for giving me this chance",
+            now: "Hi, thanks for inviting me. I'm very excited. Thank you for giving me this chance."))
+        XCTAssertTrue(WeeklyTestEngine.isBrokenOff(was: "Ich freue mich auf.", now: "Ich freue mich."))
+        XCTAssertFalse(WeeklyTestEngine.isBrokenOff(was: "I am working here since two years", now: "I've been working here for two years"))
+        XCTAssertFalse(WeeklyTestEngine.isBrokenOff(was: "I went to the the store", now: "I went to the store"))
+    }
+
+    func testAnItemFailsTheGateWhenAnyReaderDoes() {
+        UserDefaults.standard.set("en", forKey: LanguageCatalog.targetLanguageDefaultsKey)
+        defer { UserDefaults.standard.removeObject(forKey: LanguageCatalog.targetLanguageDefaultsKey) }
+        var noRule = allGood
+        noRule.rule = false
+        XCTAssertNil(WeeklyTestEngine.passing(reported, solved: [reported.answer], review: noRule))
+        XCTAssertNil(WeeklyTestEngine.passing(reported, solved: ["I am really excited."], review: allGood),
+                     "the blind reader never reached the answer")
+        let kept = WeeklyTestEngine.passing(reported, solved: [reported.answer, "Next week I am really excited because I have an interview."],
+                                            review: allGood)
+        XCTAssertEqual(kept?.orders, ["Next week I am really excited because I have an interview."])
+        XCTAssertEqual(kept.map { WeeklyTestEngine.decoyTiles(of: $0).sorted() }, ["about", "for"])
+    }
+
+    /// A monthly paper saved before 2026-10-05 is never the weekly paper
+    /// last week's misses come from.
+    func testMonthlyPaperIsNeverTheLatestWeekly() {
         let now = Date()
         let weekly = WeeklyTest(id: UUID(), targetLanguage: "en",
                                 periodStart: now.addingTimeInterval(-14 * 86_400),
@@ -367,12 +449,6 @@ final class WeeklyTestTests: XCTestCase {
         XCTAssertEqual(WeeklyTestStore.latestWeekly([monthly, weekly])?.id, weekly.id)
         XCTAssertEqual(WeeklyTestStore.latestWeekly([weekly, monthly])?.id, weekly.id)
         XCTAssertNil(WeeklyTestStore.latestWeekly([monthly]))
-        XCTAssertEqual(WeeklyTestEngine.window(lastTest: weekly, now: now).start, weekly.periodEnd)
-        // Even handed the monthly directly, the engine falls back to a week,
-        // never to the monthly's own build moment.
-        let fromMonthly = WeeklyTestEngine.window(lastTest: monthly, now: now)
-        XCTAssertEqual(fromMonthly.start.timeIntervalSince1970,
-                       now.addingTimeInterval(-WeeklyTestEngine.defaultWindow).timeIntervalSince1970, accuracy: 1)
     }
 
     /// The next unanswered item, and none once every one is answered.

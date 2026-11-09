@@ -59,6 +59,10 @@ struct WeeklyTestView: View {
     @State private var showHint = false
     /// translate: an unlisted order of the answer's words is being read.
     @State private var checkingOrder = false
+    /// This question was marked wrong and the learner said it was right.
+    @State private var appealedHere = false
+    /// The last question's second read failed, so it left the paper.
+    @State private var unjudgedNote = false
     @FocusState private var rewriteFocused: Bool
     /// Where the next tile goes: an insertion index into `laid`, 0…count.
     /// Tapping a placed tile puts the cursor right after it, so a word can be
@@ -461,7 +465,8 @@ struct WeeklyTestView: View {
                         Text("Last time you said")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary)
-                        (Text(was).strikethrough() + Text("  →  ") + Text(fixed).bold())
+                        let pair = GrammarFocusPair.compact(was, fixed, context: 2)
+                        (Text(pair.0).strikethrough() + Text("  →  ") + Text(pair.1).bold())
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -831,7 +836,7 @@ struct WeeklyTestView: View {
 
             // Once graded, the leftover traps are named for what they are:
             // the learner's own words from before the fix.
-            if outcome != nil, !decoys.isEmpty {
+            if outcome != nil, !appealedHere, !decoys.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     (item.kind == .translate ? Text("Trap words — from your mistake")
                                              : Text("Trap words — what you said before the fix"))
@@ -851,7 +856,7 @@ struct WeeklyTestView: View {
                 .transition(.opacity)
             }
 
-            if let outcome, !outcome {
+            if let outcome, !outcome || appealedHere {
                 VStack(alignment: .leading, spacing: 10) {
                     VStack(alignment: .leading, spacing: 4) {
                         (item.kind == .listen ? Text("What was said") : Text("Fluent version"))
@@ -943,6 +948,12 @@ struct WeeklyTestView: View {
     @ViewBuilder
     private func bottomBar(_ test: WeeklyTest, item: WeeklyTestItem) -> some View {
         VStack(spacing: 12) {
+            if unjudgedNote, outcome == nil {
+                Text("Couldn't check that one, so it won't count.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
             if let outcome {
                 HStack(spacing: 10) {
                     Image(systemName: outcome ? "checkmark.circle.fill" : "xmark.circle.fill")
@@ -960,6 +971,16 @@ struct WeeklyTestView: View {
                         }
                     }
                     Spacer(minLength: 0)
+                    if !outcome {
+                        Button {
+                            appeal(item, test: test)
+                        } label: {
+                            Text("My answer is right too")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .accessibilityIdentifier("weeklyTest.appeal")
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -1075,7 +1096,6 @@ struct WeeklyTestView: View {
             return
         }
         guard var test = await WeeklyTestEngine.build(lastTest: WeeklyTestStore.latestWeekly(tests),
-                                                      recentTests: tests,
                                                       appState: appState) else {
             settings.markThin(opening: opening)
             phase = .thin
@@ -1189,24 +1209,57 @@ struct WeeklyTestView: View {
         let tiles = laid.map { item.options[$0] }
         let given = WeeklyTestEngine.sentence(fromTiles: tiles)
         let right = WeeklyTestEngine.isCorrect(item, tiles: tiles)
-        // A translate answer in the answer's own words, in an order the item
-        // doesn't list, gets its order read before it is called wrong.
-        guard !right, item.kind == .translate, WeeklyTestEngine.isReorder(item, tiles: tiles) else {
+        // Tiles the code didn't accept are read once more before they are
+        // called wrong. Only translate: a dictation has one answer, the line.
+        guard !right, item.kind == .translate, tiles.count >= 2 else {
             settle(correct: right, given: given, test: test, item: item)
             return
         }
         checkingOrder = true
         Task { @MainActor in
-            let ok = await WeeklyTestEngine.orderIsNatural(item, laid: given, language: test.targetLanguage)
+            let verdict = await WeeklyTestEngine.laidStands(item, laid: given, language: test.targetLanguage)
             checkingOrder = false
             guard outcome == nil, current?.id == item.id else { return }
-            settle(correct: ok, given: given, test: test, item: item)
+            guard let verdict else {
+                dropUnjudged(item, test: test)
+                return
+            }
+            settle(correct: verdict, given: given, test: test, item: item)
         }
+    }
+
+    /// The second read failed: nobody knows whether this answer was right,
+    /// so the question leaves the paper and costs nothing.
+    private func dropUnjudged(_ item: WeeklyTestItem, test: WeeklyTest) {
+        var t = test
+        t.items.removeAll { $0.id == item.id }
+        if retry != nil { retry = t } else { WeeklyTestStore.shared.save(t) }
+        phase = .playing(t)
+        Analytics.capture("weekly_test_unjudged", ["kind": item.kind.rawValue])
+        advance(t)
+        unjudgedNote = true
+    }
+
+    /// The learner says the answer they gave was right too. It counts as
+    /// right, here and in the review loop, which is only written at the end.
+    private func appeal(_ item: WeeklyTestItem, test: WeeklyTest) {
+        guard outcome == false, let at = test.answers.lastIndex(where: { $0.itemId == item.id }) else { return }
+        var t = test
+        let old = t.answers[at]
+        t.answers[at] = WeeklyTestAnswer(itemId: old.itemId, given: old.given, correct: true, at: old.at,
+                                         score: old.score, appealed: true)
+        if retry != nil { retry = t } else { WeeklyTestStore.shared.save(t) }
+        phase = .playing(t)
+        outcome = true
+        appealedHere = true
+        wrongRun = 0
+        Analytics.capture("weekly_test_appeal", ["kind": item.kind.rawValue])
     }
 
     private func settle(correct: Bool, given: String, test: WeeklyTest, item: WeeklyTestItem,
                         score: Int? = nil) {
         outcome = correct
+        unjudgedNote = false
         var t = test
         t.answers.append(WeeklyTestAnswer(itemId: item.id, given: given, correct: correct, at: Date(),
                                           score: score))
@@ -1230,6 +1283,7 @@ struct WeeklyTestView: View {
         laid = []
         cursor = 0
         outcome = nil
+        appealedHere = false
         rewriteText = ""
         showHint = false
         speakPhase = .idle
@@ -1264,9 +1318,14 @@ struct WeeklyTestView: View {
                 appState.refreshScenarioMastery(id: s.id)
             }
             t.appliedAt = Date()
-            Analytics.capture("weekly_test_finished", [
-                "score": t.score, "total": t.total, "best_streak": t.bestStreak,
-            ])
+            var finished: [String: Any] = ["score": t.score, "total": t.total, "best_streak": t.bestStreak,
+                                           "appealed": t.answers.filter { $0.appealed == true }.count]
+            let right = Set(t.answers.filter(\.correct).map(\.itemId))
+            for (kind, items) in Dictionary(grouping: t.items, by: \.kind) {
+                finished["n_" + kind.rawValue] = items.count
+                finished["right_" + kind.rawValue] = items.filter { right.contains($0.id) }.count
+            }
+            Analytics.capture("weekly_test_finished", finished)
             SoundEffects.play(.done)
             HapticEngine.success()
         }

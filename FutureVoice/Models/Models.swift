@@ -2276,6 +2276,8 @@ struct WeeklyTestAnswer: Codable, Hashable {
     let at: Date
     /// speak: the shadow match score the verdict was made from.
     var score: Int? = nil
+    /// The learner said their answer was right too, and it was counted so.
+    var appealed: Bool? = nil
 }
 
 // MARK: - Speech (the read-aloud tab)
