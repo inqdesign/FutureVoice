@@ -251,7 +251,14 @@ final class SpeechChallenges: ObservableObject {
                          createdAt: row.published_at, isBuiltIn: false,
                          challengeId: row.id)
         }
-        defer { Task { await importLocalBests() } }
+        defer {
+            Task {
+                #if SPEECH_APP
+                await adoptBoardIdentity()
+                #endif
+                await importLocalBests()
+            }
+        }
         standings = Dictionary(uniqueKeysWithValues: rows.map { row in
             (row.id, Standing(entrants: row.entrants ?? 0, topScore: row.top_score,
                               myBest: row.my_best, myRank: row.my_rank,
@@ -356,9 +363,9 @@ final class SpeechChallenges: ObservableObject {
     /// stands beside a score they'd be embarrassed by, low enough that the
     /// board still fills.
     static let boardBar = 80
-    /// Season 2's scale runs lower (learners average 63, natives 94), so 80
-    /// would keep most readers off the board (founder, 2026-11-09).
-    static let seasonTwoBoardBar = 60
+    /// The same readers as the 60 the founder set on the curved scale
+    /// (2026-11-09): 83 on the plain one, where learners average 81.
+    static let seasonTwoBoardBar = 83
     static func boardBar(season: Int?) -> Int { (season ?? 1) >= 2 ? seasonTwoBoardBar : boardBar }
 
     /// Off this board: the score is deleted on the server. The next take
@@ -603,6 +610,11 @@ final class SpeechChallenges: ObservableObject {
     /// The photo as the board stores it: a ~96 px JPEG, base64. Nil when
     /// there is no photo or the learner chose not to show it.
     static func avatarPayload() -> String? {
+        #if SPEECH_APP
+        if AvatarStore.shared.image == nil {
+            return showsPhoto ? UserDefaults.standard.string(forKey: adoptedAvatarKey) : nil
+        }
+        #endif
         guard showsPhoto, let image = AvatarStore.shared.image else { return nil }
         let side: CGFloat = 96
         let format = UIGraphicsImageRendererFormat.default()
@@ -612,6 +624,29 @@ final class SpeechChallenges: ObservableObject {
         }
         return small.jpegData(compressionQuality: 0.7)?.base64EncodedString()
     }
+
+    #if SPEECH_APP
+    private static let adoptedAvatarKey = "speech.challenge.adoptedAvatar"
+
+    /// A learner who is already on a board (from nawana, usually) keeps the
+    /// name and face they have there. Both are per install, and the profile
+    /// is rewritten by every take: without this the speech app asks for a
+    /// name again and its first take clears the photo on every board.
+    private func adoptBoardIdentity() async {
+        guard Self.displayName == nil,
+              let entered = standings.first(where: { $0.value.myBest != nil })?.key,
+              let rows = await board(entered),
+              let me = rows.first(where: { $0.is_me }) else { return }
+        Self.displayName = me.display_name
+        UserDefaults.standard.set(me.avatar, forKey: Self.adoptedAvatarKey)
+    }
+
+    /// Signed out: the next account on this phone is someone else.
+    static func forgetIdentity() {
+        displayName = nil
+        UserDefaults.standard.removeObject(forKey: adoptedAvatarKey)
+    }
+    #endif
 
     /// The name sheet was saved: every board shows the new name (and photo
     /// choice) at once, not only after the next take.

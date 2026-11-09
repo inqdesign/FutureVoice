@@ -1,4 +1,6 @@
 Novedades
+• Los retos de Speech en inglés pasan a la temporada 2. Tu lectura se compara con la de un nativo en velocidad, ritmo, pausas, precisión y pronunciación, y tu puntuación te da un apodo.
+• La página de resultados de Speech es nueva: tu puntuación sobre tu propio video, con los detalles en una hoja que se desliza hacia arriba.
 • En la página de una meta ahora ves si estás listo para cada pregunta.
 • ¿Te marcó mal una respuesta correcta? Toca «Mi respuesta también vale».
 

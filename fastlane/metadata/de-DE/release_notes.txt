@@ -1,4 +1,6 @@
 Neu
+• Die englischen Speech-Challenges gehen in Saison 2. Dein Vortrag wird mit einer muttersprachlichen Lesung verglichen: Tempo, Rhythmus, Pausen, Genauigkeit und Aussprache. Zu deinem Ergebnis gibt es einen Spitznamen.
+• Die Speech-Ergebnisseite ist neu: dein Ergebnis über deinem eigenen Video, die Details auf einem Blatt zum Hochziehen.
 • Auf der Zielseite siehst du jetzt bei jeder Frage, ob du dafür bereit bist.
 • Als falsch gewertet, obwohl es stimmt? Tippe auf „Meine Antwort stimmt auch“.
 

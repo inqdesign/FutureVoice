@@ -255,21 +255,22 @@ enum SpeechReadingLevel: CaseIterable {
     case newsAnchor, audiobook, bornAndRaised, passesAsLocal, officeAce, presenter
     case thirdYearAbroad, firstYearAbroad, languageSchool, immigration, restaurant, gestures, warmingUp
 
-    /// The lowest score that earns this one.
+    /// The lowest score that earns this one: placed so a reading keeps the
+    /// nickname it earned before the curves went (scoring 7, 2026-11-09).
     var floor: Int {
         switch self {
         case .newsAnchor: return 100
         case .audiobook: return 97
-        case .bornAndRaised: return 93
-        case .passesAsLocal: return 89
-        case .officeAce: return 85
-        case .presenter: return 80
-        case .thirdYearAbroad: return 75
-        case .firstYearAbroad: return 70
-        case .languageSchool: return 65
-        case .immigration: return 60
-        case .restaurant: return 50
-        case .gestures: return 35
+        case .bornAndRaised: return 95
+        case .passesAsLocal: return 94
+        case .officeAce: return 92
+        case .presenter: return 90
+        case .thirdYearAbroad: return 89
+        case .firstYearAbroad: return 86
+        case .languageSchool: return 85
+        case .immigration: return 83
+        case .restaurant: return 80
+        case .gestures: return 72
         case .warmingUp: return 0
         }
     }

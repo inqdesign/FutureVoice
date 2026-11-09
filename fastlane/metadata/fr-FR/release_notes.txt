@@ -1,4 +1,6 @@
 Nouveau
+• Les défis Speech en anglais passent à la saison 2. Ta lecture est comparée à celle d’un natif : vitesse, rythme, pauses, justesse et prononciation, et ton score te vaut un surnom.
+• La page de résultats de Speech est nouvelle : ton score sur ta propre vidéo, et les détails sur une feuille à faire glisser.
 • Sur la page d’un objectif, tu vois maintenant si tu es prêt pour chaque question.
 • Compté faux alors que c’est juste ? Touche « Ma réponse est juste aussi ».
 
