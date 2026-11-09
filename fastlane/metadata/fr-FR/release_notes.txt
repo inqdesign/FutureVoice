@@ -1,10 +1,9 @@
 Nouveau
-• Répondre avec Envoyer : active-le et ton moi fluide attend que tu touches Envoyer, pour qu’une pause de réflexion ne te coupe plus. Tu peux le choisir avant ton premier appel, et il est activé par défaut jusqu’à B1.
-• Un classement général des Discours : ton meilleur score à chaque défi, additionné.
-• Les textes que ton tuteur écrit pour toi (préparation d’objectif, articles d’actualité) peuvent maintenant se travailler comme un discours.
+• Sur la page d’un objectif, tu vois maintenant si tu es prêt pour chaque question.
+• Compté faux alors que c’est juste ? Touche « Ma réponse est juste aussi ».
 
 Améliorations
-• Le mode tuteur discute avec toi comme un vrai interlocuteur et t’amène vers la phrase visée. Poser une question ou parler dans ta langue ne te vaut plus un « encore une fois ».
-• Le tuteur répond plus vite, et ses corrections s’affichent quand il commence à parler.
-• Les appels de prononciation ne te font plus relire sans fin la même phrase.
-• Les niveaux de vocabulaire en coréen, japonais et espagnol sont plus justes.
+• Le test de la semaine ne porte plus que sur ce que tu as étudié cette semaine. Les mots et phrases réussis comptent aussi comme acquis dans tes cartes et carnets.
+• Les leçons et réponses modèles du tuteur travaillent maintenant tes erreurs les plus fréquentes.
+• Les longs textes du tuteur ne s’arrêtent plus au bout d’une minute quand tu les lis dans Speech.
+• L’appel de prononciation ne valide plus un mot sorti avec un autre son.

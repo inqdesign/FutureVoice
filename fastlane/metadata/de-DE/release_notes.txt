@@ -1,10 +1,9 @@
 Neu
-• Mit Senden antworten: Ist es an, wartet dein fließendes Ich, bis du auf Senden tippst. So unterbricht dich keine Denkpause mehr. Du kannst es vor deinem ersten Anruf wählen, bis B1 ist es standardmäßig an.
-• Eine Gesamt-Rangliste für Reden: deine beste Punktzahl jeder Challenge, zusammengezählt.
-• Texte, die dein Tutor für dich schreibt (Zielvorbereitung, Nachrichtenartikel), kannst du jetzt als Rede üben.
+• Auf der Zielseite siehst du jetzt bei jeder Frage, ob du dafür bereit bist.
+• Als falsch gewertet, obwohl es stimmt? Tippe auf „Meine Antwort stimmt auch“.
 
 Verbesserungen
-• Der Tutor-Modus unterhält sich mit dir wie ein echter Gesprächspartner und führt dich zum Zielsatz. Fragen oder ein Satz in deiner Muttersprache gelten nicht mehr als Fehlversuch.
-• Der Tutor antwortet schneller, und Korrekturen erscheinen, sobald er zu sprechen beginnt.
-• Aussprache-Anrufe lassen dich nicht mehr endlos denselben Satz wiederholen.
-• Die Wortschatz-Stufen für Koreanisch, Japanisch und Spanisch sind genauer.
+• Der Wochentest fragt jetzt nur noch ab, was du in dieser Woche gelernt hast. Richtig beantwortete Wörter und Sätze gelten auch in deinen Karten und Büchern als gekonnt.
+• Lektionen und Musterantworten des Tutors gehen jetzt auf deine häufigsten Fehler ein.
+• Lange Texte vom Tutor brechen beim Vorlesen in Speech nicht mehr nach einer Minute ab.
+• Im Aussprache-Gespräch geht ein Wort, das als anderer Laut herauskommt, nicht mehr durch.

@@ -1,10 +1,9 @@
 Novedades
-• Responder con Enviar: actívalo y tu yo fluido espera hasta que toques Enviar, así que pararte a pensar ya no corta lo que dices. Puedes elegirlo antes de tu primera llamada y viene activado hasta B1.
-• Una clasificación general de Discurso: tu mejor puntuación en cada reto, sumada.
-• Los textos que te escribe tu tutor (preparación de objetivos, noticias) ahora se pueden practicar como discurso.
+• En la página de una meta ahora ves si estás listo para cada pregunta.
+• ¿Te marcó mal una respuesta correcta? Toca «Mi respuesta también vale».
 
 Mejoras
-• El modo tutor conversa contigo como alguien de verdad y te lleva hacia la frase objetivo. Si preguntas algo o hablas en tu idioma, ya no te pide que lo intentes otra vez.
-• El tutor responde más rápido y las correcciones aparecen cuando empieza a hablar.
-• Las llamadas de pronunciación ya no te hacen leer la misma frase una y otra vez.
-• Los niveles de vocabulario de coreano, japonés y español son más precisos.
+• La prueba semanal ahora solo incluye lo que estudiaste esa semana. Las palabras y frases que aciertes también cuentan como sabidas en tus tarjetas y cuadernos.
+• Las lecciones y respuestas modelo del tutor ahora trabajan los errores que más cometes.
+• Los textos largos del tutor ya no se cortan al minuto cuando los lees en Speech.
+• La llamada de pronunciación ya no da por buena una palabra que sonó como otra.

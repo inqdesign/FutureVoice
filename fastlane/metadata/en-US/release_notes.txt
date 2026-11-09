@@ -1,10 +1,9 @@
 New
-• Answer with Send: turn it on and your future self waits until you tap Send, so pausing to think never cuts you off. You can choose it before your first call, and it's on by default up to B1.
-• A Speech leaderboard for everything: your best score on each challenge, added up.
-• Readings your tutor writes for you (goal prep, news articles) can now be practiced as speeches.
+• Each question on a goal page now shows whether you are ready for it.
+• Marked wrong when you were right? Tap "My answer is right too".
 
 Improved
-• Tutor mode talks with you like a real partner and steers you toward the goal line. Asking a question or speaking your own language no longer gets a "try again".
-• The tutor answers faster, and its corrections appear when it starts talking.
-• Fixed pronunciation calls asking you to read the same sentence again and again.
-• Vocabulary levels for Korean, Japanese and Spanish are more accurate.
+• The weekly test now covers only what you studied that week. Words and sentences you get right count as known in your review cards and books too.
+• Lessons and model answers from the tutor now work on the mistakes you make most.
+• Long scripts from the tutor no longer stop at one minute when you read them in Speech.
+• The pronunciation call no longer passes a word that came out as a different sound.
