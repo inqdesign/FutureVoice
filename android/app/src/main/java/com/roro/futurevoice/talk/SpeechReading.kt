@@ -261,9 +261,9 @@ data class SpeechReadingScore(
 
 /** The nickname a score earns: a comparison for fun, not a grade. Highest first. */
 enum class SpeechReadingLevel(val floor: Int) {
-    NEWS_ANCHOR(100), AUDIOBOOK(97), BORN_AND_RAISED(93), PASSES_AS_LOCAL(89), OFFICE_ACE(85), PRESENTER(80),
-    THIRD_YEAR_ABROAD(75), FIRST_YEAR_ABROAD(70), LANGUAGE_SCHOOL(65), IMMIGRATION(60), RESTAURANT(50),
-    GESTURES(35), WARMING_UP(0);
+    NEWS_ANCHOR(100), AUDIOBOOK(97), BORN_AND_RAISED(95), PASSES_AS_LOCAL(94), OFFICE_ACE(92), PRESENTER(90),
+    THIRD_YEAR_ABROAD(89), FIRST_YEAR_ABROAD(86), LANGUAGE_SCHOOL(85), IMMIGRATION(83), RESTAURANT(80),
+    GESTURES(72), WARMING_UP(0);
 
     /** The next one up; null at the top. */
     val next: SpeechReadingLevel? get() = if (ordinal > 0) entries[ordinal - 1] else null

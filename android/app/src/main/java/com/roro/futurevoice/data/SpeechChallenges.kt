@@ -588,7 +588,7 @@ class SpeechChallenges private constructor(private val context: Context) {
         /** The lowest score that goes on a board — iOS `boardBar`. */
         const val BOARD_BAR = 80
         /** Season 2's scale runs lower (learners average 63, natives 94). */
-        const val SEASON_TWO_BOARD_BAR = 60
+        const val SEASON_TWO_BOARD_BAR = 83
         fun boardBar(season: Int?): Int = if ((season ?: 1) >= 2) SEASON_TWO_BOARD_BAR else BOARD_BAR
         private const val REMOVED_KEY = "speech.challenge.removedFromBoard"
 

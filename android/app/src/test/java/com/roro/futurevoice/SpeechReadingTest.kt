@@ -107,11 +107,11 @@ class SpeechReadingTest {
         assertEquals(13, SpeechReadingLevel.entries.size)
         assertEquals(SpeechReadingLevel.NEWS_ANCHOR, SpeechReadingLevel.of(100))
         assertEquals(SpeechReadingLevel.AUDIOBOOK, SpeechReadingLevel.of(99))
-        assertEquals(SpeechReadingLevel.IMMIGRATION, SpeechReadingLevel.of(60))
+        assertEquals(SpeechReadingLevel.IMMIGRATION, SpeechReadingLevel.of(83))
         assertEquals(SpeechReadingLevel.WARMING_UP, SpeechReadingLevel.of(0))
         assertEquals(100..100, SpeechReadingLevel.NEWS_ANCHOR.range)
         assertEquals(97..99, SpeechReadingLevel.AUDIOBOOK.range)
-        assertEquals(0..34, SpeechReadingLevel.WARMING_UP.range)
+        assertEquals(0..71, SpeechReadingLevel.WARMING_UP.range)
         assertNull(SpeechReadingLevel.NEWS_ANCHOR.next)
         for (score in 0..100) assertTrue(score in SpeechReadingLevel.of(score).range)
     }
