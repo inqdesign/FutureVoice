@@ -409,15 +409,10 @@ private fun Details(take: SpeechTake, script: SpeechScript, r: SpeechReadingScor
 
     if (script.isChallenge) SpeechChallengeEntrySection(entry, standing)
 
-    if (pendingVideo) {
-        FormSection(null) {
-            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                Spacer(Modifier.width(10.dp))
-                Text(stringResource(R.string.preparing_your_video), color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-    }
+    // The take's video (or "Preparing your video…"), Save and Delete, where
+    // iOS has its playback section. It sat behind the header icon alone, which
+    // read as no video having been kept.
+    Playback(take, pendingVideo)
 
     ReadingSection(r)
 
