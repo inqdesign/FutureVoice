@@ -21,6 +21,14 @@ import com.roro.futurevoice.talk.SpeechAnalyzer
 import com.roro.futurevoice.talk.PronunciationAssessor
 import com.roro.futurevoice.talk.PronunciationResult
 import com.roro.futurevoice.talk.SpeechPrompterTrack
+import com.roro.futurevoice.talk.SpeechDelivery
+import com.roro.futurevoice.talk.SpeechReading
+import com.roro.futurevoice.talk.SpeechReadingScore
+import com.roro.futurevoice.talk.SpeechReference
+import com.roro.futurevoice.talk.SpeechReferenceService
+import com.roro.futurevoice.audio.WavPcm
+import com.roro.futurevoice.data.SpeechMetrics
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -108,6 +116,13 @@ class SpeechTakeSession(
     private var follows = 0
     private var partials = 0
     private var liveDropped = false
+
+    /** The native reference reading, fetched as the screen opens so it is
+     *  there when the take ends (Season 2 scoring only). */
+    private val referenceTask: Deferred<SpeechReference?>? =
+        if (SpeechReading.isActive(context, script.language))
+            scope.async { SpeechReferenceService.fetch(context, script.body, script.language) }
+        else null
 
     init {
         camera.frameHandler = { bmp, rotation, width -> composer.append(bmp, rotation, width) }
@@ -262,7 +277,7 @@ class SpeechTakeSession(
             (atSentenceEnd() || clock - lastChunkAt >= CHUNK_HARD_SECONDS)) {
             capture?.rotatePiece()?.let { piece ->
                 lastChunkAt = clock
-                pieces += readPiece(piece, scriptSpan(_cursor.value))
+                pieces += readPiece(piece, scriptSpan(_cursor.value), clock)
             }
         }
         // Held: the reader stopped the text on purpose; nothing ends now.
@@ -311,7 +326,7 @@ class SpeechTakeSession(
         val meterVoiced = cap?.meterVoicedSeconds ?: 0.0
         val tail = cap?.stop()
         val liveText = stopLive()
-        tail?.let { pieces += readPiece(it, scriptSpan(_track.value.words.size)) }
+        tail?.let { pieces += readPiece(it, scriptSpan(_track.value.words.size), duration) }
         val reads = pieces.toList()
         pieces = mutableListOf()
         val fromCamera = recordingVideo
@@ -352,11 +367,17 @@ class SpeechTakeSession(
         val readStart = System.currentTimeMillis()
         val texts = mutableListOf<String>()
         var prons = mutableListOf<PronunciationResult>()
+        var assessed = listOf<SpeechDelivery.Piece>()
+        var readBackFixed = 0
         for (p in reads) {
             val piece = p.await()
-            if (piece == null) { texts.clear(); prons.clear(); break }
+            if (piece == null) { texts.clear(); prons.clear(); assessed = emptyList(); break }
             texts += piece.text
-            piece.pron?.let { prons += it }
+            if (piece.readBackReplaced) readBackFixed++
+            piece.pron?.let {
+                prons += it
+                assessed = assessed + SpeechDelivery.Piece(piece.reference, it, piece.startMs)
+            }
         }
         val transcript: String
         val audioGrounded: Boolean
@@ -376,11 +397,16 @@ class SpeechTakeSession(
             val reading = SpeechReader.read(audio, liveText, script.language)
             transcript = reading.text; audioGrounded = reading.audioGrounded; path = "whole"
             prons = mutableListOf()
+            assessed = emptyList()
             if (long != null) {
-                prons = long.await().toMutableList()
+                assessed = long.await()
+                prons = assessed.map { it.result }.toMutableList()
             } else if (reading.audioGrounded) {
                 PronunciationAssessor.assess(context, audio, transcript, script.language, "speech")
-                    .result?.let { prons = mutableListOf(it) }
+                    .result?.let {
+                        prons = mutableListOf(it)
+                        assessed = listOf(SpeechDelivery.Piece(transcript, it))
+                    }
             }
         }
         val readMs = System.currentTimeMillis() - readStart
@@ -389,8 +415,25 @@ class SpeechTakeSession(
         // by how many words it judged. Its own row on the result, and a
         // quarter of `overall` (iOS 2026-11-04).
         val pronunciation = pronunciation(prons)
-        val metrics = withContext(Dispatchers.Default) {
+        // How it was delivered (`SpeechDelivery`): recorded on every take, and
+        // with Season 2's scoring on, what four of its five parts are.
+        val deliveryPieces = assessed
+        val delivery = scope.async(Dispatchers.Default) {
+            SpeechDelivery.measure(deliveryPieces, script.language, audio)
+        }
+        var metrics = withContext(Dispatchers.Default) {
             SpeechAnalyzer.analyze(script.body, transcript, script.language, envelope, pronunciation?.first)
+        }
+        // Season 2: compared with a native reading of this script in the
+        // reader's gender. Without the reference (offline, the server not
+        // ready) the take keeps the scoring it already has.
+        if (SpeechReading.isActive(context, script.language)) {
+            val delivered = delivery.await()
+            val reference = withTimeoutOrNull(45_000) { referenceTask?.await() }
+            val reading = reference?.let { reading(assessed, it, script.body, metrics, delivered) }
+            if (reading != null) {
+                metrics = metrics.copy(reading = reading, overall = reading.total, scoring = SpeechReading.VERSION)
+            }
         }
         val take = SpeechTake(
             id = id, scriptId = script.id, createdAt = System.currentTimeMillis(),
@@ -434,6 +477,7 @@ class SpeechTakeSession(
         }
         val coachMs = System.currentTimeMillis() - coachStart
         val hasVideo = videoTask.await()
+        val delivered = delivery.await()
         Analytics.capture("speech_take", mapOf(
             "built_in" to script.isBuiltIn, "challenge" to script.isChallenge, "genre" to script.genre.raw,
             "seconds" to duration.toInt(), "overall" to metrics.overall, "accuracy" to metrics.accuracy,
@@ -444,6 +488,20 @@ class SpeechTakeSession(
             // take's number — the only record of whether the reader answers.
             "pron_pieces" to prons.size,
             "pron" to (metrics.pronunciation ?: -1),
+            // How it was delivered: where readers stand against the Season 2
+            // calibration. -1 = not measured.
+            "prosody" to (delivered.prosody ?: -1),
+            "fluency" to (delivered.fluency ?: -1),
+            "weak_sounds" to (delivered.weakSounds ?: -1),
+            "mid_pauses" to (delivered.midPauses ?: -1),
+            "mid_boundaries" to (delivered.midBoundaries ?: -1),
+            "wpm" to (delivered.wordsPerMinute ?: -1),
+            "monotone_words" to delivered.monotoneWords,
+            "pitch_range" to (delivered.pitchRange ?: -1.0),
+            "pitch_sd" to (delivered.pitchSD ?: -1.0),
+            "scoring" to (metrics.scoring ?: 0),
+            // Pieces whose read-back lost words Azure heard ([pieceText]).
+            "readback_fixed" to readBackFixed,
             "meter_voiced" to meterVoiced.toInt(),
             "live_dropped" to liveDropped,
             "read_ms" to readMs, "result_ms" to resultMs, "coach_ms" to coachMs,
@@ -471,7 +529,14 @@ class SpeechTakeSession(
         val lo = maxOf(0, lastCutCursor - 2)
         lastCutCursor = hi
         val joiner = if (LanguageCatalog.writesSpaces(_script.value.language)) " " else ""
-        return words.subList(lo, hi).joinToString(joiner) { it.text }
+        // A line break where a paragraph ends, so `SpeechDelivery` knows a
+        // paragraph's pause from a sentence's.
+        val text = StringBuilder()
+        for (i in lo until hi) {
+            if (i > lo) text.append(if (words[i].paragraph != words[i - 1].paragraph && joiner.isNotEmpty()) "\n" else joiner)
+            text.append(words[i].text)
+        }
+        return text.toString()
     }
 
     /**
@@ -482,22 +547,30 @@ class SpeechTakeSession(
      * the reference and the assessment waits for it. Either way the result
      * never waits on this piece: it runs while the next is still spoken.
      */
-    private fun readPiece(file: File, reference: String): Deferred<Piece?> {
+    private fun readPiece(file: File, reference: String, endedAt: Double): Deferred<Piece?> {
         val language = _script.value.language
         return scope.async(Dispatchers.IO) {
+            // Counted back from the take's clock by the file's own length, so
+            // the time the words are placed at never adds up across pieces.
+            val seconds = WavPcm.read(file)?.let { it.samples.size.toDouble() / it.sampleRate } ?: 0.0
+            val startMs = ((endedAt - seconds) * 1000).toInt()
             try {
                 if (reference.isNotEmpty()) {
                     coroutineScope {
                         val read = async { SpeechReader.readPiece(file, language) }
                         val pron = async { PronunciationAssessor.assess(context, file, reference, language, "speech") }
-                        val text = read.await()
-                        if (text == null) { pron.await(); null } else Piece(text, pron.await().result)
+                        val readBack = read.await()
+                        val result = pron.await().result
+                        pieceText(readBack, result?.recognized, language)?.let { (text, replaced) ->
+                            Piece(text, result, reference, replaced, startMs)
+                        }
                     }
                 } else {
                     val text = SpeechReader.readPiece(file, language) ?: return@async null
                     val trimmed = text.trim()
                     if (trimmed.isEmpty()) Piece(text, null)
-                    else Piece(text, PronunciationAssessor.assess(context, file, trimmed, language, "speech").result)
+                    else Piece(text, PronunciationAssessor.assess(context, file, trimmed, language, "speech").result,
+                        trimmed, startMs = startMs)
                 }
             } finally { file.delete() }
         }
@@ -509,12 +582,15 @@ class SpeechTakeSession(
      * assessed, all at once. A window that can't be read or assessed is left
      * out (iOS 247383e9).
      */
-    private suspend fun assessInWindows(audio: File, language: String): List<PronunciationResult> {
+    private suspend fun assessInWindows(audio: File, language: String): List<SpeechDelivery.Piece> {
         if (!PronunciationAssessor.supports(language)) return emptyList()
         val wav = withContext(Dispatchers.IO) { PronunciationAssessor.wav16kMono(audio) } ?: return emptyList()
         val windows = PronunciationAssessor.windows(wav)
+        // The windows cut the file end to end: 16-bit, 16 kHz, a 44-byte header.
+        var bytes = 0
+        val starts = windows.map { window -> (bytes / 32).also { bytes += maxOf(0, window.size - 44) } }
         return coroutineScope {
-            windows.map { piece ->
+            windows.mapIndexed { index, piece ->
                 async(Dispatchers.IO) {
                     val tmp = File(context.cacheDir, "pron-${java.util.UUID.randomUUID()}.wav")
                     if (runCatching { tmp.writeBytes(piece) }.isFailure) return@async null
@@ -522,6 +598,7 @@ class SpeechTakeSession(
                         val text = SpeechReader.readPiece(tmp, language)
                         if (text.isNullOrEmpty()) null
                         else PronunciationAssessor.assess(context, piece, text, language, "speech").result
+                            ?.let { SpeechDelivery.Piece(text, it, starts[index]) }
                     } finally { tmp.delete() }
                 }
             }.awaitAll().filterNotNull()
@@ -603,7 +680,16 @@ class SpeechTakeSession(
 
     /** One piece of the take: its words and how they were pronounced
      *  (null when the piece held no speech or the server did not answer). */
-    data class Piece(val text: String, val pron: PronunciationResult?)
+    data class Piece(
+        val text: String,
+        val pron: PronunciationResult?,
+        /** What the piece was judged against: `SpeechDelivery` lines Azure's words up with it. */
+        val reference: String = "",
+        /** The read-back lost words Azure heard, and Azure's hearing stands in ([pieceText]). */
+        val readBackReplaced: Boolean = false,
+        /** Where this piece begins in the take. */
+        val startMs: Int = 0,
+    )
 
     companion object {
         private const val CAMERA_KEY = "speech.cameraOn"
@@ -620,6 +706,49 @@ class SpeechTakeSession(
          *  those takes were cut at exactly 60 s, mid sentence. */
         fun ceilingSeconds(targetSeconds: Int, body: String, language: String): Double =
             maxOf(targetSeconds, SpeechLibrary.estimatedSeconds(body, language)) * 3.0 + 60
+
+        /**
+         * A piece's words, from two witnesses (iOS `pieceText`). The read-back
+         * is the text the take is scored on, but it can come back short: when
+         * Azure heard the piece and the read-back holds under 70% of its words
+         * (or nothing), Azure's own text is the piece's text. With no Azure
+         * text the read-back stands, null included.
+         */
+        fun pieceText(readBack: String?, heard: String?, language: String): Pair<String, Boolean>? {
+            val read = readBack?.trim().orEmpty()
+            val azure = heard?.trim().orEmpty()
+            if (azure.isEmpty()) return readBack?.let { it to false }
+            fun size(s: String): Int =
+                if (LanguageCatalog.writesSpaces(language)) s.split(Regex("\\s+")).count { it.isNotEmpty() }
+                else s.count { !it.isWhitespace() && !com.roro.futurevoice.talk.SpeechPrompterTrack.isPunctuation(it) }
+            if (read.isEmpty() || size(read) < 0.7 * size(azure)) return azure to true
+            return (readBack ?: read) to false
+        }
+
+        /** A take's Season 2 score from its assessed pieces (each piece's words
+         *  timed from its own start, so no pause is measured across pieces)
+         *  and the reference in the reader's gender, told by the voice's pitch. */
+        fun reading(pieces: List<SpeechDelivery.Piece>, reference: SpeechReference, script: String,
+                    metrics: SpeechMetrics, delivery: SpeechDelivery): SpeechReadingScore? {
+            val scriptTokens = SpeechDelivery.referenceTokens(script)
+            val tokens = scriptTokens.map { it.core }
+            val take = pieces.flatMap { piece ->
+                val words = piece.result.words.filter { !it.isOmission && it.durationMs > 0 }
+                words.mapIndexed { i, w ->
+                    SpeechReading.TimedWord(w.word, w.offsetMs, w.offsetMs + w.durationMs, i == words.lastIndex)
+                }
+            }
+            val gender = if ((delivery.pitchMedianHz ?: 0.0) > SpeechReading.FEMALE_ABOVE_HZ) "female" else "male"
+            val ref = reference.words(gender).map { SpeechReading.TimedWord(it.w, it.s, it.e, false) }
+            return SpeechReading.score(
+                take = SpeechReading.timeline(take, tokens),
+                reference = SpeechReading.timeline(ref, tokens),
+                script = tokens, stops = scriptTokens.map { it.stop },
+                slips = metrics.slips, scriptTokens = metrics.scriptTokens, missed = metrics.missed,
+                soundAccuracy = delivery.soundAccuracy, weakest = delivery.weakest,
+                coverage = metrics.coverage ?: 1.0, gender = gender,
+            )
+        }
 
         /** The take's pronunciation from its pieces: the SOUND score weighted
          *  by each piece's judged words, and every faulted word, worst first

@@ -94,6 +94,15 @@ data class SpeechMetrics(
      *  the challenge server re-checks. Null = not assessed; [overall] then
      *  uses the weighting without it. */
     val pronunciation: Int? = null,
+    /** Words changed, left out or added within the reading
+     *  (`SpeechAnalyzer.slips`), and the script's token count. Null on takes
+     *  scored before them. */
+    val slips: Int? = null,
+    val scriptTokens: Int? = null,
+    /** Season 2's score against a native reference reading
+     *  (`SpeechReading`); [overall] is its total. Null on every take scored
+     *  the older ways. */
+    val reading: com.roro.futurevoice.talk.SpeechReadingScore? = null,
 )
 
 /** The model's notes on a take, in the NATIVE language. */

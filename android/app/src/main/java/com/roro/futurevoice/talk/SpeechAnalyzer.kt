@@ -83,7 +83,29 @@ object SpeechAnalyzer {
             coverage = coverage,
             scoring = if (pronunciation == null) SCORING_WITHOUT_PRONUNCIATION else SCORING_VERSION,
             pronunciation = pronunciation,
+            slips = slips(diff.steps, language),
+            scriptTokens = diff.targetTokenCount,
         )
+    }
+
+    /**
+     * Words read differently from the script WITHIN the reading (iOS
+     * `SpeechAnalyzer.slips`): a word changed, left out or added (a filler is
+     * the filler count's), between the first and the last word read as
+     * written. Stopping early is coverage's.
+     */
+    fun slips(steps: List<ShadowScore.DiffStep>, language: String): Int {
+        val first = steps.indexOfFirst { it.op == ShadowScore.DiffOp.MATCH }
+        val last = steps.indexOfLast { it.op == ShadowScore.DiffOp.MATCH }
+        if (first < 0 || first >= last) return 0
+        val fillerWords = SpeechLibrary.fillers(language).map { it.lowercase() }.toSet()
+        return steps.subList(first, last + 1).count { step ->
+            when (step.op) {
+                ShadowScore.DiffOp.MATCH -> false
+                ShadowScore.DiffOp.SUB, ShadowScore.DiffOp.DEL -> true
+                ShadowScore.DiffOp.INS -> (step.learner ?: "").lowercase() !in fillerWords
+            }
+        }
     }
 
     /**
@@ -246,8 +268,10 @@ object SpeechAnalyzer {
     }
 
     /** One script word as the take read it — iOS `ScriptMark`. [heard] is
-     *  what the mic wrote for a word read differently, null otherwise. */
-    data class ScriptMark(val word: String, val op: ShadowScore.DiffOp, val heard: String?)
+     *  what the mic wrote for a word read differently, null otherwise;
+     *  [added] are words said after this one that the script doesn't have. */
+    data class ScriptMark(val word: String, val op: ShadowScore.DiffOp, val heard: String?,
+                          val added: List<String> = emptyList())
 
     /**
      * The script, paragraph by paragraph, every word marked against the take
@@ -266,11 +290,14 @@ object SpeechAnalyzer {
         val wordOfSlot = ArrayList<Int>()
         spans.forEachIndexed { i, span -> repeat(span.count()) { wordOfSlot.add(i) } }
         val heard = List(words.size) { mutableListOf<String>() }
+        val added = List(words.size) { mutableListOf<String>() }
         var next = 0
         for (step in steps) {
             if (step.op == ShadowScore.DiffOp.INS) {
                 if (next > 0 && next < wordOfSlot.size && wordOfSlot[next - 1] == wordOfSlot[next]) {
                     step.learner?.let { heard[wordOfSlot[next]].add(it) }
+                } else if (next > 0 && next - 1 < wordOfSlot.size) {
+                    step.learner?.let { added[wordOfSlot[next - 1]].add(it) }
                 }
                 continue
             }
@@ -287,7 +314,7 @@ object SpeechAnalyzer {
                     slice.all { it == ShadowScore.DiffOp.DEL } -> ShadowScore.DiffOp.DEL
                     else -> ShadowScore.DiffOp.SUB
                 }
-                ScriptMark(word, op, if (op == ShadowScore.DiffOp.SUB) heard[w].joinToString(joiner) else null)
+                ScriptMark(word, op, if (op == ShadowScore.DiffOp.SUB) heard[w].joinToString(joiner) else null, added[w])
                     .also { w++ }
             }
         }
