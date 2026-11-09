@@ -263,6 +263,17 @@ final class SpeechOwnScriptTests: XCTestCase {
         XCTAssertFalse(SpeechGenre.writable.contains(.own))
         XCTAssertEqual(SpeechGenre.writable.count, 5)
     }
+
+    /// A tutor, goal-prep or news script is saved with `targetSeconds` 0: its
+    /// ceiling comes from the text, or the take is cut at exactly 60 s.
+    func testATakeOfAScriptWithNoTargetIsNotCutAtAMinute() {
+        let body = String(repeating: "word ", count: 193)
+        let ceiling = SpeechTakeSession.ceilingSeconds(targetSeconds: 0, body: body, language: "en")
+        let length = SpeechLibrary.estimatedSeconds(body, language: "en")
+        XCTAssertGreaterThan(length, 0)
+        XCTAssertEqual(ceiling, Double(length) * 3 + 60)
+        XCTAssertEqual(SpeechTakeSession.ceilingSeconds(targetSeconds: 300, body: "Short.", language: "en"), 960)
+    }
 }
 
 import SwiftUI

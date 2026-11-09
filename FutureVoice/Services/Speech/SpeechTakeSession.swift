@@ -27,6 +27,8 @@ final class SpeechTakeSession: ObservableObject {
     @Published private(set) var elapsed: TimeInterval = 0
     /// The exact clock, for the take's own logic.
     private var clock: TimeInterval = 0
+    /// Set as the take starts (`ceilingSeconds`), read on every tick.
+    private var takeCeiling: TimeInterval = .infinity
     @Published var cameraOn: Bool {
         didSet {
             UserDefaults.standard.set(cameraOn, forKey: Self.cameraKey)
@@ -187,6 +189,8 @@ final class SpeechTakeSession: ObservableObject {
         position = 0
         elapsed = 0
         clock = 0
+        takeCeiling = Self.ceilingSeconds(targetSeconds: script.targetSeconds, body: script.body,
+                                          language: script.language)
         // "3" goes up FIRST and the mic is set up while it shows: the setup
         // (recognizer + voice processing + recorder session) holds the main
         // thread for a beat, and running it before the count meant a blank
@@ -326,9 +330,19 @@ final class SpeechTakeSession: ObservableObject {
             return
         }
         // A take nobody ends still ends.
-        if clock > Double(script.targetSeconds) * 3 + 60 {
+        if clock > takeCeiling {
             Task { await stop() }
         }
+    }
+
+    /// When a take nobody ended gives up: three times the script's length
+    /// plus a minute. The length is read off the text as well, because a
+    /// script from the tutor, a goal's prep or the news is saved with
+    /// `targetSeconds` 0, and those takes were cut at exactly 60 s, mid
+    /// sentence (founder, 2026-11-09: 94 of 193 words).
+    nonisolated static func ceilingSeconds(targetSeconds: Int, body: String, language: String) -> TimeInterval {
+        let length = max(targetSeconds, SpeechLibrary.estimatedSeconds(body, language: language))
+        return Double(length) * 3 + 60
     }
 
     // MARK: - Stop and score
