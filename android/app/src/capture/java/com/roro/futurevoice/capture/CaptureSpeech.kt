@@ -212,6 +212,22 @@ object CaptureSpeech {
         "speech-own" to { ctx ->
             Seeded(ctx) { SpeechOwnScriptSheet(null, LanguageScope.active(ctx), native(ctx), onSave = {}, onDismiss = {}) }
         },
+        // A Season 2 take (iOS `-capture speech-result-v5`).
+        "speech-result-v5" to { ctx ->
+            Seeded(ctx) {
+                val base = SpeechStore.shared(ctx).takes.value.first()
+                val reading = com.roro.futurevoice.talk.SpeechReadingScore(
+                    version = 6, gender = "male",
+                    parts = com.roro.futurevoice.talk.SpeechReadingScore.Parts(
+                        speed = 66, rhythm = 43, pauses = 75, accuracy = 89, pronunciation = 100),
+                    coverage = 1.0, speed = 0.76, rhythm = 0.8, pausesPer100 = 4.0, slipsPer100 = 3.0,
+                    soundAccuracy = 97, slips = 5, extraPauses = emptyList(), held = emptyList(),
+                    missed = listOf("the"), weakest = emptyList())
+                val take = base.copy(id = "capture-season2",
+                    metrics = base.metrics.copy(overall = reading.total, scoring = 6, reading = reading))
+                SpeechResultScreen(take.id, take, onBack = {}, onAgain = {})
+            }
+        },
         "speech-result" to { ctx ->
             Seeded(ctx) {
                 val take = SpeechStore.shared(ctx).takes.value.first()
