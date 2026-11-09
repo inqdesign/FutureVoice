@@ -44,20 +44,35 @@ class SpeechReadingTest {
     )
     private fun total(r: Row) = score(r).total
 
-    /** The validation of 2026-11-08, held: every reading as the prototype
-     *  scored it (within a point of rounding), and the groups where they sit. */
+    /** The validation readings under the plain scale: narrators and natives
+     *  on top, learners below them, and the learners still in the experts' order. */
     @Test fun validationShape() {
         assertEquals(138, rows.size)
-        for (r in rows) assertTrue("${r.g} ${r.sp} ${r.rh} ${r.ep}: ${total(r)} vs ${r.t}", abs(total(r) - r.t) <= 1)
         fun totals(g: String) = rows.filter { it.g == g }.map(::total).sorted()
         fun median(g: String) = totals(g).let { it[it.size / 2] }
         assertTrue("${median("narrator")}", median("narrator") in 95..99)
-        assertTrue("${median("native")}", median("native") in 93..97)
-        assertTrue("${median("learner")}", median("learner") in 60..75)
+        assertTrue("${median("native")}", median("native") in 94..98)
+        assertTrue("${median("learner")}", median("learner") in 82..92)
         assertFalse(totals("learner").contains(100))
-        assertTrue("${totals("founder")}", totals("founder").all { it in 60..77 })
         val learners = rows.filter { it.g == "learner" }
         assertTrue(spearman(learners.map { total(it).toDouble() }, learners.mapNotNull { it.h }) >= 0.8)
+    }
+
+    /** Each part is the measurement; the total is their average. */
+    @Test fun partsAreTheMeasurements() {
+        val p = SpeechReading.parts(0.82, 0.78, 0.6, 6.9, 86.0)
+        assertEquals(82, p.speed); assertEquals(78, p.rhythm); assertEquals(99, p.pauses)
+        assertEquals(93, p.accuracy); assertEquals(86, p.pronunciation)
+        // Faster than the native reading counts the same as slower.
+        assertEquals(80, SpeechReading.parts(1.25, 1.0, 0.0, 0.0, 100.0).speed)
+    }
+
+    @Test fun totalIsThePlainAverage() {
+        fun total(a: Int, b: Int, c: Int, d: Int, e: Int) = score(Row("x", 1.0, 1.0, 0.0, 0.0, 100.0, null, 100))
+            .copy(parts = SpeechReadingScore.Parts(a, b, c, d, e)).total
+        assertEquals(96, total(96, 96, 96, 96, 96))
+        assertEquals(100, total(100, 100, 100, 100, 100))
+        assertEquals(99, total(100, 100, 100, 100, 99))   // 99.8, and not 100 in everything
     }
 
     /** The pause the native reading doesn't make is found, a stop after
@@ -103,7 +118,7 @@ class SpeechReadingTest {
 
     /** The server's recheck of `total`, `submit_speech_reading_take`. */
     @Test fun coverageScalesTheTotal() {
-        val s = score(Row("x", 0.97, 0.94, 0.0, 0.0, 97.0, null, 100))
+        val s = score(Row("x", 1.0, 1.0, 0.0, 0.0, 100.0, null, 100))
         assertEquals(100, s.total)
         assertEquals(60, s.copy(coverage = 0.5).total)
         assertNull(s.focus)

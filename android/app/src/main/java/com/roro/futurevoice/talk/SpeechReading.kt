@@ -29,34 +29,26 @@ import kotlin.math.truncate
 
 /**
  * Season 2's speech score: a take compared word for word with a NATIVE reading
- * of the same script, in the reader's gender — iOS `SpeechReading`. The five
- * parts count equally; 100 needs every part at a narrator's level. Version 6:
- * a stop after punctuation is not a fault, only a mid-sentence stop the
- * reference lacks counts.
+ * of the same script, in the reader's gender — iOS `SpeechReading`. Every part
+ * is the measurement itself on a 0-100 scale, and the total is their plain
+ * average; 100 needs every part at 100 (version 7, 2026-11-09). A stop after
+ * punctuation is not a fault, only a mid-sentence stop the reference lacks
+ * counts.
  */
 object SpeechReading {
-    const val VERSION = 6
+    const val VERSION = 7
     /** A take with `scoring` at or above this was scored against a reference
      *  (iOS compares with `SpeechScoreV4.version`). */
     const val READING_SCORING_FROM = 4
-
-    /** The calibration's group medians (learner, native, narrator). */
-    val SPEED_CURVE = listOf(0.1131 to 0.0, 0.6517 to 50.0, 0.921 to 90.0, 0.9702 to 100.0)
-    val RHYTHM_CURVE = listOf(0.6001 to 0.0, 0.8227 to 50.0, 0.934 to 90.0, 0.9352 to 100.0)
-    /** Mid-sentence stops per 100 words. */
-    val PAUSES_CURVE = listOf(0.0 to 100.0, 1.5957 to 90.0, 17.3913 to 50.0, 36.8421 to 20.0, 40.0 to 0.0)
-    val SLIPS_CURVE = listOf(0.0 to 100.0, 2.5 to 90.0, 8.0 to 50.0, 21.0 to 20.0, 40.0 to 0.0)
-    /** Pronunciation is judged only where it is clearly off. */
-    val SOUND_CURVE = listOf(71.0 to 20.0, 90.0 to 50.0, 95.5 to 100.0)
 
     const val PAUSE_SECONDS = 0.15
     /** A take's median pitch above this is read against the female reference. */
     const val FEMALE_ABOVE_HZ = 165.0
 
     /** The averages the result page quotes, from the validation set. */
-    const val NATIVE_AVERAGE = 94
-    const val NARRATOR_AVERAGE = 96
-    const val LEARNER_AVERAGE = 63
+    const val NATIVE_AVERAGE = 96
+    const val NARRATOR_AVERAGE = 97
+    const val LEARNER_AVERAGE = 81
 
     private const val PREFS = "futurevoice"
     private const val DEV_KEY = "speech.scoring4"
@@ -81,17 +73,6 @@ object SpeechReading {
     fun round(x: Double): Double {
         val whole = truncate(x)
         return if (abs(x - whole) >= 0.5) whole + sign(x) else whole
-    }
-
-    fun curve(x: Double, pts: List<Pair<Double, Double>>): Double {
-        val first = pts.firstOrNull() ?: return 0.0
-        val last = pts.last()
-        if (x <= first.first) return first.second
-        if (x >= last.first) return last.second
-        for ((a, b) in pts.zipWithNext()) {
-            if (x <= b.first) return a.second + (b.second - a.second) * (x - a.first) / (b.first - a.first)
-        }
-        return last.second
     }
 
     // MARK: - Lining words up with the script
@@ -179,12 +160,15 @@ object SpeechReading {
     fun parts(speed: Double, rhythm: Double, pausesPer100: Double, slipsPer100: Double,
               soundAccuracy: Double?): SpeechReadingScore.Parts =
         SpeechReadingScore.Parts(
-            speed = round(curve(speed, SPEED_CURVE)).toInt(),
-            rhythm = round(curve(rhythm, RHYTHM_CURVE)).toInt(),
-            pauses = round(curve(pausesPer100, PAUSES_CURVE)).toInt(),
-            accuracy = round(curve(slipsPer100, SLIPS_CURVE)).toInt(),
-            pronunciation = soundAccuracy?.let { round(curve(it, SOUND_CURVE)).toInt() } ?: 100,
+            // The share of the native reading's pace, too slow or too fast.
+            speed = if (speed > 0) percent(100 * min(speed, 1 / speed)) else 0,
+            rhythm = percent(100 * rhythm),
+            pauses = percent(100 - pausesPer100),
+            accuracy = percent(100 - slipsPer100),
+            pronunciation = soundAccuracy?.let(::percent) ?: 100,
         )
+
+    private fun percent(value: Double): Int = round(min(100.0, max(0.0, value))).toInt()
 
     fun pearson(x: List<Double>, y: List<Double>): Double? {
         if (x.size != y.size || x.size < 4) return null
@@ -254,7 +238,7 @@ data class SpeechReadingScore(
         val index: Int? = null,
     )
 
-    val isPerfect: Boolean get() = parts.all.all { it.second >= BAR } && coverage >= 0.999
+    val isPerfect: Boolean get() = parts.all.all { it.second == 100 } && coverage >= 0.999
 
     val total: Int get() {
         if (isPerfect) return 100
