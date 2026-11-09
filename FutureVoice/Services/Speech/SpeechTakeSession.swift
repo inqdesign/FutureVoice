@@ -143,7 +143,7 @@ final class SpeechTakeSession: ObservableObject {
         self.native = native
         self.level_ = level
         self.track = SpeechPrompterTrack(script: script.body, language: script.language)
-        if SpeechScoreV4.isEnabled, SpeechReading.applies(to: script.language) {
+        if SpeechReading.isActive(for: script.language) {
             let body = script.body, language = script.language
             referenceTask = Task { await SpeechReferenceService.fetch(text: body, language: language) }
         }
@@ -476,7 +476,7 @@ final class SpeechTakeSession: ObservableObject {
         // Season 2: compared with a native reading of this script in the
         // reader's gender (`SpeechReading`). Without the reference (offline,
         // the server not ready) the take keeps the scoring it already has.
-        if SpeechScoreV4.isEnabled, SpeechReading.applies(to: language) {
+        if SpeechReading.isActive(for: language) {
             let delivered = await delivery.value
             let refTask = referenceTask
             if let reference = await Self.within(seconds: 45, { await refTask?.value ?? nil }),

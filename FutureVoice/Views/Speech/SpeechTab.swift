@@ -54,6 +54,25 @@ struct SpeechTab: View {
 
     private var challengesPage: some View {
         LazyVStack(alignment: .leading, spacing: 14) {
+            // A language past its first season says which one this is, and
+            // where the last one went.
+            if let season = challenges.openSeason, season >= 2 {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Season \(season)")
+                        .font(.title2.weight(.bold))
+                    Spacer()
+                    if let ended = challenges.lastEndedSeason {
+                        NavigationLink {
+                            SpeechChallengeListView()
+                                .environmentObject(appState)
+                        } label: {
+                            Text("Season \(ended) records")
+                                .font(.subheadline.weight(.medium))
+                        }
+                    }
+                }
+                .padding(.horizontal, 4)
+            }
             if let overall = challenges.overall,
                overall.count >= SpeechChallenges.overallMinEntrants {
                 NavigationLink {

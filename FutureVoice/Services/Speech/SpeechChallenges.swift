@@ -47,6 +47,17 @@ final class SpeechChallenges: ObservableObject {
         /// Set once the challenge is retired: the board is frozen, nobody can
         /// enter, and it is listed under past challenges.
         var retiredAt: Date? = nil
+        /// Which season it belongs to. nil from a server without seasons, or
+        /// a cache written before them.
+        var season: Int? = nil
+    }
+
+    /// One of a language's seasons, as this account sees them.
+    struct SeasonStatus: Decodable, Hashable {
+        let season: Int
+        let min_scoring: Int
+        let is_open: Bool
+        let ended: Bool
     }
 
     static func intro(_ standing: Standing?, native: String) -> String? {
@@ -86,6 +97,9 @@ final class SpeechChallenges: ObservableObject {
         /// Scored by Season 2's rules (`SpeechScoreV4`), which no board
         /// checks yet: kept on the phone.
         case newScoring
+        /// On a challenge that has ended: the board is frozen, so this was
+        /// practice.
+        case practice
     }
 
     @Published private(set) var scripts: [SpeechScript] = []
@@ -93,6 +107,10 @@ final class SpeechChallenges: ObservableObject {
     /// The overall board's top of the loaded language (and the learner's own
     /// row), for the Speech tab's banner. nil until it loads.
     @Published private(set) var overall: [BoardRow]?
+    /// The season `overall` is the board of. nil: a server without seasons.
+    @Published private(set) var overallSeason: Int?
+    /// The loaded language's seasons; empty from a server without them.
+    @Published private(set) var seasons: [SeasonStatus] = []
     /// By take id. In memory: the page that matters is the one the take
     /// opens on; later visits read the standing instead.
     @Published private(set) var entries: [UUID: Entry] = [:]
@@ -132,10 +150,23 @@ final class SpeechChallenges: ObservableObject {
     /// Retired challenges, newest first — boards frozen.
     var past: [SpeechScript] { scripts.filter { isPast($0.id) } }
 
+    func season(of id: UUID) -> Int? { standings[id]?.season }
+    /// The newest season taking entries.
+    var openSeason: Int? { seasons.filter(\.is_open).map(\.season).max() }
+    /// The newest season that has ended.
+    var lastEndedSeason: Int? { seasons.filter(\.ended).map(\.season).max() }
+    /// Seasons with past challenges, newest first.
+    var pastSeasons: [Int] { Array(Set(past.compactMap { season(of: $0.id) })).sorted(by: >) }
+    /// Every season that has a board, newest first: open and ended.
+    var boardSeasons: [Int] { seasons.filter { $0.is_open || $0.ended }.map(\.season).sorted(by: >) }
+    func seasonEnded(_ season: Int) -> Bool { seasons.first { $0.season == season }?.ended == true }
+
     func loadCache(language: String) {
         guard loadedLanguage != language else { return }
         loadedLanguage = language
         overall = nil
+        overallSeason = nil
+        seasons = []
         let cache = (try? Data(contentsOf: cacheURL(language)))
             .flatMap { try? decoder.decode(Cache.self, from: $0) }
         scripts = cache?.scripts ?? []
@@ -165,6 +196,30 @@ final class SpeechChallenges: ObservableObject {
         let category: String?
         let intro: [String: String]?
         let link: String?
+        var season: Int? = nil
+    }
+
+    private func seasonStatus(language: String) async -> [SeasonStatus] {
+        struct Params: Encodable { let p_language: String }
+        return (try? await SupabaseProvider.shared
+            .rpc("speech_season_status", params: Params(p_language: language))
+            .execute()
+            .value) ?? []
+    }
+
+    /// The list that knows seasons, or the old one from a server without it.
+    private func listRows(language: String) async throws -> [ListRow] {
+        struct Params: Encodable { let p_language: String; let p_scoring: Int }
+        let seasoned: [ListRow]? = try? await SupabaseProvider.shared
+            .rpc("speech_challenge_list_v2",
+                 params: Params(p_language: language, p_scoring: SpeechReading.version))
+            .execute()
+            .value
+        if let seasoned { return seasoned }
+        return try await SupabaseProvider.shared
+            .rpc("speech_challenge_list", params: ["p_language": language])
+            .execute()
+            .value
     }
 
     func refresh(language: String) async {
@@ -173,19 +228,20 @@ final class SpeechChallenges: ObservableObject {
         if !previewBoards.isEmpty { return }
         #endif
         loadCache(language: language)
-        async let overallRows = overallBoard(language: language)
+        async let status = seasonStatus(language: language)
         let rows: [ListRow]
         do {
-            rows = try await SupabaseProvider.shared
-                .rpc("speech_challenge_list", params: ["p_language": language])
-                .execute()
-                .value
+            rows = try await listRows(language: language)
         } catch {
             return
         }
-        let board = await overallRows
+        let statuses = await status
         guard loadedLanguage == language else { return }
-        if let board { overall = board }
+        seasons = statuses
+        if !statuses.isEmpty {
+            SpeechReading.setSeasonOpen(statuses.contains { $0.is_open && $0.min_scoring >= SpeechScoreV4.version },
+                                        language: language)
+        }
         scripts = rows.map { row in
             SpeechScript(id: row.id, title: row.title,
                          genre: SpeechGenre(rawValue: row.genre) ?? .explainer,
@@ -201,9 +257,16 @@ final class SpeechChallenges: ObservableObject {
                               myBest: row.my_best, myRank: row.my_rank,
                               myAttempts: row.my_attempts, topThree: row.top_three, attempts: row.attempts,
                               category: row.category, intro: row.intro,
-                              link: row.link.flatMap { URL(string: $0) }, retiredAt: row.retired_at))
+                              link: row.link.flatMap { URL(string: $0) }, retiredAt: row.retired_at,
+                              season: row.season))
         })
         writeCache(language)
+        let boardSeason = openSeason ?? lastEndedSeason
+        if let board = await overallBoard(language: language, season: boardSeason),
+           loadedLanguage == language {
+            overall = board
+            overallSeason = boardSeason
+        }
     }
 
     func board(_ challengeId: UUID, limit: Int = 10) async -> [BoardRow]? {
@@ -219,11 +282,20 @@ final class SpeechChallenges: ObservableObject {
 
     /// Every challenge of a language on one board (2026-11-05, founder):
     /// each learner's best score per challenge, added up, so the way to the
-    /// top is to take more of them. Past challenges count.
-    func overallBoard(language: String, limit: Int = 10) async -> [BoardRow]? {
+    /// top is to take more of them. Past challenges count. Per season when
+    /// the server has seasons (`season` nil: it doesn't).
+    func overallBoard(language: String, season: Int? = nil, limit: Int = 10) async -> [BoardRow]? {
         #if DEBUG
         if let rows = previewOverall { return rows }
         #endif
+        if let season {
+            struct SeasonParams: Encodable { let p_language: String; let p_season: Int; let p_limit: Int }
+            return try? await SupabaseProvider.shared
+                .rpc("speech_overall_board_v2",
+                     params: SeasonParams(p_language: language, p_season: season, p_limit: limit))
+                .execute()
+                .value
+        }
         struct Params: Encodable { let p_language: String; let p_limit: Int }
         return try? await SupabaseProvider.shared
             .rpc("speech_overall_board", params: Params(p_language: language, p_limit: limit))
@@ -240,15 +312,28 @@ final class SpeechChallenges: ObservableObject {
     /// Called by the take session once a take on a challenge is scored.
     func enter(take: SpeechTake, script: SpeechScript, recordedOnCamera: Bool) {
         guard let challengeId = script.challengeId else { return }
-        guard (take.metrics.scoring ?? 0) < SpeechScoreV4.version else {
+        // An ended challenge can still be practised; its board is frozen.
+        guard !isPast(challengeId) else {
+            entries[take.id] = .practice
+            return
+        }
+        let seasonTwo = (season(of: challengeId) ?? 1) >= 2
+        let scoredByReading = (take.metrics.scoring ?? 0) >= SpeechScoreV4.version
+        guard seasonTwo || !scoredByReading else {
             entries[take.id] = .newScoring
+            return
+        }
+        // A Season 2 board only takes a reading score: no reference reading
+        // (offline) means no entry.
+        guard !seasonTwo || (scoredByReading && take.metrics.reading != nil) else {
+            entries[take.id] = .failed
             return
         }
         guard recordedOnCamera else {
             entries[take.id] = .cameraOff
             return
         }
-        guard take.metrics.overall >= Self.boardBar else {
+        guard take.metrics.overall >= Self.boardBar(season: season(of: challengeId)) else {
             entries[take.id] = .belowBar
             return
         }
@@ -257,7 +342,13 @@ final class SpeechChallenges: ObservableObject {
             return
         }
         entries[take.id] = .submitting
-        Task { await submit(take: take, challengeId: challengeId, name: name) }
+        Task {
+            if seasonTwo {
+                await submitReading(take: take, challengeId: challengeId, name: name)
+            } else {
+                await submit(take: take, challengeId: challengeId, name: name)
+            }
+        }
     }
 
     /// The lowest score that goes on a board (2026-10-25, founder: a take
@@ -265,6 +356,34 @@ final class SpeechChallenges: ObservableObject {
     /// stands beside a score they'd be embarrassed by, low enough that the
     /// board still fills.
     static let boardBar = 80
+    /// Season 2's scale runs lower (learners average 63, natives 94), so 80
+    /// would keep most readers off the board (founder, 2026-11-09).
+    static let seasonTwoBoardBar = 60
+    static func boardBar(season: Int?) -> Int { (season ?? 1) >= 2 ? seasonTwoBoardBar : boardBar }
+
+    /// Off this board: the score is deleted on the server. The next take
+    /// goes on it again like any other; only filing an EARLIER take is
+    /// stopped (`importLocalBests`), or the score would be back at the next
+    /// refresh.
+    func withdraw(_ challengeId: UUID) async throws {
+        struct Params: Encodable { let p_challenge: UUID }
+        try await SupabaseProvider.shared
+            .rpc("withdraw_speech_challenge_entry", params: Params(p_challenge: challengeId))
+            .execute()
+        var standing = standings[challengeId] ?? Standing(entrants: 0)
+        if standing.myBest != nil { standing.entrants = max(0, standing.entrants - 1) }
+        standing.myBest = nil
+        standing.myRank = nil
+        standing.myAttempts = nil
+        standings[challengeId] = standing
+        var removed = UserDefaults.standard.stringArray(forKey: Self.removedKey) ?? []
+        if !removed.contains(challengeId.uuidString) { removed.append(challengeId.uuidString) }
+        UserDefaults.standard.set(removed, forKey: Self.removedKey)
+        if let language = loadedLanguage { writeCache(language) }
+        Analytics.capture("speech_challenge_withdrawn", [:])
+    }
+
+    private static let removedKey = "speech.challenge.removedFromBoard"
 
     private struct SubmitParams: Encodable {
         let p_challenge: UUID
@@ -326,6 +445,49 @@ final class SpeechChallenges: ObservableObject {
                 .rpc("submit_speech_challenge_take", params: params)
                 .execute()
                 .value
+            await apply(rows, take: take, challengeId: challengeId, overall: overall)
+        } catch {
+            entries[take.id] = .failed
+            Analytics.capture("speech_challenge_failed", ["error": String(String(describing: error).prefix(160))])
+        }
+    }
+
+    /// Season 2: the server rechecks the total from these parts.
+    private func submitReading(take: SpeechTake, challengeId: UUID, name: String) async {
+        guard let r = take.metrics.reading else { entries[take.id] = .failed; return }
+        struct Params: Encodable {
+            let p_challenge: UUID
+            let p_display_name: String
+            let p_avatar: String?
+            let p_overall: Int
+            let p_speed: Int
+            let p_rhythm: Int
+            let p_pauses: Int
+            let p_accuracy: Int
+            let p_pronunciation: Int
+            let p_coverage: Double
+            let p_seconds: Int
+            let p_scoring: Int
+        }
+        let params = Params(p_challenge: challengeId, p_display_name: name, p_avatar: Self.avatarPayload(),
+                            p_overall: r.total, p_speed: r.parts.speed, p_rhythm: r.parts.rhythm,
+                            p_pauses: r.parts.pauses, p_accuracy: r.parts.accuracy,
+                            p_pronunciation: r.parts.pronunciation, p_coverage: r.coverage,
+                            p_seconds: max(1, Int(take.durationSeconds.rounded())),
+                            p_scoring: take.metrics.scoring ?? SpeechReading.version)
+        do {
+            let rows: [SubmitRow] = try await SupabaseProvider.shared
+                .rpc("submit_speech_reading_take", params: params)
+                .execute()
+                .value
+            await apply(rows, take: take, challengeId: challengeId, overall: r.total)
+        } catch {
+            entries[take.id] = .failed
+            Analytics.capture("speech_challenge_failed", ["error": String(String(describing: error).prefix(160))])
+        }
+    }
+
+    private func apply(_ rows: [SubmitRow], take: SpeechTake, challengeId: UUID, overall: Int) async {
             guard let row = rows.first else { entries[take.id] = .failed; return }
             entries[take.id] = .entered(rank: row.rank, previousRank: row.previous_rank,
                                         entrants: row.entrants, best: row.best, improved: row.improved)
@@ -347,10 +509,6 @@ final class SpeechChallenges: ObservableObject {
                 "overall": overall, "rank": row.rank, "entrants": row.entrants,
                 "improved": row.improved,
             ])
-        } catch {
-            entries[take.id] = .failed
-            Analytics.capture("speech_challenge_failed", ["error": String(String(describing: error).prefix(160))])
-        }
     }
 
     // MARK: - Takes made before the board existed
@@ -369,8 +527,11 @@ final class SpeechChallenges: ObservableObject {
     func importLocalBests() async {
         guard Self.displayName != nil else { return }
         for script in scripts {
+            // Season 1 takes never go on a Season 2 board.
             guard let challengeId = script.challengeId, !importing.contains(challengeId),
-                  !isPast(challengeId) else { continue }
+                  !isPast(challengeId), (season(of: challengeId) ?? 1) < 2,
+                  !(UserDefaults.standard.stringArray(forKey: Self.removedKey) ?? []).contains(challengeId.uuidString)
+            else { continue }
             let onBoard = standings[challengeId]?.myBest ?? -1
             let candidates = SpeechStore.shared.takes(for: script.id)
                 .filter { $0.videoFilename != nil && $0.metrics.overall > onBoard
@@ -504,8 +665,10 @@ final class SpeechChallenges: ObservableObject {
 
     func seedPreview(language: String, scripts: [SpeechScript], standings: [UUID: Standing],
                      boards: [UUID: [BoardRow]], entries: [UUID: Entry] = [:],
-                     overall: [BoardRow]? = nil) {
+                     overall: [BoardRow]? = nil, seasons: [SeasonStatus] = []) {
         loadedLanguage = language
+        self.seasons = seasons
+        overallSeason = seasons.isEmpty ? nil : (seasons.filter(\.is_open).map(\.season).max())
         previewOverall = overall
         self.overall = overall
         self.scripts = scripts

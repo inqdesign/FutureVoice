@@ -30,4 +30,21 @@ final class SpeechResultSheetUITests: XCTestCase {
         let options = app.staticTexts.matching(NSPredicate(format: "label IN {'카메라 영상 저장','Save camera video'}")).firstMatch
         XCTAssertTrue(options.waitForExistence(timeout: 6), "Save did not open its sheet over the system sheet")
     }
+
+    /// The learner's own way off a board, behind a confirmation.
+    @MainActor
+    func testRemoveFromBoardAsksFirst() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-capture", "speech-season2-past"]
+        app.launch()
+        let remove = app.buttons.matching(NSPredicate(format: "label IN {'이 순위에서 내리기','Remove me from this board'}")).firstMatch
+        for _ in 0..<4 where !(remove.exists && remove.isHittable) {
+            app.swipeUp(velocity: .slow)
+            sleep(1)
+        }
+        XCTAssertTrue(remove.waitForExistence(timeout: 5), "no way off the board")
+        remove.tap()
+        let title = app.staticTexts.matching(NSPredicate(format: "label IN {'이 순위에서 내릴까요?','Remove your score from this board?'}")).firstMatch
+        XCTAssertTrue(title.waitForExistence(timeout: 5), "it did not ask first")
+    }
 }

@@ -217,6 +217,7 @@ struct SpeechChallengeView: View {
     @State private var showingScript = false
     @State private var showingTakes = false
     @State private var confirmRetire = false
+    @State private var confirmWithdraw = false
 
     private var standing: SpeechChallenges.Standing? { challenges.standings[script.id] }
     /// Retired: the board is frozen and nobody can enter.
@@ -247,9 +248,12 @@ struct SpeechChallengeView: View {
                 Text("Leaderboard")
             } footer: {
                 if isPast {
-                    Text("This challenge has ended. These are the final standings.")
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("This challenge has ended. These are the final standings.")
+                        Text("You can keep practicing. Your place stays as it is.")
+                    }
                 } else {
-                    Text("Camera-on takes that score \(SpeechChallenges.boardBar) or more go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone.")
+                    Text("Camera-on takes that score \(SpeechChallenges.boardBar(season: standing?.season)) or more go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone.")
                 }
             }
 
@@ -277,6 +281,9 @@ struct SpeechChallengeView: View {
                             }
                         }
                         .tint(.primary)
+                    }
+                    Button("Remove me from this board", role: .destructive) {
+                        confirmWithdraw = true
                     }
                 }
             }
@@ -333,6 +340,21 @@ struct SpeechChallengeView: View {
             SpeechPrompterView(script: script, native: appState.nativeLanguage,
                                level: appState.proficiency)
                 .environmentObject(appState)
+        }
+        .confirmationDialog("Remove your score from this board?",
+                            isPresented: $confirmWithdraw, titleVisibility: .visible) {
+            Button("Remove me from this board", role: .destructive) {
+                Task {
+                    try? await challenges.withdraw(script.id)
+                    await reload()
+                }
+            }
+        } message: {
+            if isPast {
+                Text("Your score and place come off the board for good. Your takes stay on your phone.")
+            } else {
+                Text("Your score and place come off the board. Your next camera take goes back on it.")
+            }
         }
         .confirmationDialog("Retire this challenge? It leaves everyone's Speech tab.",
                             isPresented: $confirmRetire, titleVisibility: .visible) {
@@ -417,19 +439,19 @@ struct SpeechChallengeView: View {
                         .padding(.vertical, 6)
                 }
                 .buttonStyle(.bordered)
-                if !isPast {
-                    Button {
-                        start()
-                    } label: {
-                        Text(standing?.myBest == nil ? LocalizedStringKey("speech.challenge.take") : LocalizedStringKey("speech.challenge.again"))
-                            .font(.headline)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 6)
-                    }
-                    .accentProminent()
+                Button {
+                    start()
+                } label: {
+                    Text(isPast ? LocalizedStringKey("speech.challenge.practice")
+                                : standing?.myBest == nil ? LocalizedStringKey("speech.challenge.take")
+                                                          : LocalizedStringKey("speech.challenge.again"))
+                        .font(.headline)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
                 }
+                .accentProminent()
             }
         }
         .padding(16)
@@ -440,7 +462,8 @@ struct SpeechChallengeView: View {
 
     /// Nothing goes on a public board until the learner has seen the name.
     private func start() {
-        if SpeechChallenges.displayName == nil {
+        // Practice on an ended challenge puts no name anywhere.
+        if !isPast, SpeechChallenges.displayName == nil {
             startAfterNaming = true
             naming = true
         } else {
@@ -588,13 +611,30 @@ struct SpeechChallengeListView: View {
     var body: some View {
         List {
             if !challenges.live.isEmpty {
-                Section("Live") {
+                Section {
                     ForEach(challenges.live) { row($0) }
+                } header: {
+                    if let season = challenges.openSeason, season >= 2 {
+                        Text("Season \(season) · Live")
+                    } else {
+                        Text("Live")
+                    }
                 }
             }
-            if !challenges.past.isEmpty {
+            ForEach(challenges.pastSeasons, id: \.self) { season in
                 Section {
-                    ForEach(challenges.past) { row($0) }
+                    ForEach(challenges.past.filter { challenges.season(of: $0.id) == season }) { pastRow($0) }
+                } header: {
+                    Text("Season \(season) · Ended")
+                } footer: {
+                    Text("Ended challenges keep their final standings.")
+                }
+            }
+            // Retired before seasons, or from a server without them.
+            let unseasoned = challenges.past.filter { challenges.season(of: $0.id) == nil }
+            if !unseasoned.isEmpty {
+                Section {
+                    ForEach(unseasoned) { row($0) }
                 } header: {
                     Text("Past challenges")
                 } footer: {
@@ -613,6 +653,33 @@ struct SpeechChallengeListView: View {
             SpeechChallengeView(script: script).environmentObject(appState)
         } label: {
             SpeechChallengeRow(script: script, standing: challenges.standings[script.id])
+        }
+    }
+
+    /// An ended challenge is a record: the title and where the reader finished.
+    private func pastRow(_ script: SpeechScript) -> some View {
+        let standing = challenges.standings[script.id]
+        return NavigationLink {
+            SpeechChallengeView(script: script).environmentObject(appState)
+        } label: {
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(script.title).lineLimit(1)
+                    Text("\(standing?.entrants ?? 0) joined")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if let rank = standing?.myRank, let best = standing?.myBest {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(verbatim: "#\(rank)")
+                            .font(.headline.monospacedDigit())
+                        Text(verbatim: "\(best)")
+                            .font(.subheadline.monospacedDigit().weight(.medium))
+                            .foregroundStyle(SpeechScoreColor.color(best))
+                    }
+                }
+            }
         }
     }
 }
@@ -719,13 +786,16 @@ struct SpeechChallengeEntrySection: View {
                 Label("The camera was off, so this take isn't on the board.", systemImage: "video.slash")
                     .foregroundStyle(.secondary)
             case .belowBar:
-                Label("Takes that score \(SpeechChallenges.boardBar) or more go on the board.", systemImage: "trophy")
+                Label("Takes that score \(SpeechChallenges.boardBar(season: standing?.season)) or more go on the board.", systemImage: "trophy")
                     .foregroundStyle(.secondary)
             case .failed:
                 Label("This take couldn't reach the board.", systemImage: "exclamationmark.triangle")
                     .foregroundStyle(.secondary)
             case .newScoring:
                 Label("Scored the Season 2 way, so it stays off this board.", systemImage: "flask")
+                    .foregroundStyle(.secondary)
+            case .practice:
+                Label("A practice take. It stays off the board.", systemImage: "mic")
                     .foregroundStyle(.secondary)
             case nil:
                 if let rank = standing?.myRank, let best = standing?.myBest {
@@ -1024,11 +1094,27 @@ struct SpeechOverallBoardView: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var challenges = SpeechChallenges.shared
     @State private var rows: [SpeechChallenges.BoardRow]?
+    /// nil until picked: the season the banner showed.
+    @State private var pickedSeason: Int?
+
+    private var season: Int? { pickedSeason ?? challenges.overallSeason }
+    private var isFinal: Bool { season.map(challenges.seasonEnded) ?? false }
 
     var body: some View {
         List {
+            if challenges.boardSeasons.count > 1 {
+                Section {
+                    Picker("Season", selection: Binding(get: { season ?? 0 }, set: { pickedSeason = $0 })) {
+                        ForEach(challenges.boardSeasons, id: \.self) { Text("Season \($0)").tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+                }
+            }
             Section {
-                if let rows = rows ?? challenges.overall {
+                if let rows = rows ?? (pickedSeason == nil ? challenges.overall : nil) {
                     ForEach(items(rows), id: \.id) { item in
                         switch item {
                         case .row(let row):
@@ -1040,19 +1126,26 @@ struct SpeechOverallBoardView: View {
                 } else {
                     HStack { Spacer(); ProgressView(); Spacer() }
                 }
+            } header: {
+                if isFinal { Text("Final standings") }
             } footer: {
-                Text("Your best score on each challenge, added up. Every challenge you take moves you up.")
+                if isFinal {
+                    Text("This season has ended. These are the final standings.")
+                } else {
+                    Text("Your best score on each challenge, added up. Every challenge you take moves you up.")
+                }
             }
         }
         .navigationTitle("Overall ranking")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(MacLayout.tabBarOnPhoneOnly, for: .tabBar)
         .refreshable { await load() }
-        .task { await load() }
+        .task(id: season) { await load() }
     }
 
     private func load() async {
-        if let fresh = await challenges.overallBoard(language: appState.targetLanguage, limit: 50) {
+        if pickedSeason != nil { rows = nil }
+        if let fresh = await challenges.overallBoard(language: appState.targetLanguage, season: season, limit: 50) {
             rows = fresh
         }
     }

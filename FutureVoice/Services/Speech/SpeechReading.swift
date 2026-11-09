@@ -65,6 +65,20 @@ enum SpeechReading {
 
     static func applies(to language: String) -> Bool { language.hasPrefix("en") }
 
+    private static func seasonKey(_ language: String) -> String { "speech.readingSeason.\(language.prefix(2))" }
+
+    /// Whether a take in this language is scored this way: the language's
+    /// Season 2 is open (the server says, `speech_season_status`), or the
+    /// developer switch is on.
+    static func isActive(for language: String) -> Bool {
+        applies(to: language)
+            && (SpeechScoreV4.isEnabled || UserDefaults.standard.bool(forKey: seasonKey(language)))
+    }
+
+    static func setSeasonOpen(_ open: Bool, language: String) {
+        UserDefaults.standard.set(open, forKey: seasonKey(language))
+    }
+
     static func curve(_ x: Double, _ pts: [(Double, Double)]) -> Double {
         guard let first = pts.first, let last = pts.last else { return 0 }
         if x <= first.0 { return first.1 }

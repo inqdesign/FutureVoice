@@ -965,6 +965,40 @@ enum DebugCapture {
                                                 scripts: SpeechChallenges.shared.scripts + extra,
                                                 standings: standings, boards: [first.id: []])
             return AnyView(SpeechTab().environmentObject(appState))
+        case "speech-season2", "speech-season2-all", "speech-season2-past", "speech-season2-overall":
+            // English after Season 2 opens: Season 1 ended, its boards frozen.
+            _ = Self.view(for: "speech-challenges-many", appState: appState)
+            let first = SpeechChallenges.shared.scripts[0]
+            var standings = SpeechChallenges.shared.standings
+            let scripts = SpeechChallenges.shared.scripts
+            for (i, script) in scripts.enumerated() {
+                let seasonTwo = i >= 2 && i < 6
+                standings[script.id]?.season = seasonTwo ? 2 : 1
+                standings[script.id]?.retiredAt = seasonTwo ? nil : Date().addingTimeInterval(-3600)
+            }
+            let overallRows = SpeechChallenges.shared.overall
+            SpeechChallenges.shared.seedPreview(
+                language: appState.targetLanguage, scripts: scripts, standings: standings,
+                boards: [first.id: [.init(rank: 1, display_name: "Minji", score: 96, is_me: false),
+                                    .init(rank: 2, display_name: "Haruto", score: 94, is_me: false),
+                                    .init(rank: 14, display_name: "Eunggyu", score: 81, is_me: true)]],
+                overall: overallRows ?? [.init(rank: 1, display_name: "Minji", score: 592, is_me: false, challenges: 6),
+                                         .init(rank: 2, display_name: "Haruto", score: 589, is_me: false, challenges: 6),
+                                         .init(rank: 3, display_name: "Lena", score: 556, is_me: false, challenges: 6),
+                                         .init(rank: 4, display_name: "Joon", score: 486, is_me: false, challenges: 5),
+                                         .init(rank: 5, display_name: "Sofía", score: 368, is_me: false, challenges: 4)],
+                seasons: [.init(season: 1, min_scoring: 2, is_open: false, ended: true),
+                          .init(season: 2, min_scoring: 6, is_open: true, ended: false)])
+            switch name {
+            case "speech-season2-all":
+                return AnyView(NavigationStack { SpeechChallengeListView() }.environmentObject(appState))
+            case "speech-season2-past":
+                return AnyView(NavigationStack { SpeechChallengeView(script: first) }.environmentObject(appState))
+            case "speech-season2-overall":
+                return AnyView(NavigationStack { SpeechOverallBoardView() }.environmentObject(appState))
+            default:
+                return AnyView(NavigationStack { SpeechTab() }.environmentObject(appState))
+            }
         case "speech-overall":
             once("speech") { seedSpeech(appState) }
             _ = seedSpeechChallenges(appState)
