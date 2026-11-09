@@ -1066,6 +1066,12 @@ fun RootScreen() {
         // made — hold rather than flash the intro before the account act.
         }}
         state.signedIn && state.isAnonymous && state.restoringVoice && !state.holdVoiceOnboarding -> {{ Loading()
+        // No answer yet on the session, so no answer on the voice. The launch
+        // screen's own veto above lets anyone who onboarded here (the flag
+        // stays set) past it, and they saw the clone intro on every launch
+        // until the session landed.
+        }}
+        state.resolvingSession && !state.holdVoiceOnboarding -> {{ Loading()
         // The voice. `holdVoiceOnboarding` keeps this screen up through the
         // meet act and the sign-up after the clone id has already landed.
         // The anonymous clause is the crash/kill guard: a session is not an
