@@ -118,8 +118,8 @@ enum SpeechCoach {
             let focus = r.focus.map { "\($0.rawValue)" } ?? "none: every part is at a narrator's level"
             rules = """
             - The take was compared word by word with a native reading of the
-              same script. Five parts; 100 only when every part is at a
-              skilled narrator's level. Native speakers reading average
+              same script. Five parts, the score is their average; 100 only
+              when every part is 100. Native speakers reading average
               \(SpeechReading.nativeAverage). The headline and the first tip are
               about THE PART TO WORK ON NEXT, using its details (the words held
               too long, where the reader stopped, the numbers). Then the next

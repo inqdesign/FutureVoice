@@ -15,14 +15,13 @@ import Foundation
 /// did NOT separate humans (narrators matched the reference no better than
 /// learners), so they are not in the score.
 ///
-/// Each measure is placed by where the groups actually sit — learner median
-/// 50, ordinary-native median 90, narrator median 100 — and the five parts
-/// count equally: an equal split agreed with the experts (0.85) better than
-/// weights fitted to them. 100 needs every part at a narrator's level. On
-/// the validation set: narrators median 97 (average 96), ordinary natives
-/// median 96 (average 94), learners median 73 (average 63). Those natives
-/// are volunteer audiobook readers, and on clips of 24-38 words they read as
-/// well as the narrators, so the two are not told apart by this score.
+/// Every part is the measurement itself, on a 0-100 scale, and the total is
+/// their plain average (2026-11-09, founder: "96 is 96, and 100 is 100 in
+/// everything"). Version 6 stretched each measure through a curve so the
+/// groups sat at 50/90/100: Azure's 86 read 44, and a rhythm could read 0. The
+/// curves added nothing (agreement with the experts 0.850 with them, 0.851
+/// without) and multiplied every small wobble, so version 7 has none. On the
+/// validation set: narrators average 97, ordinary natives 96, learners 81.
 ///
 /// Version 6 (2026-11-08): a stop after punctuation is not a fault. Version 5
 /// counted every pause the reference lacks, and the first real take showed
@@ -37,31 +36,16 @@ import Foundation
 /// learners' clips join separate recordings (gaps of 1.3-1.5 s every time),
 /// and natives and narrators hold only 21 sentence ends between them.
 enum SpeechReading {
-    static let version = 6
-
-    /// The calibration's group medians (learner, native, narrator).
-    static let speedCurve: [(Double, Double)] = [(0.1131, 0), (0.6517, 50), (0.921, 90), (0.9702, 100)]
-    static let rhythmCurve: [(Double, Double)] = [(0.6001, 0), (0.8227, 50), (0.934, 90), (0.9352, 100)]
-    /// Mid-sentence stops per 100 words. None at every group's median, so
-    /// the 75th percentile places it, the first where any group has some:
-    /// natives' 1.6 is 90, learners' 17.4 is 50, learners' 90th 36.8 is 20.
-    static let pausesCurve: [(Double, Double)] = [(0, 100), (1.5957, 90), (17.3913, 50), (36.8421, 20), (40, 0)]
-    /// Slips are none at every group's median, so their curve is set by the
-    /// tails: narrators' 95th percentile 2.5 per 100 words, learners' 75th 8,
-    /// 90th 21.
-    static let slipsCurve: [(Double, Double)] = [(0, 100), (2.5, 90), (8, 50), (21, 20), (40, 0)]
-    /// Pronunciation is judged only where it is clearly off: Azure can't rank
-    /// the top, so from the narrators' 10th percentile (95.5) up it is full.
-    static let soundCurve: [(Double, Double)] = [(71, 20), (90, 50), (95.5, 100)]
+    static let version = 7
 
     static let pauseSeconds = 0.15
     /// A take's median pitch above this is read against the female reference.
     static let femaleAboveHz = 165.0
 
     /// The averages the result page quotes, from the validation set.
-    static let nativeAverage = 94
-    static let narratorAverage = 96
-    static let learnerAverage = 63
+    static let nativeAverage = 96
+    static let narratorAverage = 97
+    static let learnerAverage = 81
 
     static func applies(to language: String) -> Bool { language.hasPrefix("en") }
 
@@ -77,16 +61,6 @@ enum SpeechReading {
 
     static func setSeasonOpen(_ open: Bool, language: String) {
         UserDefaults.standard.set(open, forKey: seasonKey(language))
-    }
-
-    static func curve(_ x: Double, _ pts: [(Double, Double)]) -> Double {
-        guard let first = pts.first, let last = pts.last else { return 0 }
-        if x <= first.0 { return first.1 }
-        if x >= last.0 { return last.1 }
-        for (a, b) in zip(pts, pts.dropFirst()) where x <= b.0 {
-            return a.1 + (b.1 - a.1) * (x - a.0) / (b.0 - a.0)
-        }
-        return last.1
     }
 
     // MARK: - Lining words up with the script
@@ -180,11 +154,16 @@ enum SpeechReading {
     static func parts(speed: Double, rhythm: Double, pausesPer100: Double,
                       slipsPer100: Double, soundAccuracy: Double?) -> SpeechReadingScore.Parts {
         SpeechReadingScore.Parts(
-            speed: Int(curve(speed, speedCurve).rounded()),
-            rhythm: Int(curve(rhythm, rhythmCurve).rounded()),
-            pauses: Int(curve(pausesPer100, pausesCurve).rounded()),
-            accuracy: Int(curve(slipsPer100, slipsCurve).rounded()),
-            pronunciation: soundAccuracy.map { Int(curve($0, soundCurve).rounded()) } ?? 100)
+            // The share of the native reading's pace, too slow or too fast.
+            speed: speed > 0 ? percent(100 * min(speed, 1 / speed)) : 0,
+            rhythm: percent(100 * rhythm),
+            pauses: percent(100 - pausesPer100),
+            accuracy: percent(100 - slipsPer100),
+            pronunciation: soundAccuracy.map(percent) ?? 100)
+    }
+
+    private static func percent(_ value: Double) -> Int {
+        Int(min(100, max(0, value)).rounded())
     }
 
     static func pearson(_ x: [Double], _ y: [Double]) -> Double? {
@@ -248,7 +227,7 @@ struct SpeechReadingScore: Codable, Hashable {
     /// A narrator's level, part by part.
     static let bar = 95
 
-    var isPerfect: Bool { parts.all.allSatisfy { $0.1 >= Self.bar } && coverage >= 0.999 }
+    var isPerfect: Bool { parts.all.allSatisfy { $0.1 == 100 } && coverage >= 0.999 }
 
     var total: Int {
         if isPerfect { return 100 }

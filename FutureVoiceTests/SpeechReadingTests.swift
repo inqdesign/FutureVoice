@@ -14,26 +14,42 @@ final class SpeechReadingTests: XCTestCase {
                                   extraPauses: [], held: [], missed: [], weakest: []).total
     }
 
-    /// The validation of 2026-11-08, held: the app scores every reading as
-    /// the prototype did (within a point of rounding), narrators and native
-    /// readers sit at the top, learners in the middle, no learner reaches
-    /// 100, and the learners come out in the experts' order.
+    /// The validation readings under the plain scale: narrators and natives
+    /// on top, learners below them, and the learners still in the experts'
+    /// order.
     func testValidationShape() throws {
         let rows = try JSONDecoder().decode([Row].self, from: Data(speechReadingValidation20261108.utf8))
         XCTAssertEqual(rows.count, 138)
-        for r in rows {
-            XCTAssertLessThanOrEqual(abs(total(r) - r.t), 1, "\(r.g) \(r.sp) \(r.rh) \(r.ep)")
-        }
         func totals(_ g: String) -> [Int] { rows.filter { $0.g == g }.map(total).sorted() }
         func median(_ g: String) -> Int { let t = totals(g); return t[t.count / 2] }
         XCTAssertTrue((95...99).contains(median("narrator")), "\(median("narrator"))")
-        XCTAssertTrue((93...97).contains(median("native")), "\(median("native"))")
-        XCTAssertTrue((60...75).contains(median("learner")), "\(median("learner"))")
+        XCTAssertTrue((94...98).contains(median("native")), "\(median("native"))")
+        XCTAssertTrue((82...92).contains(median("learner")), "\(median("learner"))")
         XCTAssertFalse(totals("learner").contains(100))
-        XCTAssertTrue(totals("founder").allSatisfy { (60...77).contains($0) }, "\(totals("founder"))")
 
         let learners = rows.filter { $0.g == "learner" }
         XCTAssertGreaterThanOrEqual(spearman(learners.map { Double(total($0)) }, learners.compactMap(\.h)), 0.8)
+    }
+
+    /// Each part is the measurement; the total is their average.
+    func testPartsAreTheMeasurements() {
+        let p = SpeechReading.parts(speed: 0.82, rhythm: 0.78, pausesPer100: 0.6, slipsPer100: 6.9, soundAccuracy: 86)
+        XCTAssertEqual(p.speed, 82); XCTAssertEqual(p.rhythm, 78); XCTAssertEqual(p.pauses, 99)
+        XCTAssertEqual(p.accuracy, 93); XCTAssertEqual(p.pronunciation, 86)
+        // Faster than the native reading counts the same as slower.
+        XCTAssertEqual(SpeechReading.parts(speed: 1.25, rhythm: 1, pausesPer100: 0, slipsPer100: 0, soundAccuracy: 100).speed, 80)
+    }
+
+    func testTotalIsThePlainAverage() {
+        func total(_ a: Int, _ b: Int, _ c: Int, _ d: Int, _ e: Int) -> Int {
+            SpeechReadingScore(version: 7, gender: "male",
+                               parts: .init(speed: a, rhythm: b, pauses: c, accuracy: d, pronunciation: e),
+                               coverage: 1, speed: 1, rhythm: 1, pausesPer100: 0, slipsPer100: 0, soundAccuracy: e,
+                               slips: 0, extraPauses: [], held: [], missed: [], weakest: []).total
+        }
+        XCTAssertEqual(total(96, 96, 96, 96, 96), 96)
+        XCTAssertEqual(total(100, 100, 100, 100, 100), 100)
+        XCTAssertEqual(total(100, 100, 100, 100, 99), 99)   // 99.8, and not 100 in everything
     }
 
     /// A take compared with a reference: the pause the native reading
