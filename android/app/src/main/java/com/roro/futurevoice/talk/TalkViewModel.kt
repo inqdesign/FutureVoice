@@ -2547,7 +2547,13 @@ class TalkViewModel(context: Context) : ViewModel() {
         viewModelScope.launch {
             var missReason = "request_failed"
             val planned = TutorPlanner.plan(plannerRequest, askedWith, cfg.targetLanguage, cfg.nativeLanguage,
-                cfg.level, cfg.persona, miss = { missReason = it })
+                cfg.level, cfg.persona,
+                weakPoints = runCatching {
+                    LearnerWeakPoints.lines(
+                        com.roro.futurevoice.data.ProfileStore.shared(appContext).load(cfg.targetLanguage, cfg.level.code),
+                        com.roro.futurevoice.data.SessionStore.shared(appContext).load(cfg.targetLanguage))
+                }.getOrDefault(emptyList()),
+                miss = { missReason = it })
             if (tutorCallOver) { _state.update { it.copy(tutorPlanning = false) }; return@launch }
             _state.update { it.copy(tutorPlanning = false) }
             if (planned == null) {

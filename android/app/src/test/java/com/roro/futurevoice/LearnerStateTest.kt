@@ -241,4 +241,45 @@ class LearnerStateTest {
         assertTrue(first != LevelTagger.requestKey("id", "f"))
         assertTrue(first.startsWith("level-tag:id:f:"))
     }
+
+    private fun event(key: String, source: String? = "talk", right: Int = 1) =
+        com.roro.futurevoice.data.LearnerEvent(key, "en", 0L, source, "item", key,
+            mapOf("right" to kotlinx.serialization.json.JsonPrimitive(right)))
+
+    @Test fun onlyChangedFactsAreSentAgain() {
+        val same = event("a")
+        val sent = mapOf(
+            "a" to com.roro.futurevoice.data.LearnerEventDiff.Sent(same.fingerprint, "talk"),
+            "b" to com.roro.futurevoice.data.LearnerEventDiff.Sent(event("b").fingerprint, "talk"),
+        )
+        val plan = com.roro.futurevoice.data.LearnerEventDiff.plan(listOf(same, event("b", right = 2), event("new")), sent)
+        assertTrue(plan.forget.isEmpty())
+        assertEquals(listOf("b", "new"), plan.put.map { it.key })
+    }
+
+    @Test fun aVanishedFactClearsItsSourceAndResendsTheRest() {
+        val kept = event("kept")
+        val other = event("other", source = "talk2")
+        val sent = mapOf(
+            "kept" to com.roro.futurevoice.data.LearnerEventDiff.Sent(kept.fingerprint, "talk"),
+            "gone" to com.roro.futurevoice.data.LearnerEventDiff.Sent("x", "talk"),
+            "other" to com.roro.futurevoice.data.LearnerEventDiff.Sent(other.fingerprint, "talk2"),
+        )
+        val plan = com.roro.futurevoice.data.LearnerEventDiff.plan(listOf(kept, other), sent)
+        assertEquals(listOf("talk"), plan.forget)
+        assertEquals(listOf("kept"), plan.put.map { it.key })
+        assertEquals(setOf("other"), com.roro.futurevoice.data.LearnerEventDiff.afterForgetting(plan.forget, sent).keys)
+    }
+
+    @Test fun noWeakPointsLeaveThePromptsAsTheyWere() {
+        assertEquals("", com.roro.futurevoice.talk.LearnerWeakPoints.plannerBlock(emptyList()))
+        assertEquals("", com.roro.futurevoice.talk.LearnerWeakPoints.goalPrepBlock(emptyList()))
+    }
+
+    @Test fun theCheckerOnlyAppliesARealCorrection() {
+        val lines = listOf("I want a opportunity.", "Fine.")
+        val check = com.roro.futurevoice.talk.MaterialCheck
+        assertEquals(listOf("I want an opportunity.", "Fine."), check.apply(listOf(1 to "I want an opportunity."), lines))
+        assertEquals(lines, check.apply(listOf(9 to "x", 2 to "  ", 2 to "much longer ".repeat(20)), lines))
+    }
 }

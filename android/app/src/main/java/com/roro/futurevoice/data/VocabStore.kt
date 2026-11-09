@@ -208,6 +208,14 @@ class VocabStore private constructor(context: Context) {
     private fun file(language: String, name: String): File =
         File(LanguageScope.directory(appContext, language), name)
 
+    /** The word and expression records, for the Learner Record. */
+    suspend fun wordRecords(language: String): Map<String, Record> = mutex.withLock {
+        readRecords(file(language, "vocab_pool.json"))
+    }
+    suspend fun expressionRecords(language: String): Map<String, Record> = mutex.withLock {
+        readRecords(file(language, "vocab_expressions.json"))
+    }
+
     // ── Reads the summarizer needs ──
 
     suspend fun studying(language: String): List<String> = mutex.withLock {

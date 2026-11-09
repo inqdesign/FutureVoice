@@ -46,6 +46,7 @@ object StudyWidgetRefresher {
         // Every word, expression and card write lands here (iOS has its
         // store funnels call `SyncEngine.noteChanged`).
         com.roro.futurevoice.sync.SyncEngine.noteChanged()
+        com.roro.futurevoice.data.LearnerRecordUploader.schedule(context)
         val app = context.applicationContext
         observe(app)
         pending?.cancel()

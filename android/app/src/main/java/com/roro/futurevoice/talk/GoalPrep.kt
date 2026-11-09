@@ -112,9 +112,14 @@ object GoalPrep {
                      persona: UserPersona?, now: Long = System.currentTimeMillis()): GoalPrepDay {
         today(c, goal, now)?.let { return it }
         val earlier = days(c, goal)
+        val weak = runCatching {
+            LearnerWeakPoints.goalPrepBlock(LearnerWeakPoints.lines(
+                com.roro.futurevoice.data.ProfileStore.shared(c).load(goal.language, level.code),
+                com.roro.futurevoice.data.SessionStore.shared(c).load(goal.language), now))
+        }.getOrDefault("")
         val r = withTimeout(60_000) {
             GeminiClient(AuthRepository()).sendJson(
-                system = system(goal, nativeLanguage, level, persona, earlier, now),
+                system = system(goal, nativeLanguage, level, persona, earlier, now, weak),
                 messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER, "Write today's preparation.")),
                 serializer = JsonObject.serializer(),
                 model = GeminiClient.Model.FLASH_36, maxTokens = 4096, purpose = "goal-prep",
@@ -132,8 +137,11 @@ object GoalPrep {
             )
         }
         val focus = r["focus"]?.jsonPrimitive?.contentOrNull ?: throw IllegalStateException("no focus")
+        // The model answer is memorized, so it gets a second reader.
+        val written = piece("speech")
+        val speech = written.copy(body = MaterialCheck.correctedText(written.body, goal.language, "goal-prep"))
         val prep = GoalPrepDay(goalId = goal.id, day = StudyPlan.dayKey(now), language = goal.language,
-            reading = piece("reading"), speech = piece("speech"), focus = focus.trim())
+            reading = piece("reading"), speech = speech, focus = focus.trim())
         withContext(Dispatchers.IO) { save(c, prep) }
         Analytics.capture("goal_prep_made", mapOf("kind" to goal.kind.raw, "day" to earlier.size + 1,
             "days_left" to (goal.daysLeft(now) ?: -1)))
@@ -217,7 +225,7 @@ object GoalPrep {
     /** iOS `GoalPrep.system`: the learner's facts and the days already done
      *  are built here (pinned by gen-goal-prep-prompts.py), the text is lifted. */
     private fun system(goal: UpcomingGoal, nativeLanguage: String, level: CefrLevel, persona: UserPersona?,
-                       earlier: List<GoalPrepDay>, now: Long): String {
+                       earlier: List<GoalPrepDay>, now: Long, weak: String = ""): String {
         val about = ArrayList<String>()
         if (persona != null) {
             if (persona.occupation.isNotEmpty()) about += "Work: ${persona.occupation}"
@@ -230,6 +238,7 @@ object GoalPrep {
         // experience they want to tell is theirs to use in the answer, and
         // the part they dread is where the days should go (iOS 333b3ee6).
         if (goal.notes.isNotEmpty()) about += "About this goal, in their words: ${goal.notes}"
+        if (weak.isNotEmpty()) about += weak
         val done = earlier.take(10).map {
             "- ${it.day}: ${it.focus} (reading \"${it.reading.title}\", answer \"${it.speech.title}\")"
         }

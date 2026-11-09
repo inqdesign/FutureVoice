@@ -186,10 +186,11 @@ object TutorPlanner {
      */
     suspend fun plan(request: String, askedWith: String? = null, targetLanguage: String,
                      nativeLanguage: String, level: CefrLevel, persona: UserPersona?,
+                     weakPoints: List<String> = emptyList(),
                      miss: ((String) -> Unit)? = null): TutorLesson? {
         val system = TutorPrompts.plannerSystem(
             LanguageCatalog.englishName(targetLanguage), LanguageCatalog.englishName(nativeLanguage),
-            level, about(persona))
+            level, about(persona)) + LearnerWeakPoints.plannerBlock(weakPoints)
         val content = content(request, askedWith)
         // One retry: now and then the reply is the challenge list alone
         // instead of the object, which decodes to nothing.
@@ -208,7 +209,11 @@ object TutorPlanner {
                 }.getOrNull()
             }
         }
-        return lesson(plan, targetLanguage, miss = miss)
+        val written = lesson(plan, targetLanguage, miss = miss) ?: return null
+        // The examples are repeated until they come out clean, so a mistake
+        // in one is a mistake learned.
+        val examples = MaterialCheck.corrected(written.challenges.map { it.example }, targetLanguage, "tutor")
+        return written.copy(challenges = written.challenges.zip(examples) { c, e -> c.copy(example = e) })
     }
 
     /** iOS `plan`'s checks on what came back. */
