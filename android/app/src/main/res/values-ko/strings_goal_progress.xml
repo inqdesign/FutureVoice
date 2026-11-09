@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="goal_question_in_practice">연습 중</string>
+    <string name="goal_question_can_say">이제 말할 수 있어요</string>
+    <string name="goal_questions_ready">%2$d개 중 %1$d개 완성</string>
+</resources>

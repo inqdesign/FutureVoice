@@ -116,7 +116,10 @@ object GoalPrep {
             LearnerWeakPoints.goalPrepBlock(LearnerWeakPoints.lines(
                 com.roro.futurevoice.data.ProfileStore.shared(c).load(goal.language, level.code),
                 com.roro.futurevoice.data.SessionStore.shared(c).load(goal.language), now))
-        }.getOrDefault("")
+        }.getOrDefault("").let { block ->
+            val tried = runCatching { lastAttempt(c, goal) }.getOrNull() ?: return@let block
+            block + "\n\nWHAT THEY SAID WHEN THEY LAST TRIED THIS (their own words, with mistakes; keep their facts and their story, fix the English)\nQ: ${tried.first}\nA: \"${tried.second}\"\nToday's answer is for this question."
+        }
         val r = withTimeout(60_000) {
             GeminiClient(AuthRepository()).sendJson(
                 system = system(goal, nativeLanguage, level, persona, earlier, now, weak),
@@ -166,6 +169,44 @@ object GoalPrep {
     )
 
     private val setsSerializer = ListSerializer(QuestionSet.serializer())
+    // ── Where each question stands (iOS `GoalPrep.state`) ──
+
+    /** Computed from the lessons on file, never stored. */
+    enum class QuestionState { UNTOUCHED, PRACTICING, READY }
+
+    /** A lesson's `topicId` when it practices one question of a goal. Same
+     *  string as iOS, since lessons sync. */
+    fun topicId(goal: UpcomingGoal, question: String): String {
+        val hash = MessageDigest.getInstance("SHA-256").digest(question.toByteArray()).take(4)
+            .joinToString("") { "%02x".format(it) }
+        return "goal:${goal.id.uppercase()}:$hash"
+    }
+
+    fun state(question: String, goal: UpcomingGoal, lessons: List<TutorLesson>): QuestionState {
+        val id = topicId(goal, question)
+        val mine = lessons.filter { it.topicId == id }
+        if (mine.any { it.check?.passedAt != null }) return QuestionState.READY
+        return if (mine.any { it.droppedAt == null }) QuestionState.PRACTICING else QuestionState.UNTOUCHED
+    }
+
+    private const val MIN_ATTEMPT_WORDS = 8
+
+    /** The question they tried last and haven't got yet, with what they said. */
+    private suspend fun lastAttempt(c: Context, goal: UpcomingGoal): Pair<String, String>? {
+        val questions = cachedQuestions(c, goal) ?: return null
+        val lessons = TutorLessonStore.all(c, goal.language).sortedByDescending { it.createdAt }
+        val sessions = com.roro.futurevoice.data.SessionStore.shared(c).load(goal.language)
+        for (lesson in lessons) {
+            val q = questions.firstOrNull { topicId(goal, it.text) == lesson.topicId } ?: continue
+            if (state(q.text, goal, lessons) != QuestionState.PRACTICING) continue
+            val turns = sessions.filter { it.id in lesson.sessionIds }.flatMap { it.turns }.filter { it.role == TurnRole.USER }
+            val said = turns.lastOrNull { it.tutorRole == TutorTurnRole.CHECK }?.transcript
+                ?: turns.maxByOrNull { it.transcript.length }?.transcript
+            if (said != null && com.roro.futurevoice.data.WordSplitter.count(said, goal.language) >= MIN_ATTEMPT_WORDS) return q.text to said
+        }
+        return null
+    }
+
     private fun questionsFile(c: Context) = File(c.applicationContext.filesDir, "goal_questions.json")
 
     private fun questionSets(c: Context): List<QuestionSet> = runCatching {

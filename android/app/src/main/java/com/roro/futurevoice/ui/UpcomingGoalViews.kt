@@ -18,6 +18,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Link
@@ -531,7 +532,8 @@ fun UpcomingGoalPage(initial: UpcomingGoal, state: AppState, onDismiss: () -> Un
         onDismiss()
         com.roro.futurevoice.talk.TutorBot.chatOpen = false
         com.roro.futurevoice.talk.TutorBot.goalCall = com.roro.futurevoice.talk.TutorBot.GoalCall(
-            topic = "“$question” — ${goal.title}", blurb = goal.drillBlurb)
+            topic = "“$question” — ${goal.title}", blurb = goal.drillBlurb,
+            lessonTopicId = com.roro.futurevoice.talk.GoalPrep.topicId(goal, question))
     }
 
     com.roro.futurevoice.ui.speech.SpeechSheet(onDismiss) {
@@ -559,7 +561,11 @@ fun UpcomingGoalPage(initial: UpcomingGoal, state: AppState, onDismiss: () -> Un
         }
         if (days.isEmpty() || tab == 0) {
             val loaded = questions
-            FormSection(null,
+            val lessons = remember(loaded) { com.roro.futurevoice.talk.TutorLessonStore.all(context, goal.language) }
+            val states = loaded.orEmpty().map { com.roro.futurevoice.talk.GoalPrep.state(it.text, goal, lessons) }
+            val ready = com.roro.futurevoice.talk.GoalPrep.QuestionState.READY
+            val practicing = com.roro.futurevoice.talk.GoalPrep.QuestionState.PRACTICING
+            FormSection(if (states.isEmpty()) null else stringResource(R.string.goal_questions_ready, states.count { it == ready }, states.size),
                 footer = if (loaded != null) stringResource(R.string.tap_one_to_practice_it_with_your_tutor_until_it_comes_out_cl_2ab412) else null) {
                 when {
                     loaded != null -> loaded.forEachIndexed { i, q ->
@@ -573,9 +579,18 @@ fun UpcomingGoalPage(initial: UpcomingGoal, state: AppState, onDismiss: () -> Un
                                     Text(q.looksFor, style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
+                                if (states[i] == practicing) {
+                                    Text(stringResource(R.string.goal_question_in_practice), style = MaterialTheme.typography.bodySmall,
+                                        color = androidx.compose.ui.graphics.Color(0xFFFF9500))
+                                }
                             }
-                            Icon(Icons.Filled.School, contentDescription = null, tint = goal.kind.color(),
-                                modifier = Modifier.size(20.dp))
+                            if (states[i] == ready) {
+                                Icon(Icons.Filled.CheckCircle, contentDescription = stringResource(R.string.goal_question_can_say),
+                                    tint = androidx.compose.ui.graphics.Color(0xFF34C759), modifier = Modifier.size(20.dp))
+                            } else {
+                                Icon(Icons.Filled.School, contentDescription = null, tint = goal.kind.color(),
+                                    modifier = Modifier.size(20.dp))
+                            }
                         }
                     }
                     failed -> Text(stringResource(R.string.try_again), style = MaterialTheme.typography.bodyLarge,

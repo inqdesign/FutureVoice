@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="goal_question_in_practice">Practicando</string>
+    <string name="goal_question_can_say">Ya puedes decirlo</string>
+    <string name="goal_questions_ready">%1$d de %2$d listas</string>
+</resources>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="goal_question_in_practice">練習中</string>
+    <string name="goal_question_can_say">已經會說了</string>
+    <string name="goal_questions_ready">%2$d 題中已完成 %1$d 題</string>
+</resources>

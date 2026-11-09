@@ -94,6 +94,8 @@ data class TalkConfig(
     /** A tutor-mode lesson on the topic whatever the Call setting says —
      *  the tutor bot's goal drill (iOS `ConversationView(tutor:)`, 70bb10f4). */
     val tutor: Boolean = false,
+    /** Ties the lesson to one question of a goal ([GoalPrep.topicId]). */
+    val lessonTopicId: String? = null,
 ) {
     /** iOS `learnerPicksTopic && resumeSession == nil`. */
     val picksTopic: Boolean get() = learnerPicksTopic && resume == null
@@ -2420,7 +2422,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             // lesson…" on the strip meanwhile). Planned after the call is up,
             // so the ready note can't go out before there is a socket.
             connectRealtime(cfg, null, emptyList())
-            startTutorLesson(cfg.composedTopic, picked = false, fromTopic = true)
+            startTutorLesson(cfg.composedTopic, picked = false, fromTopic = true, topicId = cfg.lessonTopicId)
             return true
         }
         val saved = withContext(Dispatchers.IO) { TutorLessonStore.resumable(appContext, cfg.targetLanguage) }
@@ -2570,7 +2572,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             }
             val lesson = planned.copy(sessionIds = listOf(sessionId), topicId = topic)
             TutorLessonStore.save(appContext, lesson)
-            if (topic != null) {
+            if (topic != null && TutorCurriculum.topic(topic) != null) {
                 TutorProgressStore.update(appContext, cfg.targetLanguage, topic) {
                     if (it.startedAt == null) it.copy(startedAt = System.currentTimeMillis()) else it
                 }
@@ -2845,7 +2847,7 @@ class TalkViewModel(context: Context) : ViewModel() {
     private fun beginFinalCheck(lesson: TutorLesson, language: String): TutorLesson {
         if (lesson.check != null && lesson.check.passedAt == null) return lesson
         log("tutor_challenges_done", mapOf("of" to lesson.challenges.size.toString()))
-        lesson.topicId?.let { id ->
+        lesson.topicId?.takeIf { TutorCurriculum.topic(it) != null }?.let { id ->
             TutorProgressStore.update(appContext, language, id) {
                 if (it.lessonDoneAt == null) it.copy(lessonDoneAt = System.currentTimeMillis()) else it
             }
@@ -2941,7 +2943,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                     log("tutor_lesson_finished", mapOf("of" to now.challenges.size.toString(),
                         "tries" to check.tries.toString()))
                     var nextLine = ""
-                    now.topicId?.let { id ->
+                    now.topicId?.takeIf { TutorCurriculum.topic(it) != null }?.let { id ->
                         TutorProgressStore.update(appContext, cfg.targetLanguage, id) {
                             it.copy(passedAt = it.passedAt ?: stamp, lessonDoneAt = it.lessonDoneAt ?: stamp,
                                 rounds = it.rounds + 1)

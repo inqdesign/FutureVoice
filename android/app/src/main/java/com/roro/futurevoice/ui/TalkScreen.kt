@@ -146,6 +146,7 @@ fun TalkScreen(
     learnerPicksTopic: Boolean = false,
     /** A tutor-mode lesson whatever the Call setting says (a goal drill). */
     tutor: Boolean = false,
+    lessonTopicId: String? = null,
     onExit: () -> Unit,
 ) {
     val forceTutor = tutor && resume == null
@@ -525,6 +526,7 @@ fun TalkScreen(
                 entry = entry,
                 learnerPicksTopic = learnerPicksTopic,
                 tutor = tutor,
+                lessonTopicId = lessonTopicId,
             )
         )
     }

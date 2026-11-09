@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="goal_question_in_practice">Wird geübt</string>
+    <string name="goal_question_can_say">Das kannst du schon sagen</string>
+    <string name="goal_questions_ready">%1$d von %2$d fertig</string>
+</resources>

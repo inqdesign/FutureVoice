@@ -282,4 +282,23 @@ class LearnerStateTest {
         assertEquals(listOf("I want an opportunity.", "Fine."), check.apply(listOf(1 to "I want an opportunity."), lines))
         assertEquals(lines, check.apply(listOf(9 to "x", 2 to "  ", 2 to "much longer ".repeat(20)), lines))
     }
+
+    @Test fun aGoalQuestionsTopicIdIsTheSameStringAsIos() {
+        val goal = com.roro.futurevoice.data.UpcomingGoal(id = "aaaaaaaa-0000-0000-0000-000000000001",
+            kind = com.roro.futurevoice.data.UpcomingGoal.Kind.INTERVIEW, title = "t", language = "en")
+        assertEquals("goal:AAAAAAAA-0000-0000-0000-000000000001:b466f394",
+            com.roro.futurevoice.talk.GoalPrep.topicId(goal, "Tell me about yourself"))
+    }
+
+    @Test fun aQuestionIsReadyOnlyWhenItsLessonPassed() {
+        val goal = com.roro.futurevoice.data.UpcomingGoal(kind = com.roro.futurevoice.data.UpcomingGoal.Kind.INTERVIEW, title = "t", language = "en")
+        val prep = com.roro.futurevoice.talk.GoalPrep
+        val id = prep.topicId(goal, "q")
+        fun lesson(passed: Boolean) = com.roro.futurevoice.talk.TutorLesson(title = "t", titleTarget = "t", language = "en",
+            challenges = emptyList(), createdAt = 0L, topicId = id,
+            check = if (passed) com.roro.futurevoice.talk.TutorLesson.FinalCheck(startedAt = 0L, passedAt = 1L) else null)
+        assertEquals(com.roro.futurevoice.talk.GoalPrep.QuestionState.UNTOUCHED, prep.state("q", goal, emptyList()))
+        assertEquals(com.roro.futurevoice.talk.GoalPrep.QuestionState.PRACTICING, prep.state("q", goal, listOf(lesson(false))))
+        assertEquals(com.roro.futurevoice.talk.GoalPrep.QuestionState.READY, prep.state("q", goal, listOf(lesson(false), lesson(true))))
+    }
 }

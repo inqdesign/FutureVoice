@@ -218,6 +218,7 @@ fun RootScreen() {
     var callPicksTopic by call.picksTopic
     /** The tutor bot's goal drill: a tutor-mode lesson on the topic. */
     var callTutor by call.tutor
+    var callLessonTopicId by call.lessonTopicId
     /** Set when a Talk-home card's call closes; the home consumes it and
      *  offers the persona-deepen sheet (iOS `maybePromptDeepen`). */
     var deepenPending by remember { mutableStateOf(false) }
@@ -899,7 +900,7 @@ fun RootScreen() {
      *  ready-made situation, saved once the gate passes). */
     fun startCall(topic: String, facts: List<String>, scenarioId: String?, mint: Scenario?, blurb: String = "",
                   entry: String = com.roro.futurevoice.talk.TalkEntry.OTHER, learnerPicksTopic: Boolean = false,
-                  tutor: Boolean = false) {
+                  tutor: Boolean = false, lessonTopicId: String? = null) {
         // The paywall is asked here, at the TAP — every metered
         // launcher (free talk, a news story, a scenario, a widget
         // deep link) meets in this one callback, so one gate covers
@@ -911,6 +912,7 @@ fun RootScreen() {
                 callEntry = entry
                 callPicksTopic = learnerPicksTopic
                 callTutor = tutor
+                callLessonTopicId = lessonTopicId
                 // A news story's title IS its opener — written by `news-topics`
                 // as a friend bringing it up ("Did you see the news about…?")
                 // and spoken verbatim, as iOS does (`openNewsConversation`).
@@ -953,7 +955,7 @@ fun RootScreen() {
         showActivity = false; detailSessionId = null; bookScenarioId = null; watchScenarioId = null
         tab = HomeTab.TALK
         startCall(c.topic, emptyList(), null, null, c.blurb, com.roro.futurevoice.talk.TalkEntry.TUTOR_BOT,
-            tutor = c.tutor)
+            tutor = c.tutor, lessonTopicId = c.lessonTopicId)
     }
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
     // Everything before the app proper — previews, onboarding, the gates —
@@ -1735,6 +1737,7 @@ fun RootScreen() {
                 entry = callEntry,
                 learnerPicksTopic = callPicksTopic,
                 tutor = callTutor,
+                lessonTopicId = callLessonTopicId,
                 onExit = {
                     // A call that flew in from the ring flies back to it.
                     TalkMorph.close(morphScope) {
@@ -1747,6 +1750,7 @@ fun RootScreen() {
                         callEntry = com.roro.futurevoice.talk.TalkEntry.OTHER
                         callPicksTopic = false
                         callTutor = false
+                        callLessonTopicId = null
                     }
                 },
             )
@@ -3724,6 +3728,7 @@ class CallRoute : androidx.lifecycle.ViewModel() {
     /** A tutor-mode lesson whatever the Call setting says — the tutor bot's
      *  goal drill (iOS `CallLaunch.tutor`). */
     val tutor = mutableStateOf(false)
+    val lessonTopicId = mutableStateOf<String?>(null)
 }
 
 /**

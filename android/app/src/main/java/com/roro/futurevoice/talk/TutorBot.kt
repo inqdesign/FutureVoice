@@ -148,6 +148,8 @@ object TutorBot {
         val blurb: String,
         /** A tutor-mode lesson; false = an ordinary call on the topic. */
         val tutor: Boolean = true,
+        /** Ties the lesson to one question of a goal ([GoalPrep.topicId]). */
+        val lessonTopicId: String? = null,
     )
     private var picksLoadedAt: Long? = null
     private var picksGoals = ""
