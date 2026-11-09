@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Speech Season 2 and seasons. Values are iOS Localizable.xcstrings' (iOS ed2b2eae, e870565e). -->
+<resources>
+    <string name="speech_level_format">Niveau: %s</string>
+    <string name="speech_level_news_anchor">Tagesschau-Sprecher</string>
+    <string name="speech_level_audiobook">Hörbuch-Stimme</string>
+    <string name="speech_level_born_and_raised">Wie hier geboren</string>
+    <string name="speech_level_passes_as_local">Fast schon einheimisch</string>
+    <string name="speech_level_office_ace">Ass im internationalen Büro</string>
+    <string name="speech_level_presenter">Darf präsentieren</string>
+    <string name="speech_level_third_year_abroad">Drittes Jahr im Ausland</string>
+    <string name="speech_level_first_year_abroad">Erstes Jahr im Ausland</string>
+    <string name="speech_level_language_school">Monat drei im Sprachkurs</string>
+    <string name="speech_level_immigration">Durch die Passkontrolle</string>
+    <string name="speech_level_restaurant">Im Restaurant bestellt</string>
+    <string name="speech_level_gestures">Mit Händen und Füßen</string>
+    <string name="speech_level_warming_up">Aufwärmen</string>
+    <string name="speech_what_the_scores_mean">Was die Punkte bedeuten</string>
+    <string name="speech_part_speed">Sprechtempo</string>
+    <string name="speech_part_rhythm">Rhythmus</string>
+    <string name="speech_compared_native">Im Vergleich zur muttersprachlichen Lesung</string>
+    <string name="speech_next_format">Als Nächstes: %s</string>
+    <string name="speech_narrator_read">Wie ein geübter Sprecher. Nichts mehr zu verbessern.</string>
+    <string name="speech_at_narrator_level">Sprecher-Niveau</string>
+    <string name="speech_names_for_fun">Die Namen sind nur zum Spaß.</string>
+    <string name="speech_native_average">Muttersprachler im Schnitt %d · 100 heißt Nachrichtensprecher-Niveau</string>
+    <string name="speech_like_karaoke">Wie beim Karaoke: Die Punkte zeigen, wie nah diese Lesung an der Referenz war. Dein Englisch bewerten sie nicht.</string>
+    <string name="speech_each_word_compared">Jedes Wort wird mit demselben Text verglichen, gelesen von einer muttersprachlichen Stimme (%s). Die Satzmelodie wird noch nicht bewertet: Es gibt noch keine verlässliche Messung.</string>
+    <string name="speech_voice_female">weiblich</string>
+    <string name="speech_voice_male">männlich</string>
+    <string name="speech_detail_slower">%d %% langsamer als die muttersprachliche Lesung</string>
+    <string name="speech_detail_faster">%d %% schneller als die muttersprachliche Lesung</string>
+    <string name="speech_detail_native_pace">Tempo wie die muttersprachliche Lesung</string>
+    <string name="speech_detail_held_ok">Wortlängen wie bei Muttersprachlern</string>
+    <string name="speech_detail_held">Zu lang gezogen: %s</string>
+    <string name="speech_detail_no_pauses">Keine Pausen, wo Muttersprachler keine machen</string>
+    <string name="speech_detail_stopped">Angehalten: %s</string>
+    <string name="speech_detail_every_word">Jedes Wort wie im Text</string>
+    <string name="speech_detail_slips">Anders gelesen: %d Wörter</string>
+    <string name="speech_detail_slips_list">Anders gelesen: %1$d Wörter · %2$s</string>
+    <string name="speech_detail_no_wrong_sounds">Keine klar falschen Laute</string>
+    <string name="speech_focus_faster">Lies etwas schneller: %d %% langsamer als die muttersprachliche Lesung.</string>
+    <string name="speech_focus_even_flow">Lies gleichmäßig von Wort zu Wort.</string>
+    <string name="speech_focus_dont_hold">Zieh diese Wörter nicht in die Länge: %s</string>
+    <string name="speech_focus_one_breath">Lies jede Wortgruppe in einem Atemzug.</string>
+    <string name="speech_focus_dont_stop">Hier nicht anhalten: %s</string>
+    <string name="speech_focus_every_word">Lies jedes Wort wie im Text.</string>
+    <string name="speech_focus_every_word_list">Lies jedes Wort wie im Text: %s</string>
+    <string name="speech_focus_clear_sounds">Sprich jeden Laut so klar wie die übrigen.</string>
+    <string name="speech_focus_sounds">Übe diese Laute: %s</string>
+    <string name="speech_held_item">„%1$s“ %2$s s (Muttersprachler %3$s s)</string>
+    <string name="speech_pause_item">nach „%1$s“ %2$s s</string>
+    <string name="speech_seconds">%s s</string>
+    <string name="speech_legend">%1$s: anders gelesen oder ausgelassen · %2$s: nicht im Text · %3$s: länger gezogen als in der muttersprachlichen Lesung · %4$s: Pause, wo die muttersprachliche Lesung keine macht</string>
+    <string name="speech_legend_red">Rot</string>
+    <string name="speech_legend_added">+Wort</string>
+    <string name="speech_legend_orange">Orange</string>
+    <string name="speech_challenge_practice">Üben</string>
+    <string name="speech_keep_practicing">Üben kannst du weiter. Deine Platzierung bleibt.</string>
+    <string name="speech_remove_me">Aus dieser Rangliste entfernen</string>
+    <string name="speech_remove_confirm">Deine Punktzahl aus dieser Rangliste entfernen?</string>
+    <string name="speech_remove_ended">Punktzahl und Platz werden endgültig entfernt. Deine Aufnahmen bleiben auf deinem Handy.</string>
+    <string name="speech_remove_live">Punktzahl und Platz werden entfernt. Deine nächste Kameraaufnahme kommt wieder in die Rangliste.</string>
+    <string name="speech_season_live">Saison %d · läuft</string>
+    <string name="speech_season_ended">Saison %d · beendet</string>
+    <string name="speech_joined">%d dabei</string>
+    <string name="speech_season">Saison %d</string>
+    <string name="speech_season_records">Rekorde von Saison %d</string>
+    <string name="speech_practice_entry">Eine Übungsaufnahme. Sie kommt nicht in die Rangliste.</string>
+    <string name="speech_new_scoring_entry">Nach den Regeln von Saison 2 bewertet, darum nicht auf dieser Rangliste.</string>
+    <string name="speech_final_standings">Endstand</string>
+    <string name="speech_season_over">Diese Saison ist beendet. Das ist der Endstand.</string>
+    <string-array name="speech_verdict_100">
+        <item>Liest du etwa die Nachrichten?</item>
+        <item>Das sind doch die Nachrichten, oder?</item>
+        <item>Ich dachte, das Radio läuft.</item>
+        <item>Daran gibt es nichts auszusetzen.</item>
+        <item>Perfekt. Mehr gibt es nicht zu sagen.</item>
+    </string-array>
+    <string-array name="speech_verdict_95">
+        <item>Da müssen sich Sprecher warm anziehen!</item>
+        <item>Arbeitest du beim Radio?</item>
+        <item>Du könntest synchronsprechen.</item>
+        <item>Jedes Wort sitzt.</item>
+        <item>Nur ein Haar von der 100 entfernt.</item>
+    </string-array>
+    <string-array name="speech_verdict_88">
+        <item>Du könntest Hörbücher einsprechen.</item>
+        <item>Dir hört man gern zu.</item>
+        <item>Dir würde ich die Präsentation überlassen.</item>
+        <item>Da darfst du ruhig angeben.</item>
+        <item>Das lief wie von selbst.</item>
+    </string-array>
+    <string-array name="speech_verdict_78">
+        <item>Oh, gar nicht schlecht!</item>
+        <item>Jetzt hast du meine Aufmerksamkeit.</item>
+        <item>Das hast du uns verheimlicht?</item>
+        <item>Das klingt langsam richtig gut.</item>
+        <item>Noch ein bisschen und du bist auf Sendung.</item>
+    </string-array>
+    <string-array name="speech_verdict_60">
+        <item>Gut, du hast den Dreh raus.</item>
+        <item>Das klingt schon gut.</item>
+        <item>Noch einmal und das wird ein Rekord.</item>
+        <item>Ab jetzt geht es nur noch aufwärts.</item>
+        <item>Läuft. Gleich noch mal.</item>
+    </string-array>
+    <string-array name="speech_verdict_low">
+        <item>Beim ersten Mal klappt das bei niemandem.</item>
+        <item>Bis zum Ende gelesen, das zählt.</item>
+        <item>Das war das Aufwärmen.</item>
+        <item>Die nächste Runde ist die echte.</item>
+        <item>Übung zahlt sich aus.</item>
+    </string-array>
+</resources>

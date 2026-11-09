@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Speech Season 2 and seasons. Values are iOS Localizable.xcstrings' (iOS ed2b2eae, e870565e). -->
+<resources>
+    <string name="speech_level_format">%s 레벨</string>
+    <string name="speech_level_news_anchor">9시 뉴스 앵커</string>
+    <string name="speech_level_audiobook">오디오북 성우</string>
+    <string name="speech_level_born_and_raised">타고난 원어민</string>
+    <string name="speech_level_passes_as_local">현지인 착각</string>
+    <string name="speech_level_office_ace">외국계 회사 에이스</string>
+    <string name="speech_level_presenter">발표 맡겨도 되는 사람</string>
+    <string name="speech_level_third_year_abroad">유학 3년 차</string>
+    <string name="speech_level_first_year_abroad">유학 1년 차</string>
+    <string name="speech_level_language_school">어학연수 3개월 차</string>
+    <string name="speech_level_immigration">입국 심사 통과</string>
+    <string name="speech_level_restaurant">식당 주문 성공</string>
+    <string name="speech_level_gestures">손짓 발짓 동원</string>
+    <string name="speech_level_warming_up">몸풀기</string>
+    <string name="speech_what_the_scores_mean">점수 기준</string>
+    <string name="speech_part_speed">말하는 속도</string>
+    <string name="speech_part_rhythm">리듬</string>
+    <string name="speech_compared_native">원어민 낭독과 비교</string>
+    <string name="speech_next_format">다음엔 %s</string>
+    <string name="speech_narrator_read">낭독자 수준이에요. 고칠 곳이 없어요.</string>
+    <string name="speech_at_narrator_level">낭독자 수준</string>
+    <string name="speech_names_for_fun">별명은 재미로 붙였어요.</string>
+    <string name="speech_native_average">원어민 평균 %d점 · 100점은 아나운서급 낭독</string>
+    <string name="speech_like_karaoke">노래방 점수처럼, 이번 낭독이 기준 낭독에 얼마나 가까웠는지예요. 영어 실력 점수는 아니에요.</string>
+    <string name="speech_each_word_compared">원어민 목소리(%s)로 읽은 같은 대본과 단어마다 비교했어요. 억양은 믿을 만한 측정 방법이 아직 없어서 점수에 넣지 않았어요.</string>
+    <string name="speech_voice_female">여성</string>
+    <string name="speech_voice_male">남성</string>
+    <string name="speech_detail_slower">원어민 낭독보다 %d%% 느려요</string>
+    <string name="speech_detail_faster">원어민 낭독보다 %d%% 빨라요</string>
+    <string name="speech_detail_native_pace">원어민 낭독과 같은 속도</string>
+    <string name="speech_detail_held_ok">원어민처럼 단어 길이가 고르게</string>
+    <string name="speech_detail_held">길게 끈 단어: %s</string>
+    <string name="speech_detail_no_pauses">원어민이 쉬지 않는 곳에서 멈추지 않았어요</string>
+    <string name="speech_detail_stopped">멈춘 곳: %s</string>
+    <string name="speech_detail_every_word">모든 단어를 대본대로</string>
+    <string name="speech_detail_slips">대본과 다르게 읽은 단어: %d개</string>
+    <string name="speech_detail_slips_list">대본과 다르게 읽은 단어: %1$d개 · %2$s</string>
+    <string name="speech_detail_no_wrong_sounds">확실히 틀린 소리 없음</string>
+    <string name="speech_focus_faster">조금 더 빠르게 읽어요. 원어민 낭독보다 %d%% 느렸어요.</string>
+    <string name="speech_focus_even_flow">단어와 단어 사이를 고르게 이어 읽어요.</string>
+    <string name="speech_focus_dont_hold">이 단어들은 끌지 말고 읽어요: %s</string>
+    <string name="speech_focus_one_breath">구절마다 한 호흡에 읽어요.</string>
+    <string name="speech_focus_dont_stop">여기서 멈추지 말고 이어 읽어요: %s</string>
+    <string name="speech_focus_every_word">대본 그대로 읽어요.</string>
+    <string name="speech_focus_every_word_list">대본 그대로 읽어 보세요: %s</string>
+    <string name="speech_focus_clear_sounds">모든 소리를 똑같이 또렷하게 내 보세요.</string>
+    <string name="speech_focus_sounds">이 소리를 연습해요: %s</string>
+    <string name="speech_held_item">“%1$s” %2$s초 (원어민 %3$s초)</string>
+    <string name="speech_pause_item">“%1$s” 뒤 %2$s초</string>
+    <string name="speech_seconds">%s초</string>
+    <string name="speech_legend">%1$s: 다르게 읽거나 빠뜨린 말 · %2$s: 대본에 없는 말 · %3$s: 원어민보다 길게 끈 단어 · %4$s: 원어민이 쉬지 않는 곳에서 멈춤</string>
+    <string name="speech_legend_red">빨강</string>
+    <string name="speech_legend_added">+단어</string>
+    <string name="speech_legend_orange">주황</string>
+    <string name="speech_challenge_practice">연습</string>
+    <string name="speech_keep_practicing">연습은 계속할 수 있어요. 순위는 이대로 남아요.</string>
+    <string name="speech_remove_me">이 순위에서 내리기</string>
+    <string name="speech_remove_confirm">이 순위에서 내릴까요?</string>
+    <string name="speech_remove_ended">점수와 순위가 지워지고 되돌릴 수 없어요. 내 기록은 폰에 남아요.</string>
+    <string name="speech_remove_live">점수와 순위가 지워져요. 다음 카메라 도전은 다시 순위에 올라가요.</string>
+    <string name="speech_season_live">시즌 %d · 진행 중</string>
+    <string name="speech_season_ended">시즌 %d · 종료</string>
+    <string name="speech_joined">%d명 참가</string>
+    <string name="speech_season">시즌 %d</string>
+    <string name="speech_season_records">시즌 %d 기록 보기</string>
+    <string name="speech_practice_entry">연습 기록이에요. 순위에는 들어가지 않아요.</string>
+    <string name="speech_new_scoring_entry">시즌 2 방식으로 채점해서 이 순위표에는 안 올라가요.</string>
+    <string name="speech_final_standings">최종 순위</string>
+    <string name="speech_season_over">이 시즌은 끝났어요. 최종 순위예요.</string>
+    <string-array name="speech_verdict_100">
+        <item>혹시 아나운서예요?</item>
+        <item>이건 그냥 뉴스인데요?</item>
+        <item>라디오 켜 놓은 줄 알았어요.</item>
+        <item>흠잡을 데가 없네요.</item>
+        <item>완벽해요. 더 할 말이 없어요.</item>
+    </string-array>
+    <string-array name="speech_verdict_95">
+        <item>아나운서 뺨치시네요!</item>
+        <item>혹시 방송 일 하세요?</item>
+        <item>성우 하셔도 되겠어요.</item>
+        <item>귀에 쏙쏙 들어와요.</item>
+        <item>100점까지 딱 한 끗이에요.</item>
+    </string-array>
+    <string-array name="speech_verdict_88">
+        <item>오디오북 내셔도 되겠어요.</item>
+        <item>듣기 참 편안해요.</item>
+        <item>발표 맡기고 싶은 목소리예요.</item>
+        <item>어디 가서 자랑하셔도 돼요.</item>
+        <item>술술 읽으시네요.</item>
+    </string-array>
+    <string-array name="speech_verdict_78">
+        <item>오, 제법인데요?</item>
+        <item>귀가 솔깃해지는데요?</item>
+        <item>실력 숨기고 계셨네요?</item>
+        <item>점점 그럴듯해지는데요?</item>
+        <item>조금만 더 하면 방송 나가겠어요.</item>
+    </string-array>
+    <string-array name="speech_verdict_60">
+        <item>좋아요, 감 잡으셨어요.</item>
+        <item>벌써 괜찮은데요?</item>
+        <item>한 번만 더 하면 기록 나올걸요?</item>
+        <item>이제 좋아질 일만 남았어요.</item>
+        <item>느낌 왔어요. 바로 한 번 더 가요.</item>
+    </string-array>
+    <string-array name="speech_verdict_low">
+        <item>첫술에 배부를 수 있나요.</item>
+        <item>일단 끝까지 읽은 게 어디예요.</item>
+        <item>오늘 목 좀 풀었네요.</item>
+        <item>다음 판이 진짜예요.</item>
+        <item>연습은 배신 안 해요.</item>
+    </string-array>
+</resources>

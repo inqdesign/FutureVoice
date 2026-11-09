@@ -178,6 +178,7 @@ internal fun SpeechTabBody(language: String, native: String, level: CefrLevel,
     val challengeScripts by challenges.scripts.collectAsStateWithLifecycle()
     val standings by challenges.standings.collectAsStateWithLifecycle()
     val overall by challenges.overall.collectAsStateWithLifecycle()
+    val seasons by challenges.seasons.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var publishing by remember { mutableStateOf<SpeechScript?>(null) }
     var publishError by remember { mutableStateOf<String?>(null) }
@@ -240,6 +241,21 @@ internal fun SpeechTabBody(language: String, native: String, level: CefrLevel,
             val live = challengeScripts.filter { standings[it.id]?.retiredAt == null }
             val pastCount = challengeScripts.size - live.size
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                // A language past its first season says which one this is, and
+                // where the last one went.
+                val openSeason = challenges.openSeason(seasons)
+                if (openSeason != null && openSeason >= 2) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.speech_season, openSeason), style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        challenges.lastEndedSeason(seasons)?.let { ended ->
+                            Text(stringResource(R.string.speech_season_records, ended),
+                                style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.clickable(onClick = onOpenAllChallenges))
+                        }
+                    }
+                }
                 // Every challenge on one board (iOS `SpeechOverallBanner`).
                 overall?.takeIf { it.size >= com.roro.futurevoice.data.SpeechChallenges.OVERALL_MIN_ENTRANTS }?.let { rows ->
                     SpeechOverallBanner(rows, onClick = onOpenOverall)

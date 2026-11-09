@@ -1,0 +1,587 @@
+package com.roro.futurevoice.ui.speech
+
+import android.media.MediaPlayer
+import androidx.annotation.ArrayRes
+import androidx.annotation.StringRes
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.FactCheck
+import androidx.compose.material.icons.filled.GpsFixed
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PauseCircle
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Timelapse
+import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.material3.rememberStandardBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.roro.futurevoice.R
+import com.roro.futurevoice.data.SpeechChallenges
+import com.roro.futurevoice.data.SpeechScript
+import com.roro.futurevoice.data.SpeechStore
+import com.roro.futurevoice.data.SpeechTake
+import com.roro.futurevoice.talk.SpeechAnalyzer
+import com.roro.futurevoice.talk.SpeechDelivery
+import com.roro.futurevoice.talk.SpeechReadingLevel
+import com.roro.futurevoice.talk.SpeechReadingScore
+import com.roro.futurevoice.talk.SpeechReading
+import com.roro.futurevoice.ui.FormDivider
+import com.roro.futurevoice.ui.FormSection
+import com.roro.futurevoice.ui.SheetHeader
+import com.roro.futurevoice.ui.brand.AppSurfaces
+import com.roro.futurevoice.ui.brand.IosGlassButton
+import com.roro.futurevoice.ui.brand.IosGlassTextButton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.Locale
+import kotlin.math.abs
+
+/** The one line a Season 2 score comes with, the way a karaoke machine says
+ *  something about yours — iOS `SpeechVerdict`. One byte of the take's id picks
+ *  the line, so a take keeps its line when it is reopened. */
+internal object SpeechVerdict {
+    @ArrayRes fun lines(total: Int): Int = when {
+        total >= 100 -> R.array.speech_verdict_100
+        total >= 95 -> R.array.speech_verdict_95
+        total >= 88 -> R.array.speech_verdict_88
+        total >= 78 -> R.array.speech_verdict_78
+        total >= 60 -> R.array.speech_verdict_60
+        else -> R.array.speech_verdict_low
+    }
+
+    /** iOS `take.uuid.15`: the last byte of the id. */
+    fun index(takeId: String, count: Int): Int =
+        (takeId.takeLast(2).toIntOrNull(16) ?: 0) % count
+}
+
+@StringRes
+private fun levelTitle(level: SpeechReadingLevel): Int = when (level) {
+    SpeechReadingLevel.NEWS_ANCHOR -> R.string.speech_level_news_anchor
+    SpeechReadingLevel.AUDIOBOOK -> R.string.speech_level_audiobook
+    SpeechReadingLevel.BORN_AND_RAISED -> R.string.speech_level_born_and_raised
+    SpeechReadingLevel.PASSES_AS_LOCAL -> R.string.speech_level_passes_as_local
+    SpeechReadingLevel.OFFICE_ACE -> R.string.speech_level_office_ace
+    SpeechReadingLevel.PRESENTER -> R.string.speech_level_presenter
+    SpeechReadingLevel.THIRD_YEAR_ABROAD -> R.string.speech_level_third_year_abroad
+    SpeechReadingLevel.FIRST_YEAR_ABROAD -> R.string.speech_level_first_year_abroad
+    SpeechReadingLevel.LANGUAGE_SCHOOL -> R.string.speech_level_language_school
+    SpeechReadingLevel.IMMIGRATION -> R.string.speech_level_immigration
+    SpeechReadingLevel.RESTAURANT -> R.string.speech_level_restaurant
+    SpeechReadingLevel.GESTURES -> R.string.speech_level_gestures
+    SpeechReadingLevel.WARMING_UP -> R.string.speech_level_warming_up
+}
+
+@StringRes
+private fun partTitle(part: SpeechReadingScore.Part): Int = when (part) {
+    SpeechReadingScore.Part.SPEED -> R.string.speech_part_speed
+    SpeechReadingScore.Part.RHYTHM -> R.string.speech_part_rhythm
+    SpeechReadingScore.Part.PAUSES -> R.string.pauses
+    SpeechReadingScore.Part.ACCURACY -> R.string.accuracy
+    SpeechReadingScore.Part.PRONUNCIATION -> R.string.pronunciation
+}
+
+private fun partIcon(part: SpeechReadingScore.Part): ImageVector = when (part) {
+    SpeechReadingScore.Part.SPEED -> Icons.Filled.Speed
+    SpeechReadingScore.Part.RHYTHM -> Icons.Filled.Timelapse
+    SpeechReadingScore.Part.PAUSES -> Icons.Filled.PauseCircle
+    SpeechReadingScore.Part.ACCURACY -> Icons.Filled.FactCheck
+    SpeechReadingScore.Part.PRONUNCIATION -> Icons.Filled.GraphicEq
+}
+
+private fun oneDecimal(value: Double) = "%.1f".format(Locale.US, value)
+private fun quoted(words: List<String>) = words.joinToString(" ") { "“$it”" }
+private fun soundsList(sounds: List<SpeechDelivery.Sound>) = sounds.joinToString(" · ") {
+    if (it.phoneme.isEmpty()) "“${it.word}” ${it.score}" else "${it.phoneme} “${it.word}” ${it.score}"
+}
+
+/** Seconds, yours beside the native reading's. */
+@Composable
+private fun heldList(held: List<SpeechReadingScore.Held>): String =
+    held.take(3).map { h ->
+        val mine = h.seconds; val native = h.nativeSeconds
+        if (mine == null || native == null) "“${h.word}”"
+        else stringResource(R.string.speech_held_item, h.word, oneDecimal(mine), oneDecimal(native))
+    }.joinToString(" · ")
+
+@Composable
+private fun extraPauseList(pauses: List<SpeechReadingScore.Pause>): String =
+    pauses.take(3).map { stringResource(R.string.speech_pause_item, it.after, oneDecimal(it.seconds)) }.joinToString(" · ")
+
+private fun percentOff(r: SpeechReadingScore) = SpeechReading.round(abs(1 - r.speed) * 100).toInt()
+
+/** What one part measured, in one line, against the native reading. */
+@Composable
+private fun partDetail(part: SpeechReadingScore.Part, r: SpeechReadingScore): String = when (part) {
+    SpeechReadingScore.Part.SPEED -> when {
+        r.speed < 0.97 -> stringResource(R.string.speech_detail_slower, percentOff(r))
+        r.speed > 1.15 -> stringResource(R.string.speech_detail_faster, percentOff(r))
+        else -> stringResource(R.string.speech_detail_native_pace)
+    }
+    SpeechReadingScore.Part.RHYTHM ->
+        if (r.held.isEmpty()) stringResource(R.string.speech_detail_held_ok)
+        else stringResource(R.string.speech_detail_held, heldList(r.held))
+    SpeechReadingScore.Part.PAUSES ->
+        if (r.extraPauses.isEmpty()) stringResource(R.string.speech_detail_no_pauses)
+        else stringResource(R.string.speech_detail_stopped, extraPauseList(r.extraPauses))
+    SpeechReadingScore.Part.ACCURACY -> when {
+        r.slips == 0 -> stringResource(R.string.speech_detail_every_word)
+        r.missed.isEmpty() -> stringResource(R.string.speech_detail_slips, r.slips)
+        else -> stringResource(R.string.speech_detail_slips_list, r.slips, quoted(r.missed))
+    }
+    SpeechReadingScore.Part.PRONUNCIATION ->
+        if (r.weakest.isEmpty()) stringResource(R.string.speech_detail_no_wrong_sounds) else soundsList(r.weakest)
+}
+
+/** The one thing to work on next, as an instruction with its place. */
+@Composable
+private fun partFocus(part: SpeechReadingScore.Part, r: SpeechReadingScore): String = when (part) {
+    SpeechReadingScore.Part.SPEED -> stringResource(R.string.speech_focus_faster, percentOff(r))
+    SpeechReadingScore.Part.RHYTHM ->
+        if (r.held.isEmpty()) stringResource(R.string.speech_focus_even_flow)
+        else stringResource(R.string.speech_focus_dont_hold, heldList(r.held))
+    SpeechReadingScore.Part.PAUSES ->
+        if (r.extraPauses.isEmpty()) stringResource(R.string.speech_focus_one_breath)
+        else stringResource(R.string.speech_focus_dont_stop, extraPauseList(r.extraPauses))
+    SpeechReadingScore.Part.ACCURACY ->
+        if (r.missed.isEmpty()) stringResource(R.string.speech_focus_every_word)
+        else stringResource(R.string.speech_focus_every_word_list, quoted(r.missed))
+    SpeechReadingScore.Part.PRONUNCIATION ->
+        if (r.weakest.isEmpty()) stringResource(R.string.speech_focus_clear_sounds)
+        else stringResource(R.string.speech_focus_sounds, soundsList(r.weakest))
+}
+
+/**
+ * A Season 2 take: the big score over a score-coloured ground, its one-line
+ * verdict and nickname, and the details on a sheet that opens on a summary with
+ * the five part scores — iOS `SpeechResultSheetPage`.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun SpeechReadingPage(take: SpeechTake, script: SpeechScript, reading: SpeechReadingScore,
+                               pendingVideo: Boolean, entry: SpeechChallenges.Entry?,
+                               standing: SpeechChallenges.Standing?, onBack: () -> Unit, onAgain: (() -> Unit)?) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val m = take.metrics
+
+    var player by remember { mutableStateOf<MediaPlayer?>(null) }
+    DisposableEffect(take.id) { onDispose { player?.release(); player = null } }
+    val playing = player != null
+    fun stop() { player?.release(); player = null }
+    fun play() {
+        player = runCatching {
+            MediaPlayer().apply {
+                setDataSource(SpeechStore.mediaFile(context, take.audioFilename).path)
+                setOnCompletionListener { it.release(); player = null }
+                prepare(); start()
+            }
+        }.getOrNull()
+    }
+
+    var showingVideo by remember { mutableStateOf(false) }
+    val scaffold = rememberBottomSheetScaffoldState(
+        bottomSheetState = rememberStandardBottomSheetState(SheetValue.PartiallyExpanded, skipHiddenState = true))
+    val isOpen = scaffold.bottomSheetState.targetValue == SheetValue.Expanded
+    var summaryPx by remember { mutableIntStateOf(0) }
+    val navBar = with(density) { WindowInsets.navigationBars.getBottom(this).toDp() }
+    val peek = with(density) { summaryPx.toDp() } + HANDLE_HEIGHT + navBar
+    val heroAlpha by animateFloatAsState(if (playing || isOpen) 0f else 1f, label = "hero")
+    val tint = scoreColor(m.overall)
+
+    BottomSheetScaffold(
+        scaffoldState = scaffold,
+        sheetPeekHeight = if (playing) 0.dp else peek,
+        sheetSwipeEnabled = !playing,
+        sheetContainerColor = AppSurfaces.ground,
+        sheetShape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        sheetDragHandle = {
+            Box(Modifier.fillMaxWidth().height(HANDLE_HEIGHT), contentAlignment = Alignment.Center) {
+                Box(Modifier.width(40.dp).height(5.dp)
+                    .background(MaterialTheme.colorScheme.outlineVariant, CircleShape))
+            }
+        },
+        containerColor = Color.Black,
+        sheetContent = {
+            Column(Modifier.fillMaxHeight(0.92f)) {
+                Column(Modifier.fillMaxWidth()
+                    .onSizeChanged { summaryPx = it.height }
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                        scope.launch {
+                            if (isOpen) scaffold.bottomSheetState.partialExpand() else scaffold.bottomSheetState.expand()
+                        }
+                    }) {
+                    Column(Modifier.padding(horizontal = 20.dp)) {
+                        Text(script.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        val date = takeDateLabel(take.createdAt)
+                        Text(if (script.isChallenge) stringResource(R.string.challenge) + " · " + date else date,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    ScoreStrip(reading)
+                }
+                Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).navigationBarsPadding()
+                    .padding(horizontal = 16.dp).padding(bottom = 32.dp)) {
+                    Details(take, script, reading, pendingVideo, entry, standing)
+                }
+            }
+        },
+    ) {
+        Box(Modifier.fillMaxSize().background(Color.Black)
+            .background(Brush.verticalGradient(listOf(tint.copy(alpha = 0.75f), Color.Black)))) {
+            Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().alpha(heroAlpha)
+                .padding(horizontal = 20.dp).padding(bottom = peek + 20.dp),
+                verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("${m.overall}", color = Color.White, fontSize = 96.sp, lineHeight = 100.sp, fontWeight = FontWeight.Bold)
+                    val lines = stringArrayResource(SpeechVerdict.lines(reading.total))
+                    Text(lines[SpeechVerdict.index(take.id, lines.size)], color = Color.White,
+                        style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                    Text(stringResource(R.string.speech_level_format, stringResource(levelTitle(reading.level))),
+                        color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                }
+                Box(Modifier.size(64.dp).background(Color.White.copy(alpha = 0.18f), CircleShape)
+                    .clickable(enabled = heroAlpha > 0.5f) { if (playing) stop() else play() },
+                    contentAlignment = Alignment.Center) {
+                    Icon(if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        stringResource(if (playing) R.string.pause else R.string.play), tint = Color.White,
+                        modifier = Modifier.size(30.dp))
+                }
+            }
+            // A tap on the page stops it, and everything comes back.
+            if (playing) {
+                Box(Modifier.fillMaxSize().clickable(interactionSource = remember { MutableInteractionSource() },
+                    indication = null) { stop() })
+            } else {
+                SheetHeader("",
+                    leading = { IosGlassTextButton(stringResource(R.string.done), onClick = onBack) },
+                    trailing = {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (take.videoFilename != null) {
+                                IosGlassButton(onClick = { showingVideo = true }) {
+                                    Icon(Icons.Filled.Download, stringResource(R.string.save_to_photos),
+                                        tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                }
+                            }
+                            onAgain?.let { again ->
+                                IosGlassButton(onClick = again) {
+                                    Icon(Icons.Filled.Refresh, null, tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(stringResource(R.string.again), color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.SemiBold)
+                                }
+                            }
+                        }
+                    },
+                    modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+        }
+    }
+
+    if (showingVideo && take.videoFilename != null) {
+        SpeechSheet({ showingVideo = false }, fullHeight = true) {
+            SheetHeader("", trailing = {
+                IosGlassTextButton(stringResource(R.string.done), bold = true, onClick = { showingVideo = false })
+            })
+            Playback(take, false)
+        }
+    }
+}
+
+private val HANDLE_HEIGHT = 25.dp
+
+/** The five parts: what the sheet shows before it is opened. */
+@Composable
+private fun ScoreStrip(r: SpeechReadingScore) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.Top) {
+        r.parts.all.forEach { (part, score) ->
+            val color = scoreColor(score)
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text("$score", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = color)
+                LinearProgressIndicator(progress = { score.coerceIn(0, 100) / 100f }, color = color,
+                    trackColor = MaterialTheme.colorScheme.outlineVariant,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp))
+                Text(stringResource(partTitle(part)), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+}
+
+@Composable
+private fun Details(take: SpeechTake, script: SpeechScript, r: SpeechReadingScore, pendingVideo: Boolean,
+                    entry: SpeechChallenges.Entry?, standing: SpeechChallenges.Standing?) {
+    FormSection(null) {
+        val coaching = take.coaching
+        if (coaching != null) {
+            Text(coaching.headline, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(16.dp))
+        } else {
+            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.writing_feedback), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        coaching?.tips?.forEach { tip ->
+            FormDivider()
+            Row(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(10.dp))
+                Text(tip, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+    }
+
+    if (script.isChallenge) SpeechChallengeEntrySection(entry, standing)
+
+    if (pendingVideo) {
+        FormSection(null) {
+            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(10.dp))
+                Text(stringResource(R.string.preparing_your_video), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+
+    ReadingSection(r)
+
+    var marks by remember(take.id) { mutableStateOf<Pair<Boolean, List<List<SpeechAnalyzer.ScriptMark>>?>>(false to null) }
+    LaunchedEffect(take.id) {
+        val made = withContext(Dispatchers.Default) {
+            SpeechAnalyzer.marks(script.body, take.transcript, script.language)
+        }
+        marks = true to made
+    }
+    val (ready, paragraphs) = marks
+    if (paragraphs != null) {
+        val (held, pauses) = remember(paragraphs, r) { readingTiming(r, paragraphs) }
+        FormSection(stringResource(R.string.script)) {
+            MarkedScript(paragraphs, script.language, held, pauses)
+        }
+        Legend()
+    } else if (ready && take.metrics.missed.isNotEmpty()) {
+        FormSection(stringResource(R.string.skipped_or_changed)) {
+            Text(take.metrics.missed.joinToString("  ·  "), color = RED,
+                style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(16.dp))
+        }
+    }
+    if (ready && paragraphs == null) {
+        var heard by remember { mutableStateOf(false) }
+        FormSection(null) {
+            Disclosure(stringResource(R.string.what_the_mic_heard), heard) { heard = !heard }
+            if (heard) {
+                SelectionContainer {
+                    Text(take.transcript, style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp))
+                }
+            }
+        }
+    }
+}
+
+private val RED = Color(0xFFFF3B30)
+private val ORANGE = Color(0xFFFF9500)
+
+@Composable
+private fun Disclosure(title: String, open: Boolean, toggle: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = toggle).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+        Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null, tint = MaterialTheme.colorScheme.primary)
+    }
+}
+
+@Composable
+private fun ReadingSection(r: SpeechReadingScore) {
+    val footer = listOf(
+        stringResource(R.string.speech_names_for_fun),
+        stringResource(R.string.speech_native_average, SpeechReading.NATIVE_AVERAGE),
+        stringResource(R.string.speech_like_karaoke),
+        stringResource(R.string.speech_each_word_compared,
+            stringResource(if (r.gender == "female") R.string.speech_voice_female else R.string.speech_voice_male)),
+    ).joinToString("\n")
+    FormSection(stringResource(R.string.speech_compared_native), footer = footer) {
+        val focus = r.focus
+        if (focus != null) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.GpsFixed, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.speech_next_format, stringResource(partTitle(focus))),
+                        style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                }
+                Text(partFocus(focus, r), style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        } else {
+            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.Verified, null, tint = GREEN, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.speech_narrator_read), color = GREEN)
+            }
+        }
+        SpeechReadingScore.Part.entries.forEach { part ->
+            FormDivider()
+            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(partIcon(part), null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                    Spacer(Modifier.width(14.dp))
+                    Text(stringResource(partTitle(part)), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                    if (r.parts.score(part) >= SpeechReadingScore.BAR) {
+                        Icon(Icons.Filled.Verified, stringResource(R.string.speech_at_narrator_level), tint = GREEN,
+                            modifier = Modifier.size(16.dp))
+                    }
+                }
+                Text(partDetail(part, r), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        FormDivider()
+        var bands by remember { mutableStateOf(false) }
+        Disclosure(stringResource(R.string.speech_what_the_scores_mean), bands) { bands = !bands }
+        if (bands) {
+            Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SpeechReadingLevel.entries.forEach { level ->
+                    val mine = level == r.level
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(if (level.range.first == level.range.last) "${level.range.first}"
+                            else "${level.range.first}–${level.range.last}",
+                            style = MaterialTheme.typography.bodyMedium, modifier = Modifier.width(56.dp))
+                        Text(stringResource(levelTitle(level)), style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (mine) FontWeight.SemiBold else FontWeight.Normal, modifier = Modifier.weight(1f))
+                        if (mine) {
+                            Text(stringResource(R.string.you), style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private val GREEN = Color(0xFF34C759)
+
+/** One legend for everything the script shows. */
+@Composable
+private fun Legend() {
+    val red = stringResource(R.string.speech_legend_red)
+    val added = stringResource(R.string.speech_legend_added)
+    val orange = stringResource(R.string.speech_legend_orange)
+    val pause = "⏸︎"
+    val text = stringResource(R.string.speech_legend, red, added, orange, pause)
+    val colored = listOf(red to RED, added to RED, orange to ORANGE, pause to ORANGE)
+    Text(buildAnnotatedString {
+        var at = 0
+        for ((part, color) in colored) {
+            val found = text.indexOf(part, at)
+            if (found < 0) continue
+            append(text.substring(at, found))
+            withStyle(SpanStyle(color = color)) { append(part) }
+            at = found + part.length
+        }
+        append(text.substring(at))
+    }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 7.dp))
+}
+
+/** Season 2's per-token findings laid onto the script's words: a word owns as
+ *  many scoring tokens as `SpeechDelivery.referenceTokens` makes of it (a
+ *  hyphenated word two, a lone dash none) — iOS `SpeechMarkedScript.timing`. */
+internal fun readingTiming(r: SpeechReadingScore, marks: List<List<SpeechAnalyzer.ScriptMark>>):
+    Pair<Map<Int, Double>, Map<Int, Double>> {
+    val wordOfToken = HashMap<Int, Int>()
+    var t = 0
+    marks.flatten().forEachIndexed { w, mark ->
+        repeat(SpeechDelivery.referenceTokens(mark.word).size) { wordOfToken[t] = w; t++ }
+    }
+    val held = HashMap<Int, Double>()
+    val pauses = HashMap<Int, Double>()
+    for (h in r.held) {
+        val w = h.index?.let { wordOfToken[it] } ?: continue
+        h.seconds?.let { held[w] = it }
+    }
+    for (p in r.extraPauses) {
+        val w = p.index?.let { wordOfToken[it] } ?: continue
+        pauses[w] = p.seconds
+    }
+    return held to pauses
+}

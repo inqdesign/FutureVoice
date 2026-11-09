@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Speech Season 2 and seasons. Values are iOS Localizable.xcstrings' (iOS ed2b2eae, e870565e). -->
+<resources>
+    <string name="speech_level_format">%s level</string>
+    <string name="speech_level_news_anchor">Prime-time news anchor</string>
+    <string name="speech_level_audiobook">Audiobook narrator</string>
+    <string name="speech_level_born_and_raised">Born and raised here</string>
+    <string name="speech_level_passes_as_local">Could pass for a local</string>
+    <string name="speech_level_office_ace">Star of the global office</string>
+    <string name="speech_level_presenter">Trusted with the presentation</string>
+    <string name="speech_level_third_year_abroad">Third year abroad</string>
+    <string name="speech_level_first_year_abroad">First year abroad</string>
+    <string name="speech_level_language_school">Month three of language school</string>
+    <string name="speech_level_immigration">Made it through immigration</string>
+    <string name="speech_level_restaurant">Ordered at a restaurant</string>
+    <string name="speech_level_gestures">Getting by with gestures</string>
+    <string name="speech_level_warming_up">Warming up</string>
+    <string name="speech_what_the_scores_mean">What the scores mean</string>
+    <string name="speech_part_speed">Speaking speed</string>
+    <string name="speech_part_rhythm">Rhythm</string>
+    <string name="speech_compared_native">Compared with a native reading</string>
+    <string name="speech_next_format">Next: %s</string>
+    <string name="speech_narrator_read">A narrator\'s read. Nothing left to fix.</string>
+    <string name="speech_at_narrator_level">At a narrator\'s level</string>
+    <string name="speech_names_for_fun">The names are just for fun.</string>
+    <string name="speech_native_average">Native speakers average %d · 100 is an announcer\'s read</string>
+    <string name="speech_like_karaoke">Like a karaoke score: how close this reading came to the reference. It doesn\'t grade your English.</string>
+    <string name="speech_each_word_compared">Each word is compared with the same script read by a native voice (%s). Intonation isn\'t scored yet: nothing measures it reliably.</string>
+    <string name="speech_voice_female">female</string>
+    <string name="speech_voice_male">male</string>
+    <string name="speech_detail_slower">%d%% slower than the native reading</string>
+    <string name="speech_detail_faster">%d%% faster than the native reading</string>
+    <string name="speech_detail_native_pace">The native reading\'s pace</string>
+    <string name="speech_detail_held_ok">Words held as long as a native holds them</string>
+    <string name="speech_detail_held">Held too long: %s</string>
+    <string name="speech_detail_no_pauses">No pauses where the native reading has none</string>
+    <string name="speech_detail_stopped">Stopped: %s</string>
+    <string name="speech_detail_every_word">Every word as written</string>
+    <string name="speech_detail_slips">Words read differently: %d</string>
+    <string name="speech_detail_slips_list">Words read differently: %1$d · %2$s</string>
+    <string name="speech_detail_no_wrong_sounds">No clearly wrong sounds</string>
+    <string name="speech_focus_faster">Read a little faster: %d%% slower than the native reading.</string>
+    <string name="speech_focus_even_flow">Keep an even flow from word to word.</string>
+    <string name="speech_focus_dont_hold">Don\'t hold these words: %s</string>
+    <string name="speech_focus_one_breath">Read each phrase in one breath.</string>
+    <string name="speech_focus_dont_stop">Don\'t stop here: %s</string>
+    <string name="speech_focus_every_word">Read every word as written.</string>
+    <string name="speech_focus_every_word_list">Read every word as written: %s</string>
+    <string name="speech_focus_clear_sounds">Make every sound as clear as the rest.</string>
+    <string name="speech_focus_sounds">Work on these sounds: %s</string>
+    <string name="speech_held_item">“%1$s” %2$ss (native %3$ss)</string>
+    <string name="speech_pause_item">after “%1$s” %2$ss</string>
+    <string name="speech_seconds">%ss</string>
+    <string name="speech_legend">%1$s: read differently or left out · %2$s: not in the script · %3$s: held longer than the native reading · %4$s: a stop where the native reading has none</string>
+    <string name="speech_legend_red">Red</string>
+    <string name="speech_legend_added">+word</string>
+    <string name="speech_legend_orange">Orange</string>
+    <string name="speech_challenge_practice">Practice</string>
+    <string name="speech_keep_practicing">You can keep practicing. Your place stays as it is.</string>
+    <string name="speech_remove_me">Remove me from this board</string>
+    <string name="speech_remove_confirm">Remove your score from this board?</string>
+    <string name="speech_remove_ended">Your score and place come off the board for good. Your takes stay on your phone.</string>
+    <string name="speech_remove_live">Your score and place come off the board. Your next camera take goes back on it.</string>
+    <string name="speech_season_live">Season %d · Live</string>
+    <string name="speech_season_ended">Season %d · Ended</string>
+    <string name="speech_joined">%d joined</string>
+    <string name="speech_season">Season %d</string>
+    <string name="speech_season_records">Season %d records</string>
+    <string name="speech_practice_entry">A practice take. It stays off the board.</string>
+    <string name="speech_new_scoring_entry">Scored the Season 2 way, so it stays off this board.</string>
+    <string name="speech_final_standings">Final standings</string>
+    <string name="speech_season_over">This season has ended. These are the final standings.</string>
+    <string-array name="speech_verdict_100">
+        <item>Are you a news anchor?</item>
+        <item>Wait, is this the evening news?</item>
+        <item>I thought the radio was on.</item>
+        <item>Not a thing to fix.</item>
+        <item>Perfect. Nothing to add.</item>
+    </string-array>
+    <string-array name="speech_verdict_95">
+        <item>Anchors should be worried!</item>
+        <item>Do you work in broadcasting?</item>
+        <item>You could do voice work.</item>
+        <item>Every word lands.</item>
+        <item>One hair short of 100.</item>
+    </string-array>
+    <string-array name="speech_verdict_88">
+        <item>You could record audiobooks.</item>
+        <item>So easy to listen to.</item>
+        <item>I\'d hand you the presentation.</item>
+        <item>Go on, brag a little.</item>
+        <item>That just flowed.</item>
+    </string-array>
+    <string-array name="speech_verdict_78">
+        <item>Oh, not bad at all!</item>
+        <item>You\'ve got my attention.</item>
+        <item>You\'ve been hiding this?</item>
+        <item>Starting to sound like the real thing.</item>
+        <item>A little more and you\'re on air.</item>
+    </string-array>
+    <string-array name="speech_verdict_60">
+        <item>Nice, you\'ve got the feel of it.</item>
+        <item>Already sounding good.</item>
+        <item>One more go and that\'s a record.</item>
+        <item>It only gets better from here.</item>
+        <item>You\'ve got it. Go again.</item>
+    </string-array>
+    <string-array name="speech_verdict_low">
+        <item>Nobody nails it on the first try.</item>
+        <item>You read it to the end. That counts.</item>
+        <item>Consider that a warm-up.</item>
+        <item>The next round is the real one.</item>
+        <item>Practice pays off.</item>
+    </string-array>
+</resources>

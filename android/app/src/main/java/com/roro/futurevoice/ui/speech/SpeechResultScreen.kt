@@ -133,6 +133,13 @@ internal fun SpeechResultScreen(takeId: String, live: SpeechTake?, onBack: () ->
             onDismiss = { challenges.dismissMoment(takeId) })
     }
 
+    // Season 2's page; a take scored the older ways keeps the one below.
+    val reading = take?.metrics?.reading
+    if (take != null && script != null && reading != null) {
+        SpeechReadingPage(take, script, reading, take.id in pending, entries[take.id], standings[script.id], onBack, onAgain)
+        return
+    }
+
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         SheetHeader(
             take?.let { takeDateLabel(it.createdAt) }.orEmpty(),
@@ -340,7 +347,7 @@ private fun MetricRow(title: String, icon: ImageVector, value: String, detail: S
 /** The take's video (tap to play / pause, iOS `cf89d935`), "Preparing your
  *  video…", or the voice alone. */
 @Composable
-private fun Playback(take: SpeechTake, pending: Boolean) {
+internal fun Playback(take: SpeechTake, pending: Boolean) {
     val context = LocalContext.current
     val store = remember { SpeechStore.shared(context) }
     val scope = rememberCoroutineScope()
@@ -509,29 +516,51 @@ private suspend fun saveVideoToGallery(context: Context, file: File): Boolean = 
 
 /** The script as flowing text, each misread word in red: underlined with
  *  what the mic heard written small beside it, or struck through when it
- *  was skipped — iOS `SpeechMarkedScript`. */
+ *  was skipped — iOS `SpeechMarkedScript`. [held] and [pauses] are by the
+ *  script word's index across paragraphs: seconds a word was held longer than
+ *  the native reading, and seconds of a stop after it where the native reading
+ *  has none (Season 2 takes only). */
 @Composable
-private fun MarkedScript(paragraphs: List<List<SpeechAnalyzer.ScriptMark>>, language: String) {
+internal fun MarkedScript(paragraphs: List<List<SpeechAnalyzer.ScriptMark>>, language: String,
+                          held: Map<Int, Double> = emptyMap(), pauses: Map<Int, Double> = emptyMap()) {
     val red = Color(0xFFFF3B30)
+    val orange = Color(0xFFFF9500)
     val gap = if (LanguageCatalog.writesSpaces(language)) " " else ""
+    val seconds = stringResource(R.string.speech_seconds)
+    fun label(s: Double) = seconds.format("%.1f".format(java.util.Locale.US, s))
+    fun note(color: Color) = SpanStyle(color = color, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+        baselineShift = BaselineShift(0.5f))
     SelectionContainer {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            paragraphs.filter { it.isNotEmpty() }.forEach { line ->
+            var first = 0
+            paragraphs.forEach { line ->
+                if (line.isEmpty()) return@forEach
+                val start = first
+                first += line.size
                 Text(buildAnnotatedString {
                     line.forEachIndexed { i, mark ->
                         if (i > 0) append(gap)
-                        when (mark.op) {
-                            ShadowScore.DiffOp.DEL -> withStyle(SpanStyle(color = red,
-                                textDecoration = TextDecoration.LineThrough)) { append(mark.word) }
-                            ShadowScore.DiffOp.SUB -> withStyle(SpanStyle(color = red,
-                                textDecoration = TextDecoration.Underline)) { append(mark.word) }
-                            else -> append(mark.word)
+                        val heldFor = held[start + i]
+                        val wordColor = if (mark.op == ShadowScore.DiffOp.DEL || mark.op == ShadowScore.DiffOp.SUB) red else Color.Unspecified
+                        val decoration = when (mark.op) {
+                            ShadowScore.DiffOp.DEL -> TextDecoration.LineThrough
+                            ShadowScore.DiffOp.SUB -> TextDecoration.Underline
+                            else -> null
+                        }
+                        withStyle(SpanStyle(color = wordColor, textDecoration = decoration,
+                            background = if (heldFor != null) orange.copy(alpha = 0.25f) else Color.Unspecified)) {
+                            append(mark.word)
+                        }
+                        if (heldFor != null) {
+                            withStyle(note(if (wordColor == red) red else orange)) { append(" " + label(heldFor)) }
                         }
                         val heard = mark.heard
                         if (mark.op == ShadowScore.DiffOp.SUB && !heard.isNullOrEmpty()) {
                             withStyle(SpanStyle(color = red, fontSize = 11.sp, fontStyle = FontStyle.Italic,
                                 baselineShift = BaselineShift(0.5f))) { append(" " + heard) }
                         }
+                        mark.added.forEach { extra -> withStyle(note(red)) { append(" +$extra") } }
+                        pauses[start + i]?.let { s -> withStyle(note(orange)) { append(" ⏸︎" + label(s)) } }
                     }
                 }, style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 30.sp))
             }

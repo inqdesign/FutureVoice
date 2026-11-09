@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Speech Season 2 and seasons. Values are iOS Localizable.xcstrings' (iOS ed2b2eae, e870565e). -->
+<resources>
+    <string name="speech_level_format">%s水準</string>
+    <string name="speech_level_news_anchor">晚間新聞主播</string>
+    <string name="speech_level_audiobook">有聲書配音員</string>
+    <string name="speech_level_born_and_raised">土生土長</string>
+    <string name="speech_level_passes_as_local">還以為是當地人</string>
+    <string name="speech_level_office_ace">外商王牌</string>
+    <string name="speech_level_presenter">可以放心交給你簡報</string>
+    <string name="speech_level_third_year_abroad">留學第三年</string>
+    <string name="speech_level_first_year_abroad">留學第一年</string>
+    <string name="speech_level_language_school">語言班第三個月</string>
+    <string name="speech_level_immigration">順利通過海關</string>
+    <string name="speech_level_restaurant">成功點餐</string>
+    <string name="speech_level_gestures">比手畫腳</string>
+    <string name="speech_level_warming_up">開口熱身中</string>
+    <string name="speech_what_the_scores_mean">分數的意思</string>
+    <string name="speech_part_speed">說話速度</string>
+    <string name="speech_part_rhythm">節奏</string>
+    <string name="speech_compared_native">與母語人士朗讀比較</string>
+    <string name="speech_next_format">下一步：%s</string>
+    <string name="speech_narrator_read">朗讀者的水準，沒有要改的地方。</string>
+    <string name="speech_at_narrator_level">朗讀者水準</string>
+    <string name="speech_names_for_fun">這些稱號只是好玩而已。</string>
+    <string name="speech_native_average">母語人士平均 %d 分 · 100 分是主播級朗讀</string>
+    <string name="speech_like_karaoke">就像 KTV 評分，這是這次朗讀有多接近示範朗讀，不代表你的英文程度。</string>
+    <string name="speech_each_word_compared">每個字都和母語人士聲音（%s）讀的同一份稿子比較。語調還沒有可靠的測量方法，所以還沒算進分數。</string>
+    <string name="speech_voice_female">女聲</string>
+    <string name="speech_voice_male">男聲</string>
+    <string name="speech_detail_slower">比母語人士朗讀慢 %d%%</string>
+    <string name="speech_detail_faster">比母語人士朗讀快 %d%%</string>
+    <string name="speech_detail_native_pace">和母語人士朗讀一樣的速度</string>
+    <string name="speech_detail_held_ok">字的長短和母語人士一樣</string>
+    <string name="speech_detail_held">拖太長：%s</string>
+    <string name="speech_detail_no_pauses">沒有在母語人士不停頓的地方停下</string>
+    <string name="speech_detail_stopped">停下的地方：%s</string>
+    <string name="speech_detail_every_word">每個字都照稿念</string>
+    <string name="speech_detail_slips">和稿子不同：%d 個字</string>
+    <string name="speech_detail_slips_list">和稿子不同：%1$d 個字 · %2$s</string>
+    <string name="speech_detail_no_wrong_sounds">沒有明顯讀錯的音</string>
+    <string name="speech_focus_faster">讀快一點：比母語人士朗讀慢了 %d%%。</string>
+    <string name="speech_focus_even_flow">字與字之間要連得平均。</string>
+    <string name="speech_focus_dont_hold">這些字不要拖長：%s</string>
+    <string name="speech_focus_one_breath">每個詞組一口氣讀完。</string>
+    <string name="speech_focus_dont_stop">這裡不要停：%s</string>
+    <string name="speech_focus_every_word">照稿念每個字。</string>
+    <string name="speech_focus_every_word_list">照稿念每個字：%s</string>
+    <string name="speech_focus_clear_sounds">讓每個音都一樣清楚。</string>
+    <string name="speech_focus_sounds">練習這幾個音：%s</string>
+    <string name="speech_held_item">“%1$s” %2$s 秒（母語人士 %3$s 秒）</string>
+    <string name="speech_pause_item">“%1$s” 後 %2$s 秒</string>
+    <string name="speech_seconds">%s 秒</string>
+    <string name="speech_legend">%1$s：讀得不同或漏掉 · %2$s：稿子裡沒有的字 · %3$s：比母語人士拖得長 · %4$s：在母語人士不停的地方停下</string>
+    <string name="speech_legend_red">紅色</string>
+    <string name="speech_legend_added">+字</string>
+    <string name="speech_legend_orange">橘色</string>
+    <string name="speech_challenge_practice">練習</string>
+    <string name="speech_keep_practicing">可以繼續練習，排名維持不變。</string>
+    <string name="speech_remove_me">將我從此排名移除</string>
+    <string name="speech_remove_confirm">要從此排名移除嗎？</string>
+    <string name="speech_remove_ended">分數和名次將永久移除，錄製內容保留在手機上。</string>
+    <string name="speech_remove_live">分數和名次將被移除。下次開啟相機的挑戰會重新進入排名。</string>
+    <string name="speech_season_live">第 %d 賽季 · 進行中</string>
+    <string name="speech_season_ended">第 %d 賽季 · 已結束</string>
+    <string name="speech_joined">%d 人參加</string>
+    <string name="speech_season">第 %d 賽季</string>
+    <string name="speech_season_records">第 %d 賽季紀錄</string>
+    <string name="speech_practice_entry">這是練習紀錄，不計入排名。</string>
+    <string name="speech_new_scoring_entry">用第 2 季的方式評分，所以不會上這個排行榜。</string>
+    <string name="speech_final_standings">最終排名</string>
+    <string name="speech_season_over">本賽季已結束，這是最終排名。</string>
+    <string-array name="speech_verdict_100">
+        <item>請問你是主播嗎？</item>
+        <item>這根本是新聞吧？</item>
+        <item>還以為收音機開著。</item>
+        <item>完全挑不出毛病。</item>
+        <item>太完美了，無話可說。</item>
+    </string-array>
+    <string-array name="speech_verdict_95">
+        <item>主播都要緊張了！</item>
+        <item>你是做廣播的嗎？</item>
+        <item>可以去當配音員了。</item>
+        <item>每個字都聽得好清楚。</item>
+        <item>離滿分只差一點點。</item>
+    </string-array>
+    <string-array name="speech_verdict_88">
+        <item>可以出有聲書了。</item>
+        <item>聽起來好舒服。</item>
+        <item>簡報真想交給你。</item>
+        <item>可以出去炫耀一下了。</item>
+        <item>唸得好順。</item>
+    </string-array>
+    <string-array name="speech_verdict_78">
+        <item>喔，挺厲害的嘛！</item>
+        <item>讓人忍不住豎起耳朵。</item>
+        <item>原來你藏了一手？</item>
+        <item>越來越有樣子了。</item>
+        <item>再一點點就能上節目了。</item>
+    </string-array>
+    <string-array name="speech_verdict_60">
+        <item>不錯，抓到感覺了。</item>
+        <item>已經不錯了喔。</item>
+        <item>再來一次就破紀錄了。</item>
+        <item>接下來只會越來越好。</item>
+        <item>感覺來了，馬上再來一次。</item>
+    </string-array>
+    <string-array name="speech_verdict_low">
+        <item>沒有人第一次就完美。</item>
+        <item>能唸完就很棒了。</item>
+        <item>今天先開開嗓。</item>
+        <item>下一次才是真的。</item>
+        <item>練習不會騙人。</item>
+    </string-array>
+</resources>

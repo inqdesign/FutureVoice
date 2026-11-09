@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Speech Season 2 and seasons. Values are iOS Localizable.xcstrings' (iOS ed2b2eae, e870565e). -->
+<resources>
+    <string name="speech_level_format">%sレベル</string>
+    <string name="speech_level_news_anchor">9時のニュースキャスター</string>
+    <string name="speech_level_audiobook">オーディオブックの声優</string>
+    <string name="speech_level_born_and_raised">生まれながらのネイティブ</string>
+    <string name="speech_level_passes_as_local">現地の人かと</string>
+    <string name="speech_level_office_ace">外資系のエース</string>
+    <string name="speech_level_presenter">プレゼンを任せられる人</string>
+    <string name="speech_level_third_year_abroad">留学3年目</string>
+    <string name="speech_level_first_year_abroad">留学1年目</string>
+    <string name="speech_level_language_school">語学留学3か月目</string>
+    <string name="speech_level_immigration">入国審査クリア</string>
+    <string name="speech_level_restaurant">レストランで注文成功</string>
+    <string name="speech_level_gestures">身振り手振り総動員</string>
+    <string name="speech_level_warming_up">口慣らし中</string>
+    <string name="speech_what_the_scores_mean">点数の目安</string>
+    <string name="speech_part_speed">話す速さ</string>
+    <string name="speech_part_rhythm">リズム</string>
+    <string name="speech_compared_native">ネイティブの朗読と比較</string>
+    <string name="speech_next_format">次は%s</string>
+    <string name="speech_narrator_read">ナレーター並みです。直すところはありません。</string>
+    <string name="speech_at_narrator_level">ナレーター水準</string>
+    <string name="speech_names_for_fun">呼び名はお遊びです。</string>
+    <string name="speech_native_average">ネイティブの平均 %d点 · 100点はアナウンサー級</string>
+    <string name="speech_like_karaoke">カラオケの採点と同じで、今回の読みがお手本にどれだけ近かったかの点数です。英語力の点数ではありません。</string>
+    <string name="speech_each_word_compared">同じ台本をネイティブの声（%s）で読んだものと、語ごとに比べています。イントネーションは確かな測り方がまだないため、点数に入れていません。</string>
+    <string name="speech_voice_female">女性</string>
+    <string name="speech_voice_male">男性</string>
+    <string name="speech_detail_slower">ネイティブの朗読より%d%%遅い</string>
+    <string name="speech_detail_faster">ネイティブの朗読より%d%%速い</string>
+    <string name="speech_detail_native_pace">ネイティブの朗読と同じ速さ</string>
+    <string name="speech_detail_held_ok">語の長さがネイティブと同じ</string>
+    <string name="speech_detail_held">伸ばしすぎ：%s</string>
+    <string name="speech_detail_no_pauses">ネイティブが止まらない所で止まっていません</string>
+    <string name="speech_detail_stopped">止まった所：%s</string>
+    <string name="speech_detail_every_word">すべて台本どおり</string>
+    <string name="speech_detail_slips">台本と違う読み：%d語</string>
+    <string name="speech_detail_slips_list">台本と違う読み：%1$d語 · %2$s</string>
+    <string name="speech_detail_no_wrong_sounds">はっきり誤った音はありません</string>
+    <string name="speech_focus_faster">もう少し速く読みましょう。ネイティブの朗読より%d%%遅めでした。</string>
+    <string name="speech_focus_even_flow">語と語のあいだを均等につなげましょう。</string>
+    <string name="speech_focus_dont_hold">この語を伸ばさずに読みましょう：%s</string>
+    <string name="speech_focus_one_breath">フレーズごとにひと息で読みましょう。</string>
+    <string name="speech_focus_dont_stop">ここで止まらずに読みましょう：%s</string>
+    <string name="speech_focus_every_word">台本どおりに読みましょう。</string>
+    <string name="speech_focus_every_word_list">台本どおりに読みましょう：%s</string>
+    <string name="speech_focus_clear_sounds">すべての音を同じようにはっきり出しましょう。</string>
+    <string name="speech_focus_sounds">この音を練習しましょう：%s</string>
+    <string name="speech_held_item">“%1$s” %2$s秒（ネイティブ %3$s秒）</string>
+    <string name="speech_pause_item">“%1$s”の後 %2$s秒</string>
+    <string name="speech_seconds">%s秒</string>
+    <string name="speech_legend">%1$s：違う読み・抜けた語 · %2$s：台本にない語 · %3$s：ネイティブより長く伸ばした語 · %4$s：ネイティブが止まらない所で止まった</string>
+    <string name="speech_legend_red">赤</string>
+    <string name="speech_legend_added">+語</string>
+    <string name="speech_legend_orange">オレンジ</string>
+    <string name="speech_challenge_practice">練習</string>
+    <string name="speech_keep_practicing">練習は続けられます。順位はこのまま残ります。</string>
+    <string name="speech_remove_me">このランキングから外す</string>
+    <string name="speech_remove_confirm">このランキングから外しますか？</string>
+    <string name="speech_remove_ended">スコアと順位は完全に消えます。録音はスマホに残ります。</string>
+    <string name="speech_remove_live">スコアと順位は消えます。次のカメラ撮影からまたランキングに入ります。</string>
+    <string name="speech_season_live">シーズン%d · 開催中</string>
+    <string name="speech_season_ended">シーズン%d · 終了</string>
+    <string name="speech_joined">%d人が参加</string>
+    <string name="speech_season">シーズン%d</string>
+    <string name="speech_season_records">シーズン%dの記録</string>
+    <string name="speech_practice_entry">練習の記録です。順位には入りません。</string>
+    <string name="speech_new_scoring_entry">シーズン2の方式で採点したので、このランキングには載りません。</string>
+    <string name="speech_final_standings">最終順位</string>
+    <string name="speech_season_over">このシーズンは終了しました。最終順位です。</string>
+    <string-array name="speech_verdict_100">
+        <item>もしかしてアナウンサーですか？</item>
+        <item>これ、もうニュースですよね？</item>
+        <item>ラジオがついてるのかと思いました。</item>
+        <item>文句のつけようがありません。</item>
+        <item>完璧です。もう言うことなし。</item>
+    </string-array>
+    <string-array name="speech_verdict_95">
+        <item>アナウンサー顔負けです！</item>
+        <item>放送のお仕事してます？</item>
+        <item>声優になれますよ。</item>
+        <item>スッと耳に入ってきます。</item>
+        <item>100点まであとほんの少し。</item>
+    </string-array>
+    <string-array name="speech_verdict_88">
+        <item>オーディオブック出せますよ。</item>
+        <item>とても聞きやすいです。</item>
+        <item>プレゼンをお願いしたくなる声です。</item>
+        <item>これは自慢していいですよ。</item>
+        <item>すらすら読めてますね。</item>
+    </string-array>
+    <string-array name="speech_verdict_78">
+        <item>おっ、なかなかやりますね？</item>
+        <item>思わず耳を傾けちゃいました。</item>
+        <item>実力を隠してましたね？</item>
+        <item>だんだんそれらしくなってきました。</item>
+        <item>もう少しで放送に出られますよ。</item>
+    </string-array>
+    <string-array name="speech_verdict_60">
+        <item>いいですね、つかめてきました。</item>
+        <item>もういい感じですよ。</item>
+        <item>もう一回で記録が出そうです。</item>
+        <item>ここから良くなる一方です。</item>
+        <item>いい流れです。もう一回いきましょう。</item>
+    </string-array>
+    <string-array name="speech_verdict_low">
+        <item>最初からうまくいく人はいません。</item>
+        <item>最後まで読めたのが大事です。</item>
+        <item>今日はいい準備運動でした。</item>
+        <item>次が本番です。</item>
+        <item>練習は裏切りません。</item>
+    </string-array>
+</resources>

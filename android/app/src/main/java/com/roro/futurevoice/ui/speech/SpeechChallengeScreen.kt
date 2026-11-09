@@ -28,8 +28,10 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ArrowCircleUp
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.Archive
@@ -271,6 +273,7 @@ internal fun SpeechChallengeScreen(
     val density = androidx.compose.ui.platform.LocalDensity.current
     var menu by remember { mutableStateOf(false) }
     var confirmRetire by remember { mutableStateOf(false) }
+    var confirmWithdraw by remember { mutableStateOf(false) }
 
     suspend fun reload() {
         val language = script?.language
@@ -283,7 +286,8 @@ internal fun SpeechChallengeScreen(
 
     // Nothing goes on a public board until the learner has seen the name.
     fun start() {
-        if (SpeechChallenges.displayName(context) == null) { startAfterNaming = true; naming = true }
+        // Practice on an ended challenge puts no name anywhere.
+        if (!isPast && SpeechChallenges.displayName(context) == null) { startAfterNaming = true; naming = true }
         else practicing = true
     }
 
@@ -327,8 +331,10 @@ internal fun SpeechChallengeScreen(
                 .padding(bottom = with(density) { barHeightPx.toDp() } + 24.dp)) {
                 FormSection(
                     stringResource(R.string.leaderboard),
-                    footer = if (isPast) stringResource(R.string.this_challenge_has_ended_these_are_the_final_standings)
-                        else stringResource(R.string.camera_on_takes_that_score_lld_or_more_go_on_the_board_and_y_15915e, SpeechChallenges.BOARD_BAR),
+                    footer = if (isPast) stringResource(R.string.this_challenge_has_ended_these_are_the_final_standings) +
+                            "\n" + stringResource(R.string.speech_keep_practicing)
+                        else stringResource(R.string.camera_on_takes_that_score_lld_or_more_go_on_the_board_and_y_15915e,
+                            SpeechChallenges.boardBar(standing?.season)),
                 ) {
                     val rows = board
                     when {
@@ -379,6 +385,11 @@ internal fun SpeechChallengeScreen(
                                 }
                             }
                         }
+                        FormDivider()
+                        Text(stringResource(R.string.speech_remove_me), color = Color(0xFFFF3B30),
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.fillMaxWidth().clickable { confirmWithdraw = true }
+                                .padding(horizontal = 16.dp, vertical = 12.dp))
                     }
                 }
             }
@@ -421,6 +432,18 @@ internal fun SpeechChallengeScreen(
                 scope.launch { reload() }
             })
         }
+    }
+    if (confirmWithdraw) {
+        AlertDialog(onDismissRequest = { confirmWithdraw = false },
+            title = { Text(stringResource(R.string.speech_remove_confirm)) },
+            text = { Text(stringResource(if (isPast) R.string.speech_remove_ended else R.string.speech_remove_live)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmWithdraw = false
+                    scope.launch { runCatching { challenges.withdraw(challengeId) }; reload() }
+                }) { Text(stringResource(R.string.speech_remove_me), color = Color(0xFFFF3B30)) }
+            },
+            dismissButton = { TextButton(onClick = { confirmWithdraw = false }) { Text(stringResource(R.string.cancel)) } })
     }
     if (confirmRetire) {
         AlertDialog(onDismissRequest = { confirmRetire = false },
@@ -510,12 +533,13 @@ private fun ChallengeActionBar(script: SpeechScript, intro: String?, link: Strin
                 FitButtonLabel(stringResource(R.string.script),
                     MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold))
             }
-            if (!isPast) {
-                IosButton(onClick = onStart, modifier = Modifier.weight(1f),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 12.dp)) {
-                    FitButtonLabel(stringResource(if (hasBest) R.string.speech_challenge_again else R.string.speech_challenge_take),
-                        MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold))
-                }
+            IosButton(onClick = onStart, modifier = Modifier.weight(1f),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 12.dp)) {
+                FitButtonLabel(stringResource(when {
+                    isPast -> R.string.speech_challenge_practice
+                    hasBest -> R.string.speech_challenge_again
+                    else -> R.string.speech_challenge_take
+                }), MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold))
             }
         }
     }
@@ -700,11 +724,21 @@ internal fun SpeechOverallScreen(language: String, onBack: () -> Unit) {
     val context = LocalContext.current
     val challenges = remember { SpeechChallenges.shared(context) }
     val cached by challenges.overall.collectAsStateWithLifecycle()
+    val overallSeason by challenges.overallSeason.collectAsStateWithLifecycle()
+    val seasons by challenges.seasons.collectAsStateWithLifecycle()
     var rows by remember { mutableStateOf<List<SpeechChallenges.BoardRow>?>(null) }
     var refreshing by remember { mutableStateOf(false) }
+    /** Null until picked: the season the banner showed. */
+    var pickedSeason by remember { mutableStateOf<Int?>(null) }
+    val season = pickedSeason ?: overallSeason
+    val isFinal = season?.let { challenges.seasonEnded(it, seasons) } ?: false
+    val boardSeasons = challenges.boardSeasons(seasons)
     val scope = rememberCoroutineScope()
-    suspend fun load() { challenges.overallBoard(language, limit = 50)?.let { rows = it } }
-    LaunchedEffect(language) { load() }
+    suspend fun load() {
+        if (pickedSeason != null) rows = null
+        challenges.overallBoard(language, season, limit = 50)?.let { rows = it }
+    }
+    LaunchedEffect(language, season) { load() }
     Scaffold(
         containerColor = AppSurfaces.ground,
         topBar = {
@@ -724,8 +758,18 @@ internal fun SpeechOverallScreen(language: String, onBack: () -> Unit) {
         ) {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
-                FormSection(null, footer = stringResource(R.string.speech_overall_footer)) {
-                    val shown = rows ?: cached
+                if (boardSeasons.size > 1) {
+                    val labels = boardSeasons.map { stringResource(R.string.speech_season, it) }
+                    com.roro.futurevoice.ui.brand.IosSegmented(
+                        options = labels,
+                        selected = boardSeasons.indexOf(season).coerceAtLeast(0),
+                        onSelect = { pickedSeason = boardSeasons[it] },
+                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                    )
+                }
+                FormSection(if (isFinal) stringResource(R.string.speech_final_standings) else null,
+                    footer = stringResource(if (isFinal) R.string.speech_season_over else R.string.speech_overall_footer)) {
+                    val shown = rows ?: (if (pickedSeason == null) cached else null)
                     if (shown == null) {
                         Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
                             CircularProgressIndicator(Modifier.size(24.dp))
@@ -761,9 +805,11 @@ internal fun SpeechChallengeListScreen(language: String, onOpen: (SpeechScript) 
     val challenges = remember { SpeechChallenges.shared(context) }
     val scripts by challenges.scripts.collectAsStateWithLifecycle()
     val standings by challenges.standings.collectAsStateWithLifecycle()
+    val seasons by challenges.seasons.collectAsStateWithLifecycle()
     LaunchedEffect(language) { challenges.refresh(language) }
     val live = scripts.filter { standings[it.id]?.retiredAt == null }
     val past = scripts.filter { standings[it.id]?.retiredAt != null }
+    val openSeason = challenges.openSeason(seasons)
     Scaffold(
         containerColor = AppSurfaces.ground,
         topBar = {
@@ -779,21 +825,56 @@ internal fun SpeechChallengeListScreen(language: String, onOpen: (SpeechScript) 
         Column(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
             if (live.isNotEmpty()) {
-                CardSection(stringResource(R.string.live)) {
+                CardSection(if (openSeason != null && openSeason >= 2) stringResource(R.string.speech_season_live, openSeason)
+                    else stringResource(R.string.live)) {
                     live.forEach { script ->
                         SpeechChallengeRow(script, standings[script.id], onClick = { onOpen(script) })
                     }
                 }
             }
-            if (past.isNotEmpty()) {
+            challenges.pastSeasons(scripts, standings).forEach { season ->
+                FormSection(stringResource(R.string.speech_season_ended, season),
+                    footer = stringResource(R.string.ended_challenges_keep_their_final_standings)) {
+                    past.filter { standings[it.id]?.season == season }.forEachIndexed { i, script ->
+                        if (i > 0) FormDivider()
+                        PastChallengeRow(script, standings[script.id], onClick = { onOpen(script) })
+                    }
+                }
+            }
+            // Retired before seasons, or from a server without them.
+            val unseasoned = past.filter { standings[it.id]?.season == null }
+            if (unseasoned.isNotEmpty()) {
                 CardSection(stringResource(R.string.past_challenges),
                     footer = stringResource(R.string.ended_challenges_keep_their_final_standings)) {
-                    past.forEach { script ->
+                    unseasoned.forEach { script ->
                         SpeechChallengeRow(script, standings[script.id], onClick = { onOpen(script) })
                     }
                 }
             }
         }
+    }
+}
+
+/** An ended challenge is a record: the title and where the reader finished. */
+@Composable
+private fun PastChallengeRow(script: SpeechScript, standing: SpeechChallenges.Standing?, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(script.title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(R.string.speech_joined, standing?.entrants ?: 0), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        val rank = standing?.myRank
+        val best = standing?.myBest
+        if (rank != null && best != null) {
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("#$rank", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text("$best", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium,
+                    color = scoreColor(best))
+            }
+        }
+        FormChevron()
     }
 }
 
@@ -901,10 +982,13 @@ internal fun SpeechChallengeEntrySection(entry: SpeechChallenges.Entry?, standin
                 SpeechChallenges.Entry.CameraOff -> EntryLine(Icons.Filled.VideocamOff,
                     stringResource(R.string.the_camera_was_off_so_this_take_isn_t_on_the_board), secondary, bold = false)
                 SpeechChallenges.Entry.BelowBar -> EntryLine(Icons.Outlined.EmojiEvents,
-                    stringResource(R.string.takes_that_score_lld_or_more_go_on_the_board, SpeechChallenges.BOARD_BAR), secondary, bold = false)
+                    stringResource(R.string.takes_that_score_lld_or_more_go_on_the_board, SpeechChallenges.boardBar(standing?.season)), secondary, bold = false)
                 SpeechChallenges.Entry.Failed -> EntryLine(Icons.Filled.Warning,
                     stringResource(R.string.this_take_couldn_t_reach_the_board), secondary, bold = false)
-                SpeechChallenges.Entry.NewScoring, SpeechChallenges.Entry.Practice -> Unit
+                SpeechChallenges.Entry.NewScoring -> EntryLine(Icons.Outlined.Science,
+                    stringResource(R.string.speech_new_scoring_entry), secondary, bold = false)
+                SpeechChallenges.Entry.Practice -> EntryLine(Icons.Filled.Mic,
+                    stringResource(R.string.speech_practice_entry), secondary, bold = false)
                 null -> {
                     val rank = standing?.myRank
                     val best = standing?.myBest
