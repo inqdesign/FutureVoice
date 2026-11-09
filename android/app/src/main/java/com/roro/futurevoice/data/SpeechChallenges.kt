@@ -5,6 +5,9 @@ import com.roro.futurevoice.core.Analytics
 import com.roro.futurevoice.core.Config
 import com.roro.futurevoice.net.Edge
 import com.roro.futurevoice.net.EdgeError
+import com.roro.futurevoice.talk.SpeechReading
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -73,6 +76,9 @@ class SpeechChallenges private constructor(private val context: Context) {
         val intro: Map<String, String>? = null,
         /** The original (a video of the speech), opened outside the app. */
         val link: String? = null,
+        /** Which season it belongs to. Null from a server without seasons, or
+         *  a cache written before them. */
+        val season: Int? = null,
     ) {
         /** The intro in the app's language, then English (iOS `SpeechChallenges.intro`). */
         fun introFor(appLanguage: String): String? {
@@ -81,6 +87,10 @@ class SpeechChallenges private constructor(private val context: Context) {
                 ?.takeIf { it.isNotBlank() }
         }
     }
+
+    /** One of a language's seasons, as this account sees them. */
+    @Serializable
+    data class SeasonStatus(val season: Int, val min_scoring: Int, val is_open: Boolean, val ended: Boolean)
 
     @Serializable
     data class BoardRow(
@@ -143,6 +153,10 @@ class SpeechChallenges private constructor(private val context: Context) {
         /** Under [BOARD_BAR]: kept on the phone, never on the board. */
         data object BelowBar : Entry
         data object Failed : Entry
+        /** Scored by Season 2's rules on a board that doesn't take them. */
+        data object NewScoring : Entry
+        /** On a challenge that has ended: the board is frozen, so this was practice. */
+        data object Practice : Entry
     }
 
     private val _scripts = MutableStateFlow<List<SpeechScript>>(emptyList())
@@ -153,6 +167,12 @@ class SpeechChallenges private constructor(private val context: Context) {
      *  row), for the Speech tab's banner — iOS `overall`. Null until it loads. */
     private val _overall = MutableStateFlow<List<BoardRow>?>(null)
     val overall: StateFlow<List<BoardRow>?> = _overall
+    /** The season [overall] is the board of. Null: a server without seasons. */
+    private val _overallSeason = MutableStateFlow<Int?>(null)
+    val overallSeason: StateFlow<Int?> = _overallSeason
+    /** The loaded language's seasons; empty from a server without them. */
+    private val _seasons = MutableStateFlow<List<SeasonStatus>>(emptyList())
+    val seasons: StateFlow<List<SeasonStatus>> = _seasons
     /** By take id. In memory: the page that matters is the one the take
      *  opens on; later visits read the standing instead. */
     private val _entries = MutableStateFlow<Map<String, Entry>>(emptyMap())
@@ -178,6 +198,29 @@ class SpeechChallenges private constructor(private val context: Context) {
 
     fun isPast(id: String): Boolean = _standings.value[id]?.retiredAt != null
 
+    fun season(id: String): Int? = _standings.value[id]?.season
+
+    /** The newest season taking entries. */
+    fun openSeason(seasons: List<SeasonStatus> = _seasons.value): Int? =
+        seasons.filter { it.is_open }.maxOfOrNull { it.season }
+
+    /** The newest season that has ended. */
+    fun lastEndedSeason(seasons: List<SeasonStatus> = _seasons.value): Int? =
+        seasons.filter { it.ended }.maxOfOrNull { it.season }
+
+    /** Seasons with past challenges, newest first. */
+    fun pastSeasons(scripts: List<SpeechScript> = _scripts.value,
+                    standings: Map<String, Standing> = _standings.value): List<Int> =
+        scripts.filter { standings[it.id]?.retiredAt != null }
+            .mapNotNull { standings[it.id]?.season }.distinct().sortedDescending()
+
+    /** Every season that has a board, newest first: open and ended. */
+    fun boardSeasons(seasons: List<SeasonStatus> = _seasons.value): List<Int> =
+        seasons.filter { it.is_open || it.ended }.map { it.season }.sortedDescending()
+
+    fun seasonEnded(season: Int, seasons: List<SeasonStatus> = _seasons.value): Boolean =
+        seasons.firstOrNull { it.season == season }?.ended == true
+
     /** The last list per language, so a take's result page finds its script
      *  offline and the tab draws before the network answers. */
     @Synchronized
@@ -185,6 +228,8 @@ class SpeechChallenges private constructor(private val context: Context) {
         if (loadedLanguage == language) return
         loadedLanguage = language
         _overall.value = null
+        _overallSeason.value = null
+        _seasons.value = emptyList()
         val cache = runCatching {
             StoreJson.json.decodeFromString(Cache.serializer(), cacheFile(language).readText())
         }.getOrNull()
@@ -216,16 +261,40 @@ class SpeechChallenges private constructor(private val context: Context) {
         val category: String? = null,
         val intro: Map<String, String>? = null,
         val link: String? = null,
+        val season: Int? = null,
     )
+
+    private suspend fun seasonStatus(language: String): List<SeasonStatus> = runCatching {
+        Edge.json.decodeFromString(ListSerializer(SeasonStatus.serializer()),
+            rpc("speech_season_status", buildJsonObject { put("p_language", language) }))
+    }.getOrDefault(emptyList())
+
+    /** The list that knows seasons, or the old one from a server without it. */
+    private suspend fun listRows(language: String): List<ListRow> {
+        val serializer = ListSerializer(ListRow.serializer())
+        runCatching {
+            Edge.json.decodeFromString(serializer, rpc("speech_challenge_list_v2", buildJsonObject {
+                put("p_language", language)
+                put("p_scoring", SpeechReading.VERSION)
+            }))
+        }.getOrNull()?.let { return it }
+        return Edge.json.decodeFromString(serializer,
+            rpc("speech_challenge_list", buildJsonObject { put("p_language", language) }))
+    }
 
     suspend fun refresh(language: String) {
         loadCache(language)
-        overallBoard(language)?.let { if (loadedLanguage == language) _overall.value = it }
-        val rows = runCatching {
-            Edge.json.decodeFromString(ListSerializer(ListRow.serializer()),
-                rpc("speech_challenge_list", buildJsonObject { put("p_language", language) }))
-        }.getOrNull() ?: return
-        if (loadedLanguage != language) return
+        val (statuses, rows) = coroutineScope {
+            val status = async { seasonStatus(language) }
+            val list = runCatching { listRows(language) }.getOrNull()
+            status.await() to list
+        }
+        if (rows == null || loadedLanguage != language) return
+        _seasons.value = statuses
+        if (statuses.isNotEmpty()) {
+            SpeechReading.setSeasonOpen(context,
+                statuses.any { it.is_open && it.min_scoring >= SpeechReading.READING_SCORING_FROM }, language)
+        }
         _scripts.value = rows.map { row ->
             SpeechScript(
                 id = row.id, title = row.title,
@@ -241,9 +310,16 @@ class SpeechChallenges private constructor(private val context: Context) {
         _standings.value = rows.associate { row ->
             row.id to Standing(row.entrants ?: 0, row.top_score, row.my_best, row.my_rank, row.my_attempts, row.top_three,
                 row.retired_at?.let { runCatching { OffsetDateTime.parse(it).toInstant().toEpochMilli() }.getOrNull() },
-                row.attempts, row.category, row.intro, row.link)
+                row.attempts, row.category, row.intro, row.link, row.season)
         }
         writeCache(language)
+        val boardSeason = openSeason() ?: lastEndedSeason()
+        overallBoard(language, boardSeason)?.let {
+            if (loadedLanguage == language) {
+                _overall.value = it
+                _overallSeason.value = boardSeason
+            }
+        }
         importLocalBests()
     }
 
@@ -264,13 +340,16 @@ class SpeechChallenges private constructor(private val context: Context) {
         val store = SpeechStore.shared(context)
         for (script in _scripts.value) {
             val challengeId = script.challengeId ?: continue
-            if (isPast(challengeId)) continue
+            // Season 1 takes never go on a Season 2 board, and a learner who
+            // took themselves off a board doesn't get an earlier take filed.
+            if (isPast(challengeId) || (season(challengeId) ?: 1) >= 2 || challengeId in removedFromBoard()) continue
             if (!importing.add(challengeId)) continue
             try {
                 val onBoard = _standings.value[challengeId]?.myBest ?: -1
                 val candidates = store.takes(script.id)
                     .filter { it.videoFilename != null && it.metrics.overall > onBoard &&
-                        (it.metrics.scoring ?: 1) >= com.roro.futurevoice.talk.SpeechAnalyzer.SCORING_WITHOUT_PRONUNCIATION }
+                        (it.metrics.scoring ?: 1) >= com.roro.futurevoice.talk.SpeechAnalyzer.SCORING_WITHOUT_PRONUNCIATION &&
+                        (it.metrics.scoring ?: 1) < SpeechReading.READING_SCORING_FROM }
                     .sortedByDescending { it.metrics.overall }
                 // Re-scored with today's weighting (iOS): only the number sent
                 // changes, the take on the phone stays as it was.
@@ -308,11 +387,14 @@ class SpeechChallenges private constructor(private val context: Context) {
     /** Every challenge of a language on one board (iOS 2026-11-05): each
      *  learner's best score per challenge, added up, so the way to the top is
      *  to take more of them. Past challenges count. */
-    suspend fun overallBoard(language: String, limit: Int = 10): List<BoardRow>? = runCatching {
-        Edge.json.decodeFromString(ListSerializer(BoardRow.serializer()),
-            rpc("speech_overall_board", buildJsonObject {
-                put("p_language", language); put("p_limit", limit)
-            }))
+    suspend fun overallBoard(language: String, season: Int? = null, limit: Int = 10): List<BoardRow>? = runCatching {
+        // Per season when the server has seasons (null: it doesn't).
+        val raw = if (season != null) rpc("speech_overall_board_v2", buildJsonObject {
+            put("p_language", language); put("p_season", season); put("p_limit", limit)
+        }) else rpc("speech_overall_board", buildJsonObject {
+            put("p_language", language); put("p_limit", limit)
+        })
+        Edge.json.decodeFromString(ListSerializer(BoardRow.serializer()), raw)
     }.getOrNull()
 
     // MARK: - Entering a take
@@ -320,12 +402,33 @@ class SpeechChallenges private constructor(private val context: Context) {
     /** Called by the take session once a take on a challenge is scored. */
     fun enter(take: SpeechTake, script: SpeechScript, recordedOnCamera: Boolean) {
         val challengeId = script.challengeId ?: return
-        if (!recordedOnCamera) { setEntry(take.id, Entry.CameraOff); return }
-        if (take.metrics.overall < BOARD_BAR) { setEntry(take.id, Entry.BelowBar); return }
+        val season = season(challengeId)
+        keptOff(isPast(challengeId), season, take.metrics.scoring, take.metrics.reading != null,
+            recordedOnCamera, take.metrics.overall)?.let { setEntry(take.id, it); return }
         val name = displayName(context) ?: run { setEntry(take.id, Entry.Failed); return }
         setEntry(take.id, Entry.Submitting)
-        scope.launch { submit(take, challengeId, name) }
+        val seasonTwo = (season ?: 1) >= 2
+        scope.launch { if (seasonTwo) submitReading(take, challengeId, name) else submit(take, challengeId, name) }
     }
+
+    /** Off this board: the score is deleted on the server. The next take goes
+     *  on it again like any other; only filing an EARLIER take is stopped
+     *  ([importLocalBests]), or the score would be back at the next refresh. */
+    suspend fun withdraw(challengeId: String) {
+        rpc("withdraw_speech_challenge_entry", buildJsonObject { put("p_challenge", challengeId) })
+        val old = _standings.value[challengeId] ?: Standing()
+        _standings.value = _standings.value + (challengeId to old.copy(
+            entrants = if (old.myBest != null) maxOf(0, old.entrants - 1) else old.entrants,
+            myBest = null, myRank = null, myAttempts = null,
+        ))
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putStringSet(REMOVED_KEY, removedFromBoard() + challengeId).apply()
+        loadedLanguage?.let { writeCache(it) }
+        Analytics.capture("speech_challenge_withdrawn", emptyMap())
+    }
+
+    private fun removedFromBoard(): Set<String> =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getStringSet(REMOVED_KEY, null).orEmpty()
 
     private fun setEntry(takeId: String, entry: Entry) {
         _entries.value = _entries.value + (takeId to entry)
@@ -359,30 +462,59 @@ class SpeechChallenges private constructor(private val context: Context) {
                 put("p_pronunciation", m.pronunciation)
                 put("p_seconds", maxOf(1, take.durationSeconds.roundToInt()))
             })
-            val row = Edge.json.decodeFromString(ListSerializer(SubmitRow.serializer()), raw).firstOrNull()
-                ?: run { setEntry(take.id, Entry.Failed); return }
-            setEntry(take.id, Entry.Entered(row.rank, row.previous_rank, row.entrants, row.best, row.improved))
-            if (row.improved) board(challengeId, 50)?.let { b ->
-                Moment.make(row.rank, row.previous_rank, row.entrants, row.best, row.improved, b)?.let {
-                    _moments.value = _moments.value + (take.id to it)
-                }
-            }
-            val old = _standings.value[challengeId] ?: Standing()
-            _standings.value = _standings.value + (challengeId to old.copy(
-                entrants = row.entrants, myBest = row.best, myRank = row.rank,
-                myAttempts = (old.myAttempts ?: 0) + 1,
-                attempts = old.attempts?.plus(1),
-                topScore = maxOf(old.topScore ?: 0, row.best),
-            ))
-            loadedLanguage?.let { writeCache(it) }
-            Analytics.capture("speech_challenge_entered", mapOf(
-                "overall" to overall, "rank" to row.rank, "entrants" to row.entrants,
-                "improved" to row.improved,
-            ))
+            apply(raw, take, challengeId, overall)
         } catch (e: Exception) {
             setEntry(take.id, Entry.Failed)
             Analytics.capture("speech_challenge_failed", mapOf("error" to e.toString().take(160)))
         }
+    }
+
+    /** Season 2: the server rechecks the total from these parts. */
+    private suspend fun submitReading(take: SpeechTake, challengeId: String, name: String) {
+        val r = take.metrics.reading ?: run { setEntry(take.id, Entry.Failed); return }
+        try {
+            val raw = rpc("submit_speech_reading_take", buildJsonObject {
+                put("p_challenge", challengeId)
+                put("p_display_name", name)
+                put("p_avatar", avatarPayload(context))
+                put("p_overall", r.total)
+                put("p_speed", r.parts.speed)
+                put("p_rhythm", r.parts.rhythm)
+                put("p_pauses", r.parts.pauses)
+                put("p_accuracy", r.parts.accuracy)
+                put("p_pronunciation", r.parts.pronunciation)
+                put("p_coverage", r.coverage)
+                put("p_seconds", maxOf(1, take.durationSeconds.roundToInt()))
+                put("p_scoring", take.metrics.scoring ?: SpeechReading.VERSION)
+            })
+            apply(raw, take, challengeId, r.total)
+        } catch (e: Exception) {
+            setEntry(take.id, Entry.Failed)
+            Analytics.capture("speech_challenge_failed", mapOf("error" to e.toString().take(160)))
+        }
+    }
+
+    private suspend fun apply(raw: String, take: SpeechTake, challengeId: String, overall: Int) {
+        val row = Edge.json.decodeFromString(ListSerializer(SubmitRow.serializer()), raw).firstOrNull()
+            ?: run { setEntry(take.id, Entry.Failed); return }
+        setEntry(take.id, Entry.Entered(row.rank, row.previous_rank, row.entrants, row.best, row.improved))
+        if (row.improved) board(challengeId, 50)?.let { b ->
+            Moment.make(row.rank, row.previous_rank, row.entrants, row.best, row.improved, b)?.let {
+                _moments.value = _moments.value + (take.id to it)
+            }
+        }
+        val old = _standings.value[challengeId] ?: Standing()
+        _standings.value = _standings.value + (challengeId to old.copy(
+            entrants = row.entrants, myBest = row.best, myRank = row.rank,
+            myAttempts = (old.myAttempts ?: 0) + 1,
+            attempts = old.attempts?.plus(1),
+            topScore = maxOf(old.topScore ?: 0, row.best),
+        ))
+        loadedLanguage?.let { writeCache(it) }
+        Analytics.capture("speech_challenge_entered", mapOf(
+            "overall" to overall, "rank" to row.rank, "entrants" to row.entrants,
+            "improved" to row.improved,
+        ))
     }
 
     /** The name sheet was saved: every board shows the new name (and photo
@@ -455,6 +587,27 @@ class SpeechChallenges private constructor(private val context: Context) {
         const val MAX_NAME_LENGTH = 24
         /** The lowest score that goes on a board — iOS `boardBar`. */
         const val BOARD_BAR = 80
+        /** Season 2's scale runs lower (learners average 63, natives 94). */
+        const val SEASON_TWO_BOARD_BAR = 60
+        fun boardBar(season: Int?): Int = if ((season ?: 1) >= 2) SEASON_TWO_BOARD_BAR else BOARD_BAR
+        private const val REMOVED_KEY = "speech.challenge.removedFromBoard"
+
+        /** Why a scored take stays off the board, in iOS `enter`'s order; null
+         *  when it goes up. */
+        fun keptOff(past: Boolean, season: Int?, scoring: Int?, hasReading: Boolean,
+                    onCamera: Boolean, overall: Int): Entry? {
+            // An ended challenge can still be practised; its board is frozen.
+            if (past) return Entry.Practice
+            val seasonTwo = (season ?: 1) >= 2
+            val scoredByReading = (scoring ?: 0) >= SpeechReading.READING_SCORING_FROM
+            if (!seasonTwo && scoredByReading) return Entry.NewScoring
+            // A Season 2 board only takes a reading score: no reference
+            // reading (offline) means no entry.
+            if (seasonTwo && (!scoredByReading || !hasReading)) return Entry.Failed
+            if (!onCamera) return Entry.CameraOff
+            if (overall < boardBar(season)) return Entry.BelowBar
+            return null
+        }
         /** Below this many people the overall board is not drawn: a board of
          *  two reads as empty, not as a race (iOS `overallMinEntrants`). */
         const val OVERALL_MIN_ENTRANTS = 5

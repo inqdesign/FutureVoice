@@ -904,6 +904,7 @@ internal fun SpeechChallengeEntrySection(entry: SpeechChallenges.Entry?, standin
                     stringResource(R.string.takes_that_score_lld_or_more_go_on_the_board, SpeechChallenges.BOARD_BAR), secondary, bold = false)
                 SpeechChallenges.Entry.Failed -> EntryLine(Icons.Filled.Warning,
                     stringResource(R.string.this_take_couldn_t_reach_the_board), secondary, bold = false)
+                SpeechChallenges.Entry.NewScoring, SpeechChallenges.Entry.Practice -> Unit
                 null -> {
                     val rank = standing?.myRank
                     val best = standing?.myBest
