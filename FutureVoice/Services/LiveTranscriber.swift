@@ -103,6 +103,8 @@ final class LiveTranscriber: ObservableObject {
         guard let at = Self.serverRefusedAt else { return false }
         return Date().timeIntervalSince(at) < Self.onDeviceFor
     }
+    /// Set by `beginTake`, cleared by `start`.
+    private var recognizesTakesOnDevice = false
     private var currentRequest: SFSpeechAudioBufferRecognitionRequest?
     private var currentTask: SFSpeechRecognitionTask?
     private var taskGeneration = 0
@@ -274,8 +276,10 @@ final class LiveTranscriber: ObservableObject {
                contextualStrings: [String] = [],
                captureToFile: Bool = false,
                chunkCapture: Bool = false,
-               voiceProcessing: Bool = false) throws {
+               voiceProcessing: Bool = false,
+               keepsOtherAudioLoud: Bool = false) throws {
         guard !isRunning else { return }
+        recognizesTakesOnDevice = false
         self.contextualStrings = Array(contextualStrings.prefix(50))
         joinSeparator = LanguageCatalog.writesSpaces(locale) ? " " : ""
         let rec = SFSpeechRecognizer(locale: Locale(identifier: LanguageCatalog.sttLocale(locale)))
@@ -354,6 +358,12 @@ final class LiveTranscriber: ObservableObject {
             // costs the one recording the learner listens to.
             if #available(iOS 17.0, *) {
                 input.isVoiceProcessingAGCEnabled = false
+                // The unit ducks every other sound while it runs, which here
+                // would be the answer the learner is meant to hear.
+                if keepsOtherAudioLoud {
+                    input.voiceProcessingOtherAudioDuckingConfiguration =
+                        .init(enableAdvancedDucking: false, duckingLevel: .min)
+                }
             }
         }
         // AFTER the toggle: the unit re-negotiates the input format (typically
@@ -503,6 +513,52 @@ final class LiveTranscriber: ObservableObject {
         pendingFinalGens.removeAll()
         level = 0
         return transcript
+    }
+
+    // MARK: - Takes on a mic that stays open
+
+    /// Start a fresh take on an engine already running. Opening the mic costs
+    /// half a second or more (seconds when earphones change profile) and the
+    /// first moments after it are lost, which a surface going line after line
+    /// can't afford, so Say it again opens it once and takes turns on it.
+    func beginTake(contextualStrings: [String]) {
+        guard isRunning else { return }
+        closeRecognition()
+        self.contextualStrings = Array(contextualStrings.prefix(50))
+        // A take's text only has to follow a script it was told about, and
+        // its first words have to show at once. Each take is a new request,
+        // and a new request to the server answers late (2026-11-09: "Of
+        // course" was on file but not lit until the sentence had moved on).
+        recognizesTakesOnDevice = true
+        fluency.reset()
+        pendingFinalGens = []
+        finalizingGen = nil
+        transcript = ""
+        lastChangeTime = Date()
+        lastLivePartialAt = nil
+        startNewSegment()
+    }
+
+    /// End the take and stop recognizing; the engine keeps running.
+    @discardableResult
+    func finishTake() -> String {
+        guard isRunning else { return transcript }
+        closeRecognition()
+        return transcript
+    }
+
+    private func closeRecognition() {
+        // First, so the task's last callback belongs to nobody: taken as this
+        // segment's, it would restart recognition while the answer plays.
+        taskGeneration += 1
+        appender.setRequest(nil)
+        currentRequest?.endAudio()
+        currentTask?.finish()
+        currentRequest = nil
+        currentTask = nil
+        // The quiet watcher restarts a segment that still holds text.
+        lastSegmentText = ""
+        chunks = []
     }
 
     /// Like `stop()`, but waits (briefly) for the recognizer's FINAL,
@@ -657,7 +713,7 @@ final class LiveTranscriber: ObservableObject {
         if !contextualStrings.isEmpty {
             req.contextualStrings = contextualStrings
         }
-        if useOnDevice, recognizer.supportsOnDeviceRecognition {
+        if useOnDevice || recognizesTakesOnDevice, recognizer.supportsOnDeviceRecognition {
             req.requiresOnDeviceRecognition = true
         }
         appender.setRequest(req)

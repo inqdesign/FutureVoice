@@ -137,6 +137,11 @@ struct SayItAgainView: View {
     /// What the prompter is showing. Held separately from `index` so the
     /// one-off retry from the finished screen doesn't wind the history back.
     @State private var promptStep: SayItAgainScript.Step?
+    /// The line on the prompter as the recognizer can follow it, and how many
+    /// of its words have been heard. Drawn as the part of the line already
+    /// lit, and it is what tells the take the line has been read to its end.
+    @State private var promptTrack: SpeechPrompterTrack?
+    @State private var spokenWords = 0
     @State private var oneOffRetry = false
     /// Skip abandons the step unscored. There is no "done" — a take ends on
     /// silence.
@@ -186,6 +191,8 @@ struct SayItAgainView: View {
     /// out), and without a second scroll the newest lines were left under
     /// the card — about one line in three (2026-11-02).
     @State private var barHeight: CGFloat = 0
+    @State private var settleScroll: Task<Void, Never>?
+    private static let endOfLinesId = "say-again-end-of-lines"
     /// How long one line may wait for its rewrite before it is read as it
     /// was said. A single request lands in ~2–4 s; this only covers a
     /// network that has gone away.
@@ -204,9 +211,8 @@ struct SayItAgainView: View {
         var score: Int? { if case .scored(let s) = outcome { return s } else { return nil } }
     }
 
-    /// Earliest a read can end, per word — measured from the learner's FIRST
-    /// WORD, not from the mic opening, which is where `ShadowDrillView`
-    /// measures from because its countdown puts the two at the same moment.
+    /// A line's estimated length, per word. Only sizes the ceiling below; no
+    /// clock decides that a read is finished.
     private static let readMsPerWord = 380
     /// The only thing that ends a take on a learner still talking: a room
     /// that never falls quiet. At least this, and never less than
@@ -218,6 +224,20 @@ struct SayItAgainView: View {
     /// Reading pace for a fluent-self line whose recording didn't survive.
     /// Only ever sizes a pause; the line is already on screen.
     private static let silentReadMsPerWord = 380
+    /// Quiet that ends a take once the script's last word has been heard. The
+    /// 1.5 s below exists because nobody can tell a breath from the end of a
+    /// line; with the line read to its end, that question is answered.
+    private static let lineReadQuiet: TimeInterval = 0.5
+    /// The same take in a room that never reads as quiet.
+    private static let lineReadCeiling: TimeInterval = 1.2
+    /// Quiet that ends a take stopped short of its last word. Nearly through
+    /// the line the recognizer probably just missed the end; earlier than
+    /// that the learner is looking for the next word (2026-11-09, founder:
+    /// a mid-line pause past the line's estimated length ended the take).
+    private static let nearEndQuiet: TimeInterval = ShadowDrillView.stillSpeakingSeconds
+    private static let midLineQuiet: TimeInterval = 4
+    private static let nearEndShare = 0.8
+    private static let answerRingSeconds: TimeInterval = 0.35
 
     var body: some View {
         NavigationStack {
@@ -228,9 +248,16 @@ struct SayItAgainView: View {
                     } else {
                         LazyVStack(alignment: .leading, spacing: 14) {
                             ForEach(Array(history.enumerated()), id: \.element.id) { i, step in
-                                historyRow(step, isCurrent: phase == .listening && i == index)
-                                    .id(step.id)
+                                // One view: a row with a "Heard" line under it
+                                // would otherwise be two views under one id.
+                                VStack(alignment: .leading, spacing: 14) {
+                                    historyRow(step, isCurrent: phase == .listening && i == index)
+                                }
+                                .id(step.id)
                             }
+                            // What the scroll aims at: the gap above it keeps
+                            // the newest line clear of the bar's soft edge.
+                            Color.clear.frame(height: 1).id(Self.endOfLinesId)
                         }
                         .padding(20)
                     }
@@ -241,6 +268,9 @@ struct SayItAgainView: View {
                 .onChange(of: index) { _, _ in scrollToEnd(proxy) }
                 .onChange(of: phase) { _, _ in scrollToEnd(proxy) }
                 .onChange(of: barHeight) { _, _ in scrollToEnd(proxy) }
+                // A score lands a second or two after its line and makes that
+                // row taller, which pushes the newest line under the bar.
+                .onChange(of: takes.count) { _, _ in scrollToEnd(proxy) }
                 // Which lines are the learner's, always in sight and one tap
                 // to change (2026-10-23, founder: the person icon behind a
                 // menu was unclear and took two taps).
@@ -267,6 +297,7 @@ struct SayItAgainView: View {
             .fadingBottomBar { prompterPanel }
         }
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { pageHeight = $0 }
+        .onChange(of: live.transcript) { _, heard in followVoice(heard) }
         // A swipe-down mid-take leaves the mic hot and the run half torn
         // down — the trap `ShadowDrillView` documents. Close is explicit.
         .interactiveDismissDisabled(phase == .reading)
@@ -377,9 +408,19 @@ struct SayItAgainView: View {
         }
     }
 
+    /// Once the page is full, a scroll made as the prompter grows aims at the
+    /// room under the OLD bar: it moves nothing, and the card sits on the
+    /// newest lines. The second pass runs once the taller bar is in place
+    /// (the call does the same, `ConversationView.scroll`).
     private func scrollToEnd(_ proxy: ScrollViewProxy) {
-        guard let last = history.last else { return }
-        withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo(last.id, anchor: .bottom) }
+        guard phase != .intro else { return }
+        withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo(Self.endOfLinesId, anchor: .bottom) }
+        settleScroll?.cancel()
+        settleScroll = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(70))
+            guard !Task.isCancelled, phase != .intro else { return }
+            withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(Self.endOfLinesId, anchor: .bottom) }
+        }
     }
 
     // MARK: - The prompter
@@ -525,17 +566,9 @@ struct SayItAgainView: View {
                 // past it. A short line sizes to itself as before.
                 ScrollView {
                     VStack(spacing: 14) {
-                        FuriganaText(step.isCorrected
-                                     ? highlightedCorrection(step.text, original: step.said,
-                                                             baseFont: .title2.weight(.semibold))
-                                     : AttributedString(step.text),
-                                     rubyFont: .caption, alignment: .center) {
-                            if step.isCorrected {
-                                Text(highlightedCorrection(step.text, original: step.said,
-                                                           baseFont: .title2.weight(.semibold)))
-                            } else {
-                                Text(step.text)
-                            }
+                        let line = litLine(step)
+                        FuriganaText(line, rubyFont: .caption, alignment: .center) {
+                            Text(line)
                         }
                         .font(.title2.weight(.semibold))
                         .foregroundStyle(lineInk)
@@ -582,6 +615,61 @@ struct SayItAgainView: View {
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .strokeBorder(theme.tint.opacity(washOpacity * 2), lineWidth: 1)
         }
+    }
+
+    /// The prompter's line, coloured the way the shadow screen colours its
+    /// karaoke: words already heard solid, the newest one in the accent, the
+    /// rest waiting dim. A fixed word keeps the accent throughout, only
+    /// dimmed until it is reached. Colour only, so nothing reflows.
+    private func litLine(_ step: SayItAgainScript.Step) -> AttributedString {
+        typealias Ink = AttributeScopes.SwiftUIAttributes.ForegroundColorAttribute
+        let line = step.isCorrected
+            ? highlightedCorrection(step.text, original: step.said,
+                                    baseFont: .title2.weight(.semibold))
+            : AttributedString(step.text)
+        let plain = String(line.characters)
+        let reached = promptTrack?.characterCount(throughWord: spokenWords, in: plain) ?? 0
+        let newest = promptTrack?.characterCount(throughWord: max(0, spokenWords - 1), in: plain) ?? 0
+        let newestStart = line.characters.index(line.startIndex, offsetBy: newest)
+        let end = line.characters.index(line.startIndex, offsetBy: reached)
+
+        let ink = theme.ink
+        let heard = AttributedString(line[line.startIndex..<newestStart])
+            .transformingAttributes(Ink.self) { if $0.value == nil { $0.value = ink } }
+        var current = AttributedString(line[newestStart..<end])
+        current.foregroundColor = Color.themeAccent
+        let waiting = AttributedString(line[end..<line.endIndex])
+            .transformingAttributes(Ink.self) {
+                $0.value = ($0.value == nil ? ink : Color.themeAccent).opacity(0.45)
+            }
+        return heard + current + waiting
+    }
+
+    /// Move the lit part on to what the recognizer has heard. Forward only:
+    /// its newest words get rewritten a moment later, and a highlight that
+    /// steps back reads as the app un-hearing them.
+    private func followVoice(_ heard: String) {
+        guard phase == .reading, let track = promptTrack else { return }
+        var next = min(track.advance(current: spokenWords, heard: heard), track.words.count)
+        if next == 0, track.opensWithFirstWord(heard) { next = 1 }
+        if next > spokenWords { spokenWords = next }
+    }
+
+    private var quietToEndTake: TimeInterval {
+        guard let track = promptTrack, !track.words.isEmpty else { return Self.nearEndQuiet }
+        let read = Double(spokenWords) / Double(track.words.count)
+        return read >= Self.nearEndShare ? Self.nearEndQuiet : Self.midLineQuiet
+    }
+
+    private var lineIsRead: Bool {
+        guard let track = promptTrack, !track.words.isEmpty else { return false }
+        return spokenWords >= track.words.count
+    }
+
+    /// One frame for the screen to draw before the mic opens, which holds the
+    /// main thread for a moment.
+    private func letScreenDraw() async {
+        try? await Task.sleep(for: .milliseconds(20))
     }
 
     /// How tall the prompter's line may get before it scrolls: enough for
@@ -660,18 +748,39 @@ struct SayItAgainView: View {
         runTask = Task { @MainActor in await run(from: i) }
     }
 
-    /// Cancel the run and stop the mic HERE, synchronously, before anything
-    /// new starts — a cancelled read no longer stops it on its own.
-    ///
-    /// The engine is torn down OFF the main thread
-    /// (`stopAndFinalizeInBackground`): a full `stop()` spends ~200 ms
-    /// winding down voice processing, and on "Read both sides" that landed
-    /// while the menu was closing — the toggle stuttered (2026-10-23).
+    /// Cancel the run and end its take HERE, synchronously, before anything
+    /// new starts — a cancelled read no longer ends it on its own. The mic
+    /// itself stays open for whatever starts next.
     private func stopRun() {
         runTask?.cancel()
         player.stop()
-        _ = live.stopAndFinalizeInBackground(timeout: 0.1) { _ in }
+        live.finishTake()
         _ = recorder.stop()
+    }
+
+    /// One mic for the whole run (2026-11-09, founder: the first sound lost,
+    /// and the next line late). Opened per line, the two traded off: the line
+    /// shown first cost the first sound, the mic first cost the wait, and
+    /// earphones changed profile twice a line. Run-long, like a call, the
+    /// answers play over it and a take costs only a new recognition.
+    ///
+    /// The choices are `ShadowDrillView`'s: the learner's own mic preference
+    /// stands, and voice processing is on so a room can't hold a take open.
+    private func openMicIfNeeded() throws {
+        if live.isRunning, live.isEngineRunning { return }
+        // An interruption or a route change stopped the engine under it.
+        if live.isRunning { live.stop() }
+        try live.start(locale: source.targetLanguage,
+                       preferBuiltInMic: MicPreferenceStore.forcesBuiltInMic,
+                       measurementMode: false,
+                       voiceProcessing: true,
+                       keepsOtherAudioLoud: true)
+    }
+
+    /// Off the main thread: a full `stop()` spends ~200 ms winding down voice
+    /// processing.
+    private func closeMic() {
+        _ = live.stopAndFinalizeInBackground(timeout: 0.1) { _ in }
     }
 
     /// Walk the script. Every step awaits its own end, so the loop IS the
@@ -688,6 +797,10 @@ struct SayItAgainView: View {
             phase = waits ? .preparing : steps[start].isSpoken ? .reading : .listening
         }
         await askMicChoiceIfNeeded()
+        await letScreenDraw()
+        guard !Task.isCancelled else { return }
+        // A failure here is said by the first line that needs the mic.
+        try? openMicIfNeeded()
         var i = start
         while !Task.isCancelled, i < steps.count {
             index = i
@@ -699,6 +812,7 @@ struct SayItAgainView: View {
             i += 1
         }
         guard !Task.isCancelled else { return }
+        closeMic()
         index = max(0, steps.count - 1)
         phase = .finished
         ActivityEventLog.shared.record(.sayItAgain)
@@ -725,7 +839,10 @@ struct SayItAgainView: View {
         justRecorded = false
         playbackDone = false
         do {
-            try player.play(data, source: "say_again", forceSessionReset: reset) {
+            // Over the open mic when there is one: nothing about the session
+            // changes between a line and its answer.
+            try player.play(data, source: "say_again", configureSession: !live.isRunning,
+                            forceSessionReset: reset) {
                 playbackDone = true
             }
         } catch {
@@ -756,32 +873,30 @@ struct SayItAgainView: View {
     /// fluent self answers immediately — the conversation's own pause is
     /// where the scoring goes.
     private func readStep(_ step: SayItAgainScript.Step) async {
-        phase = .reading
-        promptStep = step
+        spokenWords = 0
         skipRequested = false
         takes[step.id] = nil
         scoreTasks[step.id]?.cancel()
         player.stop()
 
         do {
-            // The same three choices `ShadowDrillView` makes, for the same
-            // reasons: bias the on-device recognizer toward the line being
-            // read (its text is only the FALLBACK here), let the learner's
-            // own mic preference stand, and keep voice processing on so a
-            // room can't hold the take open forever.
-            try live.start(locale: source.targetLanguage,
-                           preferBuiltInMic: MicPreferenceStore.forcesBuiltInMic,
-                           measurementMode: false,
-                           contextualStrings: ShadowDrillView.recognitionHints(for: step.text),
-                           voiceProcessing: true)
+            try openMicIfNeeded()
         } catch {
             micError = error.localizedDescription
             takes[step.id] = Take(outcome: .skipped)
             return
         }
-        let url = try? recorder.prepare(quality: .sttOptimal)
-        try? recorder.beginPrepared()
+        // Bias the recognizer toward the line being read (its text is only
+        // the FALLBACK for the score).
+        live.beginTake(contextualStrings: ShadowDrillView.recognitionHints(for: step.text))
+        let url = try? recorder.startOnOpenSession(quality: .sttOptimal)
         justRecorded = true
+
+        // The line is the signal to start, so it goes up only now, with the
+        // recognizer and the file already running.
+        promptTrack = SpeechPrompterTrack(script: step.text, language: source.targetLanguage)
+        promptStep = step
+        phase = .reading
 
         let spoke = await waitForReadToEnd(text: step.text)
 
@@ -796,9 +911,16 @@ struct SayItAgainView: View {
             return
         }
 
-        // Tail grace — a clipped tail reads as a deletion in the diff.
-        try? await Task.sleep(nanoseconds: 300_000_000)
-        let liveText = live.stop()
+        // Tail grace — a clipped tail reads as a deletion in the diff. Not
+        // needed once the last word has been heard and the quiet after it.
+        if !lineIsRead {
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            guard !Task.isCancelled else {
+                if let url { try? FileManager.default.removeItem(at: url) }
+                return
+            }
+        }
+        let liveText = live.finishTake()
         _ = recorder.stop()
 
         guard spoke else {
@@ -812,21 +934,29 @@ struct SayItAgainView: View {
     }
 
     /// True once the learner actually said something. Waits for their FIRST
-    /// word, then for the line's own length, then for silence.
+    /// word, then for a silence as long as where they are in the line asks.
     private func waitForReadToEnd(text: String) async -> Bool {
         // The line WAITS for them (2026-10-05, founder: "it keeps moving on
         // when I haven't said anything"). It used to give up after 8 s and
         // play the next answer, so a learner who looked away came back to a
         // conversation that had gone on without them. Only Skip (or Close)
         // moves past a line nobody has started to say.
-        while !Task.isCancelled, !skipRequested, live.lastVoicedAt == nil {
-            try? await Task.sleep(nanoseconds: 150_000_000)
+        //
+        // A word of the line heard counts as a start too (the level meter
+        // alone reads nothing from a phone at arm's length, the same thing
+        // that broke the speech take on 2026-11-03).
+        //
+        // With the mic open through the answer, the first moments can be that
+        // answer still ringing in the room, which is not the learner starting.
+        let answerRingsUntil = Date().addingTimeInterval(Self.answerRingSeconds)
+        while !Task.isCancelled, !skipRequested, spokenWords == 0,
+              (live.lastVoicedAt.map { $0 <= answerRingsUntil } ?? true) {
+            try? await Task.sleep(nanoseconds: 100_000_000)
         }
         guard !Task.isCancelled, !skipRequested else { return false }
 
         let lineMs = max(1200, WordSplitter.count(text) * Self.readMsPerWord)
         let began = Date()
-        let earliest = began.addingTimeInterval(Double(lineMs) / 1000)
         // Only silence ends a take. The line's length used to be a hard
         // stop too (`attemptCutoffMs`, ~1.5x the estimate), and a whole turn
         // read for the first time runs past 380 ms a word easily, so the take
@@ -836,22 +966,38 @@ struct SayItAgainView: View {
         // must still end.
         let hardStop = began.addingTimeInterval(
             max(Self.maxReadSeconds, Double(lineMs) / 1000 * Self.maxReadLineFactor))
+        var lineReadAt: Date?
         while !Task.isCancelled, !skipRequested, Date() < hardStop {
-            // "Quiet" is the shadow surface's 1.5 s, not a call's 0.6 s: a
-            // mid-sentence breath runs up to 1.5 s, and someone reading a
-            // line for the first time breathes more than a talker does.
+            // The script's last word has been heard: nothing is left to wait
+            // for but the end of the sound.
+            if lineIsRead {
+                let now = Date()
+                if lineReadAt == nil { lineReadAt = now }
+                let soundEnded = live.lastVoicedAt.map {
+                    now.timeIntervalSince($0) >= Self.lineReadQuiet
+                } ?? true
+                if soundEnded || now.timeIntervalSince(lineReadAt ?? now) >= Self.lineReadCeiling {
+                    break
+                }
+                try? await Task.sleep(nanoseconds: 60_000_000)
+                continue
+            }
+            // Near the end "quiet" is the shadow surface's 1.5 s, not a call's
+            // 0.6 s: a mid-sentence breath runs up to 1.5 s, and someone
+            // reading a line for the first time breathes more than a talker
+            // does. Further back it is longer still (`quietToEndTake`).
             // Two witnesses, and BOTH must say quiet (2026-10-27, learner:
             // "on a long line it moves on while I'm still talking"): loudness
             // alone dips under the bar when a long read trails off or the
             // room is loud, while the recognizer is still writing their words.
-            let still = ShadowDrillView.stillSpeakingSeconds
+            let still = quietToEndTake
             let energyQuiet = live.lastVoicedAt.map {
                 Date().timeIntervalSince($0) >= still
             } ?? true
             let wordsQuiet = live.lastLivePartialAt.map {
                 Date().timeIntervalSince($0) >= still
             } ?? true
-            if Date() >= earliest, energyQuiet, wordsQuiet { break }
+            if energyQuiet, wordsQuiet { break }
             try? await Task.sleep(nanoseconds: 150_000_000)
         }
         return !skipRequested
@@ -943,6 +1089,7 @@ struct SayItAgainView: View {
                 oneOffRetry = true
                 await readStep(step)
                 guard !Task.isCancelled else { return }
+                closeMic()
                 oneOffRetry = false
                 phase = .finished
             } else {
@@ -980,6 +1127,9 @@ struct SayItAgainView: View {
             guard let (i, step) = spoken.first else { return }
             index = i
             promptStep = step
+            let track = SpeechPrompterTrack(script: step.text, language: source.targetLanguage)
+            promptTrack = track
+            spokenWords = (track.words.count + 1) / 2
             phase = .reading
         case "done":
             for (n, (_, step)) in spoken.enumerated() {

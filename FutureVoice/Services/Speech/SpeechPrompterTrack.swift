@@ -193,6 +193,28 @@ struct SpeechPrompterTrack {
 }
 
 extension SpeechPrompterTrack {
+    /// Whether the heard text begins with the script's first word. `advance`
+    /// trusts runs of words, so on its own it says nothing until the second.
+    func opensWithFirstWord(_ heard: String) -> Bool {
+        guard let first = words.first else { return false }
+        let wanted = Self.keys(of: first.text, perChar: perChar)
+        guard !wanted.isEmpty else { return false }
+        return Self.keys(of: String(heard.prefix(60)), perChar: perChar).starts(with: wanted)
+    }
+
+    /// How many Characters of `text` the first `count` display words reach,
+    /// the end of the last one. `text` is the line as drawn, which may be
+    /// spaced differently from the script, so each word is looked for in
+    /// order rather than counted. A word that can't be found stops the walk.
+    func characterCount(throughWord count: Int, in text: String) -> Int {
+        var end = text.startIndex
+        for word in words.prefix(count) {
+            guard let found = text.range(of: word.text, range: end..<text.endIndex) else { break }
+            end = found.upperBound
+        }
+        return text.distance(from: text.startIndex, to: end)
+    }
+
     /// When each display word was said, in milliseconds of the take, from
     /// the assessed pieces. A word nobody timed (a slip, a word the reader
     /// skipped) passes between its neighbours; words after the last one

@@ -101,8 +101,20 @@ final class AudioRecorder: ObservableObject {
         return prepared.url
     }
 
+    /// Record on the session as it already is, for a mic held open by
+    /// `LiveTranscriber`: setting the category again would disturb it.
+    @discardableResult
+    func startOnOpenSession(quality: Quality = .sttOptimal) throws -> URL {
+        let prepared = try configureAndPrepare(quality: quality, configureSession: false)
+        guard prepared.recorder.record() else { throw AudioRecorderError.recordFailed }
+        isRecording = true
+        startMetering()
+        return prepared.url
+    }
+
     private func configureAndPrepare(
-        quality: Quality
+        quality: Quality,
+        configureSession: Bool = true
     ) throws -> (recorder: AVAudioRecorder, url: URL) {
         if isMonitoring { stopMonitoring() }   // hand the mic over cleanly
         let session = AVAudioSession.sharedInstance()
@@ -130,14 +142,16 @@ final class AudioRecorder: ObservableObject {
             ? [.defaultToSpeaker]
             : (forceBuiltIn ? AudioSessionRouting.builtInMicCaptureOptions
                             : AudioSessionRouting.recordOptions)
-        try session.setCategory(.playAndRecord, mode: mode, options: options)
-        try session.setActive(true)
-        // Same ask as LiveTranscriber's, because this recorder re-sets the
-        // session beside it and would otherwise undo its choice.
-        if quality == .sttOptimal && !forceBuiltIn { AudioSessionRouting.engageWornMic(session) }
-        if quality == .sttOptimal { AudioSessionRouting.applyOutputRoute(session) }
+        if configureSession {
+            try session.setCategory(.playAndRecord, mode: mode, options: options)
+            try session.setActive(true)
+            // Same ask as LiveTranscriber's, because this recorder re-sets the
+            // session beside it and would otherwise undo its choice.
+            if quality == .sttOptimal && !forceBuiltIn { AudioSessionRouting.engageWornMic(session) }
+            if quality == .sttOptimal { AudioSessionRouting.applyOutputRoute(session) }
 
-        if forceBuiltIn { AudioSessionRouting.preferBuiltInMic(session) }
+            if forceBuiltIn { AudioSessionRouting.preferBuiltInMic(session) }
+        }
 
         let url = Self.makeFileURL()
         let settings: [String: Any]

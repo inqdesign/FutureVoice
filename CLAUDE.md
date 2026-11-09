@@ -1512,6 +1512,27 @@ beside Replay (다시 듣기) the pair says listen-again / speak-again.
   that still comes back empty is `heardNothing`, not a 0, never saved.
   Connected Bluetooth earphones that aren't worn take the mic and hear
   nothing (worn mic wins) — that reads as this screen ignoring you.
+- **The prompter follows the voice** (2026-11-09, founder: "is it hearing
+  me, and why the wait when the script is right there"). The recognizer's
+  partials walk `SpeechPrompterTrack` over the line, and the line is
+  coloured like the shadow karaoke (heard solid, newest in the accent, the
+  rest dim; founder rejected a background block the same day). Once
+  the LAST word is heard, the take ends on 0.5 s of quiet (1.2 s at most in
+  a loud room) with no tail grace. Short of it, position decides: 1.5 s of
+  quiet from 80% of the line, 4 s before that, and no clock (the line's
+  estimated length used to be a floor, after which a mid-line pause of
+  1.5 s ended the take; it now only sizes the ceiling). A word of the line heard also starts the
+  take when the level meter reads nothing. **One mic for the whole run**
+  (same day): opened per line, either the line went up first and lost the
+  first sound or the mic went first and the line came late, and earphones
+  changed profile twice a line. Now the engine opens once, the answers
+  play over it (`configureSession: false`, ducking off), and a take is
+  `LiveTranscriber.beginTake`/`finishTake` plus a recorder that leaves the
+  session alone. On earphones the whole run is on the call profile. A
+  take's live text runs ON DEVICE (a new server request per line answered
+  late, measured off takes pulled from the phone: "Of course" on file and
+  in the score, not lit in time); the score still reads the file. Not yet
+  confirmed on a device.
 - **A run is ONE analytics event, not twenty.** `AudioPlayer` skips
   `audio_played` for `unreportedPlaybackSources` — the live call's per-turn
   auto-play and now a say-it-again run, which reports itself once as
