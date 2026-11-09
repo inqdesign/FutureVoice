@@ -66,6 +66,7 @@ enum StudyWidgetRefresher {
     /// scene-phase edges still call `refresh()` directly, so a background
     /// exit never loses the snapshot.
     nonisolated static func schedule() {
+        LearnerRecordUploader.schedule()
         Task { @MainActor in
             pending?.cancel()
             pending = Task { @MainActor in
