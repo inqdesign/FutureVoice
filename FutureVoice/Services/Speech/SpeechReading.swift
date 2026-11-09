@@ -254,31 +254,46 @@ struct SpeechReadingScore: Codable, Hashable {
     var level: SpeechReadingLevel { SpeechReadingLevel(total: total) }
 }
 
-/// What a score means, from where the validation readings landed. Back on the
-/// reader's page since 2026-11-09 (founder: the bands were useful to have).
+/// The nickname a score earns: a comparison for fun, not a grade, narrow
+/// enough that a few more points reach the next one (founder, 2026-11-09).
+/// Three edges rest on the validation set (learners average 63, natives 94,
+/// narrators 96); the rest are chosen by feel. Highest first.
 enum SpeechReadingLevel: CaseIterable {
-    case announcer, narrator, native, nearNative, intermediate, practicing
+    case newsAnchor, audiobook, bornAndRaised, passesAsLocal, officeAce, presenter
+    case thirdYearAbroad, firstYearAbroad, languageSchool, immigration, restaurant, gestures, warmingUp
 
-    init(total: Int) {
-        switch total {
-        case 100...: self = .announcer
-        case 95...: self = .narrator
-        case 88...: self = .native
-        case 78...: self = .nearNative
-        case 60...: self = .intermediate
-        default: self = .practicing
+    /// The lowest score that earns this one.
+    var floor: Int {
+        switch self {
+        case .newsAnchor: return 100
+        case .audiobook: return 97
+        case .bornAndRaised: return 93
+        case .passesAsLocal: return 89
+        case .officeAce: return 85
+        case .presenter: return 80
+        case .thirdYearAbroad: return 75
+        case .firstYearAbroad: return 70
+        case .languageSchool: return 65
+        case .immigration: return 60
+        case .restaurant: return 50
+        case .gestures: return 35
+        case .warmingUp: return 0
         }
     }
 
+    init(total: Int) {
+        self = Self.allCases.first { total >= $0.floor } ?? .warmingUp
+    }
+
+    /// The next one up; nil at the top.
+    var next: SpeechReadingLevel? {
+        let all = Self.allCases
+        guard let index = all.firstIndex(of: self), index > 0 else { return nil }
+        return all[index - 1]
+    }
+
     var range: ClosedRange<Int> {
-        switch self {
-        case .announcer: return 100...100
-        case .narrator: return 95...99
-        case .native: return 88...94
-        case .nearNative: return 78...87
-        case .intermediate: return 60...77
-        case .practicing: return 0...59
-        }
+        floor...((next?.floor ?? 101) - 1)
     }
 }
 

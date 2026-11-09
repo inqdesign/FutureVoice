@@ -110,7 +110,13 @@ struct SpeechResultView: View {
                 scoreStrip(take.metrics)
             }
         } details: {
+            // Presented from inside: the page below already has the sheet up,
+            // and a page can present only one thing at a time.
             content(take, script)
+                .sheet(item: $watchingScriptVideo) { SpeechScriptVideoSheet(url: $0) }
+                .sheet(isPresented: $showingVideoOptions) {
+                    if let stored { videoOptions(take, url: stored) }
+                }
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
@@ -123,15 +129,26 @@ struct SpeechResultView: View {
                     Button {
                         showingVideoOptions = true
                     } label: {
-                        Label("Save to Photos", systemImage: "square.and.arrow.down")
+                        // Its tray is heavy and its arrow thin: centred by the
+                        // box, it reads low in the circle. A plain button, or
+                        // the bar takes the bare symbol and drops the offset.
+                        Image(systemName: "square.and.arrow.down")
+                            .offset(y: -2)
+                            // The bar adds its own margin: this makes a circle.
+                            .frame(width: 36, height: 44)
+                            .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text("Save to Photos"))
                 }
             }
         }
         .task(id: video) { await hero.show(video) }
-        .sheet(item: $watchingScriptVideo) { SpeechScriptVideoSheet(url: $0) }
-        .sheet(isPresented: $showingVideoOptions) {
-            if let stored { videoOptions(take, url: stored) }
+        // Here, on the page: the details live in the system sheet, which goes
+        // away while the take plays, and this must not stop the take.
+        .onDisappear {
+            hero.stop()
+            audio.stop()
         }
         #if DEBUG
         .onAppear {
@@ -170,18 +187,17 @@ struct SpeechResultView: View {
         let playing = hero.isPlaying || audio.isPlaying
         return HStack(alignment: .bottom, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
-                if let r = m.reading {
-                    Text(levelTitle(r.level))
-                        .font(.title3.weight(.semibold))
-                }
                 Text("\(m.overall)")
                     .font(.system(size: 96, weight: .bold).monospacedDigit())
                 if let r = m.reading {
                     Text(SpeechVerdict.line(total: r.total, take: take.id))
                         .font(.title2.weight(.semibold))
+                    Text("\(Text(levelTitle(r.level))) level")
+                        .font(.title3.weight(.semibold))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .shadow(color: .black.opacity(0.35), radius: 8, y: 2)
             Button {
                 if hasVideo {
                     preparePlayback()
@@ -192,17 +208,31 @@ struct SpeechResultView: View {
                     playAudio(take)
                 }
             } label: {
-                Image(systemName: playing ? "pause.fill" : "play.fill")
-                    .font(.system(size: 26, weight: .semibold))
-                    .frame(width: 64, height: 64)
-                    .background(.ultraThinMaterial, in: Circle())
-                    .environment(\.colorScheme, .dark)
+                heroPlayGlyph(playing: playing)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(playing ? Text("Pause") : Text("Play"))
         }
         .foregroundStyle(.white)
-        .shadow(color: .black.opacity(0.35), radius: 8, y: 2)
+    }
+
+    /// The same glass as the sheet and the bar's button, and no drop shadow:
+    /// on glass it reads as a smudge around the circle.
+    @ViewBuilder
+    private func heroPlayGlyph(playing: Bool) -> some View {
+        let glyph = Image(systemName: playing ? "pause.fill" : "play.fill")
+            .font(.system(size: 26, weight: .semibold))
+            .frame(width: 64, height: 64)
+            .contentShape(Circle())
+        if #available(iOS 26.0, *) {
+            glyph
+                .glassEffect(.regular.interactive(), in: .circle)
+                .environment(\.colorScheme, .dark)
+        } else {
+            glyph
+                .background(.ultraThinMaterial, in: Circle())
+                .environment(\.colorScheme, .dark)
+        }
     }
 
     @ViewBuilder
@@ -360,10 +390,6 @@ struct SpeechResultView: View {
             }.value
             scriptMarks = (take.id, marks)
         }
-        .onDisappear {
-            hero.stop()
-            audio.stop()
-        }
         .sheet(item: Binding(get: { challenges.moments[take.id] },
                              set: { if $0 == nil { challenges.dismissMoment(for: take.id) } })) { moment in
             SpeechChallengeMomentSheet(moment: moment, onSeeBoard: onSeeBoard ?? {})
@@ -504,27 +530,23 @@ struct SpeechResultView: View {
 
     private func levelTitle(_ level: SpeechReadingLevel) -> LocalizedStringKey {
         switch level {
-        case .announcer: return "Announcer level"
-        case .narrator: return "Narrator level"
-        case .native: return "Native level"
-        case .nearNative: return "Close to native"
-        case .intermediate: return "Intermediate"
-        case .practicing: return "Still practicing"
+        case .newsAnchor: return "Prime-time news anchor"
+        case .audiobook: return "Audiobook narrator"
+        case .bornAndRaised: return "Born and raised here"
+        case .passesAsLocal: return "Could pass for a local"
+        case .officeAce: return "Star of the global office"
+        case .presenter: return "Trusted with the presentation"
+        case .thirdYearAbroad: return "Third year abroad"
+        case .firstYearAbroad: return "First year abroad"
+        case .languageSchool: return "Month three of language school"
+        case .immigration: return "Made it through immigration"
+        case .restaurant: return "Ordered at a restaurant"
+        case .gestures: return "Getting by with gestures"
+        case .warmingUp: return "Warming up"
         }
     }
 
-    private func levelNote(_ level: SpeechReadingLevel) -> LocalizedStringKey {
-        switch level {
-        case .announcer: return "Every part at a skilled narrator's level"
-        case .narrator: return "Skilled narrators average \(SpeechReading.narratorAverage)"
-        case .native: return "Native speakers reading average \(SpeechReading.nativeAverage)"
-        case .nearNative: return "Where the best learners reach"
-        case .intermediate: return "Learners average \(SpeechReading.learnerAverage)"
-        case .practicing: return "Below most learners"
-        }
-    }
-
-    /// Every band, with the reader's own marked.
+    /// Every nickname, with the reader's own marked.
     private func levelBands(_ r: SpeechReadingScore) -> some View {
         DisclosureGroup("What the scores mean") {
             ForEach(SpeechReadingLevel.allCases, id: \.self) { level in
@@ -533,10 +555,7 @@ struct SpeechResultView: View {
                                                            : "\(level.range.lowerBound)–\(level.range.upperBound)")
                         .font(.subheadline.monospacedDigit())
                         .frame(width: 56, alignment: .leading)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(levelTitle(level)).font(.subheadline.weight(level == r.level ? .semibold : .regular))
-                        Text(levelNote(level)).font(.caption).foregroundStyle(.secondary)
-                    }
+                    Text(levelTitle(level)).font(.subheadline.weight(level == r.level ? .semibold : .regular))
                     Spacer()
                     if level == r.level {
                         Text("You").font(.caption.weight(.semibold)).foregroundStyle(.tint)
@@ -651,6 +670,7 @@ struct SpeechResultView: View {
             Text("Compared with a native reading")
         } footer: {
             VStack(alignment: .leading, spacing: 6) {
+                Text("The names are just for fun.")
                 Text("Native speakers average \(SpeechReading.nativeAverage) · 100 is an announcer's read")
                 Text("Like a karaoke score: how close this reading came to the reference. It doesn't grade your English.")
                 Text("Each word is compared with the same script read by a native voice (\(Text(r.gender == "female" ? "female" : "male"))). Intonation isn't scored yet: nothing measures it reliably.")
@@ -1427,15 +1447,27 @@ private struct FloatingSheetShape: Shape {
     }
 }
 
-/// The picture with a sheet over it. The drag lives here, in its own view,
-/// on purpose: a finger moves the sheet 120 times a second, and held by the
-/// result page each move rebuilt the page's whole list of details.
+/// The picture with a sheet over it. On a phone it is the system's own sheet
+/// (founder, 2026-11-09): on iOS 26 that is glass floating off the edges and
+/// opaque edge to edge at full height, drawn by iOS, so nothing here paints
+/// its background. An iPad or Mac has no such sheet (detents are ignored and
+/// it would be a modal over the picture), so those keep the drawn one, whose
+/// drag lives here on purpose: a finger moves it 120 times a second, and held
+/// by the result page each move rebuilt the page's whole list of details.
 private struct SpeechResultSheetPage<Background: View, Overlay: View, Hero: View, Playing: View, Summary: View, Details: View>: View {
     private let peek: CGFloat = 166
     /// Leaves a strip of the blurred reader above the open sheet.
     private let top: CGFloat = 56
     /// Closed, the sheet floats this far off the edges; open, it fills them.
     private let floatInset: CGFloat = 8
+
+    /// The summary and nothing else; iOS adds the floating card's own margin.
+    private static var systemPeek: CGFloat { 136 }
+    private static var peekDetent: PresentationDetent { .height(systemPeek) }
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    /// The system sheet: up over the page, except while the take plays.
+    @State private var sheetUp = false
+    @State private var detent: PresentationDetent = Self.peekDetent
 
     let immersive: Bool
     let onTapWhilePlaying: () -> Void
@@ -1464,6 +1496,80 @@ private struct SpeechResultSheetPage<Background: View, Overlay: View, Hero: View
     }
 
     var body: some View {
+        if sizeClass == .compact {
+            systemSheetPage
+        } else {
+            drawnSheetPage
+        }
+    }
+
+    private var systemSheetPage: some View {
+        let isOpen = detent == .large
+        return GeometryReader { geo in
+            ZStack(alignment: .top) {
+                background
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                    .environment(\.colorScheme, .dark)
+                    .opacity(isOpen ? 1 : 0)
+                    .ignoresSafeArea()
+                overlay
+                hero
+                    .padding(.horizontal, 20)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: geo.size.height - Self.systemPeek - 20, alignment: .bottom)
+                    .opacity(immersive || isOpen ? 0 : 1)
+                    .allowsHitTesting(!immersive && !isOpen)
+                if immersive {
+                    // A tap on the picture pauses it, and everything comes back.
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .ignoresSafeArea()
+                        .onTapGesture(perform: onTapWhilePlaying)
+                    playing
+                        .padding(20)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                }
+            }
+            .animation(.easeOut(duration: 0.3), value: immersive)
+            .animation(.easeOut(duration: 0.3), value: isOpen)
+        }
+        .sheet(isPresented: $sheetUp) { systemSheet(isOpen: isOpen) }
+        .onChange(of: immersive) { _, playing in sheetUp = !playing }
+        .task {
+            // After the page has finished arriving: a sheet asked for during
+            // a cover's own presentation is dropped.
+            try? await Task.sleep(for: .seconds(0.45))
+            #if DEBUG
+            if UserDefaults.standard.bool(forKey: "capturePanelOpen") { detent = .large }
+            #endif
+            sheetUp = !immersive
+        }
+    }
+
+    private func systemSheet(isOpen: Bool) -> some View {
+        VStack(spacing: 0) {
+            summary
+                .padding(.top, 24)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    withAnimation(.smooth(duration: 0.3)) { detent = isOpen ? Self.peekDetent : .large }
+                }
+            details
+                // Glass at the low detent; the grouped ground only when open.
+                .scrollContentBackground(.hidden)
+                .opacity(isOpen ? 1 : 0)
+        }
+        .background(Color(.systemGroupedBackground).opacity(isOpen ? 1 : 0).ignoresSafeArea())
+        .animation(.easeOut(duration: 0.25), value: isOpen)
+        .presentationDetents([Self.peekDetent, .large], selection: $detent)
+        .presentationDragIndicator(.visible)
+        .presentationBackgroundInteraction(.enabled(upThrough: Self.peekDetent))
+        // The sheet is the page's lower half, not something to close.
+        .interactiveDismissDisabled()
+    }
+
+    private var drawnSheetPage: some View {
         GeometryReader { geo in
             let closedY: CGFloat = geo.size.height - peek
             let restY: CGFloat = open ? top : closedY
