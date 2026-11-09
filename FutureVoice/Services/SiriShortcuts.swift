@@ -74,6 +74,7 @@ struct OpenWeeklyTestIntent: AppIntent {
 /// The phrases Siri listens for. Every phrase must name the app, and the
 /// Korean (and other) phrases live in `AppShortcuts.xcstrings` — Siri
 /// resolves them by the DEVICE language, like a permission alert.
+#if !SPEECH_APP  // The speech app does not answer to nawana's Siri phrases.
 struct NawanaShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
@@ -114,3 +115,4 @@ struct NawanaShortcuts: AppShortcutsProvider {
         )
     }
 }
+#endif

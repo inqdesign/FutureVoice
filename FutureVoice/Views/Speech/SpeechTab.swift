@@ -25,6 +25,9 @@ struct SpeechTab: View {
     /// The menu's two choices, for the tap that only learned after a fresh
     /// fetch that this account may write.
     @State private var choosingKind = false
+    #if SPEECH_APP
+    @State private var showingSettings = false
+    #endif
 
     private var canWrite: Bool { gate.account?.canWriteSpeechScripts ?? false }
 
@@ -215,6 +218,16 @@ struct SpeechTab: View {
             // the toolbar row, the tab's one action at its trailing edge.
             .toolbarTitleDisplayMode(.inlineLarge)
             .toolbar {
+                #if SPEECH_APP
+                // The speech app has no Me tab: languages and the account live
+                // here. Trailing: the inline-large title owns the leading edge,
+                // and a leading item there folds into a "…" menu.
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showingSettings = true } label: {
+                        Label("Settings", systemImage: "person.crop.circle")
+                    }
+                }
+                #endif
                 ToolbarItem(placement: .topBarTrailing) {
                     if canWrite {
                         AppMenu {
@@ -242,6 +255,12 @@ struct SpeechTab: View {
                 }
             }
         }
+        #if SPEECH_APP
+        .sheet(isPresented: $showingSettings) {
+            SpeechSettingsView()
+                .environmentObject(appState)
+        }
+        #endif
         .onAppear {
             store.reloadIfLanguageChanged()
             if store.scripts.isEmpty { store.reload() }
@@ -590,12 +609,18 @@ struct SpeechScriptSheet: View {
                 // heard in the learner's own voice.
                 // A tutor reading's Speech sits beside Play and Shadow; its
                 // own row only when there is no voiceover section to join.
-                if !shipped || studyHere {
+                #if SPEECH_APP
+                // No voiceover in the speech app: the only voice is the reader's.
+                let hasVoiceoverRow = false
+                #else
+                let hasVoiceoverRow = !shipped || studyHere
+                if hasVoiceoverRow {
                     ScriptVoiceoverSection(script: script, player: voiceoverPlayer,
                                            onSpeech: canPractice ? { startPractice() } : nil)
                 }
+                #endif
 
-                if canPractice, appState.voiceCloneId == nil || (shipped && !studyHere) {
+                if canPractice, !hasVoiceoverRow || appState.voiceCloneId == nil || (shipped && !studyHere) {
                     Section {
                         Button { startPractice() } label: {
                             Label("Speech", systemImage: "music.mic")
@@ -870,7 +895,7 @@ struct SpeechComposerSheet: View {
                     .pickerStyle(.segmented)
                 }
 
-                if appState.voiceCloneId != nil {
+                if appState.voiceCloneId != nil, !SpeechAppFlags.isSpeechApp {
                     Section {
                         Toggle("Also make it in my voice", isOn: $voiceover)
                     } footer: {
@@ -1035,7 +1060,7 @@ struct SpeechOwnScriptSheet: View {
                 // Only once there IS a script: the price is measured from it,
                 // and before a word is typed there is nothing to price
                 // (founder, 2026-10-14 — the length first, then the cost).
-                if appState.voiceCloneId != nil && !trimmed.isEmpty {
+                if appState.voiceCloneId != nil && !trimmed.isEmpty, !SpeechAppFlags.isSpeechApp {
                     Section {
                         Toggle("Also make it in my voice", isOn: $voiceover)
                             .disabled(quote > ScriptVoiceover.maxMinutes)

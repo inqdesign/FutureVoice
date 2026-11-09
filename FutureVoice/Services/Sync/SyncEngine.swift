@@ -221,8 +221,15 @@ final class SyncEngine: ObservableObject {
     private let fixedTransport: Bool
 
     init(transport: SyncTransport? = nil) {
+        #if SPEECH_APP
+        // The speech app has no iCloud container: opening one would trap.
+        // Sync never turns on there, so nothing is ever sent.
+        self.transport = transport ?? NoSyncTransport()
+        fixedTransport = true
+        #else
         self.transport = transport ?? CloudKitTransport()
         fixedTransport = transport != nil
+        #endif
     }
 
     /// Which store the current transport talks to.

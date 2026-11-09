@@ -148,6 +148,62 @@ targets:
       Debug: Config/FutureVoice.xcconfig
       Release: Config/FutureVoice.xcconfig
 
+  # The speech app: nawana's Speech tab as an app of its own (2026-11-07).
+  # It builds the SAME sources with SPEECH_APP set, plus SpeechApp/ (its
+  # @main, sign-in, languages, settings), so a fix to the speech code lands
+  # in both apps. Same Supabase project and account as nawana. No widget,
+  # no iCloud, no App Group, no daily call: none of that is in this app.
+  SpeechApp:
+    type: application
+    platform: iOS
+    sources:
+      - path: FutureVoice
+        excludes:
+          - "Resources/Info.plist"
+          - "Resources/InfoPlist.xcstrings"
+          - "Resources/AppShortcuts.xcstrings"
+          - "Resources/AppIconMac.icon"
+          - "Resources/*.entitlements"
+          - "Vendor/**"
+      - path: SpeechApp
+        excludes:
+          - "Info.plist"
+          - "SpeechApp.entitlements"
+    dependencies:
+      - framework: FutureVoice/Vendor/FVDenoise.xcframework
+        embed: false
+      - package: Supabase
+        product: Supabase
+      - package: PostHog
+        product: PostHog
+    entitlements:
+      path: SpeechApp/SpeechApp.entitlements
+      properties:
+        com.apple.developer.applesignin:
+          - Default
+    settings:
+      base:
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        PRODUCT_NAME: SpeechApp
+        INFOPLIST_FILE: SpeechApp/Info.plist
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) SPEECH_APP"
+        SWIFT_OBJC_BRIDGING_HEADER: FutureVoice/Support/FutureVoice-Bridging-Header.h
+        ENABLE_PREVIEWS: "YES"
+      # The name is a working one (founder, 2026-11-09: undecided). The bundle
+      # ids stay neutral until it is settled: an id is permanent once
+      # registered in App Store Connect.
+      configs:
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: com.roro.speech.dev
+          APP_DISPLAY_NAME: nawana speech dev
+        Release:
+          PRODUCT_BUNDLE_IDENTIFIER: com.roro.speech
+          APP_DISPLAY_NAME: nawana speech
+    configFiles:
+      Debug: Config/FutureVoice.xcconfig
+      Release: Config/FutureVoice.xcconfig
+
   FutureVoiceWidget:
     type: app-extension
     platform: iOS
@@ -228,6 +284,11 @@ schemes:
       targets:
         - FutureVoiceTests
         - FutureVoiceUITests
+
+  SpeechApp:
+    build:
+      targets:
+        SpeechApp: all
 
   # The same app, run in the RELEASE configuration — the only way a build
   # launched from Xcode carries the SHIPPING bundle id (com.roro.futurevoice)

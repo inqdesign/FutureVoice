@@ -41,7 +41,11 @@ enum Analytics {
 
     /// Product identifier stamped on every event (see `start`). Keep in sync
     /// with the web landing's `posthog.register({app:'nawana'})`.
+    #if SPEECH_APP
+    static let productTag = "nawana-speech"
+    #else
     static let productTag = "nawana"
+    #endif
 
     /// Team/owner accounts whose own usage must never enter analytics. Matched
     /// on the Supabase user UUID at `identify` time and dropped client-side

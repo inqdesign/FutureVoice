@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>$(APP_DISPLAY_NAME)</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.education</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>The camera films your speech when you turn it on, so you can watch yourself back.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>The microphone records your speech so the prompter can follow you and your take can be scored.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Saves a take you choose to your photo library.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Your speech is transcribed on the device so the prompter can follow along and compare it with the script.</string>
+	<key>SUPABASE_ANON_KEY</key>
+	<string>$(SUPABASE_ANON_KEY)</string>
+	<key>SUPABASE_URL</key>
+	<string>$(SUPABASE_URL)</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>GeistPixel-Square.ttf</string>
+		<string>Galmuri14.ttf</string>
+		<string>PixelifySans-Regular.ttf</string>
+		<string>NanumPenScript-Regular.ttf</string>
+	</array>
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+</dict>
+</plist>

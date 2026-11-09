@@ -88,7 +88,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     }
 }
 
+// The speech app (SpeechApp/) builds these same sources with its own entry.
+#if !SPEECH_APP
 @main
+#endif
 struct FutureVoiceApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var appState = AppState()
