@@ -423,9 +423,6 @@ struct ScriptVoiceoverSection: View {
                         .frame(maxWidth: .infinity)
                 }
                 .accentProminent()
-                // A list row's own label style tints the icon with the
-                // accent — the same colour as the fill, so it vanished.
-                .labelStyle(.titleAndIcon)
                 Button {
                     player.stop()
                     shadowing = stored
@@ -436,6 +433,9 @@ struct ScriptVoiceoverSection: View {
                 .buttonStyle(.bordered)
                 speechButton
             }
+            // Three pills leave a label ~75 pt: beside its icon, シャドーイング
+            // or Nachsprechen came out "シ…", and so did 섀도잉.
+            .labelStyle(PillLabelStyle(stacked: onSpeech != nil))
             .buttonRowFitsOneLine()
             .controlSize(.large)
         } else if case .making(let done, let total)? = center.job(for: script, voiceId: voiceId) {
@@ -446,7 +446,7 @@ struct ScriptVoiceoverSection: View {
                 Text("\(done)/\(total)").monospacedDigit().foregroundStyle(.secondary)
             }
             if onSpeech != nil {
-                speechButton.controlSize(.large)
+                speechButton.controlSize(.large).labelStyle(PillLabelStyle(stacked: false))
             }
         } else {
             // The minutes are in the line above; on the button beside the
@@ -459,10 +459,10 @@ struct ScriptVoiceoverSection: View {
                         .frame(maxWidth: .infinity)
                 }
                 .accentProminent()
-                .labelStyle(.titleAndIcon)
                 .disabled(quote > ScriptVoiceover.maxMinutes)
                 speechButton
             }
+            .labelStyle(PillLabelStyle(stacked: false))
             .buttonRowFitsOneLine()
             .controlSize(.large)
         }
@@ -513,6 +513,27 @@ struct ScriptVoiceoverSection: View {
             } catch is CancellationError {
             } catch {
                 // Shown in the footer from the job's state.
+            }
+        }
+    }
+}
+
+/// A list row's own label style gives the icon a wide slot of its own and
+/// tints it with the accent (invisible on a filled button), so these pills
+/// lay out their own label.
+private struct PillLabelStyle: LabelStyle {
+    let stacked: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        if stacked {
+            VStack(spacing: 3) {
+                configuration.icon
+                configuration.title.font(.footnote)
+            }
+        } else {
+            HStack(spacing: 6) {
+                configuration.icon
+                configuration.title
             }
         }
     }
