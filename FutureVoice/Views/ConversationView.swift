@@ -6209,7 +6209,7 @@ struct ConversationView: View {
         guard lesson.check == nil || lesson.check?.passedAt != nil else { return }
         lesson.check = .init(startedAt: Date())
         Telemetry.log("tutor_challenges_done", ["of": String(lesson.challenges.count)])
-        if let id = lesson.topicId {
+        if let id = lesson.topicId, TutorCurriculum.topic(id) != nil {
             TutorProgressStore.update(language: appState.targetLanguage, topicId: id) {
                 if $0.lessonDoneAt == nil { $0.lessonDoneAt = Date() }
             }

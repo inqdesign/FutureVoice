@@ -238,6 +238,25 @@ final class LearnerStateTests: XCTestCase {
         XCTAssertEqual(MaterialCheck.apply([(n: 2, line: rewrite)], to: lines), lines)
     }
 
+    @MainActor func testAGoalQuestionsTopicIdIsTheSameStringAsAndroid() {
+        var goal = UpcomingGoal(kind: .interview, title: "t", language: "en")
+        goal.id = UUID(uuidString: "AAAAAAAA-0000-0000-0000-000000000001")!
+        XCTAssertEqual(GoalPrep.topicId(goal: goal, question: "Tell me about yourself"),
+                       "goal:AAAAAAAA-0000-0000-0000-000000000001:b466f394")
+    }
+
+    @MainActor func testAQuestionIsReadyOnlyWhenItsLessonPassed() {
+        let goal = UpcomingGoal(kind: .interview, title: "t", language: "en")
+        let id = GoalPrep.topicId(goal: goal, question: "q")
+        func lesson(passed: Bool) -> TutorLesson {
+            TutorLesson(id: UUID(), title: "t", titleTarget: "t", language: "en", challenges: [], createdAt: Date(),
+                        topicId: id, check: passed ? .init(startedAt: Date(), passedAt: Date()) : nil)
+        }
+        XCTAssertEqual(GoalPrep.state(of: "q", goal: goal, lessons: []), .untouched)
+        XCTAssertEqual(GoalPrep.state(of: "q", goal: goal, lessons: [lesson(passed: false)]), .practicing)
+        XCTAssertEqual(GoalPrep.state(of: "q", goal: goal, lessons: [lesson(passed: false), lesson(passed: true)]), .ready)
+    }
+
     func testEveryTaggingRequestHasItsOwnKey() {
         let id = UUID()
         let first = LevelTagger.requestKey(sessionId: id, fingerprint: "f")
