@@ -761,6 +761,10 @@ struct RootTabView: View {
         guard appState.setupComplete, weekRecap == nil else { return }
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: asked ? 400_000_000 : 1_200_000_000)
+            // A background launch (a sync wake) builds this view too, and the
+            // deck marks its week seen the moment it is raised: the one showing
+            // was spent with the phone in a pocket. Coming forward offers it.
+            guard asked || UIApplication.shared.applicationState == .active else { return }
             let store = WeekRecapStore.shared
             let recap = store.lastWeek()
             if asked && store.wasShown(recap) {
