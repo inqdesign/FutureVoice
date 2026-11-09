@@ -455,6 +455,12 @@ enum CoachSuggester {
           a new acquaintance gets easy small talk, a public figure gets what \
           a fan would actually say to them. Their own future self already \
           knows everything about them: never introduce yourself to it.
+        - When the line asks them to say something again, to say it all in \
+          one go, or hands them a line to say, "say" is that sentence \
+          itself, starting on its own first word: the words they are \
+          practising, taken from their earlier lines or the line handed to \
+          them and fitted to them, with nothing before or after it. It is \
+          the sentence to practise, not a reply to being asked.
         - If the line asks nothing, "say" is a natural reaction or a short \
           follow-up question back, about what was just said.
         - Asking the same question straight back ("And you?", "Und du?", \
