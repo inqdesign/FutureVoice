@@ -304,4 +304,12 @@ class SpeechOwnScriptTest {
         assertFalse(SpeechGenre.writable.contains(SpeechGenre.OWN))
         assertEquals(5, SpeechGenre.writable.size)
     }
+
+    @Test fun aTakeOfAScriptWithNoTargetIsNotCutAtAMinute() {
+        val body = "word ".repeat(193)
+        val length = SpeechLibrary.estimatedSeconds(body, "en")
+        assertTrue(length > 0)
+        assertEquals(length * 3.0 + 60, com.roro.futurevoice.ui.speech.SpeechTakeSession.ceilingSeconds(0, body, "en"), 0.001)
+        assertEquals(960.0, com.roro.futurevoice.ui.speech.SpeechTakeSession.ceilingSeconds(300, "Short.", "en"), 0.001)
+    }
 }

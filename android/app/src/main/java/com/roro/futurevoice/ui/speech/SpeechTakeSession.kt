@@ -10,6 +10,7 @@ import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.data.MicPreference
 import com.roro.futurevoice.data.PronunciationLedger
+import com.roro.futurevoice.data.SpeechLibrary
 import com.roro.futurevoice.data.SpeechScript
 import com.roro.futurevoice.data.SpeechStore
 import com.roro.futurevoice.data.SpeechTake
@@ -94,6 +95,8 @@ class SpeechTakeSession(
     private var ticker: Job? = null
     private var startedAtMs = 0L
     private var clock = 0.0
+    /** Set as the take starts ([ceilingSeconds]), read on every tick. */
+    private var takeCeiling = Double.POSITIVE_INFINITY
     private var position = 0.0
     private var wav: File? = null
     private var recordingVideo = false
@@ -134,6 +137,7 @@ class SpeechTakeSession(
     suspend fun start() {
         if (_phase.value != Phase.Ready && !isFailed) return
         _cursor.value = 0; position = 0.0; _elapsed.value = 0; clock = 0.0
+        _script.value.let { takeCeiling = ceilingSeconds(it.targetSeconds, it.body, it.language) }
         // "3" goes up FIRST and the mic is set up while it shows (iOS
         // `34eca23a`); the wait before "2" shrinks by what the setup took.
         val countStartedAt = System.currentTimeMillis()
@@ -273,7 +277,7 @@ class SpeechTakeSession(
             return
         }
         // A take nobody ends still ends.
-        if (clock > _script.value.targetSeconds * 3 + 60) scope.launch { stop() }
+        if (clock > takeCeiling) scope.launch { stop() }
     }
 
     /** Seconds since anyone was last heard, by the level meter or by the
@@ -609,6 +613,13 @@ class SpeechTakeSession(
          *  at the next pause whatever the word once it is this long (the
          *  assessment endpoint takes ≤30 s). */
         const val CHUNK_HARD_SECONDS = 22.0
+
+        /** When a take nobody ended gives up: three times the script's length
+         *  plus a minute. The length is read off the text as well, because a
+         *  tutor, goal-prep or news script is saved with targetSeconds 0, and
+         *  those takes were cut at exactly 60 s, mid sentence. */
+        fun ceilingSeconds(targetSeconds: Int, body: String, language: String): Double =
+            maxOf(targetSeconds, SpeechLibrary.estimatedSeconds(body, language)) * 3.0 + 60
 
         /** The take's pronunciation from its pieces: the SOUND score weighted
          *  by each piece's judged words, and every faulted word, worst first
