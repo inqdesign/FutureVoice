@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.async
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 data class AppState(
@@ -113,6 +114,8 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
     private val voices = VoiceCloneRepository()
 
     private val prefs = appContext.getSharedPreferences("futurevoice", android.content.Context.MODE_PRIVATE)
+
+    private var restoreJob: kotlinx.coroutines.Job? = null
 
     private val _state = MutableStateFlow(AppState(
         setupComplete = prefs.getBoolean(SETUP_COMPLETE_KEY, false),
@@ -236,6 +239,18 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
                 refreshParkedVoice(force)
                 // Every foreground (iOS `makeQueuedVoiceIfReady` on `.active`).
                 makeQueuedVoiceIfReady()
+            }
+        }
+        // The voice this account holds, kept per account for the next launch
+        // ([restoreVoiceClone]). Never mid-restore: the id isn't settled then.
+        viewModelScope.launch {
+            _state.collect { st ->
+                val uid = auth.userId
+                if (uid != null && st.signedIn && !st.isAnonymous && !st.restoringVoice) {
+                    val key = KNOWN_VOICE_KEY + uid
+                    if (prefs.getString(key, null) != st.voiceId)
+                        prefs.edit().putString(key, st.voiceId).apply()
+                }
             }
         }
         // A parked mark belongs to ONE voice: once the app holds another (a
@@ -1166,25 +1181,49 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
      */
     private fun restoreVoiceClone() {
         val uid = auth.userId ?: return
-        _state.update { it.copy(restoringVoice = true) }
-        viewModelScope.launch {
-            // A swallowed failure here walks a paying learner into re-cloning
-            // a voice they already own — say what went wrong, every time.
-            val serverVoiceId = runCatching { voices.activeVoiceId(uid) }
-                .onFailure { android.util.Log.w("AppViewModel", "voice restore failed", it) }
-                .onFailure { e -> _state.update { it.copy(error = e.message) } }
-                .getOrNull()
+        val parking = com.roro.futurevoice.data.VoiceParking
+        // What this phone last knew (iOS keeps `voiceCloneId` in defaults), so
+        // the voice is there before the network answers, and without it.
+        val known = if (auth.isAnonymous) null
+            else parking.restoredVoiceId(prefs.getString(KNOWN_VOICE_KEY + uid, null), parking.droppedId())
+                ?: if (_state.value.voiceIsStandIn)
+                    prefs.getString(STAND_IN_ID_KEY, null) ?: STAND_IN_PRESET_ID else null
+        _state.update { it.copy(restoringVoice = true, voiceId = it.voiceId ?: known) }
+        restoreJob?.cancel()
+        restoreJob = viewModelScope.launch {
+            // A query that FAILED knows nothing about the voice: only the
+            // server saying "no row" may send a learner to record one. With no
+            // voice on hand the restore stays open and asks again, because
+            // closing it is what opens the clone flow (a learner with a voice,
+            // on a bad connection, was walked into re-recording).
+            var lookup = runCatching { voices.activeVoiceId(uid) }
+            if (lookup.isFailure) {
+                android.util.Log.w("AppViewModel", "voice restore failed", lookup.exceptionOrNull())
+                com.roro.futurevoice.core.Analytics.capture("voice_restore_failed",
+                    mapOf("known" to (_state.value.voiceId != null)))
+            }
+            var wait = 2_000L
+            while (lookup.isFailure && _state.value.voiceId == null && auth.userId == uid) {
+                kotlinx.coroutines.delay(wait)
+                wait = (wait * 2).coerceAtMost(30_000L)
+                lookup = runCatching { voices.activeVoiceId(uid) }
+            }
+            ensureActive()
+            if (auth.userId != uid) {
+                _state.update { it.copy(restoringVoice = false) }
+                return@launch
+            }
             // A parked voice dropped for want of a recording keeps an active
             // row; restoring it would skip the re-record it was dropped for.
-            val restored = com.roro.futurevoice.data.VoiceParking.restoredVoiceId(
-                serverVoiceId, com.roro.futurevoice.data.VoiceParking.droppedId())
+            val restored = parking.restoredVoiceId(lookup.getOrNull(), parking.droppedId())
             // A stand-in has no row by construction — its voice is queued. A
             // row that DOES exist was made on another device (or the queue ran
             // there): it is theirs, and the stand-in ends.
             val standIn = _state.value.voiceIsStandIn
             if (standIn && restored != null) endStandIn()
-            val voiceId = restored ?: if (standIn)
-                prefs.getString(STAND_IN_ID_KEY, null) ?: STAND_IN_PRESET_ID else null
+            val voiceId = if (lookup.isFailure) _state.value.voiceId
+                else restored ?: if (standIn)
+                    prefs.getString(STAND_IN_ID_KEY, null) ?: STAND_IN_PRESET_ID else null
             // The lineage is what keeps already-synthesized audio reachable
             // after a re-clone — without it a new voice id misses on every
             // cached line and the whole library re-bills itself. A stand-in
@@ -1236,6 +1275,8 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         /** iOS keeps the stand-in in `voiceCloneId`'s own defaults key; this
          *  app restores the voice id from the server, which has no row for it. */
         const val STAND_IN_ID_KEY = "futurevoice.standInVoiceId"
+        /** + user id: the voice that account last held on this phone. */
+        const val KNOWN_VOICE_KEY = "futurevoice.knownVoiceId."
         /** The preset that speaks while the learner's own voice is queued
          *  (iOS `standInPresetId` = `VoicePreset.catalog[0]`). */
         val STAND_IN_PRESET_ID = com.roro.futurevoice.talk.StockPerson.catalog[0].voiceId
