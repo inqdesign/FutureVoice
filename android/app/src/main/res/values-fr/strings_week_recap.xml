@@ -131,5 +131,7 @@
     <string name="wt_say_or_type_right_way">"Dis-le ou écris-le correctement"</string>
     <string name="wt_say_it_in">"Dis-le en %1$s"</string>
     <string name="wt_last_time_you_said">"La dernière fois, tu as dit"</string>
+    <string name="wt_my_answer_is_right_too">"Ma réponse est juste aussi"</string>
+    <string name="wt_could_not_check">"Impossible de vérifier celle-ci, elle ne compte pas."</string>
     <string name="wt_trap_words_mistake">"Mots pièges : tirés de ton erreur"</string>
 </resources>

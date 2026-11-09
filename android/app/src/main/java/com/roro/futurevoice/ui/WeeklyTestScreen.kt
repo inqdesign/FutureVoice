@@ -214,6 +214,10 @@ fun WeeklyTestScreen(
     var showHint by remember { mutableStateOf(false) }
     /** translate: an unlisted order of the answer's words is being read. */
     var checkingOrder by remember { mutableStateOf(false) }
+    /** This question was marked wrong and the learner said it was right. */
+    var appealedHere by remember { mutableStateOf(false) }
+    /** The last question's second read failed, so it left the paper. */
+    var unjudgedNote by remember { mutableStateOf(false) }
 
     val mood = when (outcome) {
         null -> WeeklyTestHost.Mood.WAITING
@@ -242,6 +246,7 @@ fun WeeklyTestScreen(
 
     fun settle(correct: Boolean, given: String, test: WeeklyTest, item: WeeklyTestItem, score: Int? = null) {
         outcome = correct
+        unjudgedNote = false
         streak = if (correct) streak + 1 else 0
         wrongRun = if (correct) 0 else wrongRun + 1
         val t = test.copy(
@@ -271,8 +276,18 @@ fun WeeklyTestScreen(
         phase = TestPhase.Result(t)
         if (trialScope != null) onTrialFinished(t)
         if (firstTime) {
-            Analytics.capture("weekly_test_finished",
-                mapOf("score" to t.score, "total" to t.total, "best_streak" to t.bestStreak))
+            val finished = HashMap<String, Any?>()
+            finished["score"] = t.score
+            finished["total"] = t.total
+            finished["best_streak"] = t.bestStreak
+            finished["appealed"] = t.answers.count { it.appealed == true }
+            val rightIds = t.answers.filter { it.correct }.map { it.itemId }.toSet()
+            t.items.groupBy { it.kind }.forEach { (kind, items) ->
+                val k = kind.name.lowercase()
+                finished["n_$k"] = items.size
+                finished["right_$k"] = items.count { it.id in rightIds }
+            }
+            Analytics.capture("weekly_test_finished", finished)
             SoundEffects.play(context, SoundEffects.Cue.DONE); HapticEngine.success(context)
         }
         scope.launch {
@@ -286,6 +301,7 @@ fun WeeklyTestScreen(
     fun advance(test: WeeklyTest) {
         player.stop(); playJob?.cancel(); playing = false
         chosen = null; laid.clear(); cursor = 0; outcome = null
+        appealedHere = false
         rewriteText = ""; showHint = false
         speakPhase = SpeakPhase.IDLE; speakTranscript = null; speakScore = null; recordingFile = null
         val next = test.nextItem
@@ -304,20 +320,47 @@ fun WeeklyTestScreen(
         val tiles = laid.map { item.options[it] }
         val given = WeeklyTestEngine.sentence(tiles, test.targetLanguage)
         val right = WeeklyTestEngine.isCorrect(item, tiles, test.targetLanguage)
-        // A translate answer in the answer's own words, in an order the item
-        // doesn't list, gets its order read before it is called wrong.
-        if (right || item.kind != WeeklyTestItem.Kind.TRANSLATE ||
-            !WeeklyTestEngine.isReorder(item, tiles, test.targetLanguage)) {
+        // Tiles the code didn't accept are read once more before they are
+        // called wrong. Only translate: a dictation has one answer, the line.
+        if (right || item.kind != WeeklyTestItem.Kind.TRANSLATE || tiles.size < 2) {
             settle(right, given, test, item)
             return
         }
         checkingOrder = true
         scope.launch {
-            val ok = WeeklyTestEngine.orderIsNatural(item, given, test.targetLanguage)
+            val verdict = WeeklyTestEngine.laidStands(item, given, test.targetLanguage)
             checkingOrder = false
             if (outcome != null || current?.id != item.id) return@launch
-            settle(ok, given, test, item)
+            if (verdict == null) {
+                // Nobody knows whether this answer was right, so the question
+                // leaves the paper and costs nothing.
+                val t = test.copy(items = test.items.filter { it.id != item.id })
+                if (retry != null) retry = t else scope.launch { store.save(t) }
+                phase = TestPhase.Playing(t)
+                Analytics.capture("weekly_test_unjudged", mapOf("kind" to item.kind.name.lowercase()))
+                advance(t)
+                unjudgedNote = true
+                return@launch
+            }
+            settle(verdict, given, test, item)
         }
+    }
+
+    /** The learner says the answer they gave was right too. It counts as
+     *  right, here and in the review loop, which is only written at the end. */
+    fun appeal(item: WeeklyTestItem, test: WeeklyTest) {
+        if (outcome != false) return
+        val at = test.answers.indexOfLast { it.itemId == item.id }
+        if (at < 0) return
+        val t = test.copy(answers = test.answers.toMutableList().also {
+            it[at] = it[at].copy(correct = true, appealed = true)
+        })
+        if (retry != null) retry = t else scope.launch { store.save(t) }
+        phase = TestPhase.Playing(t)
+        outcome = true
+        appealedHere = true
+        wrongRun = 0
+        Analytics.capture("weekly_test_appeal", mapOf("kind" to item.kind.name.lowercase()))
     }
 
     fun checkRewrite(item: WeeklyTestItem, test: WeeklyTest) {
@@ -368,8 +411,7 @@ fun WeeklyTestScreen(
         // the screen long enough for an ANR (seen in the capture build).
         var test = withContext(Dispatchers.Default) {
             val material = WeeklyTestEngine.gather(context, language, level, native)
-            WeeklyTestEngine.build(material, WeeklyTestStore.latestWeekly(tests), language, level,
-                recentTests = tests) { word ->
+            WeeklyTestEngine.build(material, WeeklyTestStore.latestWeekly(tests), language, level) { word ->
                 WeeklyTestCaptureFlags.glosses?.let { return@build it[word] }
                 PracticeCaptureFlags.lookup { lore.entry(word, native, language) }
                     ?.senses?.firstOrNull()?.meaning
@@ -663,6 +705,8 @@ fun WeeklyTestScreen(
                 BottomBar(item, outcome, isLast = p.test.nextItem == null,
                     canCheck = if (rewrite) rewriteText.isNotBlank() else laid.isNotEmpty() && !checkingOrder,
                     checking = checkingOrder,
+                    unjudgedNote = unjudgedNote,
+                    onAppeal = { appeal(item, p.test) },
                     onCheck = { if (rewrite) checkRewrite(item, p.test) else checkBuild(item, p.test) },
                     onContinue = { advance(p.test) })
             }
@@ -724,7 +768,7 @@ fun WeeklyTestScreen(
                                     }
                                 WeeklyTestItem.Kind.BUILD, WeeklyTestItem.Kind.LISTEN, WeeklyTestItem.Kind.GRAMMAR,
                                 WeeklyTestItem.Kind.TRANSLATE ->
-                                    BuildArea(item, ph.test.targetLanguage, laid, cursor, outcome,
+                                    BuildArea(item, ph.test.targetLanguage, laid, cursor, outcome, appealedHere,
                                         onLay = ::lay, onTapPlaced = ::tapPlaced,
                                         onTapEnd = { if (outcome == null) cursor = laid.size })
                                 WeeklyTestItem.Kind.REWRITE ->
@@ -956,10 +1000,11 @@ private fun TranslatePrompt(item: WeeklyTestItem, outcome: Boolean?, showHint: B
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(stringResource(R.string.wt_last_time_you_said), style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold, color = secondary)
+                    val pair = com.roro.futurevoice.talk.GrammarFocus.compact(was, fixed, context = 2)
                     Text(buildAnnotatedString {
-                        withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { append(was) }
+                        withStyle(SpanStyle(textDecoration = TextDecoration.LineThrough)) { append(pair.first) }
                         append("  →  ")
-                        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(fixed) }
+                        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(pair.second) }
                     }, style = MaterialTheme.typography.bodySmall, color = secondary)
                 }
             }
@@ -1142,7 +1187,7 @@ private fun OptionButton(option: String, item: WeeklyTestItem, chosen: String?, 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun BuildArea(item: WeeklyTestItem, language: String, laid: List<Int>, cursor: Int,
-                      outcome: Boolean?, onLay: (Int) -> Unit, onTapPlaced: (Int) -> Unit,
+                      outcome: Boolean?, appealed: Boolean, onLay: (Int) -> Unit, onTapPlaced: (Int) -> Unit,
                       onTapEnd: () -> Unit) {
     // Graded and wrong: which tiles were actually misplaced.
     val check = if (outcome == false)
@@ -1205,7 +1250,7 @@ private fun BuildArea(item: WeeklyTestItem, language: String, laid: List<Int>, c
         }
         // Once graded, the leftover traps are named for what they are: the
         // learner's own words from before the fix.
-        if (outcome != null && decoys.isNotEmpty()) {
+        if (outcome != null && !appealed && decoys.isNotEmpty()) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(stringResource(if (item.kind == WeeklyTestItem.Kind.TRANSLATE) R.string.wt_trap_words_mistake
                     else R.string.wt_trap_words), style = MaterialTheme.typography.labelMedium,
@@ -1219,7 +1264,7 @@ private fun BuildArea(item: WeeklyTestItem, language: String, laid: List<Int>, c
                 }
             }
         }
-        if (outcome == false) {
+        if (outcome == false || appealed) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(stringResource(if (item.kind == WeeklyTestItem.Kind.LISTEN) R.string.what_was_said
@@ -1351,25 +1396,38 @@ private fun SpeakArea(phase: SpeakPhase, outcome: Boolean?, transcript: String?,
 
 @Composable
 private fun BottomBar(item: WeeklyTestItem, outcome: Boolean?, isLast: Boolean, canCheck: Boolean,
-                      checking: Boolean, onCheck: () -> Unit, onContinue: () -> Unit) {
+                      checking: Boolean, unjudgedNote: Boolean, onAppeal: () -> Unit,
+                      onCheck: () -> Unit, onContinue: () -> Unit) {
     val tiles = item.kind == WeeklyTestItem.Kind.BUILD || item.kind == WeeklyTestItem.Kind.LISTEN ||
         item.kind == WeeklyTestItem.Kind.GRAMMAR || item.kind == WeeklyTestItem.Kind.TRANSLATE
     val rewrite = item.kind == WeeklyTestItem.Kind.REWRITE
-    if (outcome == null && !tiles && !rewrite) return
+    if (outcome == null && !tiles && !rewrite && !unjudgedNote) return
     Column(Modifier.fillMaxWidth().background(AppSurfaces.ground).bottomBarInsets()) {
         HorizontalDivider()
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (unjudgedNote && outcome == null) {
+                Text(stringResource(R.string.wt_could_not_check), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             if (outcome != null) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Icon(if (outcome) Icons.Filled.CheckCircle else Icons.Filled.Cancel, contentDescription = null,
                         tint = if (outcome) RIGHT_GREEN else WRONG_RED, modifier = Modifier.size(24.dp))
-                    Column {
+                    Column(Modifier.weight(1f)) {
                         Text(stringResource(if (outcome) R.string.right else R.string.not_this_time),
                             style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                         if (!outcome && !tiles && !rewrite) {
                             Text(item.answer, style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    if (!outcome) {
+                        OutlinedButton(onClick = onAppeal,
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                            modifier = Modifier.heightIn(min = 34.dp)) {
+                            Text(stringResource(R.string.wt_my_answer_is_right_too),
+                                style = MaterialTheme.typography.labelMedium)
                         }
                     }
                 }
@@ -1378,7 +1436,7 @@ private fun BottomBar(item: WeeklyTestItem, outcome: Boolean?, isLast: Boolean, 
                         else ButtonDefaults.buttonColors()) {
                     Text(stringResource(if (isLast) R.string.see_result else R.string.continue_))
                 }
-            } else {
+            } else if (tiles || rewrite) {
                 Button(onClick = onCheck, enabled = canCheck, modifier = Modifier.fillMaxWidth().height(50.dp)) {
                     if (checking) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
                     else Text(stringResource(R.string.check))

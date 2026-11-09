@@ -4,8 +4,6 @@ import android.content.Context
 import com.roro.futurevoice.net.GeminiClient
 import com.roro.futurevoice.net.WeekRecapCoach
 import com.roro.futurevoice.talk.CarryoverDetector
-import com.roro.futurevoice.talk.GrammarFocus
-import com.roro.futurevoice.talk.LearnerPattern
 import com.roro.futurevoice.talk.DrillCard
 import com.roro.futurevoice.talk.Session
 import com.roro.futurevoice.talk.ShadowScore
@@ -16,6 +14,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -140,6 +139,8 @@ data class WeeklyTestAnswer(
     @Serializable(with = IsoDateMillisSerializer::class) val at: Long,
     /** speak: the shadow match score the verdict was made from. */
     val score: Int? = null,
+    /** The learner said their answer was right too, and it was counted so. */
+    val appealed: Boolean? = null,
 )
 
 /**
@@ -176,60 +177,62 @@ class WeeklyTestRandom(seed: String) : Random() {
 }
 
 /**
- * Builds and grades the weekly test (iOS `WeeklyTestEngine`, 1.1.1 with its
- * follow-ups). The test is the learner's own week turned into questions —
- * nothing is drawn from a generic bank:
+ * Builds and grades the weekly test (iOS `WeeklyTestEngine`).
  *
- *   meaning  ← the week's talk BOOKS' Words chapter (iOS `36342dd`)
- *   gap      ← the Expressions page's "To study" list, in the line it was heard in
- *   translate← the corrections (drill cards) and the profile's recurring
- *              mistakes, asked in a NEW sentence: a native-language line to say
- *              in the target language, graded in code against the pattern's
- *              required spans and the learner's own wrong forms (replaced
- *              `build`, iOS 2026-10-08 — founder: "a mistake is learned by
- *              using its pattern again, not by re-reading the sentence it was in")
- *   listen   ← the fluent self's saved lines, heard and rebuilt from tiles
- *   speak    ← the fluent self's lines, said out loud and scored like a shadow take
+ * The test is ONE WEEK of the learner's own practice, the same week "Your
+ * week" reports on: from one opening of the test to the next
+ * ([WeekRecapBuilder.lastWeek]). Nothing older is dealt, and a thin week is
+ * not padded with old material (iOS 2026-11-08, founder).
  *
- * listen and speak take only lines that carry a "To study" expression, and
- * never a call's opening line. A learner reported (2026-10-08) that the test
- * "felt random": the opener's greeting came up to be repeated, and a
- * correction card — one clause since 2026-09-27 — was shuffled into four
- * tiles that rebuilt nothing worth knowing. Every item now has a reason the
- * learner can see: a phrase they are studying, or a sentence they got wrong.
- *   grammar  ← the week report's recurring grammar points (`WeekRecap.Coach`),
- *              else the profile's recurring mistakes — rule + one of the
- *              learner's own lines, rebuilt right from tiles (iOS `9617756`)
- *   upgrade  ← the week report's leaned-on words — the learner's line with
- *              the word marked, pick the better one
+ * "Studied" is a card the learner put off in the deck this week. The paper is
+ * at most [MAX_PAPER] items, in this order:
  *
- * Every grade is computed in code. The only model calls are the free, cached
- * dictionary gloss (meaning) and the audio read of a take (speak).
+ *   translate ← this week's mistakes: the report's recurring grammar first,
+ *               then sentence cards reviewed this week, each asked in a NEW
+ *               sentence laid from tiles
+ *   gap       ← expressions put off this week, in a line they were heard in
+ *   meaning   ← words put off this week, and the report's better words
+ *   listen    ← a line the fluent self said this week, rebuilt from tiles
+ *   speak     ← another such line, said out loud
+ *   retakes   ← last week's paper's misses only, once: a second miss leaves
+ *               the test and stays with the deck
+ *
+ * `grammar`, `upgrade`, `build` and `rewrite` are no longer dealt; old papers
+ * on disk still play them.
+ *
+ * **Nothing reaches the paper unchecked.** A reader that took no part in
+ * writing an item passes it: [verifyTranslate] (a blind solver finds every
+ * right sentence the tiles can build, and a reviewer asks whether the mistake
+ * was a rule and this sentence tests it), the gap check and [onlyMeaningFits].
+ * A failed check keeps nothing.
+ *
+ * **A right answer is code's to accept; a wrong one is not code's alone to
+ * declare.** Tiles that match are right. Translate tiles that don't match get
+ * a second read before they are called wrong ([laidStands]), a failed read
+ * removes the question from the score, and every wrong answer can be appealed
+ * on the spot.
  */
 object WeeklyTestEngine {
 
-    const val MAX_MEANING = 4
+    /** The whole paper, about five minutes. */
+    const val MAX_PAPER = 12
+    const val MAX_TRANSLATE = 4
+    /** More are written than can be dealt: the gate drops about half. */
+    const val TRANSLATE_DRAFTS = 6
     const val MAX_GAP = 3
-    const val MAX_REWRITE = 3
-    const val MAX_TRANSLATE = 3
+    const val MAX_MEANING = 3
+    const val MAX_LISTEN = 1
+    const val MAX_SPEAK = 1
+    /** Last week's misses dealt again this week. */
+    const val MAX_RETAKE = 2
     /** How long a paper waits for its translate items to be written. */
     const val TRANSLATE_WAIT_MS = 30_000L
-    /** How long an unlisted tile order waits to be read. */
-    const val ORDER_WAIT_MS = 10_000L
-    const val MAX_LISTEN = 2
-    const val MAX_SPEAK = 2
-    const val MAX_GRAMMAR = 2
-    const val MAX_UPGRADE = 2
+    /** How long the second read of a wrong answer waits. */
+    const val SECOND_READ_WAIT_MS = 12_000L
     /** How long a paper waits for the week report's coach to be written when
      *  the deck hasn't been opened yet. The writing carries on past it (and
      *  lands in the report); the paper just goes without. */
     const val COACH_WAIT_MS = 25_000L
-    /** Wrong answers of recent tests dealt again this week (iOS 70dd26a9:
-     *  the weekly paper absorbed the monthly one). */
-    const val MAX_RETAKE = 5
-    /** How many finished weekly papers the retakes are drawn from — about a
-     *  month, which is what the monthly paper used to gather. */
-    const val RETAKE_WEEKS = 4
     /** Ceiling for a paper of one test's own misses ([retryPaper]). */
     const val MAX_RETRY = 20
     /** A spoken line passes at the shadow browser's own retry bar. */
@@ -239,18 +242,41 @@ object WeeklyTestEngine {
     const val CHOICE_COUNT = 4
     /** Extra tiles for a build item, from the learner's OWN wording. */
     const val MAX_DECOY_TILES = 2
-    /** How far back the window reaches with no previous test. */
-    const val DEFAULT_WINDOW_MS = 7 * 86_400_000L
+    /** The longest a card can be put off (the deck's "3 days"), with room
+     *  for the day it was pressed. */
+    const val LONGEST_PUT_OFF_MS = 3 * 86_400_000L + 3_600_000L
     const val BLANK_MARK = "______"
 
-    // ── Window
+    // ── Week
 
-    /** Since the last WEEKLY test was built, else one week. A monthly paper
-     *  is never the anchor (iOS `07170af`). */
-    fun window(lastTest: WeeklyTest?, now: Long): Pair<Long, Long> {
-        val anchor = lastTest?.takeIf { !it.isMonthly }
-        val start = anchor?.periodEnd ?: (now - DEFAULT_WINDOW_MS)
-        return minOf(start, now) to now
+    /** Whether something waiting to come back at [returnAt] was put off this
+     *  week. The schedule keeps only the return date, and a put-off is at most
+     *  [LONGEST_PUT_OFF_MS], so the date places it to within three days. */
+    fun wasPutOff(returnAt: Long, start: Long, end: Long): Boolean =
+        returnAt > start && returnAt <= end + LONGEST_PUT_OFF_MS
+
+    /** The paper in its fixed order, inside [MAX_PAPER]: last week's misses
+     *  and the two heard lines keep their seats, then mistakes, then
+     *  expressions and words share what is left. */
+    fun paper(translate: List<WeeklyTestItem>, gap: List<WeeklyTestItem>, meaning: List<WeeklyTestItem>,
+              listen: List<WeeklyTestItem>, speak: List<WeeklyTestItem>,
+              retakes: List<WeeklyTestItem>): List<WeeklyTestItem> {
+        val heard = listen.take(MAX_LISTEN) + speak.take(MAX_SPEAK)
+        val again = retakes.take(MAX_RETAKE)
+        var room = MAX_PAPER - heard.size - again.size
+        val mistakes = translate.take(minOf(MAX_TRANSLATE, room))
+        room -= mistakes.size
+        val gaps = gap.take(MAX_GAP)
+        val words = meaning.take(MAX_MEANING)
+        val keptGaps = ArrayList<WeeklyTestItem>()
+        val keptWords = ArrayList<WeeklyTestItem>()
+        var g = 0
+        var w = 0
+        while (room > 0 && (g < gaps.size || w < words.size)) {
+            if (g < gaps.size) { keptGaps += gaps[g]; g++; room-- }
+            if (room > 0 && w < words.size) { keptWords += words[w]; w++; room-- }
+        }
+        return mistakes + keptGaps + keptWords + heard + again
     }
 
     // ── What a build reads
@@ -275,11 +301,6 @@ object WeeklyTestEngine {
         val putOffWords: List<String> = emptyList(),
         /** The closed week's report coach, written at gather time if missing. */
         val coach: WeekRecap.Coach? = null,
-        /** The profile's recurring mistakes, fresh and frequent enough to be a
-         *  focus (`GrammarFocus` rules) — the grammar fallback. */
-        val mistakes: List<LearnerPattern> = emptyList(),
-        /** Names a mistake for the learner: (label, tip) in their language. */
-        val describeMistake: suspend (LearnerPattern) -> Pair<String, String>? = { null },
         /** The expressions put off in the deck, never used, rated at the
          *  learner's level or above ([QuickQuizStock.rateMissing]). */
         val putOffExpressions: List<String> = emptyList(),
@@ -294,15 +315,22 @@ object WeeklyTestEngine {
         val sceneExamples: Map<String, String> = emptyMap(),
         /** The learner's own language — translate items need it. */
         val nativeLanguage: String = "",
-        /** Every recurring mistake on the profile, unfiltered — [slips]
-         *  judges them by what was really said ([GrammarFocus.evidence]). */
-        val profileMistakes: List<LearnerPattern> = emptyList(),
         /** Writes the translate items (one model call); null = no network,
          *  so no translate items (a JVM test). Args: system, user, test id. */
         val writeTranslate: (suspend (String, String, String) -> TranslatePayload?)? = null,
         /** The trial report's fill: a talk's book words and phrases (iOS
          *  2026-10-28). Null = no fill (the weekly paper, a JVM test). */
         val bookOf: (suspend (Session) -> Pair<List<String>, List<String>>)? = null,
+        /** The week this paper is about ([WeekRecapBuilder.lastWeek]); null =
+         *  the seven days before now (a JVM test has no schedule). */
+        val week: Pair<Long, Long>? = null,
+        /** Keeps the meaning items whose gloss fits only the answer
+         *  ([onlyMeaningFits]); null = no check (a JVM test has no model). */
+        val checkMeanings: (suspend (List<WeeklyTestItem>, String) -> List<WeeklyTestItem>)? = null,
+        /** The translate gate ([verifyTranslate]); null = no check. */
+        val checkTranslate: (suspend (List<WeeklyTestItem>, String) -> List<WeeklyTestItem>)? = null,
+        /** Told what each paper came to (`weekly_test_built`). */
+        val onBuilt: ((Map<String, Any?>) -> Unit)? = null,
     )
 
     @Serializable
@@ -311,8 +339,9 @@ object WeeklyTestEngine {
         data class Item(
             val source: Int,
             val point: String,
-            val native: String,
             val answer: String,
+            val native: String,
+            val wrong: String? = null,
             val orders: List<String>? = null,
             val decoys: List<String>? = null,
             val tip: String? = null,
@@ -332,17 +361,13 @@ object WeeklyTestEngine {
         val vocab = VocabStore.shared(context)
         val app = context.applicationContext
         val now = System.currentTimeMillis()
-        val fresh = now - GrammarFocus.FRESH_DAYS * 86_400_000L
-        val profileMistakes = runCatching {
-            ProfileStore.shared(context).load(language, level.code).recurringMistakes
-        }.getOrDefault(emptyList())
-        val mistakes = profileMistakes
-            .filter { it.frequency >= GrammarFocus.MIN_FREQUENCY && it.lastSeenAt >= fresh }
-        // What was studied (iOS `studiedMaterial`): put off in the deck, still
-        // on the learner's lists, at their level or above. A word the graded
-        // list can't place keeps its seat.
+        val thisWeek = scope?.let { minOf(it.start, now) to now } ?: WeekRecapBuilder.lastWeek(context, now)
+        // What was studied this week (iOS `studiedMaterial`): put off in the
+        // deck between the openings, still on the learner's lists, at their
+        // level or above. A word the graded list can't place keeps its seat.
         val schedule = StudyScheduleStore.shared(context).snapshot(language)
-        val put = schedule.dueItems(now) + schedule.upcoming(now)
+        val put = (schedule.dueItems(now) + schedule.upcoming(now))
+            .filter { wasPutOff(it.at, thisWeek.first, thisWeek.second) }
         val seenPut = HashSet<String>()
         val putOffWords = put.filter { it.kind == StudyScheduleStore.Kind.WORD }.map { it.text }.filter { w ->
             seenPut.add("w|" + w.lowercase()) && vocab.isStudying(w, language) &&
@@ -369,10 +394,6 @@ object WeeklyTestEngine {
             graded = { band -> CoreVocabulary.headwords(band, language) },
             putOffWords = putOffWords,
             coach = if (scope != null) scope.coach else weekCoach(app, language, level, native),
-            mistakes = mistakes,
-            describeMistake = { p ->
-                GrammarFocus.describe(app, p, language, native)?.let { it.label to it.tip }
-            },
             putOffExpressions = putOffExpressions,
             putOffCards = runCatching { DrillStore.shared(context).putOffCards(language) }.getOrDefault(emptyList()),
             checkGaps = { items, testId ->
@@ -396,7 +417,10 @@ object WeeklyTestEngine {
                 out.toMap()
             }.getOrDefault(emptyMap()),
             nativeLanguage = native,
-            profileMistakes = profileMistakes,
+            week = thisWeek,
+            checkMeanings = { items, testId -> onlyMeaningFits(items, language, native, testId) },
+            checkTranslate = { items, testId -> verifyTranslate(items, language, native, testId) },
+            onBuilt = { props -> com.roro.futurevoice.core.Analytics.capture("weekly_test_built", props) },
             bookOf = if (scope == null) null else { session ->
                 val book = TalkCurriculum.build(session, level, language, vocab, emptyList(), emptyList())
                 book.words.map { it.text } to book.expressions.map { it.text }
@@ -408,7 +432,7 @@ object WeeklyTestEngine {
                             system = system,
                             messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER, user)),
                             serializer = TranslatePayload.serializer(),
-                            maxTokens = 3000, purpose = "weekly-test",
+                            maxTokens = 5000, purpose = "weekly-test",
                             idempotencyKey = "weekly-test-translate:$testId")
                     }.getOrNull()
                 }
@@ -469,85 +493,100 @@ object WeeklyTestEngine {
         level: CefrLevel,
         now: Long = System.currentTimeMillis(),
         id: String = StoreJson.newId(),
-        /** The finished weekly papers the retakes come from (with [lastTest]). */
-        recentTests: List<WeeklyTest> = emptyList(),
         /** The trial report's own window and floor; its coach rides on the
          *  [Material] ([gather] with the same scope). */
         scope: Scope? = null,
         gloss: suspend (String) -> String?,
     ): WeeklyTest? {
-        val (start, end) = scope?.let { minOf(it.start, now) to now } ?: window(lastTest, now)
+        val (start, end) = scope?.let { minOf(it.start, now) to now }
+            ?: material.week ?: ((now - 7 * 86_400_000L) to now)
         val rng = WeeklyTestRandom(id)
         val windowSessions = material.sessions.filter { s ->
             val ended = s.endedAt ?: return@filter false
-            ended > start && ended <= end
+            ended in start..end
         }
         val fluentTurns = windowSessions.flatMap { s ->
             s.turns.filter { it.role == TurnRole.FLUENT_SELF && !it.excludedFromScoring }.map { s to it }
         }
-        val userTurns = windowSessions.flatMap { s ->
-            s.turns.filter { it.role == TurnRole.USER && !it.excludedFromScoring }.map { s to it }
-        }
-
-        val items = ArrayList<WeeklyTestItem>()
-        items += meaningItems(material, language, level, rng, gloss)
-        // The expressions the learner put off in the deck — what they
-        // studied, and the reason a fluent-self line is worth a question.
-        val studied = material.putOffExpressions.filter { TextScript.isInTargetScript(it, language) }
-        val studyPhrases = studied.map { it.lowercase() }
         // A call's first fluent-self line is its greeting — the same few
         // words every call, never the material.
         val openers = material.sessions.mapNotNull { s ->
             s.turns.firstOrNull { it.role == TurnRole.FLUENT_SELF }?.id
         }.toSet()
         val teachingTurns = fluentTurns.filter { it.second.id !in openers }
-        val gaps = gapItems(studied, windowSessions, teachingTurns, material.sessions, openers,
+
+        val studied = material.putOffExpressions.filter { TextScript.isInTargetScript(it, language) }
+        val betterWords = material.coach?.upgrades.orEmpty().map { it.better }
+            .filter { WordSplitter.count(it, language) == 1 && TextScript.isInTargetScript(it, language) }
+        val seenWords = HashSet<String>()
+        val words = (material.putOffWords + betterWords).filter { seenWords.add(it.lowercase()) }
+        val meaningDrafts = meaningItems(material, language, level, rng, gloss, words = words, limit = MAX_MEANING * 2)
+        val gapDrafts = gapItems(studied, windowSessions, teachingTurns, material.sessions, openers,
             material.sceneExamples, material.libraryExpressions, language, rng, limit = MAX_GAP * 2)
-        items += (material.checkGaps?.let { check -> runCatching { check(gaps, id) }.getOrDefault(emptyList()) }
-            ?: gaps).take(MAX_GAP)
-        items += translateItems(material, start, end, now, windowSessions, language, level, id)
-        val listens = listenItems(teachingTurns, studyPhrases, material.hasAudio, language, rng)
-        items += listens
-        items += speakItems(teachingTurns, studyPhrases,
+
+        // A heard line is about what the week taught: a phrase put off this
+        // week, or one the fluent self offered in this week's talks.
+        val offered = windowSessions.flatMap { it.summary?.expressionsOffered.orEmpty() }
+        val heardPhrases = (studied + offered).map { it.lowercase() }.distinct().filter { it.isNotEmpty() }
+        val listens = listenItems(teachingTurns, heardPhrases, material.hasAudio, language, rng)
+        val speaks = speakItems(teachingTurns, heardPhrases,
             listens.map { CarryoverDetector.normalized(it.answer) }.toSet(), language, rng)
-        // What the week's report found: grammar that keeps going wrong and
-        // words leaned on too often (iOS `9617756`).
-        items += grammarItems(material, userTurns, language, rng)
-        items += upgradeItems(material, userTurns, language, level, rng)
-        // What recent weeks got wrong is asked again — the test is a review,
-        // and a miss is the most certain material there is.
-        val recent = (recentTests + listOfNotNull(lastTest))
-            .filter { it.isFinished && !it.isMonthly }
-            .associateBy { it.id }.values
-            .sortedByDescending { it.createdAt }
-            .take(RETAKE_WEEKS)
-        if (recent.isNotEmpty()) {
-            val fresh = items.map(::itemKey).toSet()
-            items += retakes(recent, MAX_RETAKE, fresh, language, rng) {
+
+        // Last week's misses, once. A retake is checked like anything else:
+        // it was written before the gate or before today's rules.
+        var retakeDrafts: List<WeeklyTestItem> = emptyList()
+        if (lastTest != null && lastTest.isFinished && !lastTest.isMonthly && lastTest.createdAt >= start) {
+            val fresh = (meaningDrafts + gapDrafts + listens + speaks).map(::itemKey).toSet()
+            retakeDrafts = retakes(listOf(lastTest), MAX_RETAKE * 2, fresh, language, rng, firstMissOnly = true) {
                 asRewrite(it, material.cards, material.sessions, language)
             }
         }
+        fun again(kind: WeeklyTestItem.Kind) = retakeDrafts.filter { it.kind == kind }
+        val askedLastWeek = lastTest?.items.orEmpty().mapNotNull { it.cardId }.toSet()
+
+        suspend fun meaningCheck(list: List<WeeklyTestItem>): List<WeeklyTestItem> =
+            material.checkMeanings?.let { check -> runCatching { check(list, id) }.getOrDefault(emptyList()) } ?: list
+        suspend fun gapCheck(list: List<WeeklyTestItem>): List<WeeklyTestItem> =
+            material.checkGaps?.let { check -> runCatching { check(list, id) }.getOrDefault(emptyList()) } ?: list
+
+        val (meaningKept, gapKept, translateKept) = coroutineScope {
+            val m = async { meaningCheck(meaningDrafts + again(WeeklyTestItem.Kind.MEANING)) }
+            val g = async { gapCheck(gapDrafts + again(WeeklyTestItem.Kind.GAP)) }
+            val t = async {
+                translateItems(material, start, end, windowSessions, askedLastWeek,
+                    again(WeeklyTestItem.Kind.TRANSLATE), language, level, id)
+            }
+            Triple(m.await(), g.await(), t.await())
+        }
+
+        fun fresh(list: List<WeeklyTestItem>) = list.filter { it.isRetake != true }
+        // Heard lines need no check: the answer is the line itself.
+        val keptAgain = (translateKept + gapKept + meaningKept).filter { it.isRetake == true } +
+            again(WeeklyTestItem.Kind.LISTEN) + again(WeeklyTestItem.Kind.SPEAK)
+        val items = paper(fresh(translateKept), fresh(gapKept), fresh(meaningKept), listens, speaks, keptAgain)
+            .toMutableList()
+
         // The trial report's test is never refused for being small (iOS
         // 2026-10-28, founder: "make the test even if the amount is small,
         // even from related things"). Twenty minutes rarely leave anything
-        // put off in the deck, where the paper's words and phrases come from,
-        // so it is filled from the window's own talks: the words and phrases
-        // their books teach, then their lines to hear and say. Any count is a test.
+        // put off in the deck, so it is filled from the window's own talks:
+        // the words and phrases their books teach, then their lines to hear
+        // and say. Any count is a test.
         val bookOf = material.bookOf
         if (scope != null && items.size < scope.minimum && bookOf != null) {
             val books = windowSessions.map { bookOf(it) }
-            val seenWord = material.putOffWords.map { it.lowercase() }.toHashSet()
+            val seenWord = words.map { it.lowercase() }.toHashSet()
             val bookWords = books.flatMap { it.first }.filter { seenWord.add(it.lowercase()) }
-            val seenPhrase = studyPhrases.toHashSet()
+            val seenPhrase = studied.map { it.lowercase() }.toHashSet()
             val bookPhrases = books.flatMap { it.second }
                 .filter { TextScript.isInTargetScript(it, language) && seenPhrase.add(it.lowercase()) }
             val have = items.map(::itemKey).toSet()
             val more = ArrayList<WeeklyTestItem>()
-            more += meaningItems(material, language, level, rng, gloss, words = bookWords)
+            more += meaningCheck(meaningItems(material, language, level, rng, gloss, words = bookWords,
+                limit = MAX_MEANING * 2)).take(MAX_MEANING)
             val moreGaps = gapItems(bookPhrases, windowSessions, teachingTurns, material.sessions, openers,
                 material.sceneExamples, material.libraryExpressions, language, rng, limit = MAX_GAP * 2)
-            more += (material.checkGaps?.let { check -> runCatching { check(moreGaps, id) }.getOrDefault(emptyList()) }
-                ?: moreGaps).take(MAX_GAP)
+            more += gapCheck(moreGaps).take(MAX_GAP)
             // Lines carrying one of those phrases first; with still too few,
             // any of their own talk's lines (every line contains "").
             val phrases = if (items.size + more.size < scope.minimum) listOf("") else bookPhrases.map { it.lowercase() }
@@ -557,8 +596,15 @@ object WeeklyTestEngine {
                 (listens + heard).map { CarryoverDetector.normalized(it.answer) }.toSet(), language, rng)
             items += more.filter { itemKey(it) !in have }
         }
-        if (items.size < (if (scope == null) MIN_ITEMS else 1)) return null
-        items.shuffle(rng)
+        val enough = items.size >= (if (scope == null) MIN_ITEMS else 1)
+        val counts = HashMap<String, Any?>()
+        items.groupBy { it.kind }.forEach { (kind, list) -> counts["n_" + kind.name.lowercase()] = list.size }
+        counts["items"] = items.size
+        counts["retakes"] = items.count { it.isRetake == true }
+        counts["talks"] = windowSessions.size
+        counts["enough"] = enough
+        material.onBuilt?.invoke(counts)
+        if (!enough) return null
         // A test opens on something you can answer by reading.
         if (items.first().kind == WeeklyTestItem.Kind.LISTEN) {
             val swap = items.indexOfFirst { it.kind != WeeklyTestItem.Kind.LISTEN }
@@ -569,11 +615,11 @@ object WeeklyTestEngine {
     }
 
     /** Wrong answers of [tests], newest test first, one per distinct answer,
-     *  as fresh items with their choices reshuffled. A miss that a NEWER test
-     *  asked again is that test's to report: answered right there, it is done
-     *  and never comes back; wrong again, the newer miss is the one dealt. */
+     *  as fresh items with their choices reshuffled. [firstMissOnly] is the
+     *  weekly paper's rule: a miss comes back once, in a kind still dealt, so
+     *  a question can't chase the learner week after week. */
     fun retakes(tests: List<WeeklyTest>, limit: Int, excluding: Set<String>,
-                        language: String, rng: Random,
+                        language: String, rng: Random, firstMissOnly: Boolean = false,
                         /** A stored tile item as its rewrite ([asRewrite]); null drops it. */
                         rewrite: (WeeklyTestItem) -> WeeklyTestItem?): List<WeeklyTestItem> {
         val out = ArrayList<WeeklyTestItem>()
@@ -584,6 +630,7 @@ object WeeklyTestEngine {
             for (stored in test.items) {
                 if (stored.id !in wrong || !isValid(stored, language)) continue
                 if (out.size >= limit) return out
+                if (firstMissOnly && (stored.isRetake == true || stored.kind !in DEALT)) continue
                 // A missed tile item comes back as the rewrite it is now.
                 val item = (if (stored.kind == WeeklyTestItem.Kind.BUILD) rewrite(stored) else stored)
                     ?: continue
@@ -604,12 +651,15 @@ object WeeklyTestEngine {
         return out
     }
 
+    private val DEALT = setOf(WeeklyTestItem.Kind.MEANING, WeeklyTestItem.Kind.GAP, WeeklyTestItem.Kind.TRANSLATE,
+        WeeklyTestItem.Kind.LISTEN, WeeklyTestItem.Kind.SPEAK)
+
     /** This test's misses dealt again as a paper of their own — played in
      *  place, never saved. Null when nothing was missed. */
     fun retryPaper(test: WeeklyTest, now: Long = System.currentTimeMillis(),
                    rewrite: (WeeklyTestItem) -> WeeklyTestItem?): WeeklyTest? {
         val items = retakes(listOf(test), MAX_RETRY, emptySet(), test.targetLanguage,
-            WeeklyTestRandom(StoreJson.newId()), rewrite)
+            WeeklyTestRandom(StoreJson.newId()), rewrite = rewrite)
         if (items.isEmpty()) return null
         return WeeklyTest(targetLanguage = test.targetLanguage, kind = test.kind,
             periodStart = test.periodStart, periodEnd = test.periodEnd, createdAt = now,
@@ -703,9 +753,7 @@ object WeeklyTestEngine {
     private suspend fun meaningItems(material: Material, language: String,
                                      level: CefrLevel, rng: Random,
                                      gloss: suspend (String) -> String?,
-                                     words: List<String> = material.putOffWords): List<WeeklyTestItem> {
-        // The words put off in the deck (iOS `studiedMaterial`, 2026-10-21):
-        // what the learner studied. The week's talk books fed this before.
+                                     words: List<String>, limit: Int): List<WeeklyTestItem> {
         val seen = words.map { it.lowercase() }.toHashSet()
         val candidates = words.shuffled(rng)
 
@@ -722,7 +770,7 @@ object WeeklyTestEngine {
 
         val out = ArrayList<WeeklyTestItem>()
         for (word in candidates) {
-            if (out.size >= MAX_MEANING) break
+            if (out.size >= limit) break
             val sense = gloss(word)?.trim().orEmpty()
             // A gloss that repeats the word teaches nothing and gives it away.
             if (sense.isEmpty() || sense.lowercase().contains(word.lowercase())) continue
@@ -732,6 +780,47 @@ object WeeklyTestEngine {
                 options = (listOf(word) + decoys).shuffled(rng))
         }
         return out
+    }
+
+    @Serializable
+    private data class MeaningVerdicts(val results: List<Result> = emptyList()) {
+        @Serializable
+        data class Result(val n: Int, val fit: List<String> = emptyList())
+    }
+
+    /** The meaning items whose gloss fits only the answer, as read by a call
+     *  that is never told which word was meant. Decoys share a word class, so
+     *  a near-synonym can be one of them and two choices would be right.
+     *  Nothing when the check can't run. */
+    suspend fun onlyMeaningFits(items: List<WeeklyTestItem>, target: String, native: String,
+                                testId: String): List<WeeklyTestItem> {
+        if (items.isEmpty()) return emptyList()
+        val system = WeeklyTestPrompts.meaningSystem(LanguageCatalog.englishName(target), LanguageCatalog.englishName(native))
+        val user = items.mapIndexed { i, item ->
+            "${i + 1}. ${item.prompt}\n   words: ${item.options.sorted().joinToString(" | ")}"
+        }.joinToString("\n")
+        val v = askModel(system, user, MeaningVerdicts.serializer(), 3000,
+            "weekly-test-meaning:$testId", 30_000L) ?: return emptyList()
+        return v.results.mapNotNull { r ->
+            val item = items.getOrNull(r.n - 1) ?: return@mapNotNull null
+            if (r.fit.map(CarryoverDetector::normalized) == listOf(CarryoverDetector.normalized(item.answer))) item else null
+        }
+    }
+
+    /** One buffered `weekly-test` call, null when it failed or ran out of time. */
+    private suspend fun <T> askModel(system: String, user: String,
+                                     serializer: kotlinx.serialization.DeserializationStrategy<T>,
+                                     maxTokens: Int, key: String, waitMs: Long): T? {
+        val job = coachScope.async {
+            runCatching {
+                GeminiClient(AuthRepository()).sendJson(
+                    system = system,
+                    messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER, user)),
+                    serializer = serializer, maxTokens = maxTokens, purpose = "weekly-test",
+                    idempotencyKey = key)
+            }.getOrNull()
+        }
+        return withTimeoutOrNull(waitMs) { job.await() }
     }
 
     /** The learner's level and its two neighbours, nearest first. */
@@ -864,31 +953,6 @@ object WeeklyTestEngine {
 
     // ── build
 
-    /** The corrections touched this window, due first then newest, each as
-     *  the learner's WHOLE sentence to say or type again the right way. */
-    private fun rewriteItems(cards: List<DrillCard>, start: Long, end: Long, now: Long,
-                             sessions: List<Session>, language: String): List<WeeklyTestItem> {
-        val pool = cards.filter { card ->
-            if (card.box >= DrillIngest.MAX_BOX || card.sourcePhrase.isBlank()) return@filter false
-            if (!TextScript.isInTargetScript(card.targetPhrase, language) ||
-                !TextScript.isInTargetScript(card.sourcePhrase, language)) return@filter false
-            val touched = listOfNotNull(card.createdAt, card.lastReviewedAt)
-            touched.any { it > start && it <= end }
-        }
-        val ordered = pool.sortedWith(compareBy<DrillCard> { if (it.nextReviewAt <= now) 0 else 1 }
-            .thenByDescending { it.createdAt })
-        val byId = sessions.associateBy { it.id }
-        val out = ArrayList<WeeklyTestItem>()
-        val seen = HashSet<String>()
-        for (card in ordered) {
-            if (out.size >= MAX_REWRITE) break
-            val item = rewriteItem(card, byId, language) ?: continue
-            if (!seen.add(itemKey(item))) continue
-            out += item
-        }
-        return out
-    }
-
     /**
      * One correction card as a rewrite item. What the learner reads is what
      * they said around the slip: the sentence it sits in, or — when that
@@ -941,60 +1005,190 @@ object WeeklyTestEngine {
      *  should be, why, and the card it came from (for write-back). */
     data class Slip(val was: String, val now: String, val why: String, val cardId: String?)
 
-    /** The mistakes to build on: the sentence cards the learner put off in
-     *  the deck ([DrillStore.putOffCards], soonest return first) — what they
-     *  studied (iOS 2026-10-21; it was the window's cards plus the profile's
-     *  recurring mistakes). */
-    fun slips(putOff: List<DrillCard>, language: String): List<Slip> {
+    /** A "fix" that only takes the last words off a sentence: the speaker
+     *  stopped mid-thought ("I'm very excited about." → "I'm very excited.").
+     *  No rule was broken, and a question built on it has nothing to test. */
+    fun isBrokenOff(was: String, now: String): Boolean {
+        val before = was.split(Regex("\\s+")).filter { it.isNotEmpty() }
+        val after = now.split(Regex("\\s+")).filter { it.isNotEmpty() }
+        if (before.isEmpty() || after.size >= before.size) return false
+        var i = 0
+        var j = 0
+        var last: String? = null
+        while (i < before.size) {
+            if (j < after.size && tileKey(before[i]) == tileKey(after[j])) { i++; j++ }
+            else { last = before[i]; i++ }
+        }
+        if (j != after.size || last == null) return false
+        return before.last() == last || (last.lastOrNull() ?: ' ') in ".!?。！？"
+    }
+
+    /** The week's mistakes to build on: the report's recurring grammar first,
+     *  then the sentence cards reviewed this week and still put off, newest
+     *  first. A card last week's paper asked about stays out: a miss returns
+     *  as last week's retake, not again in a new sentence. */
+    fun slips(putOff: List<DrillCard>, language: String, start: Long, end: Long,
+              coach: WeekRecap.Coach?, excludingCards: Set<String>): List<Slip> {
+        val cards = putOff.filter { c ->
+            c.id !in excludingCards && c.sourcePhrase.isNotBlank() &&
+                TextScript.isInTargetScript(c.targetPhrase, language) &&
+                TextScript.isInTargetScript(c.sourcePhrase, language)
+        }
         val out = ArrayList<Slip>()
         val seen = HashSet<String>()
-        for (c in putOff) {
-            if (c.sourcePhrase.isBlank() || !TextScript.isInTargetScript(c.targetPhrase, language) ||
-                !TextScript.isInTargetScript(c.sourcePhrase, language)) continue
+        for (pattern in coach?.grammar.orEmpty()) {
+            for (example in pattern.examples) {
+                if (!TextScript.isInTargetScript(example.was, language) ||
+                    !TextScript.isInTargetScript(example.now, language) ||
+                    isBrokenOff(example.was, example.now)) continue
+                val key = CarryoverDetector.normalized(example.was)
+                if (!seen.add(key)) continue
+                val card = cards.firstOrNull { CarryoverDetector.normalized(it.sourcePhrase).contains(key) }
+                if (card != null) seen += CarryoverDetector.normalized(card.sourcePhrase)
+                out += Slip(example.was, example.now, pattern.rule, card?.id)
+            }
+        }
+        val reviewed = cards.filter { c ->
+            val at = c.lastReviewedAt ?: return@filter false
+            at >= start && at < end
+        }.sortedByDescending { it.lastReviewedAt ?: 0L }
+        for (c in reviewed) {
+            if (isBrokenOff(c.sourcePhrase, c.targetPhrase)) continue
             if (seen.add(CarryoverDetector.normalized(c.sourcePhrase))) out += Slip(c.sourcePhrase, c.targetPhrase, c.reason, c.id)
         }
         return out.take(10)
     }
 
     /** New sentences that need the grammar the learner got wrong, laid from
-     *  word tiles. One model call writes each sentence, the other word orders
-     *  that are just as right, and trap words built from the learner's own
-     *  mistake; code grades the laid tiles against that closed set. A free
-     *  answer (typed or said) was tried first and could not be graded
-     *  exactly: a slip elsewhere passed and a synonym failed (founder,
-     *  2026-10-08: "that limit can't be there"). Nothing when the target IS
-     *  the native language (there is nothing to translate from) or the call
-     *  fails. */
-    private suspend fun translateItems(material: Material, start: Long, end: Long, now: Long,
-                                       windowSessions: List<Session>, target: String, level: CefrLevel,
+     *  word tiles, then passed through [verifyTranslate] beside last week's
+     *  translate misses. The writer has to produce the sentence with the
+     *  mistake made again (`wrong`): a sentence where it can't write that
+     *  doesn't test the mistake. Nothing when the target IS the native
+     *  language, or a call fails. */
+    private suspend fun translateItems(material: Material, start: Long, end: Long,
+                                       windowSessions: List<Session>, excludingCards: Set<String>,
+                                       retakes: List<WeeklyTestItem>, target: String, level: CefrLevel,
                                        testId: String): List<WeeklyTestItem> {
-        val write = material.writeTranslate ?: return emptyList()
         val native = material.nativeLanguage
         if (native.isEmpty() || LanguageCatalog.sameLanguage(target, native)) return emptyList()
-        val list = slips(material.putOffCards, target)
-        if (list.isEmpty()) return emptyList()
-        val topics = windowSessions.mapNotNull { it.topic }.filter { it.isNotEmpty() }.take(6)
-        val targetName = LanguageCatalog.englishName(target)
-        val nativeName = LanguageCatalog.englishName(native)
-        val system = com.roro.futurevoice.talk.LiftedPrompts.weeklyTranslateSystem(
-            targetName, nativeName, level.code.uppercase(), MAX_TRANSLATE, topics.joinToString("; "))
-        val user = list.mapIndexed { i, s ->
-            "${i + 1}. said \"${s.was}\" → should be \"${s.now}\"" + (if (s.why.isEmpty()) "" else " (${s.why})")
-        }.joinToString("\n")
-        val payload = runCatching { write(system, user, testId) }.getOrNull() ?: return emptyList()
-        val rng = WeeklyTestRandom(testId)
-        val out = ArrayList<WeeklyTestItem>()
-        val points = HashSet<String>()
-        for (it in payload.items) {
-            if (out.size >= MAX_TRANSLATE || it.source - 1 !in list.indices) continue
-            val slip = list[it.source - 1]
-            val item = translateItem(it.native, it.answer, it.orders.orEmpty(), it.decoys.orEmpty(), it.point,
-                it.tip, slip, target, rng) ?: continue
-            if (!points.add(it.point.lowercase())) continue
-            out += item
+        val list = slips(material.putOffCards, target, start, end, material.coach, excludingCards)
+        val drafts = ArrayList<WeeklyTestItem>()
+        val write = material.writeTranslate
+        if (write != null && list.isNotEmpty()) {
+            val topics = windowSessions.mapNotNull { it.topic }.filter { it.isNotEmpty() }.take(6)
+            val system = WeeklyTestPrompts.translateSystem(LanguageCatalog.englishName(target),
+                LanguageCatalog.englishName(native), level.code.uppercase(), TRANSLATE_DRAFTS, topics.joinToString("; "), target)
+            val user = list.mapIndexed { i, s ->
+                "${i + 1}. said \"${s.was}\" → should be \"${s.now}\"" + (if (s.why.isEmpty()) "" else " (${s.why})")
+            }.joinToString("\n")
+            val payload = runCatching { write(system, user, testId) }.getOrNull()
+            val rng = WeeklyTestRandom(testId)
+            val points = HashSet<String>()
+            for (it in payload?.items.orEmpty()) {
+                if (it.source - 1 !in list.indices) continue
+                val wrong = it.wrong ?: continue
+                if (CarryoverDetector.normalized(wrong) == CarryoverDetector.normalized(it.answer)) continue
+                val item = translateItem(it.native, it.answer, it.orders.orEmpty(), it.decoys.orEmpty(), it.point,
+                    it.tip, list[it.source - 1], target, rng) ?: continue
+                if (!points.add(it.point.lowercase())) continue
+                drafts += item
+            }
         }
-        return out
+        val check = material.checkTranslate ?: return drafts + retakes
+        return runCatching { check(drafts + retakes, testId) }.getOrDefault(emptyList())
     }
+
+    @Serializable
+    data class TranslateReview(
+        val n: Int,
+        val rule: Boolean? = null,
+        val repeats: Boolean? = null,
+        @SerialName("same_meaning") val sameMeaning: Boolean? = null,
+        val correct: Boolean? = null,
+        @SerialName("tip_true") val tipTrue: Boolean? = null,
+    ) {
+        val passes: Boolean get() =
+            rule == true && repeats == true && sameMeaning == true && correct == true && tipTrue == true
+    }
+
+    @Serializable
+    private data class ReviewVerdicts(val results: List<TranslateReview> = emptyList())
+
+    @Serializable
+    private data class SolveVerdicts(val results: List<Result> = emptyList()) {
+        @Serializable
+        data class Result(val n: Int, val sentences: List<String>? = null)
+    }
+
+    /** The gate every translate item passes before it reaches a paper. Two
+     *  readers that did not write it: one is never told the answer and lists
+     *  every right sentence the tiles can build, the other reviews the item. */
+    suspend fun verifyTranslate(items: List<WeeklyTestItem>, target: String, native: String,
+                                testId: String): List<WeeklyTestItem> {
+        if (items.isEmpty()) return emptyList()
+        val t = LanguageCatalog.englishName(target)
+        val n = LanguageCatalog.englishName(native)
+        val blind = items.mapIndexed { i, item ->
+            "${i + 1}. Sentence: ${item.prompt}\n   Tiles: ${item.options.joinToString(" | ")}"
+        }.joinToString("\n")
+        val open = items.mapIndexed { i, item ->
+            val traps = decoyTiles(item, target).joinToString(", ")
+            "${i + 1}. Sentence: ${item.prompt}\n   Answer: ${item.answer}\n   Traps: ${traps.ifEmpty { "none" }}\n" +
+                "   Earlier mistake: \"${item.focus ?: ""}\" → \"${item.example ?: ""}\"\n" +
+                "   Point: ${item.rule ?: ""}\n   Tip: ${item.note ?: "none"}"
+        }.joinToString("\n")
+        val (solved, reviewed) = coroutineScope {
+            val s = async { askModel(WeeklyTestPrompts.solveSystem(t, n), blind, SolveVerdicts.serializer(), 6000,
+                "weekly-test-solve:$testId", TRANSLATE_WAIT_MS) }
+            val r = async { askModel(WeeklyTestPrompts.reviewSystem(t, n, target), open, ReviewVerdicts.serializer(), 4000,
+                "weekly-test-review:$testId", TRANSLATE_WAIT_MS) }
+            s.await() to r.await()
+        }
+        if (solved == null || reviewed == null) return emptyList()
+        val sentences = solved.results.associate { it.n to (it.sentences ?: emptyList()) }
+        val reviews = reviewed.results.associateBy { it.n }
+        return items.mapIndexedNotNull { i, item ->
+            val review = reviews[i + 1] ?: return@mapIndexedNotNull null
+            passing(item, sentences[i + 1] ?: emptyList(), review, target)
+        }
+    }
+
+    /** Code's half of the gate. Out when the review failed or the blind reader
+     *  could not reach the answer from the tiles. A trap that built a right
+     *  sentence leaves the table; with no trap left, nothing tests the mistake
+     *  and the item goes. Other orders it found join `orders`. */
+    fun passing(item: WeeklyTestItem, solved: List<String>, review: TranslateReview, language: String): WeeklyTestItem? {
+        if (!review.passes) return null
+        val answer = tileBag(item.answer, language)
+        val said = solved.filter { it.isNotBlank() }
+        if (said.none { tileBag(it, language) == answer }) return null
+        val traps = decoyTiles(item, language)
+        val others = said.filter { tileBag(it, language) != answer }
+        fun builtWith(trap: String): Boolean {
+            val key = tileKey(trap)
+            return others.any { sentence ->
+                if (WordSplitter.spaced(language)) WordSplitter.words(sentence, language).map(::tileKey).contains(key)
+                else CarryoverDetector.normalized(sentence).contains(key)
+            }
+        }
+        val working = traps.filter(::builtWith).map(::tileKey).toSet()
+        if (working.size >= traps.map(::tileKey).toSet().size) return null
+        val keys = WordSplitter.words(item.answer, language).map(::tileKey)
+        val moreOrders = said.filter {
+            tileBag(it, language) == answer && WordSplitter.words(it, language).map(::tileKey) != keys
+        }
+        val known = item.orders.orEmpty().map { WordSplitter.words(it, language).map(::tileKey) }.toHashSet()
+        val orders = item.orders.orEmpty().toMutableList()
+        for (order in moreOrders) if (known.add(WordSplitter.words(order, language).map(::tileKey))) orders += order
+        return item.copy(options = item.options.filter { tileKey(it) !in working }, orders = orders)
+    }
+
+    /** A sentence as the things it is made of, order aside. Words where spaces
+     *  mark them; letters where they don't, because a tokenizer can cut the
+     *  same Japanese sentence differently once it is reordered. */
+    fun tileBag(text: String, language: String): String =
+        if (WordSplitter.spaced(language)) WordSplitter.words(text, language).map(::tileKey).sorted().joinToString(" ")
+        else CarryoverDetector.normalized(text).filter { !it.isWhitespace() }.toList().sorted().joinToString("")
 
     /** A model-written translate item, or null. Kept only when the answer is
      *  a tileable sentence in the target script; `orders` keep only the ones
@@ -1132,101 +1326,6 @@ object WeeklyTestEngine {
                     language: String? = CoreVocabulary.activeLanguage()): IntRange? =
         com.roro.futurevoice.talk.SpokenWords.wholeWordRange(text, needle, language)
 
-    private data class LearnerHit(val sentence: String, val range: IntRange, val session: Session, val turn: Turn)
-
-    /** The first sentence of the window's learner lines that QUOTES [span]
-     *  (the report's quotes were checked against every language's lines;
-     *  this keeps them to the active one), with the span's range in it. */
-    private fun learnerSentence(span: String, userTurns: List<Pair<Session, Turn>>, maxWords: Int,
-                                language: String): LearnerHit? {
-        for ((session, turn) in userTurns) {
-            for (sentence in TalkCurriculum.sentences(turn.transcript)) {
-                val range = foldedRange(sentence, span, language) ?: continue
-                val n = WordSplitter.count(sentence, language)
-                if (n < 3 || n > maxWords || !TextScript.isInTargetScript(sentence, language)) continue
-                return LearnerHit(sentence, range, session, turn)
-            }
-        }
-        return null
-    }
-
-    /**
-     * One item per recurring grammar point: the rule, one of the learner's
-     * own lines with the mistake in it, rebuilt right from tiles (the wrong
-     * words ride along as decoys — [buildTiles]). The report's points come
-     * first; when it has none (or none found in this week's lines) the
-     * profile's recurring mistakes stand in, named by `GrammarFocus`.
-     */
-    private suspend fun grammarItems(material: Material, userTurns: List<Pair<Session, Turn>>,
-                                     language: String, rng: Random): List<WeeklyTestItem> {
-        val maxWords = if (WordSplitter.spaced(language)) 12 else 18
-        val out = ArrayList<WeeklyTestItem>()
-        val seen = HashSet<String>()
-        fun make(rule: String, tip: String, was: String, fixed: String): WeeklyTestItem? {
-            val hit = learnerSentence(was, userTurns, maxWords, language) ?: return null
-            val answer = hit.sentence.replaceRange(hit.range, fixed)
-            val key = CarryoverDetector.normalized(answer)
-            if (!TextScript.isInTargetScript(answer, language) ||
-                key == CarryoverDetector.normalized(hit.sentence) || !seen.add(key)) return null
-            return WeeklyTestItem(kind = WeeklyTestItem.Kind.GRAMMAR, prompt = hit.sentence, answer = answer,
-                options = buildTiles(answer, hit.sentence, language, rng),
-                sessionId = hit.session.id, turnId = hit.turn.id,
-                note = tip.ifEmpty { null }, rule = rule, focus = was)
-        }
-        for (pattern in material.coach?.grammar.orEmpty()) {
-            if (out.size >= MAX_GRAMMAR) break
-            for (example in pattern.examples.shuffled(rng)) {
-                val item = make(pattern.rule, pattern.tip, example.was, example.now) ?: continue
-                out += item; break
-            }
-        }
-        for (pattern in material.mistakes) {
-            if (out.size >= MAX_GRAMMAR) break
-            if (learnerSentence(pattern.mistake, userTurns, maxWords, language) == null) continue
-            val (label, tip) = material.describeMistake(pattern) ?: continue
-            out += make(label, tip, pattern.mistake, pattern.correction) ?: continue
-        }
-        return out
-    }
-
-    /**
-     * One item per leaned-on word: the learner's line with it marked, and the
-     * report's better word among three that don't belong — the week's other
-     * better words first, then graded words of the same class one band above
-     * the learner (the band the report reaches for).
-     */
-    private fun upgradeItems(material: Material, userTurns: List<Pair<Session, Turn>>,
-                             language: String, level: CefrLevel, rng: Random): List<WeeklyTestItem> {
-        val upgrades = material.coach?.upgrades.orEmpty()
-        if (upgrades.isEmpty()) return emptyList()
-        val all = CefrLevel.entries
-        val oneUp = all[minOf(all.indexOf(level) + 1, all.lastIndex)]
-        val graded = ArrayList<String>()
-        for (band in decoyBands(oneUp)) graded += material.graded(band).shuffled(rng)
-        val maxWords = if (WordSplitter.spaced(language)) 25 else 35
-        val out = ArrayList<WeeklyTestItem>()
-        for (u in upgrades.shuffled(rng)) {
-            if (out.size >= MAX_UPGRADE) break
-            if (!TextScript.isInTargetScript(u.better, language) ||
-                !TextScript.isInTargetScript(u.instead, language)) continue
-            val hit = learnerSentence(u.instead, userTurns, maxWords, language) ?: continue
-            val taken = (listOf(u.better, u.instead) + WordSplitter.words(hit.sentence, language))
-                .map { it.lowercase() }.toSet()
-            fun fits(w: String) = w.lowercase() !in taken && TextScript.isInTargetScript(w, language)
-            val week = upgrades.map { it.better }.filter(::fits).shuffled(rng)
-            val sameClass = graded.asSequence().filter(::fits)
-                .filter { WordClass.sameClass(u.better, it, language) }.take(30).toList()
-            val decoys = dedupe(week + sameClass.shuffled(rng) + graded.filter(::fits)) { it.lowercase() }
-                .take(CHOICE_COUNT - 1)
-            if (decoys.size != CHOICE_COUNT - 1) continue
-            out += WeeklyTestItem(kind = WeeklyTestItem.Kind.UPGRADE, prompt = hit.sentence, answer = u.better,
-                options = (listOf(u.better) + decoys).shuffled(rng),
-                sessionId = hit.session.id, turnId = hit.turn.id,
-                note = u.note.ifEmpty { null }, focus = u.instead, example = u.rewritten.ifEmpty { null })
-        }
-        return out
-    }
-
     // ── listen
 
     private fun listenItems(fluentTurns: List<Pair<Session, Turn>>, studyPhrases: List<String>,
@@ -1270,46 +1369,20 @@ object WeeklyTestEngine {
             .any { WordSplitter.words(it, language).map(::tileKey) == laid }
     }
 
-    /** Laid tiles that are exactly the answer's words — no trap, none left
-     *  out — in an order the item doesn't list. The one case code can't
-     *  settle: the grammar point is already proved (every word of the right
-     *  form, no wrong one), and only whether the ORDER is natural is open. */
-    fun isReorder(item: WeeklyTestItem, tiles: List<String>, language: String): Boolean =
-        tiles.map(::tileKey).sorted() == WordSplitter.words(item.answer, language).map(::tileKey).sorted() &&
-            !isCorrect(item, tiles, language)
-
     @Serializable
-    private data class OrderVerdict(val natural: Boolean)
+    private data class SecondRead(val right: Boolean)
 
-    /**
-     * Is [laid] a natural order of the answer's words, meaning the same? The
-     * model generating the item lists the orders it can think of and
-     * measurably misses one in about twelve ("For two years I have worked
-     * here" unlisted beside "I have worked here for two years", probe
-     * 2026-10-08). Asked only for [isReorder] answers, so it judges word order
-     * and nothing else; a failed call is the old verdict, wrong.
-     */
-    suspend fun orderIsNatural(item: WeeklyTestItem, laid: String, language: String): Boolean {
-        val name = LanguageCatalog.englishName(language)
-        // Told the point and the learner's slip, or it accepts the slip itself
-        // as "understandable" (probe 2026-10-08).
-        val system = com.roro.futurevoice.talk.LiftedPrompts.weeklyOrderSystem(name)
+    /** Tiles the code did not accept, read once more before they are called
+     *  wrong: an answer can be right in words the item never listed. Null when
+     *  the read failed, and the question then doesn't count at all. */
+    suspend fun laidStands(item: WeeklyTestItem, laid: String, language: String): Boolean? {
+        val system = WeeklyTestPrompts.secondReadSystem(LanguageCatalog.englishName(language))
         var user = ""
         item.rule?.let { user += "Grammar point: $it\n" }
         if (item.focus != null && item.example != null) user += "Their earlier mistake: ${item.focus} → ${item.example}\n"
-        user += "Model answer: ${item.answer}\nTheir order: $laid"
-        val job = coachScope.async {
-            runCatching {
-                GeminiClient(AuthRepository()).sendJson(
-                    system = system,
-                    messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER, user)),
-                    serializer = OrderVerdict.serializer(),
-                    model = GeminiClient.Model.FLASH_LITE_31, maxTokens = 400, purpose = "weekly-test",
-                    idempotencyKey = "weekly-test-order:${item.id}:${CarryoverDetector.normalized(laid)}",
-                    fastThinking = true)
-            }.getOrNull()
-        }
-        return withTimeoutOrNull(ORDER_WAIT_MS) { job.await() }?.natural ?: false
+        user += "The sentence asked for: ${item.prompt}\nModel answer: ${item.answer}\nWhat they laid: $laid"
+        return askModel(system, user, SecondRead.serializer(), 1500,
+            "weekly-test-second:${item.id}:${CarryoverDetector.normalized(laid)}", SECOND_READ_WAIT_MS)?.right
     }
 
     private fun lcs(a: List<String>, b: List<String>): Array<IntArray> {

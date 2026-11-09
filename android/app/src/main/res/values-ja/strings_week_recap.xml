@@ -120,5 +120,7 @@
     <string name="wt_say_or_type_right_way">"話すか入力して、正しく言い直してみましょう"</string>
     <string name="wt_say_it_in">"%1$sで言う"</string>
     <string name="wt_last_time_you_said">"前回の言い方"</string>
+    <string name="wt_my_answer_is_right_too">"この答えも合ってます"</string>
+    <string name="wt_could_not_check">"確認できなかったので、この問題は点数に入れません。"</string>
     <string name="wt_trap_words_mistake">"ひっかけの単語 · 自分のミスから"</string>
 </resources>

@@ -17,6 +17,7 @@ import com.roro.futurevoice.talk.DrillCard
 import com.roro.futurevoice.talk.LearnerPattern
 import com.roro.futurevoice.talk.Session
 import com.roro.futurevoice.talk.SessionSummary
+import com.roro.futurevoice.data.WeeklyTestPrompts
 import com.roro.futurevoice.talk.Turn
 import com.roro.futurevoice.talk.TurnRole
 import kotlinx.coroutines.runBlocking
@@ -173,10 +174,6 @@ class WeeklyTestTest {
         assertFalse(WeeklyTestEngine.isCorrect(it, lay("We finished unpacking at midnight."), "en"))
         // Only an unlisted order of exactly the answer's words goes to the
         // order check — never one with a trap in it or a word left out.
-        assertTrue(WeeklyTestEngine.isReorder(it, lay("At midnight yesterday we finished unpacking."), "en"))
-        assertFalse(WeeklyTestEngine.isReorder(it, lay("Yesterday we finished unpacking at midnight."), "en"))
-        assertFalse(WeeklyTestEngine.isReorder(it, lay("We finish unpacking at midnight yesterday."), "en"))
-        assertFalse(WeeklyTestEngine.isReorder(it, lay("We finished unpacking at midnight."), "en"))
     }
 
     /** Right only in the answer's order, with every tile and no decoy left in. */
@@ -354,9 +351,9 @@ class WeeklyTestTest {
         val kinds = test!!.items.map { it.kind }.toSet()
         // Tile and rewrite items are no longer dealt (iOS 2026-10-08), and a
         // translate item needs the model, which a JVM build doesn't have.
-        val notDealt = setOf(WeeklyTestItem.Kind.BUILD, WeeklyTestItem.Kind.REWRITE, WeeklyTestItem.Kind.TRANSLATE)
-        for (k in WeeklyTestItem.Kind.entries - notDealt) assertTrue("missing $k", k in kinds)
-        assertTrue(kinds.none { it in notDealt })
+        val dealt = setOf(WeeklyTestItem.Kind.MEANING, WeeklyTestItem.Kind.GAP, WeeklyTestItem.Kind.LISTEN,
+            WeeklyTestItem.Kind.SPEAK)
+        assertEquals(dealt, kinds)
         // Never opens on the one item that needs the speaker.
         assertNotEquals(WeeklyTestItem.Kind.LISTEN, test.items.first().kind)
         for (i in test.items) {
@@ -365,22 +362,12 @@ class WeeklyTestTest {
                     assertEquals(WeeklyTestEngine.CHOICE_COUNT, i.options.size)
                     assertEquals(1, i.options.count { WeeklyTestEngine.isCorrect(i, it) })
                 }
-                WeeklyTestItem.Kind.BUILD, WeeklyTestItem.Kind.REWRITE, WeeklyTestItem.Kind.TRANSLATE ->
+                WeeklyTestItem.Kind.BUILD, WeeklyTestItem.Kind.REWRITE, WeeklyTestItem.Kind.TRANSLATE,
+                WeeklyTestItem.Kind.GRAMMAR, WeeklyTestItem.Kind.UPGRADE ->
                     error("${i.kind} is not dealt here")
                 WeeklyTestItem.Kind.LISTEN -> assertEquals(
                     WordSplitter.words(i.answer, "en").sorted(), i.options.sorted())
                 WeeklyTestItem.Kind.SPEAK -> assertTrue(WordSplitter.count(i.answer, "en") in 4..16)
-                WeeklyTestItem.Kind.GRAMMAR -> {
-                    assertEquals("Past tense drops out halfway through a story", i.rule)
-                    assertEquals("Yesterday I went to the flat and the landlord said it was fine.", i.answer)
-                    assertEquals("the landlord says it's fine", i.focus)
-                }
-                WeeklyTestItem.Kind.UPGRADE -> {
-                    assertEquals(WeeklyTestEngine.CHOICE_COUNT, i.options.size)
-                    assertEquals(1, i.options.count { WeeklyTestEngine.isCorrect(i, it) })
-                    assertNotNull(i.focus)
-                    assertTrue(i.prompt.contains(i.focus!!))
-                }
             }
         }
         // A gap's blank is the phrase, and its decoys aren't in the sentence.
@@ -446,7 +433,7 @@ class WeeklyTestTest {
         // Week 2 asked "chore" again and got it right, and missed d.
         val week2 = paper(listOf(item(WeeklyTestItem.Kind.MEANING, "Chore", a.options), d), setOf(1),
             now - 7 * 86_400_000L)
-        val items = WeeklyTestEngine.retakes(listOf(week1, week2), WeeklyTestEngine.MAX_RETAKE,
+        val items = WeeklyTestEngine.retakes(listOf(week1, week2), 5,
             emptySet(), "en", WeeklyTestRandom("seed")) { null }
         assertEquals(setOf("Give yourself a day off.", "end up", "I really like it"), items.map { it.answer }.toSet())
         assertEquals("Give yourself a day off.", items.first().answer)
@@ -471,9 +458,9 @@ class WeeklyTestTest {
         }.isEmpty())
     }
 
-    /** A monthly paper saved before iOS 70dd26a9 never becomes the weekly's
-     *  window anchor (iOS `07170af`). */
-    @Test fun monthlyPaperNeverAnchorsTheWeeklyWindow() {
+    /** A monthly paper saved before iOS 70dd26a9 is never the weekly paper
+     *  last week's misses come from. */
+    @Test fun monthlyPaperIsNeverTheLatestWeekly() {
         val now = System.currentTimeMillis()
         val day = 86_400_000L
         val weekly = WeeklyTest(targetLanguage = "en", periodStart = now - 14 * day, periodEnd = now - 7 * day,
@@ -483,8 +470,6 @@ class WeeklyTestTest {
         assertEquals(weekly.id, WeeklyTestStore.latestWeekly(listOf(monthly, weekly))?.id)
         assertEquals(weekly.id, WeeklyTestStore.latestWeekly(listOf(weekly, monthly))?.id)
         assertNull(WeeklyTestStore.latestWeekly(listOf(monthly)))
-        assertEquals(weekly.periodEnd, WeeklyTestEngine.window(weekly, now).first)
-        assertEquals(now - WeeklyTestEngine.DEFAULT_WINDOW_MS, WeeklyTestEngine.window(monthly, now).first)
     }
 
     @Test fun nextItemWalksTheUnanswered() {
@@ -634,28 +619,6 @@ class WeeklyTestTest {
         assertTrue(plain!!.items.none { it.kind == WeeklyTestItem.Kind.MEANING })
     }
 
-    /** With no report, the profile's recurring mistakes stand in, named in
-     *  the learner's language; a mistake not found in this week's lines is
-     *  never asked. */
-    @Test fun grammarFallsBackToRecurringMistakes() = runBlocking {
-        val now = System.currentTimeMillis()
-        val m = week(now)
-        val fallback = WeeklyTestEngine.Material(m.sessions, m.studying, m.usedRecently, m.recorded, m.cards,
-            m.libraryExpressions, m.hasAudio, putOffWords = m.putOffWords,
-            mistakes = listOf(
-                LearnerPattern(mistake = "I was very tired", correction = "I was so tired", context = ""),
-                LearnerPattern(mistake = "since two years", correction = "for two years", context = "")),
-            describeMistake = { p -> if (p.mistake.startsWith("I was")) "intensifiers" to "Use so." else null },
-            putOffExpressions = m.putOffExpressions)
-        val test = WeeklyTestEngine.build(fallback, null, "en", CefrLevel.B1, now) { null }
-        val grammar = test!!.items.filter { it.kind == WeeklyTestItem.Kind.GRAMMAR }
-        assertEquals(1, grammar.size)
-        assertEquals("intensifiers", grammar[0].rule)
-        assertEquals("I was so tired after the move.", grammar[0].answer)
-        assertEquals("Use so.", grammar[0].note)
-        assertTrue(test.items.none { it.kind == WeeklyTestItem.Kind.UPGRADE })
-    }
-
     /** A grammar item's tiles are the fixed line plus the learner's replaced
      *  words; those are the traps the screen names (iOS `cf5b08d`). */
     @Test fun decoyTilesAreTheTilesTheAnswerDoesNotUse() {
@@ -694,6 +657,87 @@ class WeeklyTestTest {
         assertEquals(WordSplitter.words(g.answer, "en").map(WeeklyTestEngine::tileKey).sorted(),
             (paper.items[0].options - WeeklyTestEngine.decoyTiles(paper.items[0], "en").toSet())
                 .map(WeeklyTestEngine::tileKey).sorted())
+    }
+
+    // ── iOS 2026-11-08: one week, sectioned, nothing unchecked
+
+    /** The paper's retakes: a miss comes back once, and only in a kind still
+     *  dealt. The second miss stays with the deck. */
+    @Test fun aWeeklyRetakeComesBackOnce() {
+        val now = System.currentTimeMillis()
+        val once = item(WeeklyTestItem.Kind.MEANING, "chore", listOf("chore", "errand", "hobby", "shift")).copy(isRetake = true)
+        val first = item(WeeklyTestItem.Kind.MEANING, "errand", listOf("errand", "chore", "hobby", "shift"))
+        val oldKind = WeeklyTestItem(kind = WeeklyTestItem.Kind.REWRITE, prompt = "I very like it",
+            answer = "I really like it", focus = "very like", example = "really like")
+        val test = paper(listOf(once, first, oldKind), setOf(0, 1, 2), now)
+        val dealt = WeeklyTestEngine.retakes(listOf(test), 5, emptySet(), "en", WeeklyTestRandom("seed"),
+            firstMissOnly = true) { null }
+        assertEquals(listOf("errand"), dealt.map { it.answer })
+    }
+
+    @Test fun thePaperIsSectionedInsideItsBudget() {
+        fun many(kind: WeeklyTestItem.Kind, n: Int) = (0 until n).map { item(kind, "${kind.name} $it") }
+        val full = WeeklyTestEngine.paper(many(WeeklyTestItem.Kind.TRANSLATE, 6), many(WeeklyTestItem.Kind.GAP, 6),
+            many(WeeklyTestItem.Kind.MEANING, 6), many(WeeklyTestItem.Kind.LISTEN, 3), many(WeeklyTestItem.Kind.SPEAK, 3),
+            many(WeeklyTestItem.Kind.MEANING, 4))
+        assertEquals(WeeklyTestEngine.MAX_PAPER, full.size)
+        val k = WeeklyTestItem.Kind.TRANSLATE
+        assertEquals(List(4) { k } + listOf(WeeklyTestItem.Kind.GAP, WeeklyTestItem.Kind.GAP, WeeklyTestItem.Kind.MEANING,
+            WeeklyTestItem.Kind.MEANING, WeeklyTestItem.Kind.LISTEN, WeeklyTestItem.Kind.SPEAK,
+            WeeklyTestItem.Kind.MEANING, WeeklyTestItem.Kind.MEANING), full.map { it.kind })
+        val thin = WeeklyTestEngine.paper(emptyList(), many(WeeklyTestItem.Kind.GAP, 6), many(WeeklyTestItem.Kind.MEANING, 6),
+            emptyList(), emptyList(), emptyList())
+        assertEquals(6, thin.size)
+    }
+
+    @Test fun putOffIsReadFromTheReturnDate() {
+        val start = 1_000_000_000L
+        val end = start + 7 * 86_400_000L
+        assertTrue(WeeklyTestEngine.wasPutOff(start + 600_000, start, end))
+        assertTrue(WeeklyTestEngine.wasPutOff(end + 2 * 86_400_000L, start, end))
+        assertFalse(WeeklyTestEngine.wasPutOff(start - 60_000, start, end))
+        assertFalse(WeeklyTestEngine.wasPutOff(end + 5 * 86_400_000L, start, end))
+    }
+
+    private val allGood = WeeklyTestEngine.TranslateReview(1, rule = true, repeats = true, sameMeaning = true,
+        correct = true, tipTrue = true)
+    private val reported = WeeklyTestItem(kind = WeeklyTestItem.Kind.TRANSLATE,
+        prompt = "다음 주에 면접이 있어서 정말 너무 설레요.",
+        answer = "I am really excited because I have an interview next week.",
+        options = listOf("about", "I", "am", "really", "excited", "because", "I", "have", "an", "interview",
+            "next", "week.", "for"),
+        rule = "excited 전치사 유무", focus = "I'm very excited about.", example = "I'm very excited.")
+
+    @Test fun aTrapThatBuildsARightSentenceLeavesTheItem() {
+        val answer = reported.answer
+        assertNull(WeeklyTestEngine.passing(reported, listOf(answer, "I am really excited about an interview next week.",
+            "I am really excited for an interview next week."), allGood, "en"))
+        val oneWorks = WeeklyTestEngine.passing(reported, listOf(answer, "I am really excited about an interview next week."),
+            allGood, "en")
+        assertEquals(listOf("for"), oneWorks?.let { WeeklyTestEngine.decoyTiles(it, "en") })
+    }
+
+    @Test fun anItemFailsTheGateWhenAnyReaderDoes() {
+        assertNull(WeeklyTestEngine.passing(reported, listOf(reported.answer), allGood.copy(rule = false), "en"))
+        assertNull(WeeklyTestEngine.passing(reported, listOf("I am really excited."), allGood, "en"))
+        val kept = WeeklyTestEngine.passing(reported,
+            listOf(reported.answer, "Next week I am really excited because I have an interview."), allGood, "en")
+        assertEquals(listOf("Next week I am really excited because I have an interview."), kept?.orders)
+        assertEquals(listOf("about", "for"), kept?.let { WeeklyTestEngine.decoyTiles(it, "en").sorted() })
+    }
+
+    @Test fun aSentenceBrokenOffIsNotAMistakeToAskAbout() {
+        assertTrue(WeeklyTestEngine.isBrokenOff(
+            "Hi, thanks for inviting me. I'm very excited about. Thank you for giving me this chance",
+            "Hi, thanks for inviting me. I'm very excited. Thank you for giving me this chance."))
+        assertTrue(WeeklyTestEngine.isBrokenOff("Ich freue mich auf.", "Ich freue mich."))
+        assertFalse(WeeklyTestEngine.isBrokenOff("I am working here since two years", "I've been working here for two years"))
+        assertFalse(WeeklyTestEngine.isBrokenOff("I went to the the store", "I went to the store"))
+    }
+
+    @Test fun promptsCarryTheLanguageLineOnlyForItsLanguage() {
+        assertTrue(WeeklyTestPrompts.reviewSystem("Korean", "English", "ko").contains("-고 싶다"))
+        assertFalse(WeeklyTestPrompts.reviewSystem("German", "Korean", "de").contains("-고 싶다"))
     }
 
     @Test fun foldedRangeIgnoresCaseAndDiacritics() {

@@ -132,5 +132,7 @@
     <string name="wt_say_or_type_right_way">"Say it or type it the right way"</string>
     <string name="wt_say_it_in">"Say it in %1$s"</string>
     <string name="wt_last_time_you_said">"Last time you said"</string>
+    <string name="wt_my_answer_is_right_too">"My answer is right too"</string>
+    <string name="wt_could_not_check">"Couldn\'t check that one, so it won\'t count."</string>
     <string name="wt_trap_words_mistake">"Trap words — from your mistake"</string>
 </resources>
