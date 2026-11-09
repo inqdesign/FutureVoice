@@ -1,0 +1,7 @@
+Novedades
+• ¿Te marcó mal una respuesta correcta? Toca «Mi respuesta también vale».
+
+Mejoras
+• La prueba semanal ahora solo incluye lo que estudiaste esa semana. Las palabras y frases que aciertes también cuentan como sabidas en tus tarjetas y cuadernos.
+• Las lecciones y respuestas modelo del tutor ahora trabajan los errores que más cometes.
+• Los textos largos del tutor ya no se cortan al minuto cuando los lees en Speech.

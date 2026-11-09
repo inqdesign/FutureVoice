@@ -1,0 +1,7 @@
+New
+• Marked wrong when you were right? Tap "My answer is right too".
+
+Improved
+• The weekly test now covers only what you studied that week. Words and sentences you get right count as known in your review cards and books too.
+• Lessons and model answers from the tutor now work on the mistakes you make most.
+• Long scripts from the tutor no longer stop at one minute when you read them in Speech.

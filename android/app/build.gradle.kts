@@ -28,8 +28,8 @@ android {
         applicationId = "com.roro.futurevoice"
         minSdk = 26
         targetSdk = 36
-        versionCode = 29
-        versionName = "1.3.1"
+        versionCode = 30
+        versionName = "1.3.2"
 
         buildConfigField("String", "SUPABASE_URL", "\"${secret("SUPABASE_URL")}\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"${secret("SUPABASE_ANON_KEY")}\"")

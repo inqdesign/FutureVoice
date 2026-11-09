@@ -1,0 +1,7 @@
+Nouveau
+• Compté faux alors que c’est juste ? Touche « Ma réponse est juste aussi ».
+
+Améliorations
+• Le test de la semaine ne porte plus que sur ce que tu as étudié cette semaine. Les mots et phrases réussis comptent aussi comme acquis dans tes cartes et carnets.
+• Les leçons et réponses modèles du tuteur travaillent maintenant tes erreurs les plus fréquentes.
+• Les longs textes du tuteur ne s’arrêtent plus au bout d’une minute quand tu les lis dans Speech.
