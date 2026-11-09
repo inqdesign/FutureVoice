@@ -189,6 +189,55 @@ final class LearnerStateTests: XCTestCase {
         XCTAssertEqual(cleared.clearingOldFailures().failures["talk"], 1)
     }
 
+    private func event(_ key: String, source: String? = "talk", right: Int = 1) -> LearnerEvent {
+        LearnerEvent(key: key, language: "en", occurredAt: Date(), sourceId: source, kind: "item",
+                     subject: key, value: ["right": .integer(right)])
+    }
+
+    func testOnlyChangedFactsAreSentAgain() {
+        let same = event("a"), changed = event("b", right: 2)
+        let sent: [String: LearnerEventDiff.Sent] = [
+            "a": .init(fingerprint: same.fingerprint, sourceId: "talk"),
+            "b": .init(fingerprint: event("b", right: 1).fingerprint, sourceId: "talk"),
+        ]
+        let plan = LearnerEventDiff.plan(current: [same, changed, event("new")], sent: sent)
+        XCTAssertTrue(plan.forget.isEmpty)
+        XCTAssertEqual(plan.put.map(\.key), ["b", "new"])
+    }
+
+    func testAVanishedFactClearsItsSourceAndResendsTheRest() {
+        let kept = event("kept"), other = event("other", source: "talk2")
+        let sent: [String: LearnerEventDiff.Sent] = [
+            "kept": .init(fingerprint: kept.fingerprint, sourceId: "talk"),
+            "gone": .init(fingerprint: "x", sourceId: "talk"),
+            "other": .init(fingerprint: other.fingerprint, sourceId: "talk2"),
+        ]
+        let plan = LearnerEventDiff.plan(current: [kept, other], sent: sent)
+        XCTAssertEqual(plan.forget, ["talk"])
+        XCTAssertEqual(plan.put.map(\.key), ["kept"])
+        XCTAssertEqual(LearnerEventDiff.afterForgetting(plan.forget, sent: sent).keys.sorted(), ["other"])
+    }
+
+    func testAPrunedFactWithNoSourceForgetsNothing() {
+        let sent: [String: LearnerEventDiff.Sent] = ["day:2026-01-01": .init(fingerprint: "x", sourceId: nil)]
+        XCTAssertTrue(LearnerEventDiff.plan(current: [], sent: sent).forget.isEmpty)
+    }
+
+    func testNoWeakPointsLeaveThePromptsAsTheyWere() {
+        XCTAssertEqual(LearnerWeakPoints.plannerBlock([]), "")
+        XCTAssertEqual(LearnerWeakPoints.goalPrepBlock([]), "")
+        XCTAssertTrue(LearnerWeakPoints.plannerBlock(["- x"]).contains("- x"))
+    }
+
+    func testTheCheckerOnlyAppliesARealCorrection() {
+        let lines = ["I want a opportunity.", "Fine."]
+        XCTAssertEqual(MaterialCheck.apply([(n: 1, line: "I want an opportunity.")], to: lines),
+                       ["I want an opportunity.", "Fine."])
+        XCTAssertEqual(MaterialCheck.apply([(n: 9, line: "x"), (n: 2, line: "  ")], to: lines), lines)
+        let rewrite = String(repeating: "much longer ", count: 20)
+        XCTAssertEqual(MaterialCheck.apply([(n: 2, line: rewrite)], to: lines), lines)
+    }
+
     func testEveryTaggingRequestHasItsOwnKey() {
         let id = UUID()
         let first = LevelTagger.requestKey(sessionId: id, fingerprint: "f")

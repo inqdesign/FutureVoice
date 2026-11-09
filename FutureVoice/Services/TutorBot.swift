@@ -100,6 +100,8 @@ final class TutorBot: ObservableObject {
         var blurb: String
         /// A tutor-mode lesson; false = an ordinary call on the topic.
         var tutor = true
+        /// Ties the lesson to one question of a goal (`GoalPrep.topicId`).
+        var lessonTopicId: String? = nil
     }
     private var picksLoadedAt: Date?
     private var picksGoals = ""

@@ -175,6 +175,7 @@ enum TutorPlanner {
     static func plan(request: String, askedWith: String? = nil,
                      targetLanguage: String, nativeLanguage: String,
                      level: CEFRLevel, persona: UserPersona?,
+                     weakPoints: [String] = [],
                      miss: ((String) -> Void)? = nil) async -> TutorLesson? {
         let target = LanguageCatalog.englishName(targetLanguage)
         let native = LanguageCatalog.englishName(nativeLanguage)
@@ -250,7 +251,7 @@ enum TutorPlanner {
         var plan: Plan?
         for _ in 0..<2 where plan == nil {
             plan = try? await GeminiClient.shared.sendJSON(
-                system: system,
+                system: system + LearnerWeakPoints.plannerBlock(weakPoints),
                 messages: [GeminiClient.Message(role: .user, content: content)],
                 maxTokens: 2000, purpose: "tutor",
                 idempotencyKey: "tutor-plan:\(UUID().uuidString)", requestTimeout: 20)
@@ -262,7 +263,7 @@ enum TutorPlanner {
         guard let title = plan.title?.trimmingCharacters(in: .whitespacesAndNewlines), !title.isEmpty,
               let items = plan.challenges, !items.isEmpty
         else { miss?("too_few"); return nil }
-        let challenges = items.prefix(4).compactMap { i -> TutorLesson.Challenge? in
+        var challenges = items.prefix(4).compactMap { i -> TutorLesson.Challenge? in
             let goal = i.goal.trimmingCharacters(in: .whitespacesAndNewlines)
             let task = i.task.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !goal.isEmpty, !task.isEmpty else { return nil }
@@ -270,6 +271,11 @@ enum TutorPlanner {
                          example: i.example.trimmingCharacters(in: .whitespacesAndNewlines))
         }
         guard challenges.count >= 2 else { miss?("too_few"); return nil }
+        // The examples are said out loud and repeated until they come out
+        // clean, so a mistake in one is a mistake learned.
+        let examples = await MaterialCheck.corrected(challenges.map(\.example), language: targetLanguage,
+                                                     purpose: "tutor")
+        for i in challenges.indices { challenges[i].example = examples[i] }
         let titleTarget = plan.title_target?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return TutorLesson(id: UUID(), title: title,
                            titleTarget: titleTarget.isEmpty ? title : titleTarget,

@@ -389,9 +389,11 @@ struct UpcomingGoalPage: View {
     private enum Tab: Hashable { case questions, prepared }
 
     private var questionsSection: some View {
-        Section {
+        let lessons = TutorLessonStore.all(language: goal.language)
+        let states = (questions ?? []).map { GoalPrep.state(of: $0.text, goal: goal, lessons: lessons) }
+        return Section {
             if let questions {
-                ForEach(questions) { q in
+                ForEach(Array(questions.enumerated()), id: \.element.id) { index, q in
                     Button { drill(q.text) } label: {
                         HStack(alignment: .top, spacing: 12) {
                             VStack(alignment: .leading, spacing: 3) {
@@ -399,11 +401,14 @@ struct UpcomingGoalPage: View {
                                 if !q.looksFor.isEmpty {
                                     Text(q.looksFor).font(.footnote).foregroundStyle(.secondary)
                                 }
+                                if states[index] == .practicing {
+                                    Text("In practice").font(.footnote.weight(.medium)).foregroundStyle(.orange)
+                                }
                             }
                             Spacer(minLength: 8)
-                            Image(systemName: "graduationcap.fill")
-                                .foregroundStyle(goal.kind.tint)
-                                .accessibilityHidden(true)
+                            Image(systemName: states[index] == .ready ? "checkmark.circle.fill" : "graduationcap.fill")
+                                .foregroundStyle(states[index] == .ready ? Color.green : goal.kind.tint)
+                                .accessibilityLabel(states[index] == .ready ? explain("You can say this") : "")
                         }
                         .contentShape(Rectangle())
                     }
@@ -416,6 +421,10 @@ struct UpcomingGoalPage: View {
                     ProgressView()
                     Text("Working out what they'll ask…").foregroundStyle(.secondary)
                 }
+            }
+        } header: {
+            if !states.isEmpty {
+                Text("\(states.filter { $0 == .ready }.count) of \(states.count) ready")
             }
         } footer: {
             if questions != nil {
@@ -509,7 +518,8 @@ struct UpcomingGoalPage: View {
         // Opened from the tutor chat, the chat goes too.
         TutorBot.shared.chatOpen = false
         let call = TutorBot.GoalCall(topic: "\u{201C}\(question)\u{201D} — \(goal.title)",
-                                     blurb: goal.drillBlurb)
+                                     blurb: goal.drillBlurb,
+                                     lessonTopicId: GoalPrep.topicId(goal: goal, question: question))
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { TutorBot.shared.goalCall = call }
     }
 }

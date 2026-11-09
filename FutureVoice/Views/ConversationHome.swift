@@ -67,6 +67,7 @@ struct ConversationHome: View {
         var learnerPicksTopic = false
         /// A tutor-mode lesson whatever the Call setting says (a goal drill).
         var tutor = false
+        var lessonTopicId: String? = nil
     }
     /// Server-side account/billing snapshot — drives the credit chip. Credits
     /// live WITH the plan (not as a bare stat) so tapping goes to the
@@ -219,7 +220,8 @@ struct ConversationHome: View {
                 // Beside the column a call may already be running.
                 if callInTopicsPane, callLaunch != nil { topicsBusy = true; return }
                 BillingGate.start(orShow: $showingPaywall) {
-                    callLaunch = CallLaunch(topic: call.topic, blurb: call.blurb, entry: .tutorBot, tutor: call.tutor)
+                    callLaunch = CallLaunch(topic: call.topic, blurb: call.blurb, entry: .tutorBot, tutor: call.tutor,
+                                            lessonTopicId: call.lessonTopicId)
                 }
             }
             .onChange(of: appState.talkHomeReloadToken) { _, _ in
@@ -357,6 +359,7 @@ struct ConversationHome: View {
                          initialNewsFacts: launch.newsFacts,
                          learnerPicksTopic: launch.learnerPicksTopic,
                          tutor: launch.tutor,
+                         lessonTopicId: launch.lessonTopicId,
                          entry: launch.entry,
                          onClose: onClose)
     }

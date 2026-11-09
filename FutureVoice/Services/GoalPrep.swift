@@ -100,14 +100,55 @@ enum GoalPrep {
                   question: p.question.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                       .flatMap { $0.isEmpty ? nil : $0 })
         }
+        // The model answer is memorized, so it gets a second reader.
+        var speech = piece(r.speech)
+        speech.body = await MaterialCheck.correctedText(speech.body, language: goal.language, purpose: "goal-prep")
         let prep = GoalPrepDay(goalId: goal.id, day: StudyPlan.dayKey(now), language: goal.language,
-                               reading: piece(r.reading), speech: piece(r.speech),
+                               reading: piece(r.reading), speech: speech,
                                focus: r.focus.trimmingCharacters(in: .whitespacesAndNewlines))
         save(prep)
         Analytics.capture("goal_prep_made", ["kind": goal.kind.rawValue, "day": earlier.count + 1,
                                              "days_left": goal.daysLeft(now: now) ?? -1])
         return prep
     }
+
+    // MARK: Where each question stands
+
+    /// Computed from the lessons on file, never stored: `ready` means a
+    /// lesson on this question passed its final check.
+    enum QuestionState { case untouched, practicing, ready }
+
+    /// A lesson's `topicId` when it practices one question of a goal.
+    static func topicId(goal: UpcomingGoal, question: String) -> String {
+        let hash = SHA256.hash(data: Data(question.utf8)).prefix(4).map { String(format: "%02x", $0) }.joined()
+        return "goal:\(goal.id.uuidString.uppercased()):\(hash)"
+    }
+
+    static func state(of question: String, goal: UpcomingGoal, lessons: [TutorLesson]) -> QuestionState {
+        let id = topicId(goal: goal, question: question)
+        let mine = lessons.filter { $0.topicId == id }
+        if mine.contains(where: { $0.check?.passedAt != nil }) { return .ready }
+        return mine.contains(where: { $0.droppedAt == nil }) ? .practicing : .untouched
+    }
+
+    /// The question they tried last and haven't got yet, with what they said.
+    private static func lastAttempt(goal: UpcomingGoal) -> (question: String, line: String)? {
+        guard let questions = cachedQuestions(for: goal) else { return nil }
+        let lessons = TutorLessonStore.all(language: goal.language).sorted { $0.createdAt > $1.createdAt }
+        let sessions = SessionStore.shared.load()
+        for lesson in lessons {
+            guard let q = questions.first(where: { topicId(goal: goal, question: $0.text) == lesson.topicId }),
+                  state(of: q.text, goal: goal, lessons: lessons) == .practicing else { continue }
+            let turns = sessions.filter { lesson.sessionIds.contains($0.id) }.flatMap(\.turns).filter { $0.role == .user }
+            let said = turns.last(where: { $0.tutorRole == .check })?.transcript
+                ?? turns.map(\.transcript).max { $0.count < $1.count }
+            if let said, WordSplitter.count(said) >= minAttemptWords { return (q.text, said) }
+        }
+        return nil
+    }
+
+    /// Shorter than this is a fragment, not an answer to build on.
+    private static let minAttemptWords = 8
 
     // MARK: Likely questions
 
@@ -212,6 +253,15 @@ enum GoalPrep {
         if let data = try? SyncFiles.storeEncoder.encode([QuestionSet(goalId: goal.id, goalUpdatedAt: goal.updatedAt, questions: qs)]) {
             try? data.write(to: questionsURL, options: .atomic)
         }
+        let ready = TutorLesson(id: UUID(), title: "Why this company", titleTarget: "Why this company", language: goal.language,
+                                challenges: [], createdAt: Date(), topicId: topicId(goal: goal, question: qs[0].text),
+                                check: .init(startedAt: Date(), passedAt: Date()))
+        let practicing = TutorLesson(id: UUID(), title: "An unhappy customer", titleTarget: "An unhappy customer", language: goal.language,
+                                     challenges: [], createdAt: Date(), topicId: topicId(goal: goal, question: qs[1].text))
+        if !TutorLessonStore.all(language: goal.language).contains(where: { $0.topicId == ready.topicId }) {
+            TutorLessonStore.save(ready)
+            TutorLessonStore.save(practicing)
+        }
         guard today(for: goal) == nil else { return }
         save(GoalPrepDay(goalId: goal.id, day: StudyPlan.dayKey(Date()), language: goal.language,
                          reading: .init(title: "The First Impression at Lufthansa",
@@ -270,6 +320,20 @@ enum GoalPrep {
         // experience they want to tell is theirs to use in the answer, and
         // the part they dread is where the days should go.
         if !goal.notes.isEmpty { about.append("About this goal, in their words: \(goal.notes)") }
+        let weak = LearnerWeakPoints.goalPrepBlock(
+            LearnerWeakPoints.lines(profile: appState.learnerProfile, sessions: SessionStore.shared.load(), now: now))
+        if !weak.isEmpty { about.append(weak) }
+        // What they said when they tried is the answer's real material:
+        // their story, in their words, with the English fixed.
+        if let tried = lastAttempt(goal: goal) {
+            about.append("""
+
+            WHAT THEY SAID WHEN THEY LAST TRIED THIS (their own words, with mistakes; keep their facts and their story, fix the English)
+            Q: \(tried.question)
+            A: "\(tried.line)"
+            Today's answer is for this question.
+            """)
+        }
         let done = earlier.prefix(10).map { "- \($0.day): \($0.focus) (reading \"\($0.reading.title)\", answer \"\($0.speech.title)\")" }
         let korean = appState.nativeLanguage == "ko" ? " Korean notes end every sentence in polite 해요체 (-요: \"설명해요\", \"전달해 보세요\"), never 합니다체; never 당신." : ""
         return """

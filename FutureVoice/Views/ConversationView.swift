@@ -254,6 +254,8 @@ struct ConversationView: View {
     /// A tutor-mode lesson on the topic whatever the Call setting says —
     /// the tutor bot's goal drill.
     private let forceTutor: Bool
+    /// Ties the lesson to one question of a goal (`GoalPrep.topicId`).
+    private let lessonTopicId: String?
     /// The screen this call was started from — `conversation_started` only.
     private let entry: TalkEntry
 
@@ -270,6 +272,7 @@ struct ConversationView: View {
          pickUpLastTalk: Bool = false,
          learnerPicksTopic: Bool = false,
          tutor: Bool = false,
+         lessonTopicId: String? = nil,
          resumeSession: Session? = nil,
          entry: TalkEntry = .other,
          onClose: (() -> Void)? = nil) {
@@ -278,6 +281,7 @@ struct ConversationView: View {
         self.pickUpLastTalk = pickUpLastTalk && resumeSession == nil
         self.learnerPicksTopic = learnerPicksTopic && resumeSession == nil
         self.forceTutor = tutor && resumeSession == nil
+        self.lessonTopicId = lessonTopicId
         // Only the ring's own page opens one: the key stays set while that
         // page shows, and a daily call or a topic must never become a
         // reading drill because of it.
@@ -5766,7 +5770,7 @@ struct ConversationView: View {
             // lesson…" on the strip meanwhile). Planned after the call is up,
             // so the ready note can't go out before there is a socket.
             await startRealtimeCall(opener: nil)
-            startTutorLesson(request: composed, picked: false, fromTopic: true)
+            startTutorLesson(request: composed, picked: false, fromTopic: true, topicId: lessonTopicId)
             return
         }
         if let saved = TutorLessonStore.resumable(language: appState.targetLanguage) {
@@ -5873,7 +5877,10 @@ struct ConversationView: View {
             let planned = await TutorPlanner.plan(
                 request: plannerRequest, askedWith: askedWith, targetLanguage: appState.targetLanguage,
                 nativeLanguage: appState.nativeLanguage, level: appState.proficiency,
-                persona: appState.persona, miss: { missReason = $0 })
+                persona: appState.persona,
+                weakPoints: LearnerWeakPoints.lines(profile: appState.learnerProfile,
+                                                    sessions: SessionStore.shared.load()),
+                miss: { missReason = $0 })
             guard !isTornDown else { return }
             withAnimation(.easeInOut(duration: 0.25)) { tutorPlanning = false }
             guard var lesson = planned else {
@@ -5894,7 +5901,7 @@ struct ConversationView: View {
             lesson.sessionIds = [sessionId]
             lesson.topicId = topicId
             TutorLessonStore.save(lesson)
-            if let topicId {
+            if let topicId, TutorCurriculum.topic(topicId) != nil {
                 TutorProgressStore.update(language: appState.targetLanguage, topicId: topicId) {
                     if $0.startedAt == nil { $0.startedAt = Date() }
                 }
@@ -6307,7 +6314,7 @@ struct ConversationView: View {
                 Telemetry.log("tutor_lesson_finished", ["of": String(now.challenges.count),
                                                         "tries": String(check.tries)])
                 var nextLine = ""
-                if let id = now.topicId {
+                if let id = now.topicId, TutorCurriculum.topic(id) != nil {
                     TutorProgressStore.update(language: appState.targetLanguage, topicId: id) {
                         if $0.passedAt == nil { $0.passedAt = Date() }
                         if $0.lessonDoneAt == nil { $0.lessonDoneAt = Date() }
