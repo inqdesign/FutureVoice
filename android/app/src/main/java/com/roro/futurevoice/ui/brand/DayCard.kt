@@ -149,14 +149,21 @@ private fun DayCardBody(
                 modifier = Modifier.fillMaxSize())
         }
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
-            0f to INK.copy(alpha = 0.34f), 0.2f to INK.copy(alpha = 0f),
-            (if (isStory) 0.38f else 0.26f) to INK.copy(alpha = 0f),
-            (if (isStory) 0.66f else 0.6f) to INK.copy(alpha = 0.88f),
+            // The story's content sits inside Instagram's safe area, so its
+            // dark ground starts higher at both ends.
+            0f to INK.copy(alpha = if (isStory) 0.5f else 0.34f),
+            (if (isStory) 0.26f else 0.2f) to INK.copy(alpha = 0f),
+            (if (isStory) 0.3f else 0.26f) to INK.copy(alpha = 0f),
+            (if (isStory) 0.48f else 0.6f) to INK.copy(alpha = 0.88f),
             1f to INK.copy(alpha = 0.95f))))
 
         Column(
             Modifier.fillMaxSize().padding(horizontal = margin)
-                .padding(top = margin, bottom = if (isFeed) 22.dp else 18.dp),
+                // A story is posted under Instagram's own chrome: the top
+                // ~250 px and the bottom ~340 px of 1080×1920 are covered
+                // (iOS `safeTop` / `safeBottom`).
+                .padding(top = if (isStory) 84.dp else margin,
+                    bottom = if (isStory) 114.dp else if (isFeed) 22.dp else 18.dp),
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 DatePill(data.date, theme, isFeed)
