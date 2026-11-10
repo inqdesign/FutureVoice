@@ -1,4 +1,2 @@
 Improved
-• Picking an AI tutor's voice plays it right away, with no wait. The speed buttons do too.
-• On your first call, the future you no longer answers in a stiff, scripted way. It talks like any other call.
 • In a pronunciation call, every miss now tells you what was off and one thing to change.
