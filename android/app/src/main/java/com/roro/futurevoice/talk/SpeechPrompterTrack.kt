@@ -197,6 +197,81 @@ class SpeechPrompterTrack(script: String, language: String) {
             return cleaned.split(Regex("\\s+")).filter { it.isNotEmpty() }
         }
 
+        /**
+         * When each display word was said, in milliseconds of the take, from
+         * the assessed pieces — iOS `wordTimes`. A word nobody timed (a slip,
+         * a word the reader skipped) passes between its neighbours; words
+         * after the last one heard get no time, so what wasn't read is never
+         * lit. Null when under half the words up to there were heard:
+         * lighting a guess is worse than the plain script.
+         */
+        fun wordTimes(words: List<String>, language: String,
+                      pieces: List<SpeechDelivery.Piece>): Pair<List<Int>, List<Int>>? {
+            val spaced = LanguageCatalog.writesSpaces(language)
+            fun parts(text: String): List<String> =
+                if (spaced) SpeechDelivery.referenceTokens(text).map { it.core }
+                else SpeechDelivery.core(text).map { it.toString() }
+            val script = ArrayList<String>()
+            val owner = ArrayList<Int>()
+            words.forEachIndexed { index, word ->
+                for (part in parts(word)) { script += part; owner += index }
+            }
+            val saidText = ArrayList<String>()
+            val saidStart = ArrayList<Int>()
+            val saidEnd = ArrayList<Int>()
+            for (piece in pieces) {
+                for (word in piece.result.words) {
+                    if (!word.isJudged || word.durationMs <= 0) continue
+                    val cut = parts(word.word)
+                    cut.forEachIndexed { i, part ->
+                        val start = piece.startMs + word.offsetMs
+                        saidText += part
+                        saidStart += start + word.durationMs * i / cut.size
+                        saidEnd += start + word.durationMs * (i + 1) / cut.size
+                    }
+                }
+            }
+            val heardStart = arrayOfNulls<Int>(words.size)
+            val heardEnd = arrayOfNulls<Int>(words.size)
+            SpeechDelivery.align(saidText, script).forEachIndexed { i, target ->
+                if (target == null) return@forEachIndexed
+                val word = owner[target]
+                heardStart[word] = minOf(heardStart[word] ?: Int.MAX_VALUE, saidStart[i])
+                heardEnd[word] = maxOf(heardEnd[word] ?: Int.MIN_VALUE, saidEnd[i])
+            }
+            val last = heardStart.indexOfLast { it != null }
+            if (last < 0) return null
+            val first = heardStart.first { it != null }!!
+            if (heardStart.count { it != null } * 2 < last + 1) return null
+            val starts = ArrayList<Int>()
+            val ends = ArrayList<Int>()
+            var clock = first
+            var index = 0
+            while (index <= last) {
+                val start = heardStart[index]
+                val end = heardEnd[index]
+                if (start != null && end != null) {
+                    val from = maxOf(clock, start)
+                    starts += from
+                    ends += maxOf(from, end)
+                    clock = ends[index]
+                    index++
+                } else {
+                    var next = index
+                    while (heardStart[next] == null) next++
+                    val target = maxOf(clock, heardStart[next] ?: clock)
+                    val share = (target - clock) / (next - index)
+                    for (step in 0 until next - index) {
+                        starts += clock + share * step
+                        ends += clock + share * (step + 1)
+                    }
+                    clock = target
+                    index = next
+                }
+            }
+            return starts to ends
+        }
+
         fun isPunctuation(ch: Char): Boolean = when (Character.getType(ch).toByte()) {
             Character.CONNECTOR_PUNCTUATION, Character.DASH_PUNCTUATION, Character.START_PUNCTUATION,
             Character.END_PUNCTUATION, Character.INITIAL_QUOTE_PUNCTUATION,

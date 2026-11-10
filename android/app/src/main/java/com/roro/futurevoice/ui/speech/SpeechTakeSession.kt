@@ -97,6 +97,8 @@ class SpeechTakeSession(
 
     val camera = SpeechCamera(context)
     val composer = SpeechVideoComposer()
+    /** The take's script layout; the movement is filled in when it ends. */
+    private var prompterBase: com.roro.futurevoice.data.SpeechPrompterRecord? = null
     private var capture: SpeechCapture? = null
     private var live: LiveTranscriber? = null
     @Volatile private var lastPartialAtMs = 0L
@@ -143,6 +145,10 @@ class SpeechTakeSession(
         _speed.value = value
         prefs.edit().putFloat(SPEED_KEY, value).apply()
     }
+
+    /** Called by the screen right before a take: how the script is laid out
+     *  (null: no video this take) — iOS `prepareVideo`. */
+    fun prepareVideo(record: com.roro.futurevoice.data.SpeechPrompterRecord?) { prompterBase = record }
 
     private val isFailed get() = _phase.value is Phase.Failed
     private val isCountdown get() = _phase.value is Phase.Countdown
@@ -210,7 +216,7 @@ class SpeechTakeSession(
         pieces = mutableListOf()
         lastChunkAt = 0.0
         lastCutCursor = 0
-        recordingVideo = _cameraOn.value && camera.running.value && composer.isPrepared
+        recordingVideo = _cameraOn.value && camera.running.value && prompterBase != null
         if (recordingVideo) composer.begin(context.cacheDir)
         startedAtMs = System.currentTimeMillis()
         _phase.value = Phase.Recording
@@ -333,7 +339,9 @@ class SpeechTakeSession(
         recordingVideo = false
         val voiceStart = cap?.startNanos ?: 0L
         val videoStop = scope.async(Dispatchers.IO) {
-            if (!fromCamera) null else composer.finish()?.let { r -> r.file to (voiceStart - r.firstFrameNanos) }
+            // (movie, how long the picture started before the voice, the
+            // script's movement)
+            if (!fromCamera) null else composer.finish()?.let { r -> Triple(r.file, voiceStart - r.firstFrameNanos, r.offsets) }
         }
 
         val recorded = wav
@@ -459,12 +467,15 @@ class SpeechTakeSession(
 
         val videoTask = scope.async(Dispatchers.IO) {
             try {
-                val (raw, leadIn) = videoStop.await() ?: return@async false
+                val (raw, leadIn, offsets) = videoStop.await() ?: return@async false
                 val name = "take-$id.mp4"
                 val merged = SpeechMediaMerger.merge(raw, audio, SpeechStore.mediaFile(context, name), leadIn)
                 raw.delete()
                 if (!merged) return@async false
-                update(id) { it.copy(videoFilename = name) }
+                val record = prompterRecord(prompterBase, offsets, leadIn / 1e9,
+                    context.resources.displayMetrics.density,
+                    _track.value.words.map { it.text }, script.language, deliveryPieces)
+                update(id) { it.copy(videoFilename = name, prompter = record) }
                 true
             } finally {
                 withContext(Dispatchers.Main) { store.markVideoPending(id, false) }
@@ -723,6 +734,29 @@ class SpeechTakeSession(
                 else s.count { !it.isWhitespace() && !com.roro.futurevoice.talk.SpeechPrompterTrack.isPunctuation(it) }
             if (read.isEmpty() || size(read) < 0.7 * size(azure)) return azure to true
             return (readBack ?: read) to false
+        }
+
+        /**
+         * The take's record of its script, once the video is cut: the merge
+         * cut any picture before the voice, so the script's movement starts
+         * there too, and the word times (the voice's clock) lose whatever was
+         * cut from the voice — iOS `85fca8ba`, `8704a191`.
+         * @param offsetsPx the script's position every 0.1 s from the first
+         *   frame, in pixels; kept in dp, to the half, as iOS keeps points.
+         * @param leadIn seconds the picture started before the voice.
+         */
+        fun prompterRecord(base: com.roro.futurevoice.data.SpeechPrompterRecord?, offsetsPx: List<Float>, leadIn: Double,
+                           density: Float, words: List<String>, language: String,
+                           pieces: List<SpeechDelivery.Piece>): com.roro.futurevoice.data.SpeechPrompterRecord? {
+            base ?: return null
+            val step = com.roro.futurevoice.data.SpeechPrompterRecord.STEP
+            val cut = Math.round(maxOf(0.0, leadIn) / step).toInt()
+            val offsets = offsetsPx.drop(cut).map { Math.round(it / density * 2.0) / 2.0 }
+            val cutFromVoice = (maxOf(0.0, -leadIn) * 1000).toInt()
+            val times = SpeechPrompterTrack.wordTimes(words, language, pieces)
+            return base.copy(offsets = offsets,
+                wordStarts = times?.first?.map { it - cutFromVoice },
+                wordEnds = times?.second?.map { it - cutFromVoice })
         }
 
         /** A take's Season 2 score from its assessed pieces (each piece's words

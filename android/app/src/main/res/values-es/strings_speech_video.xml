@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Speech take's video: replay with the script, the save sheet. Values are iOS Localizable.xcstrings' (iOS 85fca8ba, 8704a191, 528cbe68). -->
+<resources>
+    <string name="speech_save_video">Guardar video</string>
+    <string name="speech_layout_full_screen">Pantalla completa</string>
+    <string name="speech_layout_full_screen_captions">Pantalla completa + subtítulos</string>
+    <string name="speech_layout_split">Pantalla dividida</string>
+    <string name="speech_post_to_instagram">Publicar en Instagram</string>
+    <string name="speech_watch_script_video">Ver video con el guion</string>
+    <string name="speech_show_script">Mostrar guion</string>
+    <string name="speech_hide_script">Ocultar guion</string>
+    <string name="speech_couldnt_make_video">No se pudo crear el video. Inténtalo de nuevo.</string>
+</resources>

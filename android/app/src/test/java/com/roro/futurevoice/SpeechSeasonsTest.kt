@@ -61,10 +61,10 @@ class SpeechSeasonsTest {
     @Test fun eachSeasonHasItsOwnBar() {
         assertEquals(80, SpeechChallenges.boardBar(null))
         assertEquals(80, SpeechChallenges.boardBar(1))
-        assertEquals(60, SpeechChallenges.boardBar(2))
+        assertEquals(83, SpeechChallenges.boardBar(2))
         assertEquals(Entry.BelowBar, keptOff(overall = 79))
         assertNull(keptOff(overall = 80))
-        assertEquals(Entry.BelowBar, keptOff(season = 2, scoring = 6, hasReading = true, overall = 59))
-        assertNull(keptOff(season = 2, scoring = 6, hasReading = true, overall = 60))
+        assertEquals(Entry.BelowBar, keptOff(season = 2, scoring = 6, hasReading = true, overall = 82))
+        assertNull(keptOff(season = 2, scoring = 6, hasReading = true, overall = 83))
     }
 }

@@ -131,7 +131,75 @@ data class SpeechTake(
      *  can show every word and sound of the take. Null on takes made before
      *  it or not assessed (iOS 53ec4f49). */
     val assessments: List<com.roro.futurevoice.talk.PronunciationResult>? = null,
-)
+    /** How the script moved during the take. Set: [videoFilename] is the
+     *  camera alone and the script is drawn when it is wanted. Null on earlier
+     *  takes, whose video has the script burned into it (iOS 85fca8ba). */
+    val prompter: SpeechPrompterRecord? = null,
+) {
+    /** The video is the camera alone. iOS also reads `scoring >= 7` as this;
+     *  here takes scored 7 were still made with the script in the picture, so
+     *  only the record says it. */
+    val videoIsCameraOnly: Boolean get() = prompter != null
+}
+
+/**
+ * Everything needed to draw the rolling script over a camera-only take, on
+ * screen or into an exported video — iOS `SpeechPrompterRecord`, same JSON
+ * keys. Lengths are iOS points (Android dp), so a take reads the same on both.
+ */
+@Serializable
+data class SpeechPrompterRecord(
+    /** The script column's width on the screen it was read on. */
+    val width: Double,
+    val textSize: Double,
+    val dark: Boolean,
+    /** The script as it was read: it can be edited afterwards. */
+    val text: String,
+    val language: String,
+    /** Column y at the top of the prompter, every [STEP] seconds of the video. */
+    val offsets: List<Double> = emptyList(),
+    /** When each script word was said, in milliseconds of the video: what the
+     *  replay and the saved video light up. Ends where the reader stopped;
+     *  null on an older take or one too little of was heard. */
+    val wordStarts: List<Int>? = null,
+    val wordEnds: List<Int>? = null,
+) {
+    fun offset(seconds: Double): Double {
+        val last = offsets.lastOrNull() ?: return 0.0
+        val position = maxOf(0.0, seconds) / STEP
+        val i = position.toInt()
+        if (i + 1 >= offsets.size) return last
+        return offsets[i] + (offsets[i + 1] - offsets[i]) * (position - i)
+    }
+
+    /** How far the reading had got: every word before [word] is said, and
+     *  [fraction] of [word] itself. */
+    data class Reached(val word: Int, val fraction: Double)
+
+    /** Null when this take has no word times. */
+    fun reached(seconds: Double): Reached? {
+        val starts = wordStarts ?: return null
+        val ends = wordEnds ?: return null
+        if (starts.isEmpty() || starts.size != ends.size) return null
+        val ms = (seconds * 1000).toInt()
+        var low = 0
+        var high = starts.size
+        while (low < high) {
+            val middle = (low + high) / 2
+            if (starts[middle] <= ms) low = middle + 1 else high = middle
+        }
+        if (low <= 0) return Reached(0, 0.0)
+        val current = low - 1
+        if (ms >= ends[current]) return Reached(low, 0.0)
+        return Reached(current, (ms - starts[current]).toDouble() / maxOf(1, ends[current] - starts[current]))
+    }
+
+    companion object {
+        const val STEP = 0.1
+        /** How much of the script's colour a word not said yet keeps. */
+        const val UNREAD_OPACITY = 0.45
+    }
+}
 
 /**
  * The bundled script (one per target language) and the per-language numbers

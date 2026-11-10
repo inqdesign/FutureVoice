@@ -133,162 +133,74 @@ internal fun SpeechResultScreen(takeId: String, live: SpeechTake?, onBack: () ->
             onDismiss = { challenges.dismissMoment(takeId) })
     }
 
-    // Season 2's page; a take scored the older ways keeps the one below.
-    val reading = take?.metrics?.reading
-    if (take != null && script != null && reading != null) {
-        SpeechReadingPage(take, script, reading, take.id in pending, entries[take.id], standings[script.id], onBack, onAgain)
+    if (take != null && script != null) {
+        SpeechTakePage(take, script, take.id in pending, entries[take.id], standings[script.id], onBack, onAgain)
         return
     }
 
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
-        SheetHeader(
-            take?.let { takeDateLabel(it.createdAt) }.orEmpty(),
-            leading = { IosGlassTextButton(stringResource(R.string.done), onClick = onBack) },
-            trailing = onAgain?.let { again -> {
-                IosGlassButton(onClick = again) {
-                    Icon(Icons.Filled.Refresh, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(stringResource(R.string.again), color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.SemiBold)
-                }
-            } },
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-        )
-        if (take == null || script == null) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(stringResource(R.string.take_not_found), style = MaterialTheme.typography.titleMedium)
-            }
-            return@Column
+        SheetHeader("", leading = { IosGlassTextButton(stringResource(R.string.done), onClick = onBack) },
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(stringResource(R.string.take_not_found), style = MaterialTheme.typography.titleMedium)
         }
-        val m = take.metrics
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).bottomBarInsets()
-            .padding(horizontal = 16.dp).padding(bottom = 32.dp)) {
-            FormSection(script.title) {
-                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    ScoreRing(m.overall)
-                    Spacer(Modifier.width(18.dp))
-                    val coaching = take.coaching
-                    if (coaching != null) {
-                        Text(coaching.headline, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-                    } else {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                            Spacer(Modifier.width(8.dp))
-                            Text(stringResource(R.string.writing_feedback), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                }
-                take.coaching?.tips?.forEach { tip ->
-                    FormDivider()
-                    Row(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(10.dp))
-                        Text(tip, style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
-            }
+    }
+}
 
-            if (script.isChallenge) {
-                SpeechChallengeEntrySection(entries[take.id], standings[script.id])
-            }
-
-            Playback(take, take.id in pending)
-
-            FormSection(stringResource(R.string.measured)) {
-                MetricRow(stringResource(R.string.accuracy), Icons.Filled.FactCheck, "${m.accuracy}%", null, m.accuracy)
-                FormDivider(inset = 52.dp)
-                // Measured per phoneme; its own row, not in the overall (the
-                // board's weighting is checked server-side). What stood out:
-                // this take's low SOUNDS (English), or a word low here that is
-                // low across recent takes — a word low once is not said
-                // (iOS 0971c05d, 14706881).
-                m.pronunciation?.let { pron ->
-                    val detail = remember(take.id, pron) { pronunciationDetail(context, take, script.language) }
-                    // The whole assessment is a tap away when the take kept
-                    // it (iOS 53ec4f49).
-                    val all = take.assessments
-                    if (!all.isNullOrEmpty()) {
-                        var showingPronunciation by remember { mutableStateOf(false) }
-                        Row(Modifier.fillMaxWidth().clickable { showingPronunciation = true },
-                            verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.weight(1f)) {
-                                MetricRow(stringResource(R.string.pronunciation), Icons.Filled.GraphicEq, "$pron", detail, pron)
-                            }
-                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null,
-                                Modifier.padding(end = 12.dp).size(18.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
-                        }
-                        if (showingPronunciation) {
-                            com.roro.futurevoice.ui.PronunciationDetailSheet(all, script.language) {
-                                showingPronunciation = false
-                            }
-                        }
-                    } else {
+/** What a take from before Season 2's scoring measured, each number with
+ *  what it was measured against — iOS's "Measured" section. */
+@Composable
+internal fun MeasuredSection(take: SpeechTake, script: com.roro.futurevoice.data.SpeechScript) {
+    val context = LocalContext.current
+    val m = take.metrics
+    FormSection(stringResource(R.string.measured)) {
+        MetricRow(stringResource(R.string.accuracy), Icons.Filled.FactCheck, "${m.accuracy}%", null, m.accuracy)
+        FormDivider(inset = 52.dp)
+        // Measured per phoneme; its own row, not in the overall (the
+        // board's weighting is checked server-side). What stood out:
+        // this take's low SOUNDS (English), or a word low here that is
+        // low across recent takes — a word low once is not said
+        // (iOS 0971c05d, 14706881).
+        m.pronunciation?.let { pron ->
+            val detail = remember(take.id, pron) { pronunciationDetail(context, take, script.language) }
+            // The whole assessment is a tap away when the take kept
+            // it (iOS 53ec4f49).
+            val all = take.assessments
+            if (!all.isNullOrEmpty()) {
+                var showingPronunciation by remember { mutableStateOf(false) }
+                Row(Modifier.fillMaxWidth().clickable { showingPronunciation = true },
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f)) {
                         MetricRow(stringResource(R.string.pronunciation), Icons.Filled.GraphicEq, "$pron", detail, pron)
                     }
-                    FormDivider(inset = 52.dp)
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null,
+                        Modifier.padding(end = 12.dp).size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f))
                 }
-                MetricRow(stringResource(R.string.pace), Icons.Filled.Speed, rateLabel(m.rate, script.language),
-                    stringResource(R.string.comfortable_lld_lld, m.rateLow, m.rateHigh),
-                    // Outside the band is never shown as good, however close.
-                    if (m.rate in m.rateLow..m.rateHigh) 100 else minOf(m.paceScore, 80))
-                FormDivider(inset = 52.dp)
-                MetricRow(stringResource(R.string.pauses), Icons.Filled.PauseCircle,
-                    stringResource(R.string.lld_of_lld, m.pausesAtBreaks, m.breaks),
-                    if (m.hesitations > 0) stringResource(R.string.breaths_at_sentence_ends_long_stops_lld, m.hesitations)
-                    else stringResource(R.string.breaths_at_sentence_ends), m.pauseScore)
-                FormDivider(inset = 52.dp)
-                MetricRow(stringResource(R.string.fillers), Icons.Filled.MoreHoriz, "${m.fillers}", null, m.fillerScore)
-                FormDivider(inset = 52.dp)
-                MetricRow(stringResource(R.string.steady_voice), Icons.Filled.GraphicEq, "${m.steadiness}",
-                    stringResource(R.string.holding_your_volume_to_the_end_of_each_sentence), m.steadiness)
-            }
-
-            // The mistakes are marked where they are in the script, like a
-            // teacher's red pen — iOS SpeechMarkedScript (2026-10-25).
-            var marks by remember(take.id) { mutableStateOf<Pair<Boolean, List<List<SpeechAnalyzer.ScriptMark>>?>>(false to null) }
-            LaunchedEffect(take.id) {
-                val made = withContext(Dispatchers.Default) {
-                    SpeechAnalyzer.marks(script.body, take.transcript, script.language)
-                }
-                marks = true to made
-            }
-            val (marksReady, paragraphs) = marks
-            if (paragraphs != null) {
-                FormSection(stringResource(R.string.script),
-                    footer = if (m.missed.isNotEmpty()) stringResource(R.string.red_skipped_or_read_differently_the_small_red_words_are_what_c3dcaa) else null) {
-                    MarkedScript(paragraphs, script.language)
-                }
-            } else if (marksReady && m.missed.isNotEmpty()) {
-                FormSection(stringResource(R.string.skipped_or_changed)) {
-                    Text(m.missed.joinToString("  ·  "), color = Color(0xFFFF3B30),
-                        style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(16.dp))
-                }
-            }
-
-            // The marked script IS what the mic heard; the raw transcript is
-            // shown only when the marks couldn't be laid on the script.
-            if (marksReady && paragraphs == null) {
-                var heard by remember { mutableStateOf(false) }
-                FormSection(null) {
-                    Row(Modifier.fillMaxWidth().clickable { heard = !heard }.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.what_the_mic_heard), modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodyLarge)
-                        Icon(if (heard) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null,
-                            tint = MaterialTheme.colorScheme.primary)
-                    }
-                    if (heard) {
-                        SelectionContainer {
-                            Text(take.transcript, style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp))
-                        }
+                if (showingPronunciation) {
+                    com.roro.futurevoice.ui.PronunciationDetailSheet(all, script.language) {
+                        showingPronunciation = false
                     }
                 }
+            } else {
+                MetricRow(stringResource(R.string.pronunciation), Icons.Filled.GraphicEq, "$pron", detail, pron)
             }
+            FormDivider(inset = 52.dp)
         }
+        MetricRow(stringResource(R.string.pace), Icons.Filled.Speed, rateLabel(m.rate, script.language),
+            stringResource(R.string.comfortable_lld_lld, m.rateLow, m.rateHigh),
+            // Outside the band is never shown as good, however close.
+            if (m.rate in m.rateLow..m.rateHigh) 100 else minOf(m.paceScore, 80))
+        FormDivider(inset = 52.dp)
+        MetricRow(stringResource(R.string.pauses), Icons.Filled.PauseCircle,
+            stringResource(R.string.lld_of_lld, m.pausesAtBreaks, m.breaks),
+            if (m.hesitations > 0) stringResource(R.string.breaths_at_sentence_ends_long_stops_lld, m.hesitations)
+            else stringResource(R.string.breaths_at_sentence_ends), m.pauseScore)
+        FormDivider(inset = 52.dp)
+        MetricRow(stringResource(R.string.fillers), Icons.Filled.MoreHoriz, "${m.fillers}", null, m.fillerScore)
+        FormDivider(inset = 52.dp)
+        MetricRow(stringResource(R.string.steady_voice), Icons.Filled.GraphicEq, "${m.steadiness}",
+            stringResource(R.string.holding_your_volume_to_the_end_of_each_sentence), m.steadiness)
     }
 }
 
@@ -297,23 +209,6 @@ private fun rateLabel(value: Int, language: String): String = when (SpeechLibrar
     SpeechLibrary.RateUnit.WORDS -> stringResource(R.string.lld_words_min, value)
     SpeechLibrary.RateUnit.SYLLABLES -> stringResource(R.string.lld_syllables_min, value)
     SpeechLibrary.RateUnit.CHARACTERS -> stringResource(R.string.lld_characters_min, value)
-}
-
-@Composable
-private fun ScoreRing(score: Int) {
-    val track = MaterialTheme.colorScheme.outlineVariant
-    val color = scoreColor(score)
-    Box(Modifier.size(80.dp), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.size(72.dp)) {
-            val w = 7.dp.toPx()
-            val inset = w / 2
-            val arcSize = Size(size.width - w, size.height - w)
-            drawArc(track, 0f, 360f, false, Offset(inset, inset), arcSize, style = Stroke(w))
-            drawArc(color, -90f, 360f * score / 100f, false, Offset(inset, inset), arcSize,
-                style = Stroke(w, cap = StrokeCap.Round))
-        }
-        Text("$score", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-    }
 }
 
 private fun pronunciationDetail(context: android.content.Context, take: SpeechTake, language: String): String {
@@ -344,111 +239,11 @@ private fun MetricRow(title: String, icon: ImageVector, value: String, detail: S
     }
 }
 
-/** The take's video (tap to play / pause, iOS `cf89d935`), "Preparing your
- *  video…", or the voice alone. */
-@Composable
-internal fun Playback(take: SpeechTake, pending: Boolean) {
-    val context = LocalContext.current
-    val store = remember { SpeechStore.shared(context) }
-    val scope = rememberCoroutineScope()
-    val video = take.videoFilename
-    var saved by remember(video) { mutableStateOf(false) }
-    var photoError by remember { mutableStateOf<String?>(null) }
-    var confirmDelete by remember { mutableStateOf(false) }
-    val deniedText = stringResource(R.string.photos_access_is_off_turn_it_on_in_settings_to_save_videos)
-
-    fun save(file: File) {
-        scope.launch {
-            saved = saveVideoToGallery(context, file)
-            if (!saved) photoError = deniedText
-        }
-    }
-    val storagePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
-        if (ok && video != null) save(SpeechStore.mediaFile(context, video)) else photoError = deniedText
-    }
-
-    when {
-        video != null -> FormSection(null,
-            footer = stringResource(R.string.videos_stay_on_this_phone_and_aren_t_backed_up_save_the_ones_c9d7ac)) {
-            val file = SpeechStore.mediaFile(context, video)
-            var aspect by remember(video) { mutableStateOf(9f / 16f) }
-            LaunchedEffect(video) { videoAspect(file)?.let { aspect = it } }
-            Box(Modifier.padding(8.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                TakeVideo(file, Modifier.heightIn(max = 520.dp).aspectRatio(aspect).clip(RoundedCornerShape(12.dp)))
-            }
-            FormDivider()
-            ActionRow(if (saved) Icons.Filled.Check else Icons.Filled.Download,
-                stringResource(if (saved) R.string.saved_to_photos else R.string.save_to_photos), enabled = !saved) {
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q && ContextCompat.checkSelfPermission(context,
-                        Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                    storagePermission.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                } else save(file)
-            }
-            FormDivider()
-            ActionRow(Icons.Filled.Delete, stringResource(R.string.delete_video), destructive = true) { confirmDelete = true }
-        }
-        pending -> FormSection(null) {
-            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                Spacer(Modifier.width(10.dp))
-                Text(stringResource(R.string.preparing_your_video), color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        else -> FormSection(null) {
-            var player by remember { mutableStateOf<MediaPlayer?>(null) }
-            DisposableEffect(take.id) { onDispose { player?.release(); player = null } }
-            val playing = player != null
-            ActionRow(if (playing) Icons.Filled.Stop else Icons.Filled.PlayArrow,
-                stringResource(if (playing) R.string.stop else R.string.play_your_take)) {
-                if (playing) { player?.release(); player = null }
-                else player = runCatching {
-                    MediaPlayer().apply {
-                        setDataSource(SpeechStore.mediaFile(context, take.audioFilename).path)
-                        setOnCompletionListener { it.release(); player = null }
-                        prepare(); start()
-                    }
-                }.getOrNull()
-            }
-        }
-    }
-    if (confirmDelete) {
-        AlertDialog(onDismissRequest = { confirmDelete = false },
-            title = { Text(stringResource(R.string.delete_the_video_your_voice_and_score_stay)) },
-            confirmButton = {
-                TextButton(onClick = { confirmDelete = false; store.deleteVideo(take.id) }) {
-                    Text(stringResource(R.string.delete_video), color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.cancel)) } })
-    }
-    photoError?.let { msg ->
-        AlertDialog(onDismissRequest = { photoError = null },
-            title = { Text(stringResource(R.string.couldn_t_save_to_photos)) }, text = { Text(msg) },
-            confirmButton = { TextButton(onClick = { photoError = null }) { Text(stringResource(R.string.ok)) } })
-    }
-}
-
-@Composable
-private fun ActionRow(icon: ImageVector, label: String, enabled: Boolean = true, destructive: Boolean = false,
-                      onClick: () -> Unit) {
-    val color = when {
-        destructive -> MaterialTheme.colorScheme.error
-        enabled -> MaterialTheme.colorScheme.primary
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    Row(Modifier.fillMaxWidth().clickable(enabled = enabled, onClick = onClick).padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically) {
-        Icon(icon, null, tint = color, modifier = Modifier.size(22.dp))
-        Spacer(Modifier.width(14.dp))
-        Text(label, color = color, style = MaterialTheme.typography.bodyLarge)
-    }
-}
-
 /** The take's video: the picture, and one tap to play or pause — no control
  *  bar to bring up first. A play glyph shows while it is stopped; at the end
  *  a tap plays it again from the start. */
 @Composable
-private fun TakeVideo(file: File, modifier: Modifier) {
+internal fun TakeVideo(file: File, modifier: Modifier, autoplay: Boolean = false) {
     var playing by remember { mutableStateOf(false) }
     var view by remember { mutableStateOf<VideoView?>(null) }
     DisposableEffect(file) { onDispose { view?.stopPlayback() } }
@@ -463,7 +258,10 @@ private fun TakeVideo(file: File, modifier: Modifier) {
         AndroidView(factory = { ctx ->
             VideoView(ctx).apply {
                 setVideoPath(file.path)
-                setOnPreparedListener { it.isLooping = false; seekTo(1) }
+                setOnPreparedListener {
+                    it.isLooping = false
+                    if (autoplay) { start(); playing = true } else seekTo(1)
+                }
                 setOnCompletionListener { playing = false }
                 view = this
             }
@@ -493,7 +291,7 @@ private suspend fun videoAspect(file: File): Float? = withContext(Dispatchers.IO
 
 /** The mp4 into the shared gallery (Movies/nawana). API 29+ goes through
  *  MediaStore with no permission and holds the row PENDING until written. */
-private suspend fun saveVideoToGallery(context: Context, file: File): Boolean = withContext(Dispatchers.IO) {
+internal suspend fun saveVideoToGallery(context: Context, file: File): Boolean = withContext(Dispatchers.IO) {
     runCatching {
         val resolver = context.contentResolver
         val values = ContentValues().apply {

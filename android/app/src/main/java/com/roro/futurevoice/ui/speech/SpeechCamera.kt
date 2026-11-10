@@ -20,7 +20,8 @@ import java.util.concurrent.Executors
  * The front camera for a speech take — iOS `SpeechCamera`. VIDEO ONLY: the
  * voice is the app's own mic path ([com.roro.futurevoice.audio.SpeechCapture]).
  * Frames go to [frameHandler] on the camera's analysis thread, where the
- * composer draws the prompter over each one.
+ * composer writes each one to the take's video. 1080p where the camera can
+ * (720p until iOS `528cbe68`: a saved 1080p video was 720p enlarged).
  */
 class SpeechCamera(private val context: Context) {
     private val _running = MutableStateFlow(false)
@@ -52,7 +53,7 @@ class SpeechCamera(private val context: Context) {
             val preview = Preview.Builder().build().also { it.surfaceProvider = previewView.surfaceProvider }
             val analysis = ImageAnalysis.Builder()
                 .setResolutionSelector(ResolutionSelector.Builder()
-                    .setResolutionStrategy(ResolutionStrategy(Size(1280, 720),
+                    .setResolutionStrategy(ResolutionStrategy(Size(1920, 1080),
                         ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER))
                     .build())
                 .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)

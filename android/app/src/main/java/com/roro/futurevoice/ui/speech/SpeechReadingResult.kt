@@ -43,7 +43,15 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Timelapse
 import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.delay
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -217,23 +225,50 @@ private fun partFocus(part: SpeechReadingScore.Part, r: SpeechReadingScore): Str
 }
 
 /**
- * A Season 2 take: the big score over a score-coloured ground, its one-line
- * verdict and nickname, and the details on a sheet that opens on a summary with
- * the five part scores — iOS `SpeechResultSheetPage`.
+ * A take's page — iOS `SpeechResultView` / `SpeechResultSheetPage`: the
+ * reader fills the page (the camera looping a few seconds without sound, or
+ * the score's colour for a take with no camera video), the big score with its
+ * one-line verdict and nickname over it, and the details on a sheet that
+ * opens on a summary of the part scores. Play fades everything out and plays
+ * the whole take; a tap pauses and brings it back. While it plays, the script
+ * can roll over the picture, each word lit as it was said.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun SpeechReadingPage(take: SpeechTake, script: SpeechScript, reading: SpeechReadingScore,
-                               pendingVideo: Boolean, entry: SpeechChallenges.Entry?,
-                               standing: SpeechChallenges.Standing?, onBack: () -> Unit, onAgain: (() -> Unit)?) {
+internal fun SpeechTakePage(take: SpeechTake, script: SpeechScript, pendingVideo: Boolean,
+                            entry: SpeechChallenges.Entry?, standing: SpeechChallenges.Standing?,
+                            onBack: () -> Unit, onAgain: (() -> Unit)?) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val m = take.metrics
+    val reading = m.reading
+    val prefs = remember { context.getSharedPreferences("futurevoice", android.content.Context.MODE_PRIVATE) }
+
+    // The take's video on this phone, once it is put together.
+    val stored = remember(take.videoFilename, pendingVideo) {
+        take.videoFilename?.takeIf { !pendingVideo }?.let { SpeechStore.mediaFile(context, it) }?.takeIf { it.exists() }
+    }
+    // What is behind the score: the camera and nothing else. A take whose
+    // video has the script burned into it has a plain ground.
+    val heroFile = stored?.takeIf { take.videoIsCameraOnly }
+    val hero = remember(take.id) { SpeechHeroPlayer() }
+    LaunchedEffect(hero, heroFile?.path) { hero.show(heroFile) }
+    LaunchedEffect(hero) { while (true) { delay(100); hero.tick() } }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(hero, lifecycle) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) hero.background()
+            else if (event == Lifecycle.Event.ON_START) hero.foreground()
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer); hero.stop() }
+    }
+    /** The script rolling over the camera while the take plays. */
+    var showScript by remember { mutableStateOf(prefs.getBoolean("speech.replayShowsScript", false)) }
 
     var player by remember { mutableStateOf<MediaPlayer?>(null) }
     DisposableEffect(take.id) { onDispose { player?.release(); player = null } }
-    val playing = player != null
     fun stop() { player?.release(); player = null }
     fun play() {
         player = runCatching {
@@ -244,8 +279,13 @@ internal fun SpeechReadingPage(take: SpeechTake, script: SpeechScript, reading: 
             }
         }.getOrNull()
     }
+    // Playing, everything but the reader steps aside.
+    val playing = hero.isPlaying || player != null
 
+    val saving = remember(take.id) { SpeechVideoSaveState() }
     var showingVideo by remember { mutableStateOf(false) }
+    /** A take from before the camera was kept: its video has the script in it. */
+    var watching by remember { mutableStateOf<java.io.File?>(null) }
     val scaffold = rememberBottomSheetScaffoldState(
         bottomSheetState = rememberStandardBottomSheetState(SheetValue.PartiallyExpanded, skipHiddenState = true))
     val isOpen = scaffold.bottomSheetState.targetValue == SheetValue.Expanded
@@ -253,6 +293,7 @@ internal fun SpeechReadingPage(take: SpeechTake, script: SpeechScript, reading: 
     val navBar = with(density) { WindowInsets.navigationBars.getBottom(this).toDp() }
     val peek = with(density) { summaryPx.toDp() } + HANDLE_HEIGHT + navBar
     val heroAlpha by animateFloatAsState(if (playing || isOpen) 0f else 1f, label = "hero")
+    val shadeAlpha by animateFloatAsState(if (playing) 0f else 1f, label = "shade")
     val tint = scoreColor(m.overall)
 
     BottomSheetScaffold(
@@ -286,7 +327,7 @@ internal fun SpeechReadingPage(take: SpeechTake, script: SpeechScript, reading: 
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Spacer(Modifier.height(10.dp))
-                    ScoreStrip(reading)
+                    ScoreStrip(scoreTiles(m))
                 }
                 Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).navigationBarsPadding()
                     .padding(horizontal = 16.dp).padding(bottom = 32.dp)) {
@@ -295,37 +336,59 @@ internal fun SpeechReadingPage(take: SpeechTake, script: SpeechScript, reading: 
             }
         },
     ) {
-        Box(Modifier.fillMaxSize().background(Color.Black)
-            .background(Brush.verticalGradient(listOf(tint.copy(alpha = 0.75f), Color.Black)))) {
+        Box(Modifier.fillMaxSize().background(Color.Black)) {
+            if (heroFile != null) {
+                HeroVideo(hero, Modifier.fillMaxSize())
+            } else {
+                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(tint.copy(alpha = 0.75f), Color.Black))))
+            }
+            // Keeps the white text readable on any picture.
+            Box(Modifier.fillMaxSize().alpha(shadeAlpha).background(Brush.verticalGradient(
+                0.45f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.7f))))
+            val record = take.prompter
+            if (showScript && hero.isFull && record != null && heroFile != null) {
+                // Kept while paused, unseen: laying the column out takes a moment.
+                SpeechScriptOverlay(record, hero, Modifier.alpha(if (hero.isPlaying) 1f else 0f))
+            }
             Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().alpha(heroAlpha)
                 .padding(horizontal = 20.dp).padding(bottom = peek + 20.dp),
                 verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("${m.overall}", color = Color.White, fontSize = 96.sp, lineHeight = 100.sp, fontWeight = FontWeight.Bold)
-                    val lines = stringArrayResource(SpeechVerdict.lines(reading.total))
-                    Text(lines[SpeechVerdict.index(take.id, lines.size)], color = Color.White,
-                        style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-                    Text(stringResource(R.string.speech_level_format, stringResource(levelTitle(reading.level))),
-                        color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    if (reading != null) {
+                        val lines = stringArrayResource(SpeechVerdict.lines(reading.total))
+                        Text(lines[SpeechVerdict.index(take.id, lines.size)], color = Color.White,
+                            style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.speech_level_format, stringResource(levelTitle(reading.level))),
+                            color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    }
                 }
                 Box(Modifier.size(64.dp).background(Color.White.copy(alpha = 0.18f), CircleShape)
-                    .clickable(enabled = heroAlpha > 0.5f) { if (playing) stop() else play() },
+                    .clickable(enabled = heroAlpha > 0.5f) {
+                        if (heroFile != null) hero.toggle() else if (player != null) stop() else play()
+                    },
                     contentAlignment = Alignment.Center) {
                     Icon(if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                         stringResource(if (playing) R.string.pause else R.string.play), tint = Color.White,
                         modifier = Modifier.size(30.dp))
                 }
             }
-            // A tap on the page stops it, and everything comes back.
             if (playing) {
+                // A tap on the picture pauses it, and everything comes back.
                 Box(Modifier.fillMaxSize().clickable(interactionSource = remember { MutableInteractionSource() },
-                    indication = null) { stop() })
+                    indication = null) { if (hero.isPlaying) hero.toggle() else stop() })
+                if (take.prompter != null && hero.isFull) {
+                    ScriptToggle(showScript, onClick = {
+                        showScript = !showScript
+                        prefs.edit().putBoolean("speech.replayShowsScript", showScript).apply()
+                    }, modifier = Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(20.dp))
+                }
             } else {
                 SheetHeader("",
                     leading = { IosGlassTextButton(stringResource(R.string.done), onClick = onBack) },
                     trailing = {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            if (take.videoFilename != null) {
+                            if (stored != null) {
                                 IosGlassButton(onClick = { showingVideo = true }) {
                                     Icon(Icons.Filled.Download, stringResource(R.string.save_to_photos),
                                         tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
@@ -349,24 +412,50 @@ internal fun SpeechReadingPage(take: SpeechTake, script: SpeechScript, reading: 
         }
     }
 
-    if (showingVideo && take.videoFilename != null) {
-        SpeechSheet({ showingVideo = false }, fullHeight = true) {
-            SheetHeader("", trailing = {
-                IosGlassTextButton(stringResource(R.string.done), bold = true, onClick = { showingVideo = false })
-            })
-            Playback(take, false)
+    if (showingVideo && stored != null) {
+        SpeechVideoSheet(take, stored, saving, scope, onWatch = { watching = stored },
+            onDeleted = { hero.stop() }, onDismiss = { showingVideo = false })
+    }
+    watching?.let { file ->
+        Dialog(onDismissRequest = { watching = null },
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+            Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+                TakeVideo(file, Modifier.fillMaxSize(), autoplay = true)
+                SheetHeader("", trailing = {
+                    IosGlassTextButton(stringResource(R.string.done), bold = true, onClick = { watching = null })
+                }, modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp))
+            }
         }
+    }
+    saving.error?.let { message ->
+        AlertDialog(onDismissRequest = { saving.error = null },
+            title = { Text(stringResource(R.string.couldn_t_save_to_photos)) }, text = { Text(message) },
+            confirmButton = { TextButton(onClick = { saving.error = null }) { Text(stringResource(R.string.ok)) } })
     }
 }
 
 private val HANDLE_HEIGHT = 25.dp
 
-/** The five parts: what the sheet shows before it is opened. */
+/** The parts of the score, what the sheet shows before it is opened. A take
+ *  from before Season 2's scoring has no parts of its own, so it shows the
+ *  sub-scores its old total was made of — iOS `scoreTiles`. */
 @Composable
-private fun ScoreStrip(r: SpeechReadingScore) {
+private fun scoreTiles(m: com.roro.futurevoice.data.SpeechMetrics): List<Pair<String, Int>> {
+    m.reading?.let { r -> return r.parts.all.map { (part, score) -> stringResource(partTitle(part)) to score } }
+    val tiles = mutableListOf(stringResource(R.string.accuracy) to m.accuracy)
+    m.pronunciation?.let { tiles += stringResource(R.string.pronunciation) to it }
+    tiles += stringResource(R.string.pace) to m.paceScore
+    tiles += stringResource(R.string.pauses) to m.pauseScore
+    tiles += stringResource(R.string.fillers) to m.fillerScore
+    tiles += stringResource(R.string.steady_voice) to m.steadiness
+    return tiles
+}
+
+@Composable
+private fun ScoreStrip(tiles: List<Pair<String, Int>>) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 14.dp),
         horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.Top) {
-        r.parts.all.forEach { (part, score) ->
+        tiles.forEach { (title, score) ->
             val color = scoreColor(score)
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -374,7 +463,7 @@ private fun ScoreStrip(r: SpeechReadingScore) {
                 LinearProgressIndicator(progress = { score.coerceIn(0, 100) / 100f }, color = color,
                     trackColor = MaterialTheme.colorScheme.outlineVariant,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp))
-                Text(stringResource(partTitle(part)), style = MaterialTheme.typography.bodySmall,
+                Text(title, style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
@@ -382,7 +471,7 @@ private fun ScoreStrip(r: SpeechReadingScore) {
 }
 
 @Composable
-private fun Details(take: SpeechTake, script: SpeechScript, r: SpeechReadingScore, pendingVideo: Boolean,
+private fun Details(take: SpeechTake, script: SpeechScript, r: SpeechReadingScore?, pendingVideo: Boolean,
                     entry: SpeechChallenges.Entry?, standing: SpeechChallenges.Standing?) {
     FormSection(null) {
         val coaching = take.coaching
@@ -409,12 +498,18 @@ private fun Details(take: SpeechTake, script: SpeechScript, r: SpeechReadingScor
 
     if (script.isChallenge) SpeechChallengeEntrySection(entry, standing)
 
-    // The take's video (or "Preparing your video…"), Save and Delete, where
-    // iOS has its playback section. It sat behind the header icon alone, which
-    // read as no video having been kept.
-    Playback(take, pendingVideo)
+    // The video is the page itself; here only while it is being put together.
+    if (pendingVideo) {
+        FormSection(null) {
+            Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(10.dp))
+                Text(stringResource(R.string.preparing_your_video), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
 
-    ReadingSection(r)
+    if (r != null) ReadingSection(r) else MeasuredSection(take, script)
 
     var marks by remember(take.id) { mutableStateOf<Pair<Boolean, List<List<SpeechAnalyzer.ScriptMark>>?>>(false to null) }
     LaunchedEffect(take.id) {
@@ -425,11 +520,18 @@ private fun Details(take: SpeechTake, script: SpeechScript, r: SpeechReadingScor
     }
     val (ready, paragraphs) = marks
     if (paragraphs != null) {
-        val (held, pauses) = remember(paragraphs, r) { readingTiming(r, paragraphs) }
-        FormSection(stringResource(R.string.script)) {
-            MarkedScript(paragraphs, script.language, held, pauses)
+        if (r != null) {
+            val (held, pauses) = remember(paragraphs, r) { readingTiming(r, paragraphs) }
+            FormSection(stringResource(R.string.script)) {
+                MarkedScript(paragraphs, script.language, held, pauses)
+            }
+            Legend()
+        } else {
+            FormSection(stringResource(R.string.script),
+                footer = if (take.metrics.missed.isNotEmpty()) stringResource(R.string.red_skipped_or_read_differently_the_small_red_words_are_what_c3dcaa) else null) {
+                MarkedScript(paragraphs, script.language)
+            }
         }
-        Legend()
     } else if (ready && take.metrics.missed.isNotEmpty()) {
         FormSection(stringResource(R.string.skipped_or_changed)) {
             Text(take.metrics.missed.joinToString("  ·  "), color = RED,

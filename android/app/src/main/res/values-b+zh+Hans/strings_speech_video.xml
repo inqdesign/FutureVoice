@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Speech take's video: replay with the script, the save sheet. Values are iOS Localizable.xcstrings' (iOS 85fca8ba, 8704a191, 528cbe68). -->
+<resources>
+    <string name="speech_save_video">保存视频</string>
+    <string name="speech_layout_full_screen">全屏</string>
+    <string name="speech_layout_full_screen_captions">全屏 + 字幕</string>
+    <string name="speech_layout_split">分屏</string>
+    <string name="speech_post_to_instagram">发布到 Instagram</string>
+    <string name="speech_watch_script_video">观看带讲稿的视频</string>
+    <string name="speech_show_script">显示讲稿</string>
+    <string name="speech_hide_script">隐藏讲稿</string>
+    <string name="speech_couldnt_make_video">无法生成视频，请再试一次。</string>
+</resources>

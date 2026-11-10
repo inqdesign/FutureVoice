@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The Speech take's video: replay with the script, the save sheet. Values are iOS Localizable.xcstrings' (iOS 85fca8ba, 8704a191, 528cbe68). -->
+<resources>
+    <string name="speech_save_video">Enregistrer la vidéo</string>
+    <string name="speech_layout_full_screen">Plein écran</string>
+    <string name="speech_layout_full_screen_captions">Plein écran + sous-titres</string>
+    <string name="speech_layout_split">Écran partagé</string>
+    <string name="speech_post_to_instagram">Publier sur Instagram</string>
+    <string name="speech_watch_script_video">Voir la vidéo avec le texte</string>
+    <string name="speech_show_script">Afficher le texte</string>
+    <string name="speech_hide_script">Masquer le texte</string>
+    <string name="speech_couldnt_make_video">Impossible de créer la vidéo. Réessaie.</string>
+</resources>

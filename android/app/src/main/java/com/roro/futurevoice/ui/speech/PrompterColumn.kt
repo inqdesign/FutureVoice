@@ -5,6 +5,7 @@ import android.graphics.Typeface
 import android.os.Build
 import android.text.TextPaint
 import com.roro.futurevoice.data.LanguageCatalog
+import com.roro.futurevoice.talk.SpeechLit
 import com.roro.futurevoice.talk.SpeechPrompterTrack
 
 /**
@@ -68,6 +69,40 @@ class PrompterColumn(
         val across = ((f.x - sidePx) / lineWidth).coerceIn(0f, 1f)
         val advance = f.height + lineSpacing
         return Triple(f.top + across * advance, f.top, advance)
+    }
+
+    /** The part of the column already said (column pixels) — iOS
+     *  `Column.lit`. Empty: nothing said yet. */
+    fun lit(reached: com.roro.futurevoice.data.SpeechPrompterRecord.Reached): List<SpeechLit.Box> =
+        SpeechLit.boxes(placed.map { SpeechLit.Box(it.x, it.top, it.x + it.width, it.top + it.height) },
+            widthPx, reached.word, reached.fraction)
+
+    /**
+     * The words whose line overlaps [from]…[to], the ones not said yet at
+     * [unreadAlpha] of the script's colour. [reached] null: the whole script
+     * at full strength (a take with no word times).
+     */
+    fun draw(canvas: Canvas, from: Float, to: Float,
+             reached: com.roro.futurevoice.data.SpeechPrompterRecord.Reached?, unreadAlpha: Float) {
+        if (reached == null) { draw(canvas, from, to); return }
+        val boxes = lit(reached)
+        val full = paint.alpha
+        for (box in boxes) {
+            if (box.right <= box.left || box.bottom <= box.top) continue
+            canvas.save()
+            canvas.clipRect(box.left, box.top, box.right, box.bottom)
+            draw(canvas, from, to)
+            canvas.restore()
+        }
+        canvas.save()
+        for (box in boxes) {
+            if (box.right <= box.left || box.bottom <= box.top) continue
+            canvas.clipOutRect(box.left, box.top, box.right, box.bottom)
+        }
+        paint.alpha = (full * unreadAlpha).toInt()
+        draw(canvas, from, to)
+        paint.alpha = full
+        canvas.restore()
     }
 
     /** Draws the words whose line overlaps [from]…[to] (column pixels). */

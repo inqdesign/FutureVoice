@@ -190,7 +190,7 @@ private fun SpeechTakeLayout(
     var micDenied by remember { mutableStateOf(false) }
     var prompterWidthPx by remember { mutableFloatStateOf(0f) }
     val ground = AppSurfaces.ground
-    val ink = MaterialTheme.colorScheme.onSurface
+    val dark = com.roro.futurevoice.ui.appIsDark()
 
     // The camera: asked for only when it is on.
     fun hasCamera() = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
@@ -208,22 +208,16 @@ private fun SpeechTakeLayout(
     val cameraShowing = cameraOn && cameraRunning
 
     fun begin() {
-        // The video's script, drawn from the same layout the screen draws.
+        // Tells the take how the script is laid out on this screen, so it can
+        // be drawn over the camera later, the way the reader saw it (iOS
+        // `prepareVideo`). Lengths in dp, as iOS keeps points.
         if (cameraShowing && prompterWidthPx > 0) {
-            val w = prompterWidthPx
-            val h = Math.round(w * 16 / 9f).toFloat()
-            val half = h / 2
             val dp = density.density
-            val layout = SpeechVideoComposer.Layout(
-                canvasW = w, canvasH = h,
-                prompter = android.graphics.RectF(0f, 0f, w, half - 6 * dp),
-                card = android.graphics.RectF(12 * dp, half + 6 * dp, w - 12 * dp, h - 12 * dp),
-                cardRadius = 24 * dp, background = ground.toArgb())
-            val column = PrompterColumn(track, script.language, w, with(density) { textSize.sp.toPx() },
-                24 * dp, ink.toArgb())
-            session.composer.prepare(layout, column)
-        } else session.composer.prepare(
-            SpeechVideoComposer.Layout(0f, 0f, android.graphics.RectF(), android.graphics.RectF(), 0f, 0), null)
+            session.prepareVideo(com.roro.futurevoice.data.SpeechPrompterRecord(
+                width = (prompterWidthPx / dp).toDouble(),
+                textSize = (with(density) { textSize.sp.toPx() } / dp).toDouble(),
+                dark = dark, text = script.body, language = script.language))
+        } else session.prepareVideo(null)
         scope.launch { session.start() }
     }
     val micPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
