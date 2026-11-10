@@ -1,2 +1,10 @@
+Novedades
+• Guarda o comparte el vídeo de un discurso de tres formas: pantalla completa, con subtítulos o dividido.
+• Al volver a ver un discurso, cada palabra se ilumina cuando la dices.
+
 Mejoras
+• En Dilo otra vez, la frase sigue tu voz.
 • En la llamada de pronunciación, cada fallo te dice qué sonó distinto y una cosa que cambiar.
+
+Correcciones
+• Los botones Suscribirse y Añadir minutos no hacían nada al tocarlos. Ahora abren la pantalla de pago.

@@ -1,2 +1,10 @@
+New
+• Save or share a speech video three ways: full screen, with captions, or split.
+• When you replay a speech, each word lights up as you say it.
+
 Improved
-• In a pronunciation call, every miss now tells you what was off and one thing to change.
+• In Say it again, the line follows your voice.
+• In a pronunciation call, every miss tells you what was off and one thing to change.
+
+Fixed
+• The Subscribe and Add minutes buttons did nothing when tapped. They now open the payment screen.

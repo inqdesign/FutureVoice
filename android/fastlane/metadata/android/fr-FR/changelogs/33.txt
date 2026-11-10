@@ -1,2 +1,10 @@
+Nouveautés
+• Enregistre ou partage la vidéo d’un discours de trois façons : plein écran, avec sous-titres ou en écran partagé.
+• Quand tu revois un discours, chaque mot s’allume au moment où tu le dis.
+
 Améliorations
+• Dans Redis-le, la phrase suit ta voix.
 • Dans l’appel de prononciation, chaque erreur te dit ce qui sonnait différemment et une chose à changer.
+
+Corrections
+• Les boutons S’abonner et Ajouter des minutes ne faisaient rien. Ils ouvrent maintenant l’écran de paiement.
