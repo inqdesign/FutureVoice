@@ -1,0 +1,4 @@
+Améliorations
+• La voix d’un tuteur IA se lance tout de suite quand tu la choisis, sans attente. Les boutons de vitesse aussi.
+• Lors de ton premier appel, ton futur toi ne répond plus de façon raide et récitée. Il parle comme dans n’importe quel appel.
+• Dans l’appel de prononciation, chaque erreur te dit ce qui sonnait différemment et une chose à changer.
