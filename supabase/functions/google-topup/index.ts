@@ -22,6 +22,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
+import { notifyOwner } from "../_shared/credits.ts"
+import { reportPlayPurchaseToRevenueCat } from "../_shared/revenuecat.ts"
 
 const PACKAGE_NAME = "com.roro.futurevoice"
 
@@ -116,6 +118,27 @@ Deno.serve(async (req) => {
   }
 
   console.log("google-topup", { user: userId, order: purchase.orderId, product: productId, ...data })
+
+  // The owner hears about a pack the moment it lands (2026-11-10: the first
+  // one sold was found three days later, from the buyer's own mail), and
+  // RevenueCat gets the purchase. Only on the call that APPLIED it: the app
+  // retries a landed token, and a retry is not a second sale. Neither may
+  // fail or slow the answer the app is waiting on to consume the purchase.
+  if (data?.applied === true) {
+    const after = (async () => {
+      await reportPlayPurchaseToRevenueCat({ userId, purchaseToken, productId })
+      await notifyOwner([
+        "[nawana] 💰 분 팩 구매 (Google Play)",
+        `누구: ${authed.user.email ?? userId.slice(0, 8)}`,
+        `무엇: ${productId} · ${Math.round((data.seconds ?? 0) / 60)}분`,
+        `주문: ${purchase.orderId ?? "?"}${purchase.regionCode ? ` · ${purchase.regionCode}` : ""}` +
+          (purchase.purchaseType === 0 ? " · 테스트 결제" : ""),
+      ].join("\n"))
+    })()
+    // deno-lint-ignore no-explicit-any
+    const rt = (globalThis as any).EdgeRuntime
+    if (rt?.waitUntil) rt.waitUntil(after); else await after
+  }
   return new Response(JSON.stringify(data), {
     status: 200,
     headers: { "Content-Type": "application/json", ...cors() },
