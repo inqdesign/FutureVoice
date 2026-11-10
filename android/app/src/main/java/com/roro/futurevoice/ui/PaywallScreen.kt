@@ -1,6 +1,5 @@
 package com.roro.futurevoice.ui
 
-import android.app.Activity
 import kotlinx.coroutines.launch
 import com.roro.futurevoice.ui.brand.ContinuousShape
 import androidx.activity.compose.BackHandler
@@ -323,7 +322,7 @@ fun PaywallScreen(onDismiss: () -> Unit, preselectTier: String? = null) {
                         PaywallStep.PITCH -> step = PaywallStep.TIMELINE
                         PaywallStep.TIMELINE -> step = PaywallStep.PLANS
                         PaywallStep.PLANS -> {
-                            val activity = context as? Activity
+                            val activity = context.findActivity()
                             if (packPicked) {
                                 activity?.let { billing.buyPack(it) }
                             } else when (route) {

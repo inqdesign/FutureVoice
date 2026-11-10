@@ -1,6 +1,5 @@
 package com.roro.futurevoice.ui
 
-import android.app.Activity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -80,7 +79,7 @@ fun TalkTopUpButton(
 
     val busy = state == BillingService.PackState.Purchasing
     val done = state is BillingService.PackState.Purchased
-    val onClick = { (context as? Activity)?.let { billing.buyPack(it) }; Unit }
+    val onClick = { context.findActivity()?.let { billing.buyPack(it) }; Unit }
     val label: @Composable () -> Unit = {
         when {
             busy -> CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)

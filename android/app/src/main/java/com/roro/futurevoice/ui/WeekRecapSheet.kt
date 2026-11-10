@@ -1581,7 +1581,7 @@ private fun usageFacts(uses: List<FeatureUse>, appSeconds: Int): List<String> {
  *  feedback sheet said (never gated on its stars), then the deck goes. Asked
  *  after the deck has gone: over a screen mid-dismissal it can be dropped. */
 private fun endTrialReport(context: android.content.Context, onClose: (WeekRecapAction?) -> Unit) {
-    val activity = context as? android.app.Activity
+    val activity = context.findActivity()
     onClose(null)
     if (activity != null) android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
         com.roro.futurevoice.data.ReviewRequest.askAtTrialReportEnd(activity)
