@@ -8,6 +8,7 @@ import SwiftUI
 /// it is a menu of every take to jump to, and deleting the one shown — what
 /// the list this replaced did. A menu, not a sheet: the page's details are a
 /// sheet already, and a page shows one at a time.
+/// Android still opens the old takes list from the history button.
 struct SpeechTakesPager: View {
     let scriptId: UUID
     @ObservedObject private var store = SpeechStore.shared
