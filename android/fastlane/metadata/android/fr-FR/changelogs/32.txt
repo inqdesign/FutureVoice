@@ -1,0 +1,2 @@
+Corrections
+• Les boutons pour s’abonner et ajouter des minutes ne faisaient rien. Ils ouvrent maintenant l’écran de paiement.

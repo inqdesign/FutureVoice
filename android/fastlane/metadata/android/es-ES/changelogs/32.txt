@@ -1,0 +1,2 @@
+Correcciones
+• Los botones para suscribirte y añadir minutos no hacían nada al tocarlos. Ahora abren la pantalla de pago.

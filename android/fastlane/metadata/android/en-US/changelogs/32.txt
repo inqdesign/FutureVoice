@@ -1,0 +1,2 @@
+Fixed
+• The Subscribe and Add minutes buttons did nothing when tapped. They now open the payment screen.
