@@ -244,6 +244,11 @@ internal fun SpeechTabBody(language: String, native: String, level: CefrLevel,
                 // A language past its first season says which one this is, and
                 // where the last one went.
                 val openSeason = challenges.openSeason(seasons)
+                // The header's "Season N records" link is on screen (iOS
+                // `showsSeasonRecords`): the card below would open the same
+                // list a second time.
+                val showsSeasonRecords = openSeason != null && openSeason >= 2 &&
+                    challenges.lastEndedSeason(seasons) != null
                 if (openSeason != null && openSeason >= 2) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(stringResource(R.string.speech_season, openSeason), style = MaterialTheme.typography.titleLarge,
@@ -269,7 +274,7 @@ internal fun SpeechTabBody(language: String, native: String, level: CefrLevel,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 4.dp))
-                if (pastCount > 0) {
+                if (pastCount > 0 && !showsSeasonRecords) {
                     Row(
                         Modifier.fillMaxWidth().clip(ContinuousShape(14.dp)).background(AppSurfaces.card)
                             .clickable(onClick = onOpenAllChallenges).padding(16.dp),
