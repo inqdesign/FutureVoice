@@ -1,11 +1,4 @@
-Neu
-• Die englischen Speech-Challenges gehen in Saison 2. Dein Vortrag wird mit einer muttersprachlichen Lesung verglichen: Tempo, Rhythmus, Pausen, Genauigkeit und Aussprache. Zu deinem Ergebnis gibt es einen Spitznamen.
-• Die Speech-Ergebnisseite ist neu: dein Ergebnis über deinem eigenen Video, die Details auf einem Blatt zum Hochziehen.
-• Auf der Zielseite siehst du jetzt bei jeder Frage, ob du dafür bereit bist.
-• Als falsch gewertet, obwohl es stimmt? Tippe auf „Meine Antwort stimmt auch“.
-
-Verbesserungen
-• Der Wochentest fragt jetzt nur noch ab, was du in dieser Woche gelernt hast. Richtig beantwortete Wörter und Sätze gelten auch in deinen Karten und Büchern als gekonnt.
-• Lektionen und Musterantworten des Tutors gehen jetzt auf deine häufigsten Fehler ein.
-• Lange Texte vom Tutor brechen beim Vorlesen in Speech nicht mehr nach einer Minute ab.
-• Im Aussprache-Gespräch geht ein Wort, das als anderer Laut herauskommt, nicht mehr durch.
+Verbessert
+• Die Stimme eines KI-Tutors hörst du jetzt sofort, ohne Wartezeit. Die Tempo-Tasten auch.
+• Im ersten Gespräch antwortet dein zukünftiges Ich nicht mehr steif und einstudiert, sondern wie in jedem anderen Gespräch.
+• Im Aussprache-Gespräch erfährst du bei jedem Fehler, was anders klang und was du ändern kannst.

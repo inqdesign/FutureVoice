@@ -1,11 +1,4 @@
-Nouveau
-• Les défis Speech en anglais passent à la saison 2. Ta lecture est comparée à celle d’un natif : vitesse, rythme, pauses, justesse et prononciation, et ton score te vaut un surnom.
-• La page de résultats de Speech est nouvelle : ton score sur ta propre vidéo, et les détails sur une feuille à faire glisser.
-• Sur la page d’un objectif, tu vois maintenant si tu es prêt pour chaque question.
-• Compté faux alors que c’est juste ? Touche « Ma réponse est juste aussi ».
-
 Améliorations
-• Le test de la semaine ne porte plus que sur ce que tu as étudié cette semaine. Les mots et phrases réussis comptent aussi comme acquis dans tes cartes et carnets.
-• Les leçons et réponses modèles du tuteur travaillent maintenant tes erreurs les plus fréquentes.
-• Les longs textes du tuteur ne s’arrêtent plus au bout d’une minute quand tu les lis dans Speech.
-• L’appel de prononciation ne valide plus un mot sorti avec un autre son.
+• La voix d’un tuteur IA se lance tout de suite quand tu la choisis, sans attente. Les boutons de vitesse aussi.
+• Lors de ton premier appel, ton futur toi ne répond plus de façon raide et récitée. Il parle comme dans n’importe quel appel.
+• Dans l’appel de prononciation, chaque erreur te dit ce qui sonnait différemment et une chose à changer.

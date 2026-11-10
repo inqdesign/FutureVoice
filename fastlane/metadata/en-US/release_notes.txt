@@ -1,11 +1,4 @@
-New
-• English speech challenges move to Season 2. Your reading is compared with a native reading for speed, rhythm, pauses, accuracy and pronunciation, and your score earns a nickname.
-• The speech result page is new: your score over your own video, with the details on a sheet you pull up.
-• Each question on a goal page now shows whether you are ready for it.
-• Marked wrong when you were right? Tap "My answer is right too".
-
 Improved
-• The weekly test now covers only what you studied that week. Words and sentences you get right count as known in your review cards and books too.
-• Lessons and model answers from the tutor now work on the mistakes you make most.
-• Long scripts from the tutor no longer stop at one minute when you read them in Speech.
-• The pronunciation call no longer passes a word that came out as a different sound.
+• Picking an AI tutor's voice plays it right away, with no wait. The speed buttons do too.
+• On your first call, the future you no longer answers in a stiff, scripted way. It talks like any other call.
+• In a pronunciation call, every miss now tells you what was off and one thing to change.
