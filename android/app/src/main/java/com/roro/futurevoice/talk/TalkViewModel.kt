@@ -351,6 +351,8 @@ class TalkViewModel(context: Context) : ViewModel() {
      *  speaking, closed when the take is sent ([pronHeard]). */
     private var pronWindowOpen = false
     private var pronSendJob: Job? = null
+    /** How long the last take's assessment took (`assess_ms` on its event). */
+    private var pronAssessMs = 0L
     /** When the words now held started — to tell reading along (started
      *  early in the fluent self's line) from answering at its end. */
     private var pronHeardSince: Long? = null
@@ -2035,6 +2037,9 @@ class TalkViewModel(context: Context) : ViewModel() {
      *  ([PronunciationJudge]); the voice then says exactly one line for it. */
     private fun pronTurn(turnId: String, said: String) {
         if (!pronThisCall) return
+        // `tutor_turn_wait` (kind pron): turn in hand → note → the voice.
+        tutorWaitTurnAt = System.currentTimeMillis()
+        tutorWaitNoteAt = null
         val cfg = config ?: return
         if (_state.value.pronPlanning) { tutorNudge(PronunciationNotes.SPOKE_WHILE_PLANNING); return }
         val round = _state.value.pronRound ?: run { tutorNudge(PronunciationNotes.PLAN_FAILED); return }
@@ -2049,10 +2054,12 @@ class TalkViewModel(context: Context) : ViewModel() {
         viewModelScope.launch {
             var result: PronunciationResult? = null
             var outcome = PronunciationAssessor.Outcome.SKIPPED
+            val assessStart = System.currentTimeMillis()
             if (audio != null) {
                 val a = PronunciationAssessor.assess(appContext, audio, drill ?: line.text, target, "pron_call")
                 result = a.result; outcome = a.outcome
             }
+            pronAssessMs = System.currentTimeMillis() - assessStart
             var now = _state.value.pronRound ?: return@launch
             if (tutorCallOver || !tutorStillSaid(turnId, said) || now.id != round.id || now.current != i) return@launch
             result?.let { r ->
@@ -2086,7 +2093,8 @@ class TalkViewModel(context: Context) : ViewModel() {
                 "score" to (result?.soundScore?.toString() ?: ""),
                 "fluency" to (result?.fluency?.toString() ?: ""),
                 "prosody" to (result?.prosody?.toString() ?: ""),
-                "outcome" to outcome.raw, "try" to (line.tries + 1).toString()))
+                "outcome" to outcome.raw, "try" to (line.tries + 1).toString(),
+                "assess_ms" to pronAssessMs.toString()))
             val fb = PronunciationJudge.feedback(verdict, result, line, now.topic.phonemes)
             val heard = (verdict as? PronunciationJudge.Verdict.NotYet)?.takeIf { it.heard != null }
             now = now.replacing(i) { l ->
@@ -2123,7 +2131,8 @@ class TalkViewModel(context: Context) : ViewModel() {
                     // "Next sentence" leaves a sentence.
                     now = now.replacing(i) { l -> l.copy(tries = l.tries + 1, bestScore = maxOf(l.bestScore ?: 0, verdict.score)) }
                     _state.update { it.copy(pronRound = now) }
-                    tutorNudge(PronunciationNotes.notSmooth(line.text))
+                    tutorNudge(PronunciationNotes.notSmooth(line.text, PronunciationJudge.pauseBefore(result),
+                        tries = now.lines[i].tries))
                 }
                 is PronunciationJudge.Verdict.NotYet -> {
                     pronUnheard = 0
@@ -2138,7 +2147,8 @@ class TalkViewModel(context: Context) : ViewModel() {
                         }
                         _state.update { it.copy(pronRound = now) }
                         sendTutorSystem()
-                        tutorNudge(PronunciationNotes.inFlow(chunk, verdict.word))
+                        tutorNudge(PronunciationNotes.inFlow(chunk, verdict.word, now.topic, verdict.sound,
+                            fb?.heardAs, fb?.score))
                         return@launch
                     }
                     val drillText = PronunciationJudge.drillText(verdict.word, line.text, target)
@@ -2149,7 +2159,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                     _state.update { it.copy(pronRound = now) }
                     sendTutorSystem()
                     tutorNudge(PronunciationNotes.notYet(drillText, verdict.sound, verdict.heard, now.topic, line.text,
-                        PronunciationJudge.heardAs(result, verdict.word, verdict.sound)))
+                        fb?.heardAs, fb?.score))
                 }
             }
         }
@@ -2201,8 +2211,11 @@ class TalkViewModel(context: Context) : ViewModel() {
         val round = _state.value.pronRound
         val sentence = round?.current?.let { round.lines[it].drillWord ?: round.lines[it].text }.orEmpty()
         val whole = sentence.isNotEmpty() && PronunciationJudge.overlap(partial, sentence) >= 0.8
+        // A word practiced alone has no middle to pause in, and a word that
+        // came out wrong never matches the screen (iOS, 2026-11-10).
+        val drilling = round?.current?.let { round.lines[it].drillWord != null } == true
         pronSendJob = viewModelScope.launch {
-            delay(if (whole) 1000 else 2500)
+            delay(if (whole) 1000 else if (drilling) 1200 else 2500)
             // Still voicing (the transcript lags the mouth): give it a beat.
             var extra = 0
             while (realtime.level > 0.25f && extra < 10) { delay(300); extra++ }
@@ -2312,11 +2325,12 @@ class TalkViewModel(context: Context) : ViewModel() {
         }
         com.roro.futurevoice.core.Telemetry.log("pron_word_take", mapOf("topic" to round.topic.id,
             "word" to word, "verdict" to verdict.name, "score" to (result?.soundScore?.toString() ?: ""),
-            "try" to (round.lines[i].drillTries + 1).toString()))
+            "try" to (round.lines[i].drillTries + 1).toString(), "assess_ms" to pronAssessMs.toString()))
         var now = round
-        PronunciationJudge.feedback(verdict, result, probe, round.topic.phonemes)?.let { fb ->
-            now = now.replacing(i) { it.copy(feedback = fb) }
-        }
+        // The last miss on this word, to say whether this one came closer.
+        val previous = round.lines[i].feedback?.takeIf { round.lines[i].drillTries > 0 && !it.ok }?.score
+        val fb = PronunciationJudge.feedback(verdict, result, probe, round.topic.phonemes)
+        if (fb != null) now = now.replacing(i) { it.copy(feedback = fb) }
         when (verdict) {
             is PronunciationJudge.Verdict.Pass, is PronunciationJudge.Verdict.NotSmooth -> {
                 pronUnheard = 0
@@ -2335,9 +2349,10 @@ class TalkViewModel(context: Context) : ViewModel() {
                 pronUnheard = 0
                 now = now.replacing(i) { it.copy(drillTries = it.drillTries + 1) }
                 _state.update { it.copy(pronRound = now) }
-                // Every third miss carries a tip.
-                tutorNudge(PronunciationNotes.wordAgain(word, verdict.sound, now.topic,
-                    withTip = now.lines[i].drillTries % 3 == 0))
+                // Every miss says what was off and a new tip, never a bare
+                // "again" (iOS, founder 2026-11-10).
+                tutorNudge(PronunciationNotes.wordAgain(word, verdict.sound, now.topic, fb?.heardAs, fb?.score,
+                    previous, tries = now.lines[i].drillTries))
             }
             PronunciationJudge.Verdict.OffScript -> {
                 pronUnheard = 0
@@ -2494,7 +2509,7 @@ class TalkViewModel(context: Context) : ViewModel() {
     private fun tutorNudge(note: String, waitKind: String = "other") {
         if (tutorWaitTurnAt != null && tutorWaitNoteAt == null) {
             tutorWaitNoteAt = System.currentTimeMillis()
-            tutorWaitKind = waitKind
+            tutorWaitKind = if (pronThisCall) "pron" else waitKind
         }
         if (REALTIME && _state.value.phase == TalkPhase.PAUSED) pendingTutorNudge = note
         else realtime.nudge(note)

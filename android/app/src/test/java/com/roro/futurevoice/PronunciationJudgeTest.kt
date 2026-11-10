@@ -80,6 +80,33 @@ class PronunciationJudgeTest {
         assertEquals("Not that", PronunciationJudge.flowText("that", "Not that."))
     }
 
+    // A miss is explained (iOS, 2026-11-10).
+
+    private val thTopic = com.roro.futurevoice.talk.PronunciationCourse.Topic(
+        "th", "th", "think, three", listOf("θ"), "tongue between the teeth")
+
+    @Test fun everyMissNoteSaysWhatWasMeasured() {
+        val notes = com.roro.futurevoice.talk.PronunciationNotes
+        val first = notes.notYet("think", "θ", null, thTopic, "I think so.", PronunciationJudge.HeardAs.Sound("s"), 41)
+        assertTrue(first.contains("came out like \"s\""))
+        assertTrue(first.contains("today's sound"))
+        val again = notes.wordAgain("think", "θ", thTopic, null, 58, previous = 41, tries = 2)
+        assertTrue(again.contains("wasn't clear"))
+        assertTrue(again.contains("41 → 58"))
+        assertTrue(again.contains("NOT given"))
+        val whole = notes.wordAgain("Brötchen", null, thTopic, score = 44, tries = 1)
+        assertTrue(whole.contains("don't name one"))
+        assertTrue(!whole.contains("today's sound"))
+    }
+
+    @Test fun theLongestStopIsNamed() {
+        val a = word("I", "aɪ" to 95).copy(offsetMs = 0, durationMs = 200)
+        val b = word("think", "θ" to 90).copy(offsetMs = 250, durationMs = 300)
+        val c = word("so", "s" to 90).copy(offsetMs = 1400, durationMs = 300)
+        assertEquals("so", PronunciationJudge.pauseBefore(take(a, b, c)))
+        assertEquals(null, PronunciationJudge.pauseBefore(take(a, b, c.copy(offsetMs = 600))))
+    }
+
     // A word on its own: a sound heard as another (iOS e272f61f)
 
     private class Heard(val phoneme: String, val accuracy: Int, vararg val list: Pair<String, Int>)

@@ -689,6 +689,20 @@ object PronunciationJudge {
         return null
     }
 
+    /** The word the longest stop of a reading came in front of, when one
+     *  stop stands out (Azure's word times). null when no gap is long
+     *  enough to name. */
+    fun pauseBefore(result: PronunciationResult?): String? {
+        val words = result?.judgedWords?.filter { it.durationMs > 0 }?.sortedBy { it.offsetMs } ?: return null
+        if (words.size < 2) return null
+        var best: Pair<Int, String>? = null
+        for ((a, b) in words.zip(words.drop(1))) {
+            val gap = b.offsetMs - (a.offsetMs + a.durationMs)
+            if (gap >= 350 && gap > (best?.first ?: 0)) best = gap to b.word
+        }
+        return best?.second
+    }
+
     fun heardAs(result: PronunciationResult?, word: String, sound: String?): HeardAs? {
         sound ?: return null
         val w = result?.referenceWords?.firstOrNull { key(it.word) == key(word) } ?: return null
@@ -867,8 +881,15 @@ object PronunciationNotes {
             "like a friend. Informal.\n" +
             "- Each of your lines answers ONE note from the app. Do exactly what " +
             "the note says and nothing more. Keep it SHORT: a few words is a " +
-            "whole line here. Never explain how to make a sound — the tip is " +
-            "on their screen.\n" +
+            "whole line here.\n" +
+            "- A NOT YET note tells you what the app measured. Say it to them: " +
+            "which word, what was off, and ONE thing to do with the mouth " +
+            "(tongue, lips, teeth, air, voice, length). Never just \"again\", " +
+            "and never a tip you already gave in this call for the same word: " +
+            "take another angle. Only what the note measured; never invent a " +
+            "fault it doesn't name. A sound in the note is a phonetic symbol " +
+            "for YOU: never say a symbol, name it by its letters in the word " +
+            "(\"the th in think\").\n" +
             "- When you say a word or a sentence for them to copy, say it clearly " +
             "at a natural pace. Never spell it, never cut it into letters or " +
             "syllables, no symbols, nothing in brackets.\n" +
@@ -918,27 +939,53 @@ object PronunciationNotes {
         return "Result: PASSED — the last sentence of the round (${round.passedCount} of ${round.sentenceCount} passed). In one or two short sentences: the round is done; another round of this sound, or a different one with the button on their screen?"
     }
 
-    private fun cap(w: String) = w.split(" ").joinToString(" ") { it.replaceFirstChar { c -> c.titlecase() } }
+    // A miss is never a bare "again" (iOS, founder 2026-11-10): every one
+    // says what the app measured and one thing to do about it, still short,
+    // and never the same tip twice.
 
-    fun notYet(word: String, sound: String?, heard: String?, topic: PronunciationCourse.Topic,
-               sentence: String, heardAs: PronunciationJudge.HeardAs? = null): String {
-        if (sound != null && heardAs != null) {
-            val how = when (heardAs) {
-                is PronunciationJudge.HeardAs.Sound -> "Your \"$sound\" in \"$word\" came out like \"${heardAs.phoneme}\""
-                PronunciationJudge.HeardAs.VowelAdded -> "A little vowel slipped in at \"$sound\" in \"$word\" — it should be one tight sound"
-            }
-            return "Result: NOT YET. Say ONLY this, in the call's language, in at most 16 words: $how; then \"${cap(word)}. ${cap(word)}. Just this.\"" + AS_IN_SENTENCE
+    /** What the app measured on [word], for the voice to say. */
+    fun measured(word: String, sound: String?, heard: String?, heardAs: PronunciationJudge.HeardAs?,
+                 score: Int?, topic: PronunciationCourse.Topic): String {
+        val points = score?.let { " ($it of 100)" } ?: ""
+        var what = when {
+            heard != null -> "\"$word\" came out as the word \"$heard\""
+            sound != null && heardAs is PronunciationJudge.HeardAs.Sound ->
+                "the \"$sound\" sound in \"$word\" came out like \"${heardAs.phoneme}\"$points"
+            sound != null && heardAs == PronunciationJudge.HeardAs.VowelAdded ->
+                "a little extra vowel slipped in at the \"$sound\" sound in \"$word\"$points — it should be one tight sound"
+            sound != null -> "the \"$sound\" sound in \"$word\" wasn't clear$points"
+            else -> return "What the app measured: \"$word\" as a whole wasn't clear$points. It can't tell which sound, so don't name one: the tip is about the whole word (its beat, its length, opening the mouth, not swallowing the end)."
         }
-        if (heard != null) {
-            return "Result: NOT YET. " + only("Sounded like $heard. ${cap(word)}. ${cap(word)}. Just this.", 12) + AS_IN_SENTENCE
+        if (sound != null && PronunciationJudge.isLesson(sound, topic.phonemes)) {
+            what += ". That is today's sound: ${topic.english}"
         }
-        return "Result: NOT YET. " + only("Not yet. ${cap(word)}. ${cap(word)}. Just this.", 12) + AS_IN_SENTENCE
+        return "What the app measured: $what."
     }
 
-    fun wordAgain(word: String, sound: String?, topic: PronunciationCourse.Topic, withTip: Boolean): String {
-        if (!withTip) return "Result: NOT YET. " + only("Again. ${cap(word)}.", 6) + AS_IN_SENTENCE
-        val which = sound?.let { " (its \"$it\" sound)" } ?: ""
-        return "Result: NOT YET, several tries now. \"$word\"$which: give ONE different short tip on how to make it (today's sound: ${topic.english}), at most 10 words, then say \"$word\" once, clearly, and \"again\". At most 20 words in all."
+    /** The sentence missed on [word]: the screen now shows that word alone. */
+    fun notYet(word: String, sound: String?, heard: String?, topic: PronunciationCourse.Topic,
+               sentence: String, heardAs: PronunciationJudge.HeardAs? = null, score: Int? = null): String =
+        "Result: NOT YET. Their screen now shows only \"$word\". " +
+            measured(word, sound, heard, heardAs, score, topic) +
+            " In at most 28 words: say what was off, give ONE tip for the mouth that fixes exactly that, then say \"$word\" twice, clearly, and ask for just that." +
+            AS_IN_SENTENCE
+
+    /** The word on its own missed again. [tries]: misses on this word so
+     *  far, this one included; [previous]: the last take's score for it. */
+    fun wordAgain(word: String, sound: String?, topic: PronunciationCourse.Topic,
+                  heardAs: PronunciationJudge.HeardAs? = null, score: Int? = null,
+                  previous: Int? = null, tries: Int = 1): String {
+        var note = "Result: NOT YET, try $tries on \"$word\" alone. " +
+            measured(word, sound, null, heardAs, score, topic)
+        if (score != null && previous != null) {
+            if (score >= previous + 8) note += " It is closer than their last try ($previous → $score): say so, as a fact."
+            else if (score <= previous - 8) note += " The last try was nearer ($previous → $score): the new tip should be simpler."
+        }
+        note += " In at most 24 words: say what is still off, give ONE tip you have NOT given for this word yet (another angle: where the tongue is, the lips, the air, the voice, how long it is, or an easy word with the same sound), then say \"$word\" once, clearly, and ask again."
+        if (tries == 3) {
+            note += " Then add, in a few words, that it's fine to leave it for now with the button under the word and come back to it. Up to 34 words this time."
+        }
+        return note + AS_IN_SENTENCE
     }
 
     /** Said alone, a word can lose the sound it has in the sentence. */
@@ -946,8 +993,11 @@ object PronunciationNotes {
 
     /** The word is right alone and slipped in the sentence again: now it is
      *  practiced joined to its neighbours. */
-    fun inFlow(chunk: String, word: String): String =
-        "Result: NOT YET. " + only("${cap(word)} alone is good. Now together: $chunk. $chunk.", 16) +
+    fun inFlow(chunk: String, word: String, topic: PronunciationCourse.Topic, sound: String? = null,
+               heardAs: PronunciationJudge.HeardAs? = null, score: Int? = null): String =
+        "Result: NOT YET. \"$word\" was right on its own and slipped again inside the sentence. " +
+            measured(word, sound, null, heardAs, score, topic) +
+            " Their screen now shows \"$chunk\". In at most 26 words: say the word alone is good and what happens to it next to the other words, ONE tip for joining them (don't rush into it, keep the sound when the next word starts), then say \"$chunk\" twice, as one piece." +
             AS_IN_SENTENCE
 
     fun wordPassed(word: String): String =
@@ -962,8 +1012,16 @@ object PronunciationNotes {
 
     fun wordOffScript(word: String): String = only("Just the word: $word.", 5)
 
-    fun notSmooth(sentence: String): String =
-        "Result: NOT YET (it stopped and started). " + only("Good sounds. Once more, without stopping.", 7)
+    /** Every sound was there and the reading broke. [pauseBefore]: the word
+     *  the longest stop came in front of; [tries]: misses on this sentence
+     *  so far, this one included. */
+    fun notSmooth(sentence: String, pauseBefore: String? = null, tries: Int = 1): String {
+        val where = pauseBefore?.let { " The longest stop was right before \"$it\": say so." }
+            ?: " The app can't tell where it stopped, so don't name a place."
+        val tip = if (tries <= 1) "ONE tip: slower is fine, but in one breath, the words joined"
+            else "ONE tip you have NOT given for this sentence yet (breathe before starting; say it in two halves first, then all of it; lean on the main words and let the small ones run; look at the next word while saying this one)"
+        return "Result: NOT YET, try $tries. Every sound was right; the reading stopped and started.$where In at most 24 words: say the sounds were good and what broke it, $tip, then ask for the whole sentence once more. Don't read the sentence for them."
+    }
 
     /** The learner skipping a sentence: what wasn't there, one tip, the word
      *  said right, and WHEN it comes back. */
