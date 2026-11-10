@@ -18,7 +18,6 @@ class LanguageLineTest {
     @Test fun otherLanguagesGetNothing() {
         for (lang in listOf("en", "fr", "zh-Hans")) {
             assertEquals(lang, "", LanguageLines.beginnerQuestion(lang))
-            assertEquals(lang, "", LanguageLines.firstCall(lang))
             assertEquals(lang, "", LanguageLines.selfAddress(lang, asFutureSelf = true))
             assertEquals(lang, "", LanguageLines.spanishGuard(lang, asFutureSelf = true, accentId = null))
         }
@@ -32,9 +31,6 @@ class LanguageLineTest {
         assertTrue(ConversationPrompt.beginnerQuestions(CefrLevel.A2, "ja").contains("JAPANESE, BEGINNER"))
         assertEquals("", LanguageLines.beginnerQuestion("de"))
         assertEquals("", LanguageLines.beginnerQuestion("es"))
-        assertTrue(LanguageLines.firstCall("ko").contains("이렇게 얘기하니까 좋다"))
-        assertTrue(LanguageLines.firstCall("ja").contains("話せてうれしい"))
-        assertEquals("", LanguageLines.firstCall("de"))
     }
 
     @Test fun futureSelfOnlyLines() {

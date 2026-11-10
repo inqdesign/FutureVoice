@@ -122,13 +122,13 @@ object ConversationEngine {
             ConversationCharacter.characterBlock(it, persona, targetLanguage, languageName, personHistory)
         } ?: ""
 
-        // The very first call — never for a cast counterpart.
-        val firstMeetingBlock = if (firstMeeting && counterpart == null)
-            ConversationPrompt.firstCallBlock(languageName, targetLanguage) else ""
+        // The very first call gets no block of its own (iOS 2026-11-10,
+        // founder: it is just a first conversation). The opener makes it a
+        // first call; after it, it is a free talk.
 
         // A plain free talk the learner placed: their subject first, and on
         // "nothing much" the fluent self brings what `freeTalkCue` says (iOS `bbfa2902`).
-        val isFreeTalk = topic.isEmpty() && counterpart == null && !firstMeeting && !learnerPicksTopic && !tutor
+        val isFreeTalk = topic.isEmpty() && counterpart == null && !learnerPicksTopic && !tutor
         // A later call the same day opens on what came earlier
         // (`FreeTalkOpeners.callOpener`), so the line says so.
         val sameDay = if (isFreeTalk) earlierToday else null
@@ -164,7 +164,7 @@ object ConversationEngine {
             nativeName = LanguageCatalog.englishName(nativeLanguage),
             levelName = levelName, level = level,
             personaBlock = personaBlock, counterpartBlock = counterpartBlock,
-            firstMeetingBlock = firstMeetingBlock, theyCalledBlock = theyCalledBlock,
+            theyCalledBlock = theyCalledBlock,
             ownTopicBlock = ownTopicBlock, clockBlock = clockBlock,
             earlierBlock = earlierBlock,
             patterns = patterns, weak = weak, topic = topic,

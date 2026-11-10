@@ -29,15 +29,6 @@ object LanguageLines {
         else -> ""
     }
 
-    /** iOS `firstCallLanguageLine` — appended to the FIRST CALL block. */
-    fun firstCall(targetLanguage: String): String = when (base(targetLanguage)) {
-        "ko" -> "\n- KOREAN, FIRST CALL: when you're glad to be talking, the Korean for it" +
-            " is \"이렇게 얘기하니까 좋다\" — that is the whole of it."
-        "ja" -> "\n- JAPANESE, FIRST CALL: when you're glad to be talking, the Japanese for" +
-            " it is 「話せてうれしい」 — that is the whole of it."
-        else -> ""
-    }
-
     /** iOS `selfAddressLine` — after the form-of-address rule, only while the
      *  model IS the learner's future self (no cast person, no topic). */
     fun selfAddress(targetLanguage: String, asFutureSelf: Boolean): String {

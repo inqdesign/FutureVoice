@@ -42,15 +42,6 @@ object ConversationPrompt {
             newsFacts.joinToString("\n") { "- $it" } +
             "\nAnchor the conversation on these facts and your opinions about them. Do NOT invent specifics (names, numbers, quotes, outcomes) beyond them — if the user asks something about THIS STORY that these facts don't cover, react honestly (\"I only caught the headlines — but…\") and steer to takes and opinions. This guard is about the story only: general knowledge you actually have (companies, history, how things work) stays fair game — answer those per DIRECT QUESTIONS below."
 
-    /** iOS `firstMeetingBlock`, when it applies. */
-    fun firstCallBlock(languageName: String, targetLanguage: String): String =
-        "\n\nFIRST CALL — you two have never spoken before, and today is the two of you meeting. Everything below still holds (level, length, one " +
-            languageName +
-            "); this only decides what the time is SPENT on.\n- YOU INTRODUCED YOURSELF FIRST, and that order holds for the whole   call. Your opening line already said who you are — them, later,   speaking " +
-            languageName +
-            " fluently — and that you're glad to be   starting this with them. Don't re-introduce yourself later, don't   announce again that this is the first call, and don't make another   speech; that part is done and now you're just talking.\n- You GIVE before you ASK. Every question you put to them is followed   — in a later turn, once they've answered — by your own version of   it: \"yeah, I still do that\", \"that was the hard part for me too\".   A turn that only takes is an interview, and an interview is what   makes people hang up.\n- NEVER invent their life to fill that in. You are them, so their   facts are yours, and you only know what's in \"About the user\"   above. Don't hand yourself a job, a city, a family or a story they   haven't told you — if you haven't heard it yet, react to what they   DID say instead. The one thing you can always say about yourself   unprompted is what being the fluent version of them is like: what   got easier, what stopped being scary, what you notice now.\n- YOU ARE MEETING A PERSON, NOT FILLING IN A FORM. There is no list   of things you need out of them and no order to get them in. Be   curious about what they actually just said, the way you are with   someone you've only just met and already like. If they mention   their work, the interesting part is never that you now know their   job — it's whether they like it, how they ended up there, what   today was like.\n- FOLLOW, don't move on. What they say is a door, not an item: ask   the one thing you genuinely want to know about it, react to that,   and stay there while it's alive. Two exchanges about something real   beat six subjects touched once. Open new ground only when a thread   has actually run out.\n- So for TODAY the rule about not asking them about their own life is   suspended, and most of your turns SHOULD end in a question. The two   rules that replace it: never ask about something already listed   above (you know it — say it back instead, that's what makes you   them), and never ask two things in one turn.\n- A short answer is not a problem to solve. Take the pressure off   rather than pressing — offer something of your own, or let the   subject go. A first call that ends with ONE thing you both enjoyed   talking about went better than one that got through their   biography." +
-            LanguageLines.firstCall(targetLanguage)
-
     /**
      * iOS `ConversationEngine.FreeTalkCue`: what the fluent self brings when the
      * learner answers the free talk's hello with no subject of their own. Drawn
@@ -268,7 +259,7 @@ object ConversationPrompt {
     /** iOS `conversationSystemPrompt`'s body, every computed piece passed in. */
     fun systemPrompt(
         languageName: String, nativeName: String, levelName: String, level: CefrLevel,
-        personaBlock: String, counterpartBlock: String, firstMeetingBlock: String,
+        personaBlock: String, counterpartBlock: String,
         theyCalledBlock: String, ownTopicBlock: String, clockBlock: String,
         earlierBlock: String = "",
         patterns: String, weak: String, topic: String, newsBlock: String, briefBlock: String,
@@ -282,7 +273,6 @@ object ConversationPrompt {
             personaBlock +
             futureBlock +
             counterpartBlock +
-            firstMeetingBlock +
             theyCalledBlock +
             earlierBlock +
             ownTopicBlock +

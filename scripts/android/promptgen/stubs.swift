@@ -43,3 +43,7 @@ enum CoachSuggester {}
 /// speech take (iOS 0971c05d, defined in the app's pronunciation reader); no
 /// prompt reads it.
 struct PronunciationResult: Codable, Hashable { struct Word: Codable, Hashable {} }
+
+// Speech score parts (iOS Models.swift names them; the prompts never read them).
+struct SpeechParts: Codable, Hashable {}
+struct SpeechReadingScore: Codable, Hashable {}
