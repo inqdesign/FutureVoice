@@ -140,7 +140,7 @@ private struct BookExportPresentation: ViewModifier {
 /// `UIActivityViewController` in SwiftUI clothing. Used instead of
 /// `ShareLink` because the file is already on disk by the time this appears —
 /// there is nothing left to resolve, so nothing left to block on.
-private struct ShareSheet: UIViewControllerRepresentable {
+struct ShareSheet: UIViewControllerRepresentable {
     let url: URL
 
     func makeUIViewController(context: Context) -> UIActivityViewController {

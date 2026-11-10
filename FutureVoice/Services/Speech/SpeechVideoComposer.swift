@@ -7,6 +7,8 @@ import UIKit
 /// How the script sits in a video made from a take, the learner's pick when
 /// saving (2026-11-08, founder).
 enum SpeechVideoStyle: String, CaseIterable {
+    /// The camera as it was recorded, no script: nothing to make.
+    case cameraOnly
     /// The camera fills the frame and the script rolls over it in white, as
     /// on the take's own replay.
     case fullScreen
@@ -295,11 +297,14 @@ final class SpeechVideoComposer: @unchecked Sendable {
         let size = (CVPixelBufferGetWidth(frame), CVPixelBufferGetHeight(frame))
         if rawWriter == nil {
             guard let rawURL, let w = try? AVAssetWriter(outputURL: rawURL, fileType: .mov) else { rawFailed = true; return }
-            let i = AVAssetWriterInput(mediaType: .video, outputSettings: [
-                AVVideoCodecKey: AVVideoCodecType.h264,
-                AVVideoWidthKey: size.0,
-                AVVideoHeightKey: size.1,
-            ])
+            // HEVC where the device can: 1080p in about the room H.264 needs
+            // for 720p, so the better picture doesn't cost the phone's space.
+            func settings(_ codec: AVVideoCodecType) -> [String: Any] {
+                [AVVideoCodecKey: codec, AVVideoWidthKey: size.0, AVVideoHeightKey: size.1]
+            }
+            let i = AVAssetWriterInput(mediaType: .video,
+                                       outputSettings: w.canApply(outputSettings: settings(.hevc), forMediaType: .video)
+                                           ? settings(.hevc) : settings(.h264))
             i.expectsMediaDataInRealTime = true
             let a = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: i, sourcePixelBufferAttributes: nil)
             guard w.canAdd(i) else { rawFailed = true; return }

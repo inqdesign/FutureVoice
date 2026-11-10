@@ -129,6 +129,10 @@ final class SpeechCamera: NSObject, ObservableObject {
               let input = try? AVCaptureDeviceInput(device: device),
               session.canAddInput(input), session.canAddOutput(output) else { return false }
         session.addInput(input)
+        // Asked with the camera attached: whether 1080p exists is the
+        // camera's answer, and a Mac's may be no. 720p until 2026-11-09, from
+        // when frames were drawn live; a saved 1080p video was 720p enlarged.
+        if session.canSetSessionPreset(.hd1920x1080) { session.sessionPreset = .hd1920x1080 }
         self.device = device
         Self.log.notice("camera: \(device.localizedName, privacy: .public) type=\(device.deviceType.rawValue, privacy: .public)")
         observeSession()

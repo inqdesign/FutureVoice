@@ -32,6 +32,12 @@ struct SpeechResultView: View {
     /// Save, send to iCloud, delete: behind the header's button.
     @State private var showingVideoOptions = false
     @State private var savedToPhotos: Set<URL> = []
+    /// The video with the script, made to hand to Instagram. A temporary
+    /// file, removed when the share sheet closes.
+    @State private var sharedVideo: URL?
+    @State private var showingShare = false
+    /// A frame of the take, for the layout choices.
+    @State private var layoutFrame: UIImage?
     /// How far the video with the script has been made, while it is.
     @State private var exporting: Double?
     @State private var photoError: String?
@@ -948,43 +954,11 @@ struct SpeechResultView: View {
     /// What can be done with the take's video, from the header's button.
     private func videoOptions(_ take: SpeechTake, url: URL) -> some View {
         NavigationStack {
-            List {
+            Group {
                 if let record = take.prompter {
-                    Section {
-                        saveRow(url, title: "Save camera video")
-                    }
-                    Section {
-                        Picker(selection: $exportStyle) {
-                            Text("Full screen").tag(SpeechVideoStyle.fullScreen)
-                            Text("Split").tag(SpeechVideoStyle.split)
-                        } label: {
-                            Text("Video layout")
-                        }
-                        .pickerStyle(.segmented)
-                        .labelsHidden()
-                        .disabled(exporting != nil)
-                        exportRow(url, record: record)
-                    }
-                }
-                Section {
-                    if take.prompter == nil {
-                        Button {
-                            preparePlayback()
-                            showingVideoOptions = false
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { watchingScriptVideo = url }
-                        } label: {
-                            Label("Watch script video", systemImage: "play.rectangle")
-                        }
-                        saveRow(url, title: "Save to Photos")
-                    }
-                    cloudRow(take)
-                    Button(role: .destructive) {
-                        confirmDeleteVideo = true
-                    } label: {
-                        Label("Delete video", systemImage: "trash")
-                    }
-                } footer: {
-                    Text(videoFooter(take))
+                    videoSavePage(take, url: url, record: record)
+                } else {
+                    burnedInVideoOptions(take, url: url)
                 }
             }
             .toolbar {
@@ -992,7 +966,16 @@ struct SpeechResultView: View {
                     Button("Done") { showingVideoOptions = false }
                 }
             }
+            .navigationTitle(take.prompter == nil ? Text(verbatim: "") : Text("Save video"))
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showingShare, onDismiss: {
+                // Only a video made for this share: the camera's own file is
+                // the take.
+                if let sharedVideo, sharedVideo != url { try? FileManager.default.removeItem(at: sharedVideo) }
+                sharedVideo = nil
+            }) {
+                if let sharedVideo { ShareSheet(url: sharedVideo) }
+            }
             .confirmationDialog("Delete the video? Your voice and score stay.",
                                 isPresented: $confirmDeleteVideo, titleVisibility: .visible) {
                 Button("Delete video", role: .destructive) {
@@ -1008,32 +991,211 @@ struct SpeechResultView: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents(take.prompter == nil ? [.medium, .large] : [.large])
+    }
+
+    /// The layout picked on the take's own picture, then one thing to do
+    /// with it. What is rarely wanted sits small underneath.
+    private func videoSavePage(_ take: SpeechTake, url: URL, record: SpeechPrompterRecord) -> some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                HStack(alignment: .top, spacing: 10) {
+                    layoutTile(.cameraOnly, title: "Full screen", record: record)
+                    layoutTile(.fullScreen, title: "Full screen + captions", record: record)
+                    layoutTile(.split, title: "Split", record: record)
+                }
+                saveActions(url, record: record)
+                VStack(alignment: .leading, spacing: 14) {
+                    cloudRow(take)
+                    Button(role: .destructive) {
+                        confirmDeleteVideo = true
+                    } label: {
+                        Label("Delete video", systemImage: "trash")
+                    }
+                    Text(videoFooter(take))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                .font(.subheadline)
+                .buttonStyle(.borderless)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(20)
+        }
+        .task(id: url) { layoutFrame = await Self.layoutFrame(of: url) }
+    }
+
+    private func layoutTile(_ style: SpeechVideoStyle, title: LocalizedStringKey,
+                            record: SpeechPrompterRecord) -> some View {
+        let selected = exportStyle == style
+        return Button {
+            exportStyle = style
+        } label: {
+            VStack(spacing: 8) {
+                layoutPreview(style, record: record)
+                    .aspectRatio(9 / 16, contentMode: .fit)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 14)
+                            .strokeBorder(selected ? Color.accentColor : Color(.separator),
+                                          lineWidth: selected ? 3 : 1)
+                    }
+                Text(title)
+                    .font(.caption.weight(selected ? .semibold : .regular))
+                    .foregroundStyle(selected ? Color.accentColor : Color.primary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(exporting != nil)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    @ViewBuilder
+    private func layoutPreview(_ style: SpeechVideoStyle, record: SpeechPrompterRecord) -> some View {
+        let script = Text(String(record.text.prefix(90)))
+            .font(.system(size: 7, weight: .semibold))
+            .lineSpacing(1)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(6)
+        if style == .cameraOnly {
+            layoutPicture
+        } else if style == .fullScreen {
+            ZStack {
+                layoutPicture
+                LinearGradient(colors: [.black.opacity(0.6), .clear], startPoint: .top, endPoint: .center)
+                script.foregroundStyle(.white)
+            }
+        } else {
+            VStack(spacing: 4) {
+                script.foregroundStyle(.primary)
+                layoutPicture
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .padding([.horizontal, .bottom], 4)
+            }
+            .background(Color(.systemBackground))
+        }
+    }
+
+    /// Drawn in a clear box so a picture of any shape fills it and is cut,
+    /// never pushing the tile wider. With no frame (still loading, or the
+    /// file can't be read) a figure stands in for the speaker, so the three
+    /// layouts still read as three layouts and not three grey boxes.
+    private var layoutPicture: some View {
+        Color(.tertiarySystemFill)
+            .overlay {
+                if let layoutFrame {
+                    Image(uiImage: layoutFrame).resizable().scaledToFill()
+                } else {
+                    GeometryReader { box in
+                        Image(systemName: "person.fill")
+                            .resizable()
+                            .scaledToFit()
+                            .foregroundStyle(.tertiary)
+                            .frame(width: box.size.width * 0.6)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                    }
+                }
+            }
+            .clipped()
+    }
+
+    /// A frame 3 s in, or from the middle of a take shorter than 6 s: a
+    /// time past the end returns no frame at all.
+    nonisolated private static func layoutFrame(of url: URL) async -> UIImage? {
+        let asset = AVURLAsset(url: url)
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        generator.maximumSize = CGSize(width: 480, height: 480)
+        let length = (try? await asset.load(.duration)).map(CMTimeGetSeconds) ?? 0
+        let at = length.isFinite && length > 0 ? min(3, length / 2) : 0
+        guard let frame = try? await generator.image(at: CMTime(seconds: at, preferredTimescale: 600)) else { return nil }
+        return UIImage(cgImage: frame.image)
     }
 
     /// The video with the script in it, made when it is asked for.
-    private func exportRow(_ url: URL, record: SpeechPrompterRecord) -> some View {
+    @ViewBuilder
+    private func saveActions(_ url: URL, record: SpeechPrompterRecord) -> some View {
         let style = exportStyle
-        let mark = url.appendingPathExtension("with-script-\(style.rawValue)")
+        let mark = style == .cameraOnly ? url : url.appendingPathExtension("with-script-\(style.rawValue)")
         let saved = savedToPhotos.contains(mark)
-        return Button {
-            exportWithScript(url, record: record, style: style, mark: mark)
-        } label: {
+        VStack(spacing: 10) {
             if let exporting {
-                HStack(spacing: 10) {
-                    ProgressView(value: exporting).frame(width: 44)
-                    Text("Preparing your video…").foregroundStyle(.secondary)
+                VStack(spacing: 8) {
+                    ProgressView(value: exporting)
+                    Text("Preparing your video…")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
-            } else if saved {
-                Label("Saved to Photos", systemImage: "checkmark")
+                .padding(.vertical, 16)
             } else {
-                Label("Save script video", systemImage: "square.and.arrow.down")
+                #if !targetEnvironment(macCatalyst)
+                Button {
+                    if style == .cameraOnly {
+                        sharedVideo = url
+                        showingShare = true
+                    } else {
+                        exportWithScript(url, record: record, style: style, mark: nil, sharing: true)
+                    }
+                } label: {
+                    Text("Post to Instagram").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                #endif
+                Button {
+                    if style == .cameraOnly {
+                        Task { await saveToPhotos(url) }
+                    } else {
+                        exportWithScript(url, record: record, style: style, mark: mark)
+                    }
+                } label: {
+                    Group {
+                        if saved {
+                            Label("Saved to Photos", systemImage: "checkmark")
+                        } else {
+                            Text("Save to Photos")
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+                .disabled(saved)
             }
         }
-        .disabled(saved || exporting != nil)
     }
 
-    private func exportWithScript(_ url: URL, record: SpeechPrompterRecord, style: SpeechVideoStyle, mark: URL) {
+    /// A take from before the camera was kept: the script is in its video.
+    private func burnedInVideoOptions(_ take: SpeechTake, url: URL) -> some View {
+        List {
+            Section {
+                Button {
+                    preparePlayback()
+                    showingVideoOptions = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { watchingScriptVideo = url }
+                } label: {
+                    Label("Watch script video", systemImage: "play.rectangle")
+                }
+                saveRow(url, title: "Save to Photos")
+                cloudRow(take)
+                Button(role: .destructive) {
+                    confirmDeleteVideo = true
+                } label: {
+                    Label("Delete video", systemImage: "trash")
+                }
+            } footer: {
+                Text(videoFooter(take))
+            }
+        }
+    }
+
+    /// Instagram gives an app no way to post by itself: `sharing` hands the
+    /// finished video to the system's share sheet, and Instagram's own screen
+    /// takes it from there.
+    private func exportWithScript(_ url: URL, record: SpeechPrompterRecord, style: SpeechVideoStyle,
+                                  mark: URL?, sharing: Bool = false) {
         exporting = 0
         Task {
             let started = Date()
@@ -1041,11 +1203,17 @@ struct SpeechResultView: View {
                 Task { @MainActor in if exporting != nil { exporting = value } }
             }
             Analytics.capture("speech_video_export", ["ok": made != nil, "ms": Int(Date().timeIntervalSince(started) * 1000),
-                                                      "seconds": Int(record.offsets.count) / 10, "style": style.rawValue])
+                                                      "seconds": Int(record.offsets.count) / 10, "style": style.rawValue,
+                                                      "to": sharing ? "instagram" : "photos"])
             exporting = nil
             guard let made else {
                 showingVideoOptions = false
                 photoError = explain("Couldn't make the video. Try again.")
+                return
+            }
+            if sharing {
+                sharedVideo = made
+                showingShare = true
                 return
             }
             await saveToPhotos(made, mark: mark)
