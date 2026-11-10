@@ -52,25 +52,47 @@ data class DayCardData(
     val shadowTakes: Int = 0,
     /** The day's talks, MAIN one first. Only the first is printed. */
     val topics: List<String> = emptyList(),
+    /** Everything else done that day, each in the unit the app counts it in
+     *  (only a talk is measured in minutes). Null on snapshots written before
+     *  2026-11-10; those days list what they have (iOS `DayCardData`). */
+    val sayItAgainRuns: Int? = null,
+    val speechTakes: Int? = null,
+    /** Podcast episodes and situations heard in the player. */
+    val listens: Int? = null,
+    val reads: Int? = null,
+    val scenes: Int? = null,
+    /** Word and expression cards worked through. */
+    val words: Int? = null,
 ) {
     val hasActivity: Boolean get() = talkMinutes > 0 || talks > 0 || studyMinutes > 0
 
-    /** Talk and study always, then whatever else the day has — up to four. */
-    val stats: List<Pair<String, String>>
-        get() = buildList {
-            add("Talk" to "$talkMinutes min")
-            add("Study" to "$studyMinutes min")
-            if (streakDays > 0) add("Streak" to "$streakDays days")
-            if (talks > 0) add("Talks" to "$talks")
-            if (reviews > 0) add("Reviews" to "$reviews")
-            if (shadowTakes > 0) add("Shadow" to "$shadowTakes")
-        }.take(4)
+    /** The list at the card's bottom left: everything done that day, one
+     *  line each, a zero never printed. Talk is minutes (metered); the rest
+     *  are counts, because that is what the app records for them. */
+    val lines: List<Pair<String, String>>
+        get() {
+            fun n(count: Int?, one: String, many: String): String? =
+                if (count != null && count > 0) "$count ${if (count == 1) one else many}" else null
+            return listOf(
+                "Talk" to (if (talkMinutes > 0) "$talkMinutes min" else n(talks, "talk", "talks")),
+                "Say it again" to n(sayItAgainRuns, "run", "runs"),
+                "Speech" to n(speechTakes, "take", "takes"),
+                "Listening" to n(listens, "episode", "episodes"),
+                "Reading" to n(reads, "article", "articles"),
+                "Scenes" to n(scenes, "scene", "scenes"),
+                "Shadowing" to n(shadowTakes, "take", "takes"),
+                "Review" to n(reviews, "card", "cards"),
+                "Words" to n(words, "word", "words"),
+            ).mapNotNull { (label, value) -> value?.let { label to it } }
+        }
 }
 
-enum class DayCardFormat(val width: Int, val height: Int) {
+enum class DayCardFormat(val width: Int, val height: Int, val maxLines: Int) {
+    /** 9:16 — the tall card, with room for the whole day's list (iOS 2026-11-10). */
+    STORY(360, 640, 9),
     /** Instagram's tall feed frame, which Threads takes as is. */
-    FEED(360, 450),
-    SQUARE(360, 360);
+    FEED(360, 450, 5),
+    SQUARE(360, 360, 3);
 
     companion object { const val EXPORT_SCALE = 3 }
 }
@@ -115,74 +137,106 @@ private fun DayCardBody(
     format: DayCardFormat,
     theme: Int,
 ) {
-    val isFeed = format == DayCardFormat.FEED
+    val isFeed = format != DayCardFormat.SQUARE
+    val isStory = format == DayCardFormat.STORY
     val margin = if (isFeed) 24.dp else 21.dp
-    Box(
-        modifier.size(format.width.dp, format.height.dp).background(INK),
-        contentAlignment = Alignment.BottomStart,
-    ) {
+    // Top: the date pill and the streak. Bottom: the headline, then the day's
+    // list at the left with the day's total at the right, then the name. The
+    // photo keeps the middle (iOS `DayCardView`, 2026-11-10).
+    Box(modifier.size(format.width.dp, format.height.dp).background(INK)) {
         photo?.let {
             Image(it, contentDescription = null, contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize())
         }
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
-            colorStops = if (isFeed) arrayOf(
-                0f to INK.copy(alpha = 0.18f), 0.26f to INK.copy(alpha = 0f),
-                0.40f to INK.copy(alpha = 0f), 0.72f to INK.copy(alpha = 0.86f),
-                1f to INK.copy(alpha = 0.94f))
-            else arrayOf(
-                0f to INK.copy(alpha = 0.16f), 0.30f to INK.copy(alpha = 0f),
-                0.72f to INK.copy(alpha = 0.88f), 1f to INK.copy(alpha = 0.94f)))))
+            0f to INK.copy(alpha = 0.34f), 0.2f to INK.copy(alpha = 0f),
+            (if (isStory) 0.38f else 0.26f) to INK.copy(alpha = 0f),
+            (if (isStory) 0.66f else 0.6f) to INK.copy(alpha = 0.88f),
+            1f to INK.copy(alpha = 0.95f))))
 
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = margin)
-                .padding(bottom = if (isFeed) 26.dp else 21.dp),
-            verticalArrangement = Arrangement.spacedBy(if (isFeed) 15.dp else 11.dp),
+            Modifier.fillMaxSize().padding(horizontal = margin)
+                .padding(top = margin, bottom = if (isFeed) 22.dp else 18.dp),
         ) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                DatePill(data.date, theme, isFeed)
+                Spacer(Modifier.weight(1f))
+                if (data.streakDays > 0) {
+                    val streak = "${data.streakDays} day streak"
+                    Text(streak, color = PAPER, style = DisplayFace.style(streak,
+                        TextStyle(fontSize = (if (isFeed) 10.7f else 9.7f).sp)))
+                }
+            }
+            Spacer(Modifier.weight(1f))
             data.topics.firstOrNull()?.let { topic ->
-                // iOS `.lineLimit(3).minimumScaleFactor(0.6)`: a long headline
-                // SHRINKS until it fits three lines, and is cut only past 60%.
+                // iOS `.lineLimit(3 / 2).minimumScaleFactor(0.6)`: a long
+                // headline SHRINKS until it fits, and is cut only past 60%.
                 var scale by remember(topic, format) { mutableStateOf(1f) }
-                Text(topic, color = PAPER, maxLines = 3, overflow = TextOverflow.Ellipsis,
+                Text(topic, color = PAPER, maxLines = if (isStory) 3 else 2, overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(bottom = if (isFeed) 14.dp else 10.dp),
                     style = DisplayFace.style(topic, TextStyle(
-                        fontSize = (if (isFeed) 35 else 29).sp * scale,
-                        lineHeight = (if (isFeed) 40 else 34).sp * scale)),
+                        fontSize = (if (isFeed) 31 else 25).sp * scale,
+                        lineHeight = (if (isFeed) 36 else 30).sp * scale)),
                     onTextLayout = { r ->
                         if (r.hasVisualOverflow && scale > 0.6f) scale = (scale - 0.05f).coerceAtLeast(0.6f)
                     })
             }
-            // Up to four numbers — the value in the pixel face, the label
-            // small and tracked beneath, like the stat row under a run.
-            Row(Modifier.fillMaxWidth()) {
-                data.stats.forEach { (label, value) ->
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(value, color = PAPER, style = DisplayFace.style(value,
-                            TextStyle(fontSize = (if (isFeed) 15 else 13).sp)))
-                        Text(label.uppercase(), color = PAPER.copy(alpha = 0.72f),
-                            style = TextStyle(fontSize = (if (isFeed) 7.3f else 6.7f).sp,
-                                letterSpacing = 1.sp))
+            Rule()
+            Row(Modifier.fillMaxWidth().padding(vertical = if (isFeed) 12.dp else 9.dp),
+                verticalAlignment = Alignment.Bottom) {
+                // What was done, one line each: the name small and tracked,
+                // the amount in the pixel face beside it.
+                val lines = data.lines.take(format.maxLines)
+                Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    val gap = if (isFeed) 7.dp else 5.dp
+                    val rowH = if (isFeed) 16.dp else 14.dp
+                    Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+                        lines.forEach { (label, _) ->
+                            Box(Modifier.height(rowH), contentAlignment = Alignment.CenterStart) {
+                                Text(label.uppercase(), color = PAPER.copy(alpha = 0.72f), maxLines = 1,
+                                    style = TextStyle(fontSize = (if (isFeed) 8f else 7.3f).sp,
+                                        letterSpacing = 1.sp,
+                                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace))
+                            }
+                        }
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+                        lines.forEach { (_, value) ->
+                            Box(Modifier.height(rowH), contentAlignment = Alignment.CenterStart) {
+                                Text(value, color = PAPER, maxLines = 1, style = DisplayFace.style(value,
+                                    TextStyle(fontSize = (if (isFeed) 13 else 12).sp)))
+                            }
+                        }
                     }
                 }
-            }
-            Spacer(Modifier.height(if (isFeed) 10.dp else 8.dp))
-            Box(Modifier.fillMaxWidth().height(0.5.dp).background(PAPER.copy(alpha = 0.28f)))
-            Row(Modifier.fillMaxWidth().padding(top = if (isFeed) 10.dp else 8.dp),
-                verticalAlignment = Alignment.CenterVertically) {
-                DatePill(data.date, theme, isFeed)
                 Spacer(Modifier.weight(1f))
-                Column(horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text("Learn a language from your fluent self.", color = PAPER,
-                        style = DisplayFace.style("Learn",
-                            TextStyle(fontSize = (if (isFeed) 8.7f else 8f).sp)))
-                    Text("nawana.app", color = PAPER.copy(alpha = 0.72f),
-                        style = TextStyle(fontSize = (if (isFeed) 8.7f else 8f).sp,
-                            letterSpacing = 1.2.sp))
+                // The day's whole time in the app, large, at the bottom right.
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    val total = "${data.studyMinutes}"
+                    Text(total, color = PAPER, style = DisplayFace.style(total,
+                        TextStyle(fontSize = (if (isFeed) 40 else 32).sp)))
+                    Text("MIN TODAY", color = PAPER.copy(alpha = 0.72f),
+                        style = TextStyle(fontSize = (if (isFeed) 7.3f else 6.7f).sp, letterSpacing = 1.sp,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace))
                 }
+            }
+            Rule()
+            Row(Modifier.fillMaxWidth().padding(top = if (isFeed) 10.7.dp else 8.7.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Text("Learn a language from your fluent self.", color = PAPER,
+                    style = DisplayFace.style("Learn",
+                        TextStyle(fontSize = (if (isFeed) 8.7f else 8f).sp)))
+                Spacer(Modifier.weight(1f))
+                Text("nawana.app", color = PAPER.copy(alpha = 0.72f),
+                    style = TextStyle(fontSize = (if (isFeed) 8.7f else 8f).sp, letterSpacing = 1.2.sp,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace))
             }
         }
     }
 }
+
+@Composable
+private fun Rule() = Box(Modifier.fillMaxWidth().height(0.5.dp).background(PAPER.copy(alpha = 0.28f)))
 
 /**
  * The call screen's pill, shrunk to a badge and carrying the DATE — the

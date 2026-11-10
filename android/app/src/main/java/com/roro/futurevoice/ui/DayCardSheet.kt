@@ -79,7 +79,7 @@ import java.io.File
 fun DayCardSheet(data: DayCardData, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var format by remember { mutableStateOf(DayCardFormat.FEED) }
+    var format by remember { mutableStateOf(DayCardFormat.STORY) }
     var photo by remember { mutableStateOf<Bitmap?>(null) }
     // The headline the card prints. It starts as the day's main talk and can
     // be replaced — the topic of a news talk is a sentence, and the learner
@@ -236,7 +236,9 @@ fun DayCardSheet(data: DayCardData, onDismiss: () -> Unit) {
             // squeezed to the width and then stretched back to 4:5.
             androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
                 val cardW = DayCardFormat.FEED.width
-                val shownW = minOf(maxWidth, cardW.dp)
+                // The tall card is held to a height that leaves the controls on
+                // screen (iOS: 500 pt).
+                val shownW = minOf(maxWidth, cardW.dp, 500.dp * (cardW.toFloat() / format.height))
                 val shownH = shownW * (format.height.toFloat() / cardW)
                 val pxW = cardW * DayCardFormat.EXPORT_SCALE
                 val pxH = format.height * DayCardFormat.EXPORT_SCALE
@@ -279,9 +281,9 @@ fun DayCardSheet(data: DayCardData, onDismiss: () -> Unit) {
                 }
             }
             com.roro.futurevoice.ui.brand.IosSegmented(
-                options = listOf(stringResource(R.string.feed_4_5), stringResource(R.string.square)),
-                selected = if (format == DayCardFormat.FEED) 0 else 1,
-                onSelect = { format = if (it == 0) DayCardFormat.FEED else DayCardFormat.SQUARE },
+                options = listOf("9:16", "4:5", "1:1"),
+                selected = DayCardFormat.entries.indexOf(format),
+                onSelect = { format = DayCardFormat.entries[it] },
                 modifier = Modifier.fillMaxWidth().padding(top = 20.dp),
             )
 

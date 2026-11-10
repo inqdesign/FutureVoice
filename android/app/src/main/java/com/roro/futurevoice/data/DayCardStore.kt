@@ -32,6 +32,8 @@ object DayCardStore {
     private data class Frozen(
         val talkMinutes: Int, val studyMinutes: Int, val streakDays: Int,
         val talks: Int, val reviews: Int, val shadowTakes: Int, val topics: List<String>,
+        val sayItAgainRuns: Int? = null, val speechTakes: Int? = null, val listens: Int? = null,
+        val reads: Int? = null, val scenes: Int? = null, val words: Int? = null,
     )
 
     private fun dir(context: Context) = File(context.filesDir, "daycards").apply { mkdirs() }
@@ -93,7 +95,8 @@ object DayCardStore {
         return runCatching {
             val fr = StoreJson.json.decodeFromString(Frozen.serializer(), f.readText())
             DayCardData(day, fr.talkMinutes, fr.studyMinutes, fr.streakDays,
-                fr.talks, fr.reviews, fr.shadowTakes, fr.topics)
+                fr.talks, fr.reviews, fr.shadowTakes, fr.topics,
+                fr.sayItAgainRuns, fr.speechTakes, fr.listens, fr.reads, fr.scenes, fr.words)
         }.getOrNull()
     }
 
@@ -118,7 +121,8 @@ object DayCardStore {
         snapshotIn(dir, data.date)?.let { if (it.talkMinutes > data.talkMinutes) return false }
         File(dir, "${key(data.date)}.json").writeText(StoreJson.json.encodeToString(
             Frozen.serializer(), Frozen(data.talkMinutes, data.studyMinutes, data.streakDays,
-                data.talks, data.reviews, data.shadowTakes, data.topics)))
+                data.talks, data.reviews, data.shadowTakes, data.topics,
+                data.sayItAgainRuns, data.speechTakes, data.listens, data.reads, data.scenes, data.words)))
         return true
     }
 
@@ -146,6 +150,14 @@ object DayCardStore {
      */
     fun make(context: Context, day: Long, talkSeconds: Int, sessions: List<Session>): DayCardData {
         val practice = PracticeLog.day(context, day)
+        val cal = Calendar.getInstance().apply {
+            timeInMillis = day
+            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        }
+        val start = cal.timeInMillis
+        cal.add(Calendar.DAY_OF_YEAR, 1)
+        val events = ActivityEventLog.events(context, start, cal.timeInMillis)
+        fun count(kind: ActivityEventLog.Kind) = events.count { it.kind == kind }
         val talkMinutes = talkSeconds / 60
         // Never less than the talk figure: a call in a pocket is metered but
         // not foregrounded.
@@ -161,6 +173,12 @@ object DayCardStore {
             topics = sessions.sortedByDescending { s ->
                 s.turns.filter { it.role == TurnRole.USER }.sumOf { it.durationMs }
             }.mapNotNull { it.displayTitle }.distinct().take(4),
+            sayItAgainRuns = count(ActivityEventLog.Kind.SAY_IT_AGAIN),
+            speechTakes = count(ActivityEventLog.Kind.SPEECH),
+            listens = count(ActivityEventLog.Kind.LISTEN),
+            reads = count(ActivityEventLog.Kind.READ),
+            scenes = practice?.sceneReps ?: 0,
+            words = (practice?.wordReps ?: 0) + (practice?.expressionReps ?: 0),
         )
     }
 
