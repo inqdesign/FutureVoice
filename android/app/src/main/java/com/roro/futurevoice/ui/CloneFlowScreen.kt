@@ -1438,6 +1438,7 @@ fun CloneFlowScreen(
                                     showLine = false,
                                     showLaterHint = false,
                                     sounds = sounds,
+                                    language = targetLanguage,
                                 )
                             }
                         }
@@ -1940,15 +1941,31 @@ internal fun SpeedAudition(
     /** The sample line under the pills — the revival screen's alone now. */
     showLine: Boolean = true,
     sounds: MeetSounds = remember { MeetSounds() },
+    /** The target language, for the clips that ship with the app. */
+    language: String? = null,
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var selected by remember { mutableStateOf(com.roro.futurevoice.data.SpeechSpeed.current(context)) }
     val voiceKey = voiceId ?: ""
+    /** An AI tutor's pace line at each rung ships with the app
+     *  (`voice_previews/pace-<lang>-<slot>-<100|090|085>.mp3`, iOS
+     *  `seedBundledPace`). The default rung's clip was made at 0.9, so it is
+     *  used only while the server has not moved the default; a rung without
+     *  a clip is synthesized as before. */
+    fun bundled(s: com.roro.futurevoice.data.SpeechSpeed, id: String): ByteArray? {
+        if (language == null || !com.roro.futurevoice.talk.VoicePreset.isPreset(id)) return null
+        val tag = "%03d".format(java.util.Locale.US, Math.round(s.multiplier(context) * 100))
+        return runCatching {
+            context.assets.open("voice_previews/pace-${language.substringBefore('-')}-$id-$tag.mp3")
+                .use { it.readBytes() }
+        }.getOrNull()
+    }
     /** One request per take; it plays on landing only if it is still the ask. */
     fun fetch(s: com.roro.futurevoice.data.SpeechSpeed, id: String) {
         val key = MeetSounds.paceKey(id, s)
         if (sounds.pace[key] != null || key in sounds.inFlight) return
+        bundled(s, id)?.let { sounds.pace[key] = it; return }
         sounds.inFlight.add(key)
         scope.launch {
             val data = runCatching {
@@ -1980,6 +1997,7 @@ internal fun SpeedAudition(
                     val key = MeetSounds.paceKey(voiceKey, s)
                     sounds.ask = key
                     val have = sounds.pace[key]
+                        ?: voiceId?.let { bundled(s, it) }?.also { sounds.pace[key] = it }
                     if (have != null) {
                         player.stop()
                         scope.launch { player.play(have) }
