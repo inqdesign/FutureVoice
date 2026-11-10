@@ -2140,8 +2140,7 @@
     <string name="past_tense_slipped_twice_once_the_story_moved_back_in_time">"Quand l’histoire est repartie dans le passé, le passé a flanché deux fois."</string>
     <string name="past_weeks">"Semaines passées"</string>
     <string name="paste_a_link">"Coller un lien"</string>
-    <!-- 'Paste the presentation or speech you actually have to give. Plus and Max.' -->
-    <string name="paste_the_presentation_or_speech_you_actually_have_to_give_p_a8d05a">"Colle la vraie présentation ou le discours que tu dois faire, et entraîne-toi sur celui-là."</string>
+    <string name="paste_the_presentation_or_speech_you_actually_have_to_give">"Colle la vraie présentation ou le discours que tu dois faire, et entraîne-toi sur celui-là."</string>
     <string name="patient">"Patient"</string>
     <string name="patterns_to_work_on">"Tournures à travailler"</string>
     <string name="pause">"Pause"</string>
@@ -2190,8 +2189,8 @@
     <string name="pick_a_time_you_usually_have_ten_quiet_minutes">"Choisis un moment où tu as souvent dix minutes au calme."</string>
     <!-- 'Pick a topic and your future self teaches it step by step, until you can say it without a mistake.' -->
     <string name="pick_a_topic_and_your_future_self_teaches_it_step_by_step_un_ad6699">"Choisis un sujet et ton moi fluide te l’apprend pas à pas, jusqu’à ce que tu le dises sans faute."</string>
-    <!-- 'Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level. Plus and Max.' -->
-    <string name="pick_a_type_like_an_explainer_a_person_or_the_news_then_a_to_08bd90">"Choisis le genre (expliquer quelque chose, présenter quelqu’un, actualité…), le sujet et la longueur : l’IA écrit un texte à ton niveau, faits vérifiés."</string>
+    <!-- 'Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level.' -->
+    <string name="pick_a_type_like_an_explainer_a_person_or_the_news_then_a_to_b452e5">"Choisis le genre (expliquer quelque chose, présenter quelqu’un, actualité…), le sujet et la longueur : l’IA écrit un texte à ton niveau, faits vérifiés."</string>
     <string name="pick_an_area_to_go_one_step_deeper">"Choisis un domaine pour descendre d’un cran."</string>
     <string name="pick_as_many_as_you_like">"Choisis-en autant que tu veux."</string>
     <!-- "Pick as many as you like. Talk's topics, your goals and your tutor follow them." -->
@@ -2238,7 +2237,6 @@
     <string name="playful_teasing">"Taquineries"</string>
     <string name="playground_friends">"Amis du parc"</string>
     <string name="plus">"Plus"</string>
-    <string name="plus_and_max">"Plus et Max"</string>
     <string name="podcast">"Podcast"</string>
     <string name="podcasts">"podcasts"</string>
     <string name="policy">"Politique"</string>
@@ -2637,8 +2635,8 @@
     <string name="scored_against_your_level_setting_how_this_talk_went_not_a_l_4b7213">"Noté par rapport à ton niveau %s. Ce n’est pas une évaluation de niveau : ça montre comment cet appel s’est passé."</string>
     <!-- 'Scored against your %@ level setting — this talk itself read as ≈%@.' -->
     <string name="scored_against_your_level_setting_this_talk_itself_read_as">"Noté par rapport à ton niveau %1$s. Cet appel en lui-même se lit comme ≈%2$s."</string>
-    <!-- "Scores come from a pronunciation assessment against a native model of the language. Sound names are given for English only. Flow is the pauses between words, completeness how much of the line was said, intonation stress and rhythm. A word is red under 50 or with a sound under 35, orange under 70 or with a sound under 45; a native speaker's slip reads orange at most. One take's marks move with where the recording was cut, so what matters is a sound that stays low across takes." -->
-    <string name="scores_come_from_azure_s_pronunciation_assessment_against_a_535c64">"Les scores viennent d’une évaluation de prononciation, face à un modèle natif de la langue. Les noms des sons ne s’affichent qu’en anglais. La fluidité, ce sont les pauses entre les mots ; la complétude, la part de la phrase que tu as dite ; l’intonation, l’accent et le rythme. Un mot est rouge sous 50 ou avec un son sous 35, orange sous 70 ou avec un son sous 45 ; un lapsus de natif reste orange au pire. Les marques d’une prise varient selon l’endroit où l’enregistrement a été coupé : ce qui compte, c’est un son qui reste bas d’une prise à l’autre."</string>
+    <!-- "Scores come from Azure's pronunciation assessment against a native model of the language. Sound names are given for English only. Flow is the pauses between words, completeness how much of the line was said, intonation stress and rhythm. A word is red under 50 or with a sound under 35, orange under 70 or with a sound under 45; a native speaker's slip reads orange at most. One take's marks move with where the recording was cut, so what matters is a sound that stays low across takes." -->
+    <string name="scores_come_from_azure_s_pronunciation_assessment_against_a_535c64">"Les scores viennent de l’évaluation de prononciation d’Azure, face à un modèle natif de la langue. Les noms des sons ne s’affichent qu’en anglais. La fluidité, ce sont les pauses entre les mots ; la complétude, la part de la phrase que tu as dite ; l’intonation, l’accent et le rythme. Un mot est rouge sous 50 ou avec un son sous 35, orange sous 70 ou avec un son sous 45 ; un lapsus de natif reste orange au pire. Les marques d’une prise varient selon l’endroit où l’enregistrement a été coupé : ce qui compte, c’est un son qui reste bas d’une prise à l’autre."</string>
     <!-- 'Scoring %lld/100 across recent talks — each talk graded from the verified grammar slips in what you said.' -->
     <string name="scoring_lld_100_across_recent_talks_each_talk_graded_from_th_0e37da">"%d/100 sur tes dernières conversations : chacune est notée sur les fautes de grammaire confirmées dans ce que tu as dit."</string>
     <string name="screen">"Écran"</string>
@@ -3762,6 +3760,7 @@
     <string name="with_6be81a">"Avec %s"</string>
     <string name="with_a_friend">"Avec un ami"</string>
     <string name="with_a_neighbor">"Avec un voisin"</string>
+    <string name="with_any_plan">"Avec tout abonnement"</string>
     <string name="with_room_in_the_margin">"Avec de la place dans la marge"</string>
     <string name="withdraw_consent_delete_my_voice">"Retirer mon consentement et supprimer ma voix"</string>
     <string name="woman">"Femme"</string>

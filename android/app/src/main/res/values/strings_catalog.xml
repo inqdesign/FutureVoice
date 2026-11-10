@@ -2148,8 +2148,7 @@
     <string name="past_tense_slipped_twice_once_the_story_moved_back_in_time">"Past tense slipped twice once the story moved back in time."</string>
     <string name="past_weeks">"Past weeks"</string>
     <string name="paste_a_link">"Paste a link"</string>
-    <!-- 'Paste the presentation or speech you actually have to give. Plus and Max.' -->
-    <string name="paste_the_presentation_or_speech_you_actually_have_to_give_p_a8d05a">"Paste the presentation or speech you actually have to give. Plus and Max."</string>
+    <string name="paste_the_presentation_or_speech_you_actually_have_to_give">"Paste the presentation or speech you actually have to give."</string>
     <string name="patient">"Patient"</string>
     <string name="patterns_to_work_on">"Patterns to work on"</string>
     <string name="pause">"Pause"</string>
@@ -2198,8 +2197,8 @@
     <string name="pick_a_time_you_usually_have_ten_quiet_minutes">"Pick a time you usually have ten quiet minutes."</string>
     <!-- 'Pick a topic and your future self teaches it step by step, until you can say it without a mistake.' -->
     <string name="pick_a_topic_and_your_future_self_teaches_it_step_by_step_un_ad6699">"Pick a topic and your future self teaches it step by step, until you can say it without a mistake."</string>
-    <!-- 'Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level. Plus and Max.' -->
-    <string name="pick_a_type_like_an_explainer_a_person_or_the_news_then_a_to_08bd90">"Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level. Plus and Max."</string>
+    <!-- 'Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level.' -->
+    <string name="pick_a_type_like_an_explainer_a_person_or_the_news_then_a_to_b452e5">"Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level."</string>
     <string name="pick_an_area_to_go_one_step_deeper">"Pick an area to go one step deeper."</string>
     <string name="pick_as_many_as_you_like">"Pick as many as you like."</string>
     <!-- "Pick as many as you like. Talk's topics, your goals and your tutor follow them." -->
@@ -2246,7 +2245,6 @@
     <string name="playful_teasing">"Playful teasing"</string>
     <string name="playground_friends">"Playground friends"</string>
     <string name="plus">"Plus"</string>
-    <string name="plus_and_max">"Plus and Max"</string>
     <string name="podcast">"Podcast"</string>
     <string name="podcasts">"podcasts"</string>
     <string name="policy">"Policy"</string>
@@ -2645,8 +2643,8 @@
     <string name="scored_against_your_level_setting_how_this_talk_went_not_a_l_4b7213">"Scored against your %s level setting — how this talk went, not a level rating."</string>
     <!-- 'Scored against your %@ level setting — this talk itself read as ≈%@.' -->
     <string name="scored_against_your_level_setting_this_talk_itself_read_as">"Scored against your %1$s level setting — this talk itself read as ≈%2$s."</string>
-    <!-- "Scores come from a pronunciation assessment against a native model of the language. Sound names are given for English only. Flow is the pauses between words, completeness how much of the line was said, intonation stress and rhythm. A word is red under 50 or with a sound under 35, orange under 70 or with a sound under 45; a native speaker's slip reads orange at most. One take's marks move with where the recording was cut, so what matters is a sound that stays low across takes." -->
-    <string name="scores_come_from_azure_s_pronunciation_assessment_against_a_535c64">"Scores come from a pronunciation assessment against a native model of the language. Sound names are given for English only. Flow is the pauses between words, completeness how much of the line was said, intonation stress and rhythm. A word is red under 50 or with a sound under 35, orange under 70 or with a sound under 45; a native speaker's slip reads orange at most. One take's marks move with where the recording was cut, so what matters is a sound that stays low across takes."</string>
+    <!-- "Scores come from Azure's pronunciation assessment against a native model of the language. Sound names are given for English only. Flow is the pauses between words, completeness how much of the line was said, intonation stress and rhythm. A word is red under 50 or with a sound under 35, orange under 70 or with a sound under 45; a native speaker's slip reads orange at most. One take's marks move with where the recording was cut, so what matters is a sound that stays low across takes." -->
+    <string name="scores_come_from_azure_s_pronunciation_assessment_against_a_535c64">"Scores come from Azure's pronunciation assessment against a native model of the language. Sound names are given for English only. Flow is the pauses between words, completeness how much of the line was said, intonation stress and rhythm. A word is red under 50 or with a sound under 35, orange under 70 or with a sound under 45; a native speaker's slip reads orange at most. One take's marks move with where the recording was cut, so what matters is a sound that stays low across takes."</string>
     <!-- 'Scoring %lld/100 across recent talks — each talk graded from the verified grammar slips in what you said.' -->
     <string name="scoring_lld_100_across_recent_talks_each_talk_graded_from_th_0e37da">"Scoring %d/100 across recent talks — each talk graded from the verified grammar slips in what you said."</string>
     <string name="screen">"Screen"</string>
@@ -3774,6 +3772,7 @@
     <string name="with_6be81a">"With %s"</string>
     <string name="with_a_friend">"With a friend"</string>
     <string name="with_a_neighbor">"With a neighbor"</string>
+    <string name="with_any_plan">"With any plan"</string>
     <string name="with_room_in_the_margin">"With room in the margin"</string>
     <string name="withdraw_consent_delete_my_voice">"Withdraw consent &amp; delete my voice"</string>
     <string name="woman">"Woman"</string>

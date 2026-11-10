@@ -879,7 +879,7 @@ internal fun SpeechPlusSheet(isLight: Boolean, onDismiss: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Filled.Lock, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.plus_and_max), style = MaterialTheme.typography.bodyMedium,
+                    Text(stringResource(R.string.with_any_plan), style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
                 }
                 Text(stringResource(R.string.new_scripts_are_a_plus_feature),

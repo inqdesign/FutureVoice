@@ -2144,8 +2144,7 @@
     <string name="past_tense_slipped_twice_once_the_story_moved_back_in_time">"一讲到以前的事，过去式就漏了两次。"</string>
     <string name="past_weeks">"过去几周"</string>
     <string name="paste_a_link">"粘贴链接"</string>
-    <!-- 'Paste the presentation or speech you actually have to give. Plus and Max.' -->
-    <string name="paste_the_presentation_or_speech_you_actually_have_to_give_p_a8d05a">"把真正要讲的汇报或演讲粘贴进来，直接练这一份。"</string>
+    <string name="paste_the_presentation_or_speech_you_actually_have_to_give">"把真正要讲的汇报或演讲粘贴进来，直接练这一份。"</string>
     <string name="patient">"很有耐心"</string>
     <string name="patterns_to_work_on">"要加强的句型"</string>
     <string name="pause">"暂停"</string>
@@ -2194,8 +2193,8 @@
     <string name="pick_a_time_you_usually_have_ten_quiet_minutes">"选一个你通常能安静十分钟的时间。"</string>
     <!-- 'Pick a topic and your future self teaches it step by step, until you can say it without a mistake.' -->
     <string name="pick_a_topic_and_your_future_self_teaches_it_step_by_step_un_ad6699">"选一个话题，流利的自己会一步步教你，直到你能说对为止。"</string>
-    <!-- 'Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level. Plus and Max.' -->
-    <string name="pick_a_type_like_an_explainer_a_person_or_the_news_then_a_to_08bd90">"选好类型（讲解、人物介绍、新闻等）、话题和长度，就会写出适合你水平的讲稿，内容也会先核实过。"</string>
+    <!-- 'Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level.' -->
+    <string name="pick_a_type_like_an_explainer_a_person_or_the_news_then_a_to_b452e5">"选好类型（讲解、人物介绍、新闻等）、话题和长度，就会写出适合你水平的讲稿，内容也会先核实过。"</string>
     <string name="pick_an_area_to_go_one_step_deeper">"选一个领域，再往下一层。"</string>
     <string name="pick_as_many_as_you_like">"想选几个都可以。"</string>
     <!-- "Pick as many as you like. Talk's topics, your goals and your tutor follow them." -->
@@ -2242,7 +2241,6 @@
     <string name="playful_teasing">"打打闹闹"</string>
     <string name="playground_friends">"公园认识的"</string>
     <string name="plus">"Plus"</string>
-    <string name="plus_and_max">"Plus·Max 专享"</string>
     <string name="podcast">"播客"</string>
     <string name="podcasts">"Podcast"</string>
     <string name="policy">"政策"</string>
@@ -2641,8 +2639,8 @@
     <string name="scored_against_your_level_setting_how_this_talk_went_not_a_l_4b7213">"以%s等级设置为基准的分数。不是等级判定，而是这次通话表现如何。"</string>
     <!-- 'Scored against your %@ level setting — this talk itself read as ≈%@.' -->
     <string name="scored_against_your_level_setting_this_talk_itself_read_as">"以%1$s等级设置为基准评分，这次通话本身读来≈%2$s。"</string>
-    <!-- "Scores come from a pronunciation assessment against a native model of the language. Sound names are given for English only. Flow is the pauses between words, completeness how much of the line was said, intonation stress and rhythm. A word is red under 50 or with a sound under 35, orange under 70 or with a sound under 45; a native speaker's slip reads orange at most. One take's marks move with where the recording was cut, so what matters is a sound that stays low across takes." -->
-    <string name="scores_come_from_azure_s_pronunciation_assessment_against_a_535c64">"分数来自发音评估，和该语言的母语者模型比对。音素名称只有英文会显示。流畅度是单词之间的停顿，完整度是句子说完了多少，语调是重音和节奏。单词低于 50 或有低于 35 的音就是红色，低于 70 或有低于 45 的音就是橙色；母语者的口误最多只会是橙色。单次录音的标记会随录音的切法变动，所以重要的是多次录音都一直偏低的音。"</string>
+    <!-- "Scores come from Azure's pronunciation assessment against a native model of the language. Sound names are given for English only. Flow is the pauses between words, completeness how much of the line was said, intonation stress and rhythm. A word is red under 50 or with a sound under 35, orange under 70 or with a sound under 45; a native speaker's slip reads orange at most. One take's marks move with where the recording was cut, so what matters is a sound that stays low across takes." -->
+    <string name="scores_come_from_azure_s_pronunciation_assessment_against_a_535c64">"分数来自 Azure 发音评估，和该语言的母语者模型比对。音素名称只有英文会显示。流畅度是单词之间的停顿，完整度是句子说完了多少，语调是重音和节奏。单词低于 50 或有低于 35 的音就是红色，低于 70 或有低于 45 的音就是橙色；母语者的口误最多只会是橙色。单次录音的标记会随录音的切法变动，所以重要的是多次录音都一直偏低的音。"</string>
     <!-- 'Scoring %lld/100 across recent talks — each talk graded from the verified grammar slips in what you said.' -->
     <string name="scoring_lld_100_across_recent_talks_each_talk_graded_from_th_0e37da">"最近对话平均 %d/100 分，每次对话都依你实际说出的句子中确认到的错误评分。"</string>
     <string name="screen">"界面"</string>
@@ -3766,6 +3764,7 @@
     <string name="with_6be81a">"与 %s"</string>
     <string name="with_a_friend">"和朋友"</string>
     <string name="with_a_neighbor">"和邻居"</string>
+    <string name="with_any_plan">"订阅即可用"</string>
     <string name="with_room_in_the_margin">"附留白可做笔记"</string>
     <string name="withdraw_consent_delete_my_voice">"撤回同意并删除我的声音"</string>
     <string name="woman">"女性"</string>

@@ -350,11 +350,11 @@ private fun GuidePage(page: Page, i: Int) {
                     GuideStep(Icons.AutoMirrored.Filled.Article, R.string.start_with_the_sample,
                         R.string.every_account_can_practice_the_built_in_script),
                     GuideStep(Icons.Filled.AutoAwesome, R.string.write_one_with_ai,
-                        R.string.pick_a_type_like_an_explainer_a_person_or_the_news_then_a_to_08bd90,
-                        badge = R.string.plus_and_max),
+                        R.string.pick_a_type_like_an_explainer_a_person_or_the_news_then_a_to_b452e5,
+                        badge = R.string.with_any_plan),
                     GuideStep(Icons.Outlined.EditNote, R.string.add_your_own,
-                        R.string.paste_the_presentation_or_speech_you_actually_have_to_give_p_a8d05a,
-                        badge = R.string.plus_and_max),
+                        R.string.paste_the_presentation_or_speech_you_actually_have_to_give,
+                        badge = R.string.with_any_plan),
                 ))
         }
         Page.WATCH -> when (i) {
