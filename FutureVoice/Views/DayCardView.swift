@@ -177,6 +177,12 @@ enum DayCardFormat: String, CaseIterable, Identifiable {
         case .square: 3
         }
     }
+    /// A story is posted under Instagram's own chrome: the top ~250 px
+    /// (profile, close) and the bottom ~340 px (reply bar) of 1080×1920 are
+    /// covered, so the 9:16 card keeps its date, streak and list inside
+    /// (founder, 2026-11-10). Feed frames have no such chrome.
+    var safeTop: CGFloat? { self == .story ? 84 : nil }
+    var safeBottom: CGFloat? { self == .story ? 114 : nil }
     static let exportScale: CGFloat = 3
 }
 
@@ -217,9 +223,12 @@ struct DayCardView: View {
                     .clipped()
             }
             LinearGradient(
-                stops: [.init(color: ink.opacity(0.34), location: 0), .init(color: ink.opacity(0), location: 0.2),
-                        .init(color: ink.opacity(0), location: format == .story ? 0.38 : 0.26),
-                        .init(color: ink.opacity(0.88), location: format == .story ? 0.66 : 0.6),
+                // The story's content sits inside Instagram's safe area, so
+                // its dark ground starts higher at both ends.
+                stops: [.init(color: ink.opacity(format == .story ? 0.5 : 0.34), location: 0),
+                        .init(color: ink.opacity(0), location: format == .story ? 0.26 : 0.2),
+                        .init(color: ink.opacity(0), location: format == .story ? 0.3 : 0.26),
+                        .init(color: ink.opacity(0.88), location: format == .story ? 0.48 : 0.6),
                         .init(color: ink.opacity(0.95), location: 1)],
                 startPoint: .top, endPoint: .bottom)
 
@@ -251,8 +260,8 @@ struct DayCardView: View {
                 footer
             }
             .padding(.horizontal, margin)
-            .padding(.top, margin)
-            .padding(.bottom, isFeed ? 22 : 18)
+            .padding(.top, format.safeTop ?? margin)
+            .padding(.bottom, format.safeBottom ?? (isFeed ? 22 : 18))
         }
         .frame(width: size.width, height: size.height)
         .clipped()
