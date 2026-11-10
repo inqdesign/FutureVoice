@@ -177,12 +177,14 @@ enum DayCardFormat: String, CaseIterable, Identifiable {
         case .square: 3
         }
     }
-    /// A story is posted under Instagram's own chrome: the top ~250 px
-    /// (profile, close) and the bottom ~340 px (reply bar) of 1080×1920 are
-    /// covered, so the 9:16 card keeps its date, streak and list inside
-    /// (founder, 2026-11-10). Feed frames have no such chrome.
-    var safeTop: CGFloat? { self == .story ? 84 : nil }
-    var safeBottom: CGFloat? { self == .story ? 114 : nil }
+    /// A story is posted under Instagram's own chrome, so the 9:16 card
+    /// keeps its date and streak below the profile row (~190 px of
+    /// 1080×1920) and its footer off the bottom edge. Instagram's published
+    /// 250 / 340 px margins were tried first and left the card half empty
+    /// (founder, 2026-11-10); on a tall phone the reply bar sits under the
+    /// picture, not on it. Feed frames have no such chrome.
+    var safeTop: CGFloat? { self == .story ? 64 : nil }
+    var safeBottom: CGFloat? { self == .story ? 44 : nil }
     static let exportScale: CGFloat = 3
 }
 
@@ -225,10 +227,10 @@ struct DayCardView: View {
             LinearGradient(
                 // The story's content sits inside Instagram's safe area, so
                 // its dark ground starts higher at both ends.
-                stops: [.init(color: ink.opacity(format == .story ? 0.5 : 0.34), location: 0),
-                        .init(color: ink.opacity(0), location: format == .story ? 0.26 : 0.2),
-                        .init(color: ink.opacity(0), location: format == .story ? 0.3 : 0.26),
-                        .init(color: ink.opacity(0.88), location: format == .story ? 0.48 : 0.6),
+                stops: [.init(color: ink.opacity(format == .story ? 0.45 : 0.34), location: 0),
+                        .init(color: ink.opacity(0), location: format == .story ? 0.24 : 0.2),
+                        .init(color: ink.opacity(0), location: format == .story ? 0.34 : 0.26),
+                        .init(color: ink.opacity(0.88), location: format == .story ? 0.6 : 0.6),
                         .init(color: ink.opacity(0.95), location: 1)],
                 startPoint: .top, endPoint: .bottom)
 
