@@ -2641,8 +2641,8 @@
     <string name="scored_against_your_level_setting_how_this_talk_went_not_a_l_4b7213">"以%s等級設定為基準的分數。不是等級判定，而是這次通話表現如何。"</string>
     <!-- 'Scored against your %@ level setting — this talk itself read as ≈%@.' -->
     <string name="scored_against_your_level_setting_this_talk_itself_read_as">"以%1$s等級設定為基準評分，這次通話本身讀來≈%2$s。"</string>
-    <!-- "Scores come from Azure's pronunciation assessment against a native model of the language. Sound names are given for English only. Flow is the pauses between words, completeness how much of the line was said, intonation stress and rhythm. A word is red under 50 or with a sound under 35, orange under 70 or with a sound under 45; a native speaker's slip reads orange at most. One take's marks move with where the recording was cut, so what matters is a sound that stays low across takes." -->
-    <string name="scores_come_from_azure_s_pronunciation_assessment_against_a_535c64">"分數來自 Azure 發音評估，和該語言的母語者模型比對。音素名稱只有英文會顯示。流暢度是單字之間的停頓，完整度是句子說完了多少，語調是重音和節奏。單字低於 50 或有低於 35 的音就是紅色，低於 70 或有低於 45 的音就是橘色；母語者的口誤最多只會是橘色。單次錄音的標記會隨錄音的切法變動，所以重要的是多次錄音都一直偏低的音。"</string>
+    <!-- "Scores come from a pronunciation assessment against a native model of the language. Sound names are given for English only. Flow is the pauses between words, completeness how much of the line was said, intonation stress and rhythm. A word is red under 50 or with a sound under 35, orange under 70 or with a sound under 45; a native speaker's slip reads orange at most. One take's marks move with where the recording was cut, so what matters is a sound that stays low across takes." -->
+    <string name="scores_come_from_azure_s_pronunciation_assessment_against_a_535c64">"分數來自發音評估，和該語言的母語者模型比對。音素名稱只有英文會顯示。流暢度是單字之間的停頓，完整度是句子說完了多少，語調是重音和節奏。單字低於 50 或有低於 35 的音就是紅色，低於 70 或有低於 45 的音就是橘色；母語者的口誤最多只會是橘色。單次錄音的標記會隨錄音的切法變動，所以重要的是多次錄音都一直偏低的音。"</string>
     <!-- 'Scoring %lld/100 across recent talks — each talk graded from the verified grammar slips in what you said.' -->
     <string name="scoring_lld_100_across_recent_talks_each_talk_graded_from_th_0e37da">"最近對話平均 %d/100 分，每次對話都依你實際說出的句子中確認到的錯誤評分。"</string>
     <string name="screen">"畫面"</string>
