@@ -2091,6 +2091,22 @@ struct VoiceCloneOnboardingView: View {
         greetingTakes[voiceId] = data
     }
 
+    /// The same for the speed pills: a tutor's pace line at each rung ships
+    /// too (`pace-<lang>-<slot>-<100|090|085>.mp3`). The default rung's clip
+    /// was made at 0.9, so it is used only while the server has not moved
+    /// the default; a rung without a clip is synthesized as before.
+    private func seedBundledPace(for voiceId: String) {
+        guard voiceId == appState.fluentSelfPresetId else { return }
+        let language = appState.targetLanguage
+        let lang = language.split(separator: "-").first.map(String.init) ?? language
+        for speed in SpeechSpeed.allCases where paceTakesByVoice[voiceId]?[speed] == nil {
+            let tag = String(format: "%03d", Int((speed.multiplier * 100).rounded()))
+            guard let url = Bundle.main.url(forResource: "pace-\(lang)-\(voiceId)-\(tag)", withExtension: "mp3"),
+                  let data = try? Data(contentsOf: url) else { continue }
+            paceTakesByVoice[voiceId, default: [:]][speed] = data
+        }
+    }
+
     private func fetchGreeting(voiceId: String) {
         let sound = MeetSound.greeting(voice: voiceId)
         guard greetingTakes[voiceId] == nil, !meetInFlight.contains(sound.key) else { return }
@@ -2129,6 +2145,7 @@ struct VoiceCloneOnboardingView: View {
         HapticEngine.light()
         let voiceKey = meetVoiceKey
         meetAsk = .pace(voice: voiceKey, speed: speed)
+        seedBundledPace(for: voiceKey)
         // Playing what is already in hand must not depend on there being a
         // voice to synthesize WITH: the debug preview has takes on disk and
         // no clone, and gating the whole function on the id made every pill

@@ -64,7 +64,56 @@ line_for() {  # must stay byte-identical to previewLine(for:)
   esac
 }
 
+# The pace line the onboarding speed pills speak (VoiceCloneScript.paceSample),
+# one clip per rung: a tutor sounds the same to everyone at every speed too.
+#   pace-<lang>-<slot>-<100|090|085>.mp3   (the app's rung, x100)
+# The 090 clip is the DEFAULT rung at 0.9; the app plays it only while the
+# server default (app_release.default_speech_speed) has not moved it.
+pace_line_for() {  # must stay byte-identical to VoiceCloneScript.paceSample
+  case "$1" in
+    de) echo 'Ab jetzt rede ich in diesem Tempo. Hör kurz rein und sag mir, ob du gut mitkommst.' ;;
+    ko) echo '앞으로 이 속도로 말할게. 조금 들어보고, 이 정도면 편하게 들리는지 알려줘.' ;;
+    ja) echo 'これからはこの速さで話すね。少し聞いてみて、これなら聞き取りやすいか教えて。' ;;
+    es) echo 'A partir de ahora hablaré a este ritmo. Escucha un momento y dime si se me entiende bien.' ;;
+    *)  echo 'From now on I'"'"'ll talk at this pace. Listen for a moment, and tell me if it'"'"'s easy enough to follow.' ;;
+  esac
+}
+
+synth() {  # $1 text, $2 cartesia speed, $3 voice, $4 lang, $5 file
+  local BODY STATUS
+  BODY="$(python3 - "$1" "$MODEL" "$2" "$3" "$4" <<'PY'
+import json, sys
+text, model, speed, voice, lang = sys.argv[1:6]
+print(json.dumps({"model_id": model, "transcript": text, "voice": {"mode": "id", "id": voice},
+                  "language": lang, "output_format": {"container": "mp3", "sample_rate": 44100, "bit_rate": 64000},
+                  "generation_config": {"speed": float(speed), "emotion": "neutral"}}, ensure_ascii=False))
+PY
+)"
+  STATUS="$(curl -s -o "$5" -w '%{http_code}' -X POST https://api.cartesia.ai/tts/bytes \
+    -H "Authorization: Bearer $KEY" -H "Cartesia-Version: 2026-08-14" \
+    -H "Content-Type: application/json" --data "$BODY")"
+  if [ "$STATUS" != "200" ]; then
+    echo "$(basename "$5"): HTTP $STATUS" >&2; head -c 300 "$5" >&2; echo >&2
+    rm -f "$5"; return 1
+  fi
+  echo "$(basename "$5") ($(wc -c < "$5" | tr -d ' ') bytes)"
+}
+
 mkdir -p "$OUT"
+# ONLY=pace makes the pace clips alone; ONLY=preview the greeting clips alone.
+if [ "${ONLY:-}" != "preview" ]; then
+  for lang in $LANGS; do
+    text="$(pace_line_for "$lang")"
+    for slot in $SLOTS; do
+      voice="$(voice_for "$lang" "$slot")"
+      # app rung → Cartesia's scale (cartesia.ts cartesiaSpeed)
+      for rung in 100:1.5 090:1.1667 085:1.0; do
+        synth "$text" "${rung#*:}" "$voice" "$lang" "$OUT/pace-$lang-$slot-${rung%%:*}.mp3" || true
+      done
+    done
+  done
+fi
+[ "${ONLY:-}" = "pace" ] && exit 0
 for lang in $LANGS; do
   text="$(line_for "$lang")"
   for slot in $SLOTS; do
