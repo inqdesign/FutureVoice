@@ -104,12 +104,17 @@ def plans_on_sale():
 # ── App Store Connect ──────────────────────────────────────────────────────
 
 _asc_token = None
+_asc_token_at = 0.0
 
 
 def asc_token() -> str:
-    global _asc_token
-    if _asc_token:
+    # A token lives 20 minutes and a full `trial off` is 875 deletes, which
+    # takes about that long: the run of 2026-11-03 lost its token on the last
+    # 39 territories of the last plan. Made again after 10 minutes.
+    global _asc_token, _asc_token_at
+    if _asc_token and time.time() - _asc_token_at < 600:
         return _asc_token
+    _asc_token_at = time.time()
     key_dir = os.path.expanduser("~/.appstoreconnect/private_keys")
     keys = sorted(f for f in os.listdir(key_dir) if f.startswith("AuthKey_") and f.endswith(".p8"))
     if not keys:
