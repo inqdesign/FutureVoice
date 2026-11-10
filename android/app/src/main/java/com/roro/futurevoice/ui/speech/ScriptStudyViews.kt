@@ -437,19 +437,21 @@ internal fun ScriptVoiceoverSection(script: SpeechScript, voiceId: String,
                             }
                         }, modifier = Modifier.weight(1f)) {
                             VoiceoverLabel(if (playing) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                                stringResource(if (playing) R.string.pause else R.string.play))
+                                stringResource(if (playing) R.string.pause else R.string.play),
+                                stacked = onSpeech != null)
                         }
                         IosOutlinedButton(onClick = {
                             player.stop(); playing = false; resumeAt = 0; shadowing = stored
                         }, modifier = Modifier.weight(1f)) {
-                            VoiceoverLabel(Icons.Filled.GraphicEq, stringResource(R.string.shadow))
+                            VoiceoverLabel(Icons.Filled.GraphicEq, stringResource(R.string.shadow),
+                                stacked = onSpeech != null)
                         }
                         // A tutor reading's Speech, beside Play and Shadow (iOS).
                         onSpeech?.let { go ->
                             IosOutlinedButton(onClick = {
                                 player.stop(); playing = false; go()
                             }, modifier = Modifier.weight(1f)) {
-                                VoiceoverLabel(Icons.Filled.MicExternalOn, stringResource(R.string.speech_d00d85))
+                                VoiceoverLabel(Icons.Filled.MicExternalOn, stringResource(R.string.speech_d00d85), stacked = true)
                             }
                         }
                     }
@@ -503,9 +505,22 @@ internal fun ScriptVoiceoverSection(script: SpeechScript, voiceId: String,
     }
 }
 
-/** An iOS `Label` on a large button: icon, then the title, centred. */
+/** An iOS `Label` on a large button: icon, then the title, centred. With
+ *  three pills in the row a label has ~75 pt, and 섀도잉 or Nachsprechen
+ *  came out cut beside its icon, so [stacked] puts the icon over the title
+ *  (iOS `PillLabelStyle`). */
 @Composable
-private fun VoiceoverLabel(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String) {
+private fun VoiceoverLabel(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String,
+                           stacked: Boolean = false) {
+    if (stacked) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Icon(icon, null, modifier = Modifier.size(18.dp))
+            com.roro.futurevoice.ui.brand.FitButtonLabel(label,
+                androidx.compose.material3.LocalTextStyle.current.copy(fontSize = androidx.compose.ui.unit.TextUnit(13f, androidx.compose.ui.unit.TextUnitType.Sp)))
+        }
+        return
+    }
     Icon(icon, null, modifier = Modifier.size(18.dp))
     Spacer(Modifier.width(6.dp))
     com.roro.futurevoice.ui.brand.FitButtonLabel(label, androidx.compose.material3.LocalTextStyle.current)
