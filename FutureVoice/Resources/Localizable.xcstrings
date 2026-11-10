@@ -130945,48 +130945,48 @@
         }
       }
     },
-    "Scores come from Azure's pronunciation assessment against a native model of the language. Sound names are given for English only. Flow is the pauses between words, completeness how much of the line was said, intonation stress and rhythm. A word is red under 50 or with a sound under 35, orange under 70 or with a sound under 45; a native speaker's slip reads orange at most. One take's marks move with where the recording was cut, so what matters is a sound that stays low across takes." : {
+    "Scores come from a pronunciation assessment against a native model of the language. Sound names are given for English only. Flow is the pauses between words, completeness how much of the line was said, intonation stress and rhythm. A word is red under 50 or with a sound under 35, orange under 70 or with a sound under 45; a native speaker's slip reads orange at most. One take's marks move with where the recording was cut, so what matters is a sound that stays low across takes." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Die Werte stammen aus der Aussprachebewertung von Azure, gemessen an einem muttersprachlichen Modell der Sprache. Lautnamen gibt es nur für Englisch. Fluss sind die Pausen zwischen den Wörtern, Vollständigkeit ist, wie viel vom Satz gesagt wurde, Betonung sind Akzent und Rhythmus. Ein Wort ist rot unter 50 oder mit einem Laut unter 35, orange unter 70 oder mit einem Laut unter 45; ein Versprecher von Muttersprachlern ist höchstens orange. Die Markierungen einer Aufnahme hängen davon ab, wo sie geschnitten wurde – entscheidend ist ein Laut, der über mehrere Aufnahmen niedrig bleibt."
+            "value" : "Die Werte stammen aus einer Aussprachebewertung, gemessen an einem muttersprachlichen Modell der Sprache. Lautnamen gibt es nur für Englisch. Fluss sind die Pausen zwischen den Wörtern, Vollständigkeit ist, wie viel vom Satz gesagt wurde, Betonung sind Akzent und Rhythmus. Ein Wort ist rot unter 50 oder mit einem Laut unter 35, orange unter 70 oder mit einem Laut unter 45; ein Versprecher von Muttersprachlern ist höchstens orange. Die Markierungen einer Aufnahme hängen davon ab, wo sie geschnitten wurde – entscheidend ist ein Laut, der über mehrere Aufnahmen niedrig bleibt."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Las puntuaciones vienen de la evaluación de pronunciación de Azure, frente a un modelo nativo del idioma. Los nombres de los sonidos solo aparecen en inglés. La fluidez son las pausas entre palabras; la completitud, cuánto de la frase dijiste; la entonación, el acento y el ritmo. Una palabra sale en rojo por debajo de 50 o con un sonido por debajo de 35, y en naranja por debajo de 70 o con un sonido por debajo de 45; un despiste de un nativo sale en naranja como mucho. Las marcas de una toma cambian según dónde se cortó la grabación, así que lo que cuenta es un sonido que sigue bajo de una toma a otra."
+            "value" : "Las puntuaciones vienen de una evaluación de pronunciación, frente a un modelo nativo del idioma. Los nombres de los sonidos solo aparecen en inglés. La fluidez son las pausas entre palabras; la completitud, cuánto de la frase dijiste; la entonación, el acento y el ritmo. Una palabra sale en rojo por debajo de 50 o con un sonido por debajo de 35, y en naranja por debajo de 70 o con un sonido por debajo de 45; un despiste de un nativo sale en naranja como mucho. Las marcas de una toma cambian según dónde se cortó la grabación, así que lo que cuenta es un sonido que sigue bajo de una toma a otra."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Les scores viennent de l’évaluation de prononciation d’Azure, face à un modèle natif de la langue. Les noms des sons ne s’affichent qu’en anglais. La fluidité, ce sont les pauses entre les mots ; la complétude, la part de la phrase que tu as dite ; l’intonation, l’accent et le rythme. Un mot est rouge sous 50 ou avec un son sous 35, orange sous 70 ou avec un son sous 45 ; un lapsus de natif reste orange au pire. Les marques d’une prise varient selon l’endroit où l’enregistrement a été coupé : ce qui compte, c’est un son qui reste bas d’une prise à l’autre."
+            "value" : "Les scores viennent d’une évaluation de prononciation, face à un modèle natif de la langue. Les noms des sons ne s’affichent qu’en anglais. La fluidité, ce sont les pauses entre les mots ; la complétude, la part de la phrase que tu as dite ; l’intonation, l’accent et le rythme. Un mot est rouge sous 50 ou avec un son sous 35, orange sous 70 ou avec un son sous 45 ; un lapsus de natif reste orange au pire. Les marques d’une prise varient selon l’endroit où l’enregistrement a été coupé : ce qui compte, c’est un son qui reste bas d’une prise à l’autre."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "スコアはAzureの発音評価が、その言語のネイティブモデルと比べて付けています。音の名前は英語のみ表示されます。流れは単語間の間、完成度は文をどれだけ言えたか、抑揚は強勢とリズムです。単語は50未満か35未満の音があれば赤、70未満か45未満の音があればオレンジです。ネイティブの言い間違いはオレンジまでです。1回の録音の印は録音の区切り方で変わるので、大事なのは何度録音しても低いままの音です。"
+            "value" : "スコアは発音評価が、その言語のネイティブモデルと比べて付けています。音の名前は英語のみ表示されます。流れは単語間の間、完成度は文をどれだけ言えたか、抑揚は強勢とリズムです。単語は50未満か35未満の音があれば赤、70未満か45未満の音があればオレンジです。ネイティブの言い間違いはオレンジまでです。1回の録音の印は録音の区切り方で変わるので、大事なのは何度録音しても低いままの音です。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "점수는 Azure 발음 평가가 그 언어의 원어민 모델과 비교해서 매겨요. 소리 이름은 영어에서만 보여요. 흐름은 단어 사이의 쉼, 완성도는 문장을 얼마나 다 말했는지, 억양은 강세와 리듬이에요. 단어는 50 미만이거나 35 미만인 소리가 있으면 빨강, 70 미만이거나 45 미만인 소리가 있으면 주황이에요. 원어민의 말실수는 주황까지만 나와요. 한 번 녹음의 표시는 녹음이 어디서 잘렸는지에 따라 달라지니, 여러 번 녹음해도 계속 낮은 소리가 중요해요."
+            "value" : "점수는 발음 평가가 그 언어의 원어민 모델과 비교해서 매겨요. 소리 이름은 영어에서만 보여요. 흐름은 단어 사이의 쉼, 완성도는 문장을 얼마나 다 말했는지, 억양은 강세와 리듬이에요. 단어는 50 미만이거나 35 미만인 소리가 있으면 빨강, 70 미만이거나 45 미만인 소리가 있으면 주황이에요. 원어민의 말실수는 주황까지만 나와요. 한 번 녹음의 표시는 녹음이 어디서 잘렸는지에 따라 달라지니, 여러 번 녹음해도 계속 낮은 소리가 중요해요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "分数来自 Azure 发音评估，和该语言的母语者模型比对。音素名称只有英文会显示。流畅度是单词之间的停顿，完整度是句子说完了多少，语调是重音和节奏。单词低于 50 或有低于 35 的音就是红色，低于 70 或有低于 45 的音就是橙色；母语者的口误最多只会是橙色。单次录音的标记会随录音的切法变动，所以重要的是多次录音都一直偏低的音。"
+            "value" : "分数来自发音评估，和该语言的母语者模型比对。音素名称只有英文会显示。流畅度是单词之间的停顿，完整度是句子说完了多少，语调是重音和节奏。单词低于 50 或有低于 35 的音就是红色，低于 70 或有低于 45 的音就是橙色；母语者的口误最多只会是橙色。单次录音的标记会随录音的切法变动，所以重要的是多次录音都一直偏低的音。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "分數來自 Azure 發音評估，和該語言的母語者模型比對。音素名稱只有英文會顯示。流暢度是單字之間的停頓，完整度是句子說完了多少，語調是重音和節奏。單字低於 50 或有低於 35 的音就是紅色，低於 70 或有低於 45 的音就是橘色；母語者的口誤最多只會是橘色。單次錄音的標記會隨錄音的切法變動，所以重要的是多次錄音都一直偏低的音。"
+            "value" : "分數來自發音評估，和該語言的母語者模型比對。音素名稱只有英文會顯示。流暢度是單字之間的停頓，完整度是句子說完了多少，語調是重音和節奏。單字低於 50 或有低於 35 的音就是紅色，低於 70 或有低於 45 的音就是橘色；母語者的口誤最多只會是橘色。單次錄音的標記會隨錄音的切法變動，所以重要的是多次錄音都一直偏低的音。"
           }
         }
       }
