@@ -1338,7 +1338,7 @@ struct SpeechPlusSheet: View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 22) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Label("Plus and Max", systemImage: "lock.fill")
+                    Label("With any plan", systemImage: "lock.fill")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.tint)
                     Text("New scripts come with a plan")

@@ -392,12 +392,12 @@ struct PageIntroSheet: View {
                           detail: explain("Every account can practice the built-in script.")),
                     .init(symbol: "sparkles",
                           title: explain("Write one with AI"),
-                          detail: explain("Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level. Plus and Max."),
-                          badge: explain("Plus and Max")),
+                          detail: explain("Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level."),
+                          badge: explain("With any plan")),
                     .init(symbol: "pencil.line",
                           title: explain("Add your own"),
-                          detail: explain("Paste the presentation or speech you actually have to give. Plus and Max."),
-                          badge: explain("Plus and Max")),
+                          detail: explain("Paste the presentation or speech you actually have to give."),
+                          badge: explain("With any plan")),
                 ])
 
         // MARK: Watch

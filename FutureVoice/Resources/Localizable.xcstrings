@@ -113352,7 +113352,7 @@
         }
       }
     },
-    "Paste the presentation or speech you actually have to give. Plus and Max." : {
+    "Paste the presentation or speech you actually have to give." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -115334,7 +115334,7 @@
         }
       }
     },
-    "Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level. Plus and Max." : {
+    "Pick a type, like an explainer, a person or the news, then a topic and a length. The facts are checked and the words fit your level." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -117239,52 +117239,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Plus"
-          }
-        }
-      }
-    },
-    "Plus and Max" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Plus und Max"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Plus y Max"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Plus et Max"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Plus·Max限定"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Plus·Max 전용"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Plus·Max 专享"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Plus·Max 專屬"
           }
         }
       }
@@ -171790,6 +171744,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "和鄰居"
+          }
+        }
+      }
+    },
+    "With any plan" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In jedem Tarif"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Con cualquier plan"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avec tout abonnement"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "どのプランでも"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모든 구독자"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "订阅即可用"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "訂閱即可用"
           }
         }
       }
