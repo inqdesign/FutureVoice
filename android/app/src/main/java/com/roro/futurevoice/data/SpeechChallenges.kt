@@ -608,9 +608,10 @@ class SpeechChallenges private constructor(private val context: Context) {
             if (overall < boardBar(season)) return Entry.BelowBar
             return null
         }
-        /** Below this many people the overall board is not drawn: a board of
-         *  two reads as empty, not as a race (iOS `overallMinEntrants`). */
-        const val OVERALL_MIN_ENTRANTS = 5
+        /** The overall board is drawn as soon as one person is on it (iOS
+         *  `overallMinEntrants`, founder 2026-11-10: a new season's board is
+         *  there from its first day). */
+        const val OVERALL_MIN_ENTRANTS = 1
 
         /** The one name a learner goes by on every board. Null until they
          *  have seen and confirmed it — nothing goes on a public board unasked. */
