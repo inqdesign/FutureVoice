@@ -114,6 +114,32 @@ class SpeechPrompterTrack(script: String, language: String) {
         return current
     }
 
+    /** Whether the heard text begins with the script's first word. [advance]
+     *  trusts runs of words, so on its own it says nothing until the second. */
+    fun opensWithFirstWord(heard: String): Boolean {
+        val first = words.firstOrNull() ?: return false
+        val wanted = keys(first.text, perChar)
+        if (wanted.isEmpty()) return false
+        val got = keys(heard.take(60), perChar)
+        return got.size >= wanted.size && got.subList(0, wanted.size) == wanted
+    }
+
+    /**
+     * How many characters of [text] the first [count] display words reach,
+     * the end of the last one. [text] is the line as drawn, which may be
+     * spaced differently from the script, so each word is looked for in
+     * order rather than counted. A word that can't be found stops the walk.
+     */
+    fun characterCount(throughWord: Int, text: String): Int {
+        var end = 0
+        for (word in words.take(maxOf(0, throughWord))) {
+            val found = text.indexOf(word.text, end)
+            if (found < 0) break
+            end = found + word.text.length
+        }
+        return end
+    }
+
     /** Words a reader covers per second at the planned pace. */
     fun wordsPerSecond(language: String): Double {
         val rate = SpeechLibrary.plannedRate(language).toDouble() / 60

@@ -88,7 +88,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.roro.futurevoice.R
 import com.roro.futurevoice.audio.Mp3Player
-import com.roro.futurevoice.audio.WavRecorder
+import com.roro.futurevoice.audio.LiveTranscriber
+import com.roro.futurevoice.audio.RunMic
 import com.roro.futurevoice.data.PhraseAudioStore
 import com.roro.futurevoice.data.PracticeLog
 import com.roro.futurevoice.data.SayItAgainScript
@@ -102,6 +103,7 @@ import com.roro.futurevoice.talk.Scenario
 import com.roro.futurevoice.talk.Session
 import com.roro.futurevoice.talk.ShadowScore
 import com.roro.futurevoice.talk.ShadowTranscriber
+import com.roro.futurevoice.talk.SpeechPrompterTrack
 import com.roro.futurevoice.talk.SpokenWords
 import com.roro.futurevoice.talk.StockPerson
 import com.roro.futurevoice.ui.brand.Books
@@ -233,7 +235,8 @@ private data class SayTake(val score: Int? = null, val outcome: Outcome, val hea
     enum class Outcome { SCORED, HEARD_NOTHING, SKIPPED }
 }
 
-/** Earliest a read can end, per word — measured from the FIRST WORD. */
+/** A line's estimated length, per word. Only sizes the ceiling below; no
+ *  clock decides that a read is finished. */
 private const val READ_MS_PER_WORD = 380
 /** The only thing that ends a take on a learner still talking: a room that
  *  never falls quiet. At least this, and never less than
@@ -244,6 +247,20 @@ private const val MAX_READ_MS = 60_000L
 private const val MAX_READ_LINE_FACTOR = 2.5
 /** Pause for an other-side line whose recording didn't survive. */
 private const val SILENT_READ_MS_PER_WORD = 380
+/** Quiet that ends a take once the script's last word has been heard. The
+ *  1.5 s below exists because nobody can tell a breath from the end of a
+ *  line; with the line read to its end, that question is answered. */
+private const val LINE_READ_QUIET_MS = 500L
+/** The same take in a room that never reads as quiet. */
+private const val LINE_READ_CEILING_MS = 1_200L
+/** Quiet that ends a take stopped short of its last word. Nearly through
+ *  the line the recognizer probably just missed the end; earlier than that
+ *  the learner is looking for the next word (iOS 2026-11-09, founder: a
+ *  mid-line pause past the line's estimated length ended the take). */
+private const val NEAR_END_QUIET_MS = STILL_SPEAKING_MS
+private const val MID_LINE_QUIET_MS = 4_000L
+private const val NEAR_END_SHARE = 0.8
+private const val ANSWER_RING_MS = 350L
 
 /**
  * Say it again (다시 말하기) — the talk, run AGAIN, with the learner in it
@@ -275,7 +292,16 @@ fun SayItAgainScreen(
     val scope = rememberCoroutineScope()
     // No `source`: the run is one ANALYTICS event, not one per line played.
     val player = remember { Mp3Player(context.cacheDir) }
-    val recorder = remember { WavRecorder() }
+    /** One mic for the whole run (iOS 8a753a84, founder: the first sound
+     *  lost, and the next line late). Opened per line, the two traded off:
+     *  the line shown first cost the first sound, the mic first cost the
+     *  wait. Run-long, like a call, the answers play over it and a take
+     *  costs only a new recognition and a new file. */
+    val mic = remember { RunMic().apply { voicedLevel = VOICED_LEVEL } }
+    /** The live recognizer, fed the mic's own buffers. Null where this
+     *  Android can't feed one (< 13) or has none: the run then goes by the
+     *  level alone, as it did before the line followed the voice. */
+    var live by remember { mutableStateOf<LiveTranscriber?>(null) }
     /** Read the other side's lines too ([SayItAgainScript.bothSides]).
      *  Remembered: whoever asked for it once wants it the next time. */
     val prefs = remember { context.getSharedPreferences("futurevoice", 0) }
@@ -299,6 +325,12 @@ fun SayItAgainScreen(
     /** What the prompter shows — separate from `index` so a one-off retry
      *  from the finished screen doesn't wind the history back. */
     var promptStep by remember { mutableStateOf<SayItAgainScript.Step?>(null) }
+    /** The line on the prompter as the recognizer can follow it, and how
+     *  many of its words have been heard. Drawn as the part of the line
+     *  already lit, and it is what tells the take the line has been read to
+     *  its end. */
+    var promptTrack by remember { mutableStateOf<SpeechPrompterTrack?>(null) }
+    var spokenWords by remember { mutableIntStateOf(0) }
     // The mic level the reading panel's dot follows (iOS `live.level`).
     var micLevel by remember { mutableFloatStateOf(0f) }
     var oneOffRetry by remember { mutableStateOf(false) }
@@ -330,7 +362,8 @@ fun SayItAgainScreen(
             runJob?.cancel()
             scoreJobs.values.forEach { it.cancel() }
             player.stop()
-            runCatching { recorder.stop() }
+            runCatching { live?.stop() }
+            mic.close()
         }
     }
 
@@ -338,7 +371,11 @@ fun SayItAgainScreen(
         val spoken = steps.withIndex().filter { it.value.isSpoken }
         when (captureStage) {
             "reading" -> spoken.firstOrNull()?.let { (i, step) ->
-                index = i; promptStep = step; phase = SayPhase.READING
+                index = i; promptStep = step
+                val track = SpeechPrompterTrack(step.text, language)
+                promptTrack = track
+                spokenWords = (track.words.size + 1) / 2
+                phase = SayPhase.READING
             }
             "done" -> {
                 spoken.forEachIndexed { n, (_, step) ->
@@ -435,33 +472,114 @@ fun SayItAgainScreen(
         if (!played) waitUnlessSkipped(silentPause(step.text))
     }
 
-    /** True once the learner actually said something: waits for their FIRST
-     *  word, then for the line's own length, then for the shadow surface's
-     *  1.5 s of quiet (someone reading a line for the first time breathes
-     *  more than a talker does). */
+    /** Move the lit part on to what the recognizer has heard. Forward only:
+     *  its newest words get rewritten a moment later, and a highlight that
+     *  steps back reads as the app un-hearing them. */
+    fun followVoice(heard: String) {
+        val track = promptTrack ?: return
+        if (phase != SayPhase.READING) return
+        var next = minOf(track.advance(spokenWords, heard), track.words.size)
+        if (next == 0 && track.opensWithFirstWord(heard)) next = 1
+        if (next > spokenWords) spokenWords = next
+    }
+
+    fun quietToEndTakeMs(): Long {
+        val track = promptTrack?.takeIf { it.words.isNotEmpty() } ?: return NEAR_END_QUIET_MS
+        val read = spokenWords.toDouble() / track.words.size
+        return if (read >= NEAR_END_SHARE) NEAR_END_QUIET_MS else MID_LINE_QUIET_MS
+    }
+
+    fun lineIsRead(): Boolean {
+        val track = promptTrack?.takeIf { it.words.isNotEmpty() } ?: return false
+        return spokenWords >= track.words.size
+    }
+
+    /** Open the run's mic, and the recognizer on its buffers. Throws when
+     *  the mic can't be opened; a recognizer that can't is only a run
+     *  without the lit line. */
+    fun openMicIfNeeded() {
+        if (mic.isOpen) return
+        mic.open()
+        val t = LiveTranscriber(context)
+        val following = runCatching {
+            t.startForTakes(com.roro.futurevoice.data.LanguageCatalog.sttLocale(language)) { heard ->
+                followVoice(heard)
+            }
+        }.getOrDefault(false)
+        if (following) {
+            live = t
+            mic.tap = { buf, n -> t.feed(buf, n) }
+        } else {
+            live = null
+        }
+    }
+
+    fun closeMic() {
+        runCatching { live?.stop() }
+        live = null
+        mic.close()
+    }
+
+    /** True once the learner actually said something. Waits for their FIRST
+     *  word, then for a silence as long as where they are in the line asks. */
     suspend fun waitForReadToEnd(text: String): Boolean {
         // The line WAITS for them (iOS 384fb8d9, founder: "it keeps moving on
         // when I haven't said anything"). It used to give up after 8 s and
         // play the next answer, so a learner who looked away came back to a
         // conversation that had gone on without them. Only Skip (or Close)
         // moves past a line nobody has started to say.
-        while (!skipRequested && recorder.level < VOICED_LEVEL) { micLevel = recorder.level; delay(100) }
+        //
+        // A word of the line heard counts as a start too (the level meter
+        // alone reads nothing from a phone at arm's length).
+        //
+        // With the mic open through the answer, the first moments can be that
+        // answer still ringing in the room, which is not the learner starting.
+        val answerRingsUntil = System.currentTimeMillis() + ANSWER_RING_MS
+        while (!skipRequested && spokenWords == 0 &&
+            (mic.lastVoicedAtMs?.let { it <= answerRingsUntil } ?: true)) {
+            micLevel = mic.level
+            delay(100)
+        }
         if (skipRequested) return false
 
         val lineMs = maxOf(1_200, WordSplitter.count(text, language) * READ_MS_PER_WORD)
         val began = System.currentTimeMillis()
-        val earliest = began + lineMs
         // Only silence ends a take. The line's length used to be a hard stop
         // too (~1.5x the estimate), and a whole turn read for the first time
         // runs past 380 ms a word easily, so the take was cut mid-sentence.
         val hardStop = began + maxOf(MAX_READ_MS, (lineMs * MAX_READ_LINE_FACTOR).toLong())
-        var lastVoiced = began
+        // Android only: with no recognizer to follow the line (Android < 13,
+        // or none installed) there is no position to judge a pause by, so
+        // the take keeps the rule it had before: the line's own length, then
+        // 1.5 s of quiet.
+        val following = live != null
+        val earliest = began + lineMs
+        var lineReadAt: Long? = null
         while (!skipRequested && System.currentTimeMillis() < hardStop) {
             val now = System.currentTimeMillis()
-            micLevel = recorder.level
-            if (recorder.level >= VOICED_LEVEL) lastVoiced = now
-            if (now >= earliest && now - lastVoiced >= STILL_SPEAKING_MS) break
-            delay(100)
+            micLevel = mic.level
+            // The script's last word has been heard: nothing is left to wait
+            // for but the end of the sound.
+            if (lineIsRead()) {
+                val readAt = lineReadAt ?: now.also { lineReadAt = it }
+                val soundEnded = mic.lastVoicedAtMs?.let { now - it >= LINE_READ_QUIET_MS } ?: true
+                if (soundEnded || now - readAt >= LINE_READ_CEILING_MS) break
+                delay(60)
+                continue
+            }
+            // Near the end "quiet" is the shadow surface's 1.5 s: a
+            // mid-sentence breath runs up to 1.5 s, and someone reading a
+            // line for the first time breathes more than a talker does.
+            // Further back it is longer still ([quietToEndTakeMs]).
+            // Two witnesses, and BOTH must say quiet (iOS 2026-10-27, learner:
+            // "on a long line it moves on while I'm still talking"): loudness
+            // alone dips under the bar when a long read trails off or the
+            // room is loud, while the recognizer is still writing their words.
+            val still = if (following) quietToEndTakeMs() else STILL_SPEAKING_MS
+            val energyQuiet = mic.lastVoicedAtMs?.let { now - it >= still } ?: true
+            val wordsQuiet = live?.lastPartialAtMs?.let { now - it >= still } ?: true
+            if ((following || now >= earliest) && energyQuiet && wordsQuiet) break
+            delay(150)
         }
         return !skipRequested
     }
@@ -500,36 +618,45 @@ fun SayItAgainScreen(
         ), language)
     }
 
-    /** The learner's line. The mic opens with the line, the take ends when
-     *  they go quiet, and the GRADING runs on its own so the other side
-     *  answers immediately. */
+    /** The learner's line. The mic is already open: the take begins, the
+     *  line goes up, the take ends when they go quiet, and the GRADING runs
+     *  on its own so the other side answers immediately. */
     suspend fun readStep(step: SayItAgainScript.Step) {
-        phase = SayPhase.READING
-        promptStep = step
+        spokenWords = 0
         skipRequested = false
         takes.remove(step.id)
         scoreJobs.remove(step.id)?.cancel()
         player.stop()
         val file = File(File(context.filesDir, "shadow-takes"), StoreJson.newId() + ".wav")
-        if (runCatching { recorder.start(file) }.isFailure) {
+        if (runCatching { openMicIfNeeded(); live?.beginTake(); mic.beginTake(file) }.isFailure) {
             micError = context.getString(R.string.microphone_or_speech_permission_denied)
             takes[step.id] = SayTake(outcome = SayTake.Outcome.SKIPPED)
             return
         }
+        // The line is the signal to start, so it goes up only now, with the
+        // recognizer and the file already running.
+        promptTrack = SpeechPrompterTrack(step.text, language)
+        promptStep = step
+        phase = SayPhase.READING
+
         var spoke = false
         var completed = false
         try {
             spoke = waitForReadToEnd(step.text)
-            // Tail grace — "Done reading" lands mid-syllable, and a clipped
-            // tail reads as a deletion in the diff.
-            delay(300)
+            // Tail grace — a clipped tail reads as a deletion in the diff. Not
+            // needed once the last word has been heard and the quiet after it.
+            if (!lineIsRead()) delay(300)
             completed = true
         } finally {
-            // A cancelled read leaves the recorder alone: whoever cancelled
-            // it stopped it already and may have started the NEXT read on
-            // it by now, which this stop would kill (iOS 2026-10-23).
-            withContext(NonCancellable + Dispatchers.IO) {
-                if (completed) runCatching { recorder.stop() } else file.delete()
+            // A cancelled read leaves the take alone: whoever cancelled it
+            // ended it already and may have started the NEXT read on the
+            // same mic by now, which ending it here would kill (iOS
+            // 2026-10-23).
+            if (completed) {
+                live?.finishTake()
+                withContext(NonCancellable + Dispatchers.IO) { mic.finishTake() }
+            } else {
+                withContext(NonCancellable + Dispatchers.IO) { file.delete() }
             }
         }
         if (!spoke) {
@@ -562,24 +689,31 @@ fun SayItAgainScreen(
         }
     }
 
-    /** Cancel the run and stop the mic here, before anything new starts —
-     *  a cancelled read no longer stops it on its own. */
+    /** Cancel the run and end its take here, before anything new starts —
+     *  a cancelled read no longer ends it on its own. The mic itself stays
+     *  open for whatever starts next. */
     fun stopRun() {
         runJob?.cancel()
         player.stop()
-        runCatching { recorder.stop() }
+        live?.finishTake()
+        mic.discardTake()
     }
 
     /** Walk the script. Every step awaits its own end, so the loop IS the
      *  pacing — there is no timer anywhere on this screen. */
     suspend fun run(from: Int) {
         oneOffRetry = false
+        // One frame for the screen to draw before the mic opens.
+        delay(20)
+        // A failure here is said by the first line that needs the mic.
+        runCatching { openMicIfNeeded() }
         for (i in from until steps.size) {
             index = i
             if (steps[i].isSpoken) waitForRewrites()
             val step = steps[i]
             if (step.isSpoken) readStep(step) else listenStep(step)
         }
+        closeMic()
         index = maxOf(0, steps.lastIndex)
         phase = SayPhase.FINISHED
         // A finished run is what a routine's say-it-again block counts.
@@ -619,6 +753,7 @@ fun SayItAgainScreen(
             if (wasFinished) {
                 oneOffRetry = true
                 readStep(step)
+                closeMic()
                 oneOffRetry = false
                 phase = SayPhase.FINISHED
             } else run(i)
@@ -641,7 +776,8 @@ fun SayItAgainScreen(
         scoreJobs.values.forEach { it.cancel() }
         scoreJobs.clear()
         player.stop()
-        runCatching { recorder.stop() }
+        live?.finishTake()
+        mic.discardTake()
         takes.clear()
         steps = arrangedSteps(base, source.kind, on)
         if (phase != SayPhase.INTRO) start(0)
@@ -671,7 +807,7 @@ fun SayItAgainScreen(
         runJob?.cancel()
         scoreJobs.values.forEach { it.cancel() }
         player.stop()
-        runCatching { recorder.stop() }
+        closeMic()
         onClose()
     }
 
@@ -695,7 +831,9 @@ fun SayItAgainScreen(
     // right above the prompter. Anchored at the top, the prompter growing
     // from the one-line "is answering" row into the reading card pushed the
     // fluent self's last line down under the bar, out of sight.
-    LaunchedEffect(history.size, phase, index) {
+    // A score lands a second or two after its line and makes that row
+    // taller, which would leave the newest line under the bar.
+    LaunchedEffect(history.size, phase, index, takes.size) {
         if (history.isNotEmpty()) listState.animateScrollToItem(0)
     }
     // The plain page, not the grouped ground (iOS: the sheet's own
@@ -785,6 +923,7 @@ fun SayItAgainScreen(
                         SayPhase.LISTENING -> ListeningPanel(source.otherName) { skipRequested = true }
                         SayPhase.PREPARING -> PreparingPanel()
                         SayPhase.READING -> ReadingPanel(promptStep, source.otherName, micLevel,
+                            track = promptTrack, spokenWords = spokenWords,
                             onSkip = { skipRequested = true })
                         SayPhase.FINISHED -> FinishedPanel(
                             readCount = readCount, spokenCount = spokenCount, average = averageScore,
@@ -995,7 +1134,10 @@ private fun ListeningPanel(otherName: String, onSkip: () -> Unit) {
  * mic already knows. Skip stays, small, for a line they don't want to say.
  */
 @Composable
-private fun ReadingPanel(step: SayItAgainScript.Step?, otherName: String, micLevel: Float, onSkip: () -> Unit) {
+private fun ReadingPanel(
+    step: SayItAgainScript.Step?, otherName: String, micLevel: Float,
+    track: SpeechPrompterTrack?, spokenWords: Int, onSkip: () -> Unit,
+) {
     val context = LocalContext.current
     val theme = com.roro.futurevoice.ui.brand.FutureselfTheme.live.value
         ?: com.roro.futurevoice.ui.brand.FutureselfTheme.stored(context)
@@ -1058,8 +1200,12 @@ private fun ReadingPanel(step: SayItAgainScript.Step?, otherName: String, micLev
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    val shown = if (step.isCorrected) highlightedCorrection(step.text, step.said)
+                    val base = if (step.isCorrected) highlightedCorrection(step.text, step.said)
                         else buildAnnotatedString { append(step.text) }
+                    val accent = MaterialTheme.colorScheme.primary
+                    val shown = remember(base, track, spokenWords, ink, accent) {
+                        litLine(base, track, spokenWords, ink, accent)
+                    }
                     val lineStyle = MaterialTheme.typography.headlineSmall.copy(
                         // iOS `.lineSpacing(4)` on title2's 28 pt leading.
                         lineHeight = androidx.compose.ui.unit.TextUnit(32f,
@@ -1086,6 +1232,37 @@ private fun ReadingPanel(step: SayItAgainScript.Step?, otherName: String, micLev
                 tint = ink.copy(alpha = 0.5f))
             Text(stringResource(R.string.moves_on_when_you_finish), style = MaterialTheme.typography.labelSmall,
                 color = ink.copy(alpha = 0.5f))
+        }
+    }
+}
+
+/**
+ * The prompter's line, coloured the way the shadow screen colours its
+ * karaoke (iOS `litLine`): words already heard solid, the newest one in the
+ * accent, the rest waiting dim. A fixed word keeps the accent throughout,
+ * only dimmed until it is reached. Colour only, so nothing reflows.
+ */
+internal fun litLine(
+    line: androidx.compose.ui.text.AnnotatedString, track: SpeechPrompterTrack?,
+    spokenWords: Int, ink: Color, accent: Color,
+): androidx.compose.ui.text.AnnotatedString {
+    val plain = line.text
+    val reached = (track?.characterCount(spokenWords, plain) ?: 0).coerceIn(0, plain.length)
+    val newest = (track?.characterCount(maxOf(0, spokenWords - 1), plain) ?: 0).coerceIn(0, reached)
+    return buildAnnotatedString {
+        append(plain)
+        if (newest > 0) addStyle(SpanStyle(color = ink), 0, newest)
+        if (reached > newest) addStyle(SpanStyle(color = accent), newest, reached)
+        if (plain.length > reached) addStyle(SpanStyle(color = ink.copy(alpha = 0.45f)), reached, plain.length)
+        // The fixed words, laid over the three parts.
+        for (span in line.spanStyles) {
+            fun part(from: Int, to: Int, color: Color?) {
+                val a = maxOf(span.start, from); val b = minOf(span.end, to)
+                if (a < b) addStyle(if (color == null) span.item else span.item.copy(color = color), a, b)
+            }
+            part(0, newest, null)
+            part(newest, reached, accent)
+            part(reached, plain.length, accent.copy(alpha = 0.45f))
         }
     }
 }

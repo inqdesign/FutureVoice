@@ -104,6 +104,13 @@ class LiveTranscriber(private val context: Context) {
      */
     val lastVoicedAtMs: Long? get() = fluency.lastVoicedAt()
 
+    /** Wall-clock ms the recognizer last wrote a new live partial (iOS
+     *  `lastLivePartialAt`): the second witness that someone is still
+     *  talking, for a room where the level alone reads as quiet. */
+    @Volatile
+    var lastPartialAtMs: Long? = null
+        private set
+
     /** Ambient noise estimate the endpointer is working against (telemetry). */
     val ambientNoiseLevel: Float get() = fluency.noiseFloorLevel()
 
@@ -130,6 +137,7 @@ class LiveTranscriber(private val context: Context) {
         onTranscriptChanged = onTranscript
         chunks.clear()
         partial = ""
+        lastPartialAtMs = null
         fluency.reset()
         level = 0f
         lastRmsAtMs = System.currentTimeMillis()
@@ -151,23 +159,7 @@ class LiveTranscriber(private val context: Context) {
         generation++
         stopOwnMic()
         if (piped) {
-            // End of input, not a cancel: the pipe closes, the recognizer
-            // reads EOF and ends the session on its own. A cancelled session
-            // is what Google's recognizer answers with an earcon
-            // (`raw/no_input`), so the recognizer is only released once the
-            // session has had time to end. Callbacks from it are already
-            // ignored (the generation moved on).
-            queue?.let { q -> if (!q.offer(EOF)) { q.poll(); q.offer(EOF) } }
-            queue = null
-            writer = null
-            val rec = recognizer
-            val read = readEnd
-            recognizer = null
-            readEnd = null
-            main.postDelayed({
-                rec?.let { runCatching { it.destroy() } }
-                read?.let { runCatching { it.close() } }
-            }, RELEASE_AFTER_EOF_MS)
+            endPipeSession()
         } else {
             recognizer?.let {
                 runCatching { it.stopListening() }
@@ -178,6 +170,75 @@ class LiveTranscriber(private val context: Context) {
         val out = transcript
         onTranscriptChanged = null
         return out
+    }
+
+    /** End of input, not a cancel: the pipe closes, the recognizer reads EOF
+     *  and ends the session on its own. A cancelled session is what Google's
+     *  recognizer answers with an earcon (`raw/no_input`), so the recognizer
+     *  is only released once the session has had time to end. Callbacks from
+     *  it are already ignored (the generation moved on). */
+    private fun endPipeSession() {
+        queue?.let { q -> if (!q.offer(EOF)) { q.poll(); q.offer(EOF) } }
+        queue = null
+        writer = null
+        val rec = recognizer
+        val read = readEnd
+        recognizer = null
+        readEnd = null
+        if (rec == null && read == null) return
+        main.postDelayed({
+            rec?.let { runCatching { it.destroy() } }
+            read?.let { runCatching { it.close() } }
+        }, RELEASE_AFTER_EOF_MS)
+    }
+
+    // MARK: - Takes on a mic that stays open (iOS 8a753a84)
+
+    /**
+     * Ready for takes on a mic the CALLER holds open for a whole run (Say it
+     * again, [RunMic]): every buffer comes through [feed], and nothing is
+     * recognized until [beginTake]. False when this Android can't feed a
+     * recognizer (< 13) or has none: the run then goes on without live text.
+     */
+    fun startForTakes(languageCode: String, onTranscript: (String) -> Unit): Boolean {
+        if (isRunning) return acceptsFeed
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return false
+        if (!SpeechRecognizer.isRecognitionAvailable(context)) return false
+        locale = languageCode
+        onTranscriptChanged = onTranscript
+        chunks.clear()
+        partial = ""
+        lastPartialAtMs = null
+        fluency.reset()
+        level = 0f
+        sessionRestarts = 0
+        isRunning = true
+        piped = true
+        feedFromCaller = true
+        return true
+    }
+
+    /** Start a fresh take: a new recognition over the audio already being
+     *  fed. The mic is the caller's and stays as it is. */
+    fun beginTake() {
+        if (!acceptsFeed) return
+        generation++
+        endPipeSession()
+        chunks.clear()
+        partial = ""
+        lastPartialAtMs = null
+        fluency.reset()
+        sessionRestarts = 0
+        beginPipeSession()
+    }
+
+    /** End the take and stop recognizing; the caller's mic keeps running. */
+    fun finishTake(): String {
+        if (!acceptsFeed) return transcript
+        // First, so the session's last callbacks belong to nobody.
+        generation++
+        endPipeSession()
+        return transcript
     }
 
     /** One buffer of the caller's recording (16 kHz mono PCM16). Never
@@ -304,7 +365,9 @@ class LiveTranscriber(private val context: Context) {
             Log.w(TAG, "giving up on the recognizer for this take")
             return
         }
-        main.postDelayed({ if (isRunning && piped) beginPipeSession() }, 150)
+        // Not once the session it was for has been ended (a take finished).
+        val gen = generation
+        main.postDelayed({ if (isRunning && piped && gen == generation) beginPipeSession() }, 150)
     }
 
     private fun commit(text: String?) {
@@ -332,6 +395,7 @@ class LiveTranscriber(private val context: Context) {
                 .orEmpty()
             if (text.isNotBlank() && text != partial) {
                 partial = text
+                lastPartialAtMs = System.currentTimeMillis()
                 onTranscriptChanged?.invoke(transcript)
             }
         }
@@ -429,6 +493,7 @@ class LiveTranscriber(private val context: Context) {
                 .orEmpty()
             if (text.isNotBlank() && text != partial) {
                 partial = text
+                lastPartialAtMs = System.currentTimeMillis()
                 onTranscriptChanged?.invoke(transcript)
             }
         }
