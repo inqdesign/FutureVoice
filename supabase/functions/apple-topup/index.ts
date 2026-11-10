@@ -18,6 +18,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
+import { notifyOwner } from "../_shared/credits.ts"
 import { verifyAppleJWS, peekJWSUnverified, isoFromMs } from "../_shared/apple-jws.ts"
 
 Deno.serve(async (req) => {
@@ -93,6 +94,22 @@ Deno.serve(async (req) => {
   }
 
   console.log("apple-topup", { user: userId, transactionId, product: tx.productId, ...data })
+
+  // The owner hears about a pack the moment it lands, as on google-topup
+  // (2026-11-10). Only on the call that applied it; never in the way of the
+  // answer the app is waiting on to finish the transaction.
+  if (data?.applied === true) {
+    const after = notifyOwner([
+      "[nawana] 💰 분 팩 구매 (App Store)",
+      `누구: ${authed.user.email ?? userId.slice(0, 8)}`,
+      `무엇: ${tx.productId} · ${Math.round((data.seconds ?? 0) / 60)}분`,
+      `거래: ${transactionId}${tx.storefront ? ` · ${tx.storefront}` : ""}` +
+        (tx.environment && tx.environment !== "Production" ? ` · ${tx.environment}` : ""),
+    ].join("\n"))
+    // deno-lint-ignore no-explicit-any
+    const rt = (globalThis as any).EdgeRuntime
+    if (rt?.waitUntil) rt.waitUntil(after); else await after
+  }
   return new Response(JSON.stringify(data), {
     status: 200,
     headers: { "Content-Type": "application/json", ...cors() },

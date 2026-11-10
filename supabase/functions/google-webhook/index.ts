@@ -21,6 +21,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
 import { timingSafeEqual } from "../_shared/auth.ts"
 import { notifyOwner } from "../_shared/credits.ts"
+import { reportPlayPurchaseToRevenueCat } from "../_shared/revenuecat.ts"
 
 const PACKAGE_NAME = "com.roro.futurevoice"
 
@@ -170,6 +171,12 @@ Deno.serve(async (req) => {
         .eq("user_id", userId)
         .is("price_consent_pending_since", null)
     }
+
+    // RevenueCat hears about every subscription event (2026-11-10): the first
+    // post makes the purchase known there, a later one has it re-read the
+    // token (a cancel, a renewal). After the row above, which it never gates.
+    await reportPlayPurchaseToRevenueCat({
+      userId, purchaseToken: sub.purchaseToken, productId })
 
     // The owner hears about a subscriber leaving, as on apple-webhook
     // (2026-10-16). RTDN types: developer.android.com/google/play/billing/rtdn-reference
