@@ -73,7 +73,14 @@ final class SpeechStore: ObservableObject {
     func script(id: UUID) -> SpeechScript? {
         // The challenge first: the bundled sample IS the first challenge
         // (same id), and its takes must open as challenge takes.
+        #if SPEECH_APP
+        if let script = SpeechChallenges.shared.script(id: id) ?? scripts.first(where: { $0.id == id }) {
+            return script
+        }
+        return SpeechGroups.shared.script(id: id)
+        #else
         SpeechChallenges.shared.script(id: id) ?? scripts.first { $0.id == id }
+        #endif
     }
 
     func takes(for scriptId: UUID) -> [SpeechTake] { takes.filter { $0.scriptId == scriptId } }

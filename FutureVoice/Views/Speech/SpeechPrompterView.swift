@@ -262,7 +262,7 @@ struct SpeechPrompterView: View {
             }
             .environmentObject(appState)
         }
-        .sheet(isPresented: $showingTakes) { SpeechTakesSheet(scriptId: session.script.id) }
+        .fullScreenCover(isPresented: $showingTakes) { SpeechTakesPager(scriptId: session.script.id) }
     }
 
     private func cornerButton(_ symbol: String, label: Text, action: @escaping () -> Void) -> some View {

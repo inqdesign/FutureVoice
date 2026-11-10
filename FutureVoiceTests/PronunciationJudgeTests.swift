@@ -159,4 +159,34 @@ final class PronunciationJudgeTests: XCTestCase {
                                        ("s", 90, [("s", 100)])], accuracy: 85)
         XCTAssertEqual(drill(r, "decision", lesson: []), .pass(score: 90))
     }
+
+    // MARK: - A miss is explained (2026-11-10)
+
+    private let thTopic = PronunciationCourse.Topic(id: "th", symbol: "th", examples: "think, three",
+                                                    phonemes: ["θ"], english: "tongue between the teeth")
+
+    func testEveryMissNoteSaysWhatWasMeasured() {
+        let first = PronunciationNotes.notYet(word: "think", sound: "θ", heard: nil, topic: thTopic,
+                                              sentence: "I think so.", heardAs: .sound("s"), score: 41)
+        XCTAssertTrue(first.contains("came out like \"s\""))
+        XCTAssertTrue(first.contains("today's sound"))
+        let again = PronunciationNotes.wordAgain(word: "think", sound: "θ", topic: thTopic,
+                                                 heardAs: nil, score: 58, previous: 41, tries: 2)
+        XCTAssertTrue(again.contains("wasn't clear"))
+        XCTAssertTrue(again.contains("41 → 58"))
+        XCTAssertTrue(again.contains("NOT given"))
+        // No sound named: the voice is told not to invent one.
+        let whole = PronunciationNotes.wordAgain(word: "Brötchen", sound: nil, topic: thTopic, score: 44, tries: 1)
+        XCTAssertTrue(whole.contains("don't name one"))
+        XCTAssertFalse(whole.contains("today's sound"))
+    }
+
+    func testTheLongestStopIsNamed() {
+        var a = word("I", [("aɪ", 95)]); a.offsetMs = 0; a.durationMs = 200
+        var b = word("think", [("θ", 90)]); b.offsetMs = 250; b.durationMs = 300
+        var c = word("so", [("s", 90)]); c.offsetMs = 1400; c.durationMs = 300
+        XCTAssertEqual(PronunciationJudge.pauseBefore(in: take([a, b, c])), "so")
+        c.offsetMs = 600
+        XCTAssertNil(PronunciationJudge.pauseBefore(in: take([a, b, c])))
+    }
 }

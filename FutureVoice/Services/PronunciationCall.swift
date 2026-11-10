@@ -809,6 +809,20 @@ enum PronunciationJudge {
         return nil
     }
 
+    /// The word the longest stop of a reading came in front of, when one
+    /// stop stands out (Azure's word times): what "it stopped and started"
+    /// points at. nil when no gap is long enough to name.
+    static func pauseBefore(in result: PronunciationResult?) -> String? {
+        guard let words = result?.judgedWords.filter({ $0.durationMs > 0 })
+            .sorted(by: { $0.offsetMs < $1.offsetMs }), words.count >= 2 else { return nil }
+        var best: (gap: Int, word: String)?
+        for (a, b) in zip(words, words.dropFirst()) {
+            let gap = b.offsetMs - (a.offsetMs + a.durationMs)
+            if gap >= 350, gap > (best?.gap ?? 0) { best = (gap, b.word) }
+        }
+        return best?.word
+    }
+
     /// `heardAs` for the sound a verdict named, found in the take.
     static func heardAs(result: PronunciationResult?, word: String, sound: String?) -> HeardAs? {
         guard let sound,
@@ -986,8 +1000,15 @@ enum PronunciationNotes {
           like a friend. Informal.
         - Each of your lines answers ONE note from the app. Do exactly what \
           the note says and nothing more. Keep it SHORT: a few words is a \
-          whole line here. Never explain how to make a sound — the tip is \
-          on their screen.
+          whole line here.
+        - A NOT YET note tells you what the app measured. Say it to them: \
+          which word, what was off, and ONE thing to do with the mouth \
+          (tongue, lips, teeth, air, voice, length). Never just "again", \
+          and never a tip you already gave in this call for the same word: \
+          take another angle. Only what the note measured; never invent a \
+          fault it doesn't name. A sound in the note is a phonetic symbol \
+          for YOU: never say a symbol, name it by its letters in the word \
+          ("the th in think").
         - When you say a word or a sentence for them to copy, say it clearly \
           at a natural pace. Never spell it, never cut it into letters or \
           syllables, no symbols, nothing in brackets.
@@ -1012,13 +1033,14 @@ enum PronunciationNotes {
             : "Say hi in a few words and that you're getting today's sentences ready — nothing else."
     }
 
-    // Every line below is SHORT and set by the app (founder, 2026-11-04:
-    // "the retry lines are too long — that's all cost, and it says the same
-    // thing every time"). Each note is a fresh generation and a fresh
-    // synthesis, and the fluent self's seconds are the learner's talk time,
-    // so a retry is a few words: the word, said right, and "again". How to
-    // make the sound is on the card, in their own language — the voice does
-    // not explain it again.
+    // A PASS is a few fixed words set by the app (founder, 2026-11-04: "the
+    // retry lines are too long — that's all cost, and it says the same
+    // thing every time"): each note is a fresh generation and synthesis,
+    // and the fluent self's seconds are the learner's talk time. A MISS is
+    // not (founder, 2026-11-10: "don't just say again, again — explain
+    // what was wrong; the learner is going mad being told to keep going").
+    // Every miss says what the app measured and one thing to do about it,
+    // still short, and never the same tip twice.
     private static func only(_ example: String, max words: Int) -> String {
         "Say ONLY this, in the call's language, at most \(words) words, nothing before or after it: \"\(example)\""
     }
@@ -1054,33 +1076,62 @@ enum PronunciationNotes {
         return "Result: PASSED — the last sentence of the round (\(round.passedCount) of \(round.sentenceCount) passed). In one or two short sentences: the round is done; another round of this sound, or a different one with the button on their screen?"
     }
 
+    /// What the app measured on `word`, for the voice to say: the sound and
+    /// how it came out, or that only the word as a whole is known.
+    static func measured(word: String, sound: String?, heard: String?,
+                         heardAs: PronunciationJudge.HeardAs?, score: Int?,
+                         topic: PronunciationCourse.Topic) -> String {
+        let points = score.map { " (\($0) of 100)" } ?? ""
+        var what: String
+        if let heard {
+            what = "\"\(word)\" came out as the word \"\(heard)\""
+        } else if let sound, let heardAs {
+            switch heardAs {
+            case .sound(let other):
+                what = "the \"\(sound)\" sound in \"\(word)\" came out like \"\(other)\"\(points)"
+            case .vowelAdded:
+                what = "a little extra vowel slipped in at the \"\(sound)\" sound in \"\(word)\"\(points) — it should be one tight sound"
+            }
+        } else if let sound {
+            what = "the \"\(sound)\" sound in \"\(word)\" wasn't clear\(points)"
+        } else {
+            return "What the app measured: \"\(word)\" as a whole wasn't clear\(points). It can't tell which sound, so don't name one: the tip is about the whole word (its beat, its length, opening the mouth, not swallowing the end)."
+        }
+        if let sound, PronunciationJudge.isLesson(sound, topic.phonemes) {
+            what += ". That is today's sound: \(topic.english)"
+        }
+        return "What the app measured: \(what)."
+    }
+
     /// The sentence missed on `word`: the screen now shows that word alone.
     static func notYet(word: String, sound: String?, heard: String?,
                        topic: PronunciationCourse.Topic, sentence: String,
-                       heardAs: PronunciationJudge.HeardAs? = nil) -> String {
-        if let sound, let heardAs {
-            let how: String
-            switch heardAs {
-            case .sound(let other):
-                how = "Your \"\(sound)\" in \"\(word)\" came out like \"\(other)\""
-            case .vowelAdded:
-                how = "A little vowel slipped in at \"\(sound)\" in \"\(word)\" — it should be one tight sound"
-            }
-            return "Result: NOT YET. Say ONLY this, in the call's language, in at most 16 words: \(how); then \"\(word.capitalized). \(word.capitalized). Just this.\"" + asInSentence
-        }
-        if let heard {
-            return "Result: NOT YET. " + only("Sounded like \(heard). \(word.capitalized). \(word.capitalized). Just this.", max: 12)
-                + Self.asInSentence
-        }
-        return "Result: NOT YET. " + only("Not yet. \(word.capitalized). \(word.capitalized). Just this.", max: 12)
-            + Self.asInSentence
+                       heardAs: PronunciationJudge.HeardAs? = nil, score: Int? = nil) -> String {
+        "Result: NOT YET. Their screen now shows only \"\(word)\". "
+            + measured(word: word, sound: sound, heard: heard, heardAs: heardAs, score: score, topic: topic)
+            + " In at most 28 words: say what was off, give ONE tip for the mouth that fixes exactly that, then say \"\(word)\" twice, clearly, and ask for just that."
+            + asInSentence
     }
 
+    /// The word on its own missed again. `tries`: misses on this word so
+    /// far, this one included; `previous`: the last take's score for it.
     static func wordAgain(word: String, sound: String?, topic: PronunciationCourse.Topic,
-                          withTip: Bool) -> String {
-        guard withTip else { return "Result: NOT YET. " + only("Again. \(word.capitalized).", max: 6) + Self.asInSentence }
-        let which = sound.map { " (its \"\($0)\" sound)" } ?? ""
-        return "Result: NOT YET, several tries now. \"\(word)\"\(which): give ONE different short tip on how to make it (today's sound: \(topic.english)), at most 10 words, then say \"\(word)\" once, clearly, and \"again\". At most 20 words in all."
+                          heardAs: PronunciationJudge.HeardAs? = nil, score: Int? = nil,
+                          previous: Int? = nil, tries: Int = 1) -> String {
+        var note = "Result: NOT YET, try \(tries) on \"\(word)\" alone. "
+            + measured(word: word, sound: sound, heard: nil, heardAs: heardAs, score: score, topic: topic)
+        if let score, let previous {
+            if score >= previous + 8 {
+                note += " It is closer than their last try (\(previous) → \(score)): say so, as a fact."
+            } else if score <= previous - 8 {
+                note += " The last try was nearer (\(previous) → \(score)): the new tip should be simpler."
+            }
+        }
+        note += " In at most 24 words: say what is still off, give ONE tip you have NOT given for this word yet (another angle: where the tongue is, the lips, the air, the voice, how long it is, or an easy word with the same sound), then say \"\(word)\" once, clearly, and ask again."
+        if tries == 3 {
+            note += " Then add, in a few words, that it's fine to leave it for now with the button under the word and come back to it. Up to 34 words this time."
+        }
+        return note + asInSentence
     }
 
     /// Said alone, a word can lose the sound it has in the sentence ("the"
@@ -1089,8 +1140,12 @@ enum PronunciationNotes {
 
     /// The word is right alone and slipped in the sentence again: now it is
     /// practiced joined to its neighbours.
-    static func inFlow(chunk: String, word: String) -> String {
-        "Result: NOT YET. " + only("\(word.capitalized) alone is good. Now together: \(chunk). \(chunk).", max: 16)
+    static func inFlow(chunk: String, word: String, sound: String? = nil,
+                       heardAs: PronunciationJudge.HeardAs? = nil, score: Int? = nil,
+                       topic: PronunciationCourse.Topic) -> String {
+        "Result: NOT YET. \"\(word)\" was right on its own and slipped again inside the sentence. "
+            + measured(word: word, sound: sound, heard: nil, heardAs: heardAs, score: score, topic: topic)
+            + " Their screen now shows \"\(chunk)\". In at most 26 words: say the word alone is good and what happens to it next to the other words, ONE tip for joining them (don't rush into it, keep the sound when the next word starts), then say \"\(chunk)\" twice, as one piece."
             + asInSentence
     }
 
@@ -1113,8 +1168,16 @@ enum PronunciationNotes {
         only("Just the word: \(word).", max: 5)
     }
 
-    static func notSmooth(sentence: String) -> String {
-        "Result: NOT YET (it stopped and started). " + only("Good sounds. Once more, without stopping.", max: 7)
+    /// Every sound was there and the reading broke. `pauseBefore`: the word
+    /// the longest stop came in front of; `tries`: misses on this sentence
+    /// so far, this one included.
+    static func notSmooth(sentence: String, pauseBefore: String? = nil, tries: Int = 1) -> String {
+        let where_ = pauseBefore.map { " The longest stop was right before \"\($0)\": say so." }
+            ?? " The app can't tell where it stopped, so don't name a place."
+        let tip = tries <= 1
+            ? "ONE tip: slower is fine, but in one breath, the words joined"
+            : "ONE tip you have NOT given for this sentence yet (breathe before starting; say it in two halves first, then all of it; lean on the main words and let the small ones run; look at the next word while saying this one)"
+        return "Result: NOT YET, try \(tries). Every sound was right; the reading stopped and started.\(where_) In at most 24 words: say the sounds were good and what broke it, \(tip), then ask for the whole sentence once more. Don't read the sentence for them."
     }
 
     /// The learner skipping a sentence (founder, 2026-11-04: "'tricky

@@ -27,7 +27,7 @@ struct DayCardSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var data: DayCardData?
     @State private var photo: UIImage?
-    @State private var format: DayCardFormat = .feed
+    @State private var format: DayCardFormat = .story
     @State private var pick: PhotosPickerItem?
     @State private var showingCamera = false
     @State private var exported: SharedCard?
@@ -65,8 +65,9 @@ struct DayCardSheet: View {
                 }
                 Section {
                     Picker("Format", selection: $format) {
-                        Text("Feed 4:5").tag(DayCardFormat.feed)
-                        Text("Square").tag(DayCardFormat.square)
+                        Text(verbatim: "9:16").tag(DayCardFormat.story)
+                        Text(verbatim: "4:5").tag(DayCardFormat.feed)
+                        Text(verbatim: "1:1").tag(DayCardFormat.square)
                     }
                     .pickerStyle(.segmented)
                     .listRowBackground(Color.clear)
@@ -186,10 +187,13 @@ struct DayCardSheet: View {
     /// The card at the sheet's width. The view is fixed-size, so it's scaled
     /// rather than re-laid-out — what's shared is exactly what's shown.
     private func cardPreview(_ data: DayCardData) -> some View {
-        let scale = min(1, (UIScreen.main.bounds.width - 40) / format.size.width)
+        // The tall card is held to a height that leaves the controls on screen.
+        let scale = min(1, (UIScreen.main.bounds.width - 40) / format.size.width, 500 / format.size.height)
         return DayCardView(data: data, photo: photo, format: format)
             .scaleEffect(scale, anchor: .topLeading)
-            .frame(width: format.size.width * scale, height: format.size.height * scale)
+            // The card keeps its full layout size under the scale, so it has to
+            // be pinned to the corner it is scaled from.
+            .frame(width: format.size.width * scale, height: format.size.height * scale, alignment: .topLeading)
             // Same corner as the grouped sections below it — a 6 pt corner
             // beside iOS 26's large container radius read as a mismatch.
             .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))

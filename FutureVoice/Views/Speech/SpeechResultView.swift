@@ -13,8 +13,16 @@ struct SpeechResultView: View {
     /// Back to the challenge's board (the prompter closes) — from the sheet a
     /// better challenge take raises.
     var onSeeBoard: (() -> Void)? = nil
+    /// Every take of the script, oldest first (`SpeechTakesPager`): the
+    /// picture behind the page swipes between them while the score, the
+    /// sheet and the buttons stay put and change to the take swiped to.
+    var pages: [UUID]? = nil
+    /// The take swiped to.
+    var onPage: ((UUID) -> Void)? = nil
 
     @ObservedObject private var store = SpeechStore.shared
+    /// The first frame of each take's loop, for pictures swiped in.
+    @ObservedObject private var posters = SpeechPosters.shared
     @ObservedObject private var challenges = SpeechChallenges.shared
     /// Re-renders as a video copy lands or goes up.
     @ObservedObject private var sync = SyncEngine.shared
@@ -108,7 +116,9 @@ struct SpeechResultView: View {
                             Text(verbatim: "·")
                         }
                         Text(take.createdAt, format: .dateTime.month().day().hour().minute())
+                            .contentTransition(.numericText())
                     }
+                    .animation(.snappy(duration: 0.4), value: take.id)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 }
@@ -149,7 +159,8 @@ struct SpeechResultView: View {
                 }
             }
         }
-        .task(id: video) { await hero.show(video) }
+        .task(id: video) { await hero.show(video, take: take.id) }
+        .onChange(of: takeId) { _, _ in audio.stop() }
         .task(id: take.id) { await SpeechReadingRepair.restore(take, script: script) }
         // Here, on the page: the details live in the system sheet, which goes
         // away while the take plays, and this must not stop the take.
@@ -173,20 +184,48 @@ struct SpeechResultView: View {
     }
 
     private func heroBackground(_ take: SpeechTake, immersive: Bool) -> some View {
-        let tint = SpeechScoreColor.color(take.metrics.overall)
-        return ZStack {
+        ZStack {
             Color.black
-            if let player = hero.player {
-                PlayerLayerView(player: player, fill: true)
+            if let pages, pages.count > 1 {
+                TakesBackdrop(pages: pages, current: take.id, scrollable: !immersive,
+                              onPage: { onPage?($0) }) { id in
+                    backdropPicture(id, current: id == take.id)
+                }
             } else {
-                LinearGradient(colors: [tint.opacity(0.75), .black], startPoint: .top, endPoint: .bottom)
+                backdropPicture(take.id, current: true)
             }
             // Keeps the white text readable on any picture.
             LinearGradient(colors: [.clear, .black.opacity(0.7)],
                            startPoint: UnitPoint(x: 0.5, y: 0.45), endPoint: .bottom)
                 .opacity(immersive ? 0 : 1)
+                .allowsHitTesting(false)
         }
         .ignoresSafeArea()
+    }
+
+    /// One take's picture: its player when it is the take on the page, its
+    /// loop's first frame under that (and alone on a take swiped past), or
+    /// the score's colour for a take with no video.
+    @ViewBuilder
+    private func backdropPicture(_ id: UUID, current: Bool) -> some View {
+        let shown = id == take?.id ? take : store.takes.first { $0.id == id }
+        ZStack {
+            Color.black
+            if let shown {
+                let video = heroVideo(shown)
+                if let video, let poster = posters.image(video) {
+                    Color.clear
+                        .overlay(Image(uiImage: poster).resizable().scaledToFill())
+                        .clipped()
+                }
+                if current, let player = hero.player {
+                    PlayerLayerView(player: player, fill: true)
+                } else if video == nil {
+                    LinearGradient(colors: [SpeechScoreColor.color(shown.metrics.overall).opacity(0.75), .black],
+                                   startPoint: .top, endPoint: .bottom)
+                }
+            }
+        }
     }
 
     private func heroContent(_ take: SpeechTake, hasVideo: Bool) -> some View {
@@ -194,15 +233,23 @@ struct SpeechResultView: View {
         let playing = hero.isPlaying || audio.isPlaying
         return HStack(alignment: .bottom, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
+                // Swiped to another take (`SpeechTakesPager`): the digits roll
+                // to the new score and the lines under it blur into theirs.
                 Text("\(m.overall)")
                     .font(.system(size: 96, weight: .bold).monospacedDigit())
+                    .contentTransition(.numericText(value: Double(m.overall)))
                 if let r = m.reading {
-                    Text(SpeechVerdict.line(total: r.total, take: take.id))
-                        .font(.title2.weight(.semibold))
-                    Text("\(Text(levelTitle(r.level))) level")
-                        .font(.title3.weight(.semibold))
+                    Group {
+                        Text(SpeechVerdict.line(total: r.total, take: take.id))
+                            .font(.title2.weight(.semibold))
+                        Text("\(Text(levelTitle(r.level))) level")
+                            .font(.title3.weight(.semibold))
+                    }
+                    .id(take.id)
+                    .transition(.blurReplace)
                 }
             }
+            .animation(.snappy(duration: 0.4), value: take.id)
             .frame(maxWidth: .infinity, alignment: .leading)
             .shadow(color: .black.opacity(0.35), radius: 8, y: 2)
             Button {
@@ -834,6 +881,7 @@ struct SpeechResultView: View {
                     Text(verbatim: "\(tiles[index].score)")
                         .font(.title.weight(.bold).monospacedDigit())
                         .foregroundStyle(SpeechScoreColor.color(tiles[index].score))
+                        .contentTransition(.numericText(value: Double(tiles[index].score)))
                     ProgressView(value: Double(min(100, max(0, tiles[index].score))), total: 100)
                         .tint(SpeechScoreColor.color(tiles[index].score))
                         .padding(.horizontal, 10)
@@ -850,6 +898,8 @@ struct SpeechResultView: View {
         }
         .padding(.horizontal, 12)
         .padding(.bottom, 14)
+        // A take swiped to: each part's number rolls and its bar slides.
+        .animation(.snappy(duration: 0.4), value: tiles.map(\.score))
     }
 
     /// Season 2's result: what to work on next, then the five parts, each
@@ -1353,7 +1403,9 @@ private struct PlayerLayerView: UIViewRepresentable {
         let view = LayerView()
         view.playerLayer.player = player
         view.playerLayer.videoGravity = fill ? .resizeAspectFill : .resizeAspect
-        view.backgroundColor = .black
+        // Clear when it fills the page: the take's first frame under it shows
+        // until the player draws.
+        view.backgroundColor = fill ? .clear : .black
         return view
     }
 
@@ -1425,19 +1477,23 @@ final class SpeechHeroPlayer: ObservableObject {
     /// The whole take is loaded, playing or paused, not the silent loop.
     @Published private(set) var isFull = false
 
-    private static let loopSeconds = 6.0
+    static let loopSeconds = 6.0
     /// Skips the first breath of the take when there is enough of it.
-    private static let loopStart = 3.0
+    static let loopStart = 3.0
 
     private var url: URL?
+    private var takeId: UUID?
     private var looper: AVPlayerLooper?
     private var endObserver: NSObjectProtocol?
     private var generation = 0
 
-    func show(_ url: URL?) async {
+    func show(_ url: URL?, take: UUID? = nil) async {
         guard url != self.url else { return }
-        // Switching videos while the take plays keeps its place.
-        let resume = isFull ? (time: player?.currentTime() ?? .zero, playing: isPlaying) : nil
+        // Switching videos while the take plays keeps its place, for the
+        // same take only (a synced copy landing); another take starts over.
+        let sameTake = take == nil || take == takeId
+        takeId = take
+        let resume = isFull && sameTake ? (time: player?.currentTime() ?? .zero, playing: isPlaying) : nil
         self.url = url
         guard let url else { reset(); player = nil; return }
         if let resume {
@@ -1837,5 +1893,93 @@ private struct SpeechResultSheetPage<Background: View, Overlay: View, Hero: View
                                       visibleHeight: visibleHeight - inset + 48 * CGFloat(progress),
                                       radius: 24 + 10 * CGFloat(1 - progress)))
         .ignoresSafeArea(edges: .bottom)
+    }
+}
+
+/// Each take's loop, first frame: what a picture swiped in shows before its
+/// player draws (the takes' pager warms them all when it opens).
+@MainActor
+final class SpeechPosters: ObservableObject {
+    static let shared = SpeechPosters()
+    @Published private(set) var images: [URL: UIImage] = [:]
+
+    func image(_ url: URL) -> UIImage? { images[url] }
+
+    func warm(_ url: URL) async {
+        guard images[url] == nil else { return }
+        let asset = AVURLAsset(url: url)
+        let duration = (try? await asset.load(.duration))?.seconds ?? 0
+        guard duration > 0 else { return }
+        let start = duration > SpeechHeroPlayer.loopStart + SpeechHeroPlayer.loopSeconds
+            ? SpeechHeroPlayer.loopStart : 0
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        generator.maximumSize = CGSize(width: 1080, height: 1920)
+        generator.requestedTimeToleranceBefore = .zero
+        generator.requestedTimeToleranceAfter = .zero
+        if let frame = try? await generator.image(at: CMTime(seconds: start, preferredTimescale: 600)).image {
+            images[url] = UIImage(cgImage: frame)
+        }
+    }
+}
+
+/// The pictures of every take side by side, a page each: the only thing
+/// that moves when the takes' pager is swiped.
+private struct TakesBackdrop<Page: View>: View {
+    let pages: [UUID]
+    let current: UUID
+    let scrollable: Bool
+    let onPage: (UUID) -> Void
+    let page: (UUID) -> Page
+    @State private var position: UUID?
+
+    init(pages: [UUID], current: UUID, scrollable: Bool, onPage: @escaping (UUID) -> Void,
+         @ViewBuilder page: @escaping (UUID) -> Page) {
+        self.pages = pages
+        self.current = current
+        self.scrollable = scrollable
+        self.onPage = onPage
+        self.page = page
+        _position = State(initialValue: current)
+    }
+
+    var body: some View {
+        ScrollView(.horizontal) {
+            LazyHStack(spacing: 0) {
+                ForEach(pages, id: \.self) { id in
+                    page(id)
+                        .containerRelativeFrame([.horizontal, .vertical])
+                }
+            }
+            .scrollTargetLayout()
+        }
+        .scrollTargetBehavior(.paging)
+        .scrollIndicators(.hidden)
+        // Edge to edge: inside a navigation stack a scroll view keeps its
+        // content below the bar, and the picture started under the buttons.
+        .contentMargins(0, for: .scrollContent)
+        .ignoresSafeArea()
+        // iOS 26 darkens a scroll view's top under a bar; this is a picture.
+        .modifier(NoScrollEdgeEffect())
+        .scrollPosition(id: $position)
+        .scrollDisabled(!scrollable)
+        .onAppear { if position != current { position = current } }
+        .onChange(of: position) { _, now in
+            if let now, now != current { onPage(now) }
+        }
+        // Picked from the list: the picture follows.
+        .onChange(of: current) { _, now in
+            if position != now { position = now }
+        }
+    }
+}
+
+private struct NoScrollEdgeEffect: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26, *) {
+            content.scrollEdgeEffectHidden(true, for: .all)
+        } else {
+            content
+        }
     }
 }

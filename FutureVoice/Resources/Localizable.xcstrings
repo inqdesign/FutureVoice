@@ -521,316 +521,6 @@
         }
       }
     },
-    "In practice" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wird geübt"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Practicando"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "En cours"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "練習中"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "연습 중"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "练习中"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "練習中"
-          }
-        }
-      }
-    },
-    "My answer is right too" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Meine Antwort stimmt auch"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mi respuesta también vale"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ma réponse est juste aussi"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "この答えも合ってます"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "제 답도 맞아요"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "我的答案也对"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "我的答案也對"
-          }
-        }
-      }
-    },
-    "Couldn't check that one, so it won't count." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Das konnten wir nicht prüfen, also zählt es nicht."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No pudimos comprobarla, así que no cuenta."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Impossible de vérifier celle-ci, elle ne compte pas."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "確認できなかったので、この問題は点数に入れません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "확인하지 못한 문제라 점수에서 뺐어요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "这题没法确认，不计分。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "這題沒辦法確認，不計分。"
-          }
-        }
-      }
-    },
-    "You can say this" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Das kannst du schon sagen"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ya puedes decirlo"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tu sais le dire"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "もう言えます"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이제 말할 수 있어요"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已经会说了"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已經會說了"
-          }
-        }
-      }
-    },
-    "dev.firstCallSetup.subtitle" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The sheet before a new learner's first call. Nothing is saved"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "새 학습자가 첫 통화 전에 보는 화면. 아무것도 저장하지 않아요"
-          }
-        }
-      }
-    },
-    "dev.firstCallSetup.title" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Preview first-call setup"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "첫 통화 설정 미리 보기"
-          }
-        }
-      }
-    },
-    "Each time your future self says something, you see a line you could answer with." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jedes Mal, wenn dein fließendes Ich etwas sagt, siehst du einen Satz, mit dem du antworten kannst."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cada vez que tu yo fluido dice algo, ves una frase con la que podrías responder."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chaque fois que ton moi fluide dit quelque chose, tu vois une phrase pour lui répondre."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "流暢な自分がひとこと話すたびに、こう答えればいいという文が出ます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "유창해진 내가 한마디 할 때마다, 이렇게 답하면 된다는 문장을 보여 줘요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "流利的自己每说一句，就会出现一句你可以拿来回答的话。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "流利的自己每說一句，就會出現一句你可以拿來回答的話。"
-          }
-        }
-      }
-    },
-    "Each word is compared with the same script read by a native voice (%@). Intonation isn't scored yet: nothing measures it reliably." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jedes Wort wird mit demselben Text verglichen, gelesen von einer muttersprachlichen Stimme (%@). Die Satzmelodie wird noch nicht bewertet: Es gibt noch keine verlässliche Messung."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cada palabra se compara con el mismo texto leído por una voz nativa (%@). La entonación aún no se puntúa: todavía no hay forma fiable de medirla."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chaque mot est comparé au même texte lu par une voix native (%@). L’intonation n’est pas encore notée : rien ne la mesure de façon fiable."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "同じ台本をネイティブの声（%@）で読んだものと、語ごとに比べています。イントネーションは確かな測り方がまだないため、点数に入れていません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "원어민 목소리(%@)로 읽은 같은 대본과 단어마다 비교했어요. 억양은 믿을 만한 측정 방법이 아직 없어서 점수에 넣지 않았어요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "每个词都和母语人士声音（%@）读的同一份稿子比较。语调还没有可靠的测量方法，所以还没算进分数。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "每個字都和母語人士聲音（%@）讀的同一份稿子比較。語調還沒有可靠的測量方法，所以還沒算進分數。"
-          }
-        }
-      }
-    },
     "First year abroad" : {
       "localizations" : {
         "de" : {
@@ -919,6 +609,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "比手畫腳"
+          }
+        }
+      }
+    },
+    "Have a nawana plan?" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "나와나 요금제를 쓰고 있나요?"
+          }
+        }
+      }
+    },
+    "In practice" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird geübt"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Practicando"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En cours"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "練習中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "연습 중"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "练习中"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "練習中"
           }
         }
       }
@@ -1015,146 +761,134 @@
         }
       }
     },
-    "Ordered at a restaurant" : {
+    "My answer is right too" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Im Restaurant bestellt"
+            "value" : "Meine Antwort stimmt auch"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pediste en el restaurante"
+            "value" : "Mi respuesta también vale"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Commande au resto réussie"
+            "value" : "Ma réponse est juste aussi"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "レストランで注文成功"
+            "value" : "この答えも合ってます"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "식당 주문 성공"
+            "value" : "제 답도 맞아요"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "成功点餐"
+            "value" : "我的答案也对"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "成功點餐"
+            "value" : "我的答案也對"
           }
         }
       }
     },
-    "Overall ranking" : {
+    "Couldn't check that one, so it won't count." : {
       "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Overall ranking"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "전체 순위"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "総合ランキング"
-          }
-        },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gesamtrangliste"
+            "value" : "Das konnten wir nicht prüfen, also zählt es nicht."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Clasificación general"
+            "value" : "No pudimos comprobarla, así que no cuenta."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Classement général"
+            "value" : "Impossible de vérifier celle-ci, elle ne compte pas."
           }
         },
-        "zh-Hant" : {
+        "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "總排名"
+            "value" : "確認できなかったので、この問題は点数に入れません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "확인하지 못한 문제라 점수에서 뺐어요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "总排名"
+            "value" : "这题没法确认，不计分。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這題沒辦法確認，不計分。"
           }
         }
       }
     },
-    "Prime-time news anchor" : {
+    "On nawana already? Sign in the same way and your plan comes with you." : {
       "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tagesschau-Sprecher"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Presentador de noticias"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Présentateur du 20 heures"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "9時のニュースキャスター"
-          }
-        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "9시 뉴스 앵커"
+            "value" : "나와나를 쓰고 있다면 같은 방법으로 로그인하세요. 요금제도 그대로예요."
           }
-        },
-        "zh-Hans" : {
+        }
+      }
+    },
+    "Privacy policy" : {
+      "localizations" : {
+        "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "晚间新闻主播"
+            "value" : "개인정보 처리방침"
           }
-        },
-        "zh-Hant" : {
+        }
+      }
+    },
+    "Ranking" : {
+      "localizations" : {
+        "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "晚間新聞主播"
+            "value" : "순위"
+          }
+        }
+      }
+    },
+    "Read a script under a prompter that follows your voice, film it if you like, and get every take scored." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "원고를 읽으면 프롬프터가 내 목소리를 따라오고, 읽을 때마다 점수가 나와요."
           }
         }
       }
@@ -1435,6 +1169,668 @@
         }
       }
     },
+    "Set your name" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이름 정하기"
+          }
+        }
+      }
+    },
+    "Sign in to start" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "로그인하고 시작해요"
+          }
+        }
+      }
+    },
+    "Signed in as" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "로그인 계정"
+          }
+        }
+      }
+    },
+    "Speak it like you mean it" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "외국어 발표, 소리 내어 연습해요"
+          }
+        }
+      }
+    },
+    "Subscribed on nawana? Sign in with the account you use there." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "나와나를 구독했다면 그 계정으로 로그인하세요."
+          }
+        }
+      }
+    },
+    "Take a challenge and your scores show up here." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "챌린지에 도전하면 점수가 여기에 쌓여요."
+          }
+        }
+      }
+    },
+    "The same plan works in nawana and here." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "나와나와 여기서 같은 요금제를 써요."
+          }
+        }
+      }
+    },
+    "This season has ended. These are the final standings." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Saison ist beendet. Das ist der Endstand."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta temporada ha terminado. Esta es la clasificación final."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette saison est terminée. Voici le classement final."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このシーズンは終了しました。最終順位です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 시즌은 끝났어요. 최종 순위예요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本赛季已结束，这是最终排名。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本賽季已結束，這是最終排名。"
+          }
+        }
+      }
+    },
+    "Everyone" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "전체"
+          }
+        }
+      }
+    },
+    "My groups" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 그룹"
+          }
+        }
+      }
+    },
+    "Make a group" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그룹 만들기"
+          }
+        }
+      }
+    },
+    "Join with a code" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "코드로 참여하기"
+          }
+        }
+      }
+    },
+    "Whose board" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "보고 있는 그룹"
+          }
+        }
+      }
+    },
+    "Leading the group" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그룹 선두"
+          }
+        }
+      }
+    },
+    "%lld members" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "멤버 %lld명"
+          }
+        }
+      }
+    },
+    "Invite" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "초대하기"
+          }
+        }
+      }
+    },
+    "Group challenges" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그룹 챌린지"
+          }
+        }
+      }
+    },
+    "Pick a challenge" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "챌린지 고르기"
+          }
+        }
+      }
+    },
+    "Post my script" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 원고 올리기"
+          }
+        }
+      }
+    },
+    "Add a group challenge" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그룹 챌린지 추가"
+          }
+        }
+      }
+    },
+    "Pick one challenge and read it together." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "챌린지 하나를 골라 같이 읽어봐요."
+          }
+        }
+      }
+    },
+    "Take off the group" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그룹에서 내리기"
+          }
+        }
+      }
+    },
+    "Picked by you" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내가 골랐어요"
+          }
+        }
+      }
+    },
+    "Written by you" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내가 썼어요"
+          }
+        }
+      }
+    },
+    "Picked by %@" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 님이 골랐어요"
+          }
+        }
+      }
+    },
+    "Written by %@" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 님이 썼어요"
+          }
+        }
+      }
+    },
+    "Member" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "멤버"
+          }
+        }
+      }
+    },
+    "Nobody in the group has read this yet." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그룹에서 아직 아무도 안 읽었어요."
+          }
+        }
+      }
+    },
+    "In the group every take counts, camera on or off. Your best one stands." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그룹에선 카메라를 켜든 끄든 모든 테이크가 들어가요. 가장 잘한 기록이 남아요."
+          }
+        }
+      }
+    },
+    "Each member's best score on every challenge, added up." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "챌린지마다 가장 잘한 점수를 모두 더했어요."
+          }
+        }
+      }
+    },
+    "Leave the group" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그룹 나가기"
+          }
+        }
+      }
+    },
+    "Leave %@?" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@에서 나갈까요?"
+          }
+        }
+      }
+    },
+    "Group name" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그룹 이름"
+          }
+        }
+      }
+    },
+    "Friends, a study group, your team. Only people with the invite code can join." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "친구, 스터디 모임, 팀 누구든 좋아요. 초대 코드가 있는 사람만 들어올 수 있어요."
+          }
+        }
+      }
+    },
+    "Make" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "만들기"
+          }
+        }
+      }
+    },
+    "Ask someone in the group for its six-letter code." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그룹 사람에게 여섯 자리 코드를 받아 넣어요."
+          }
+        }
+      }
+    },
+    "Join a group" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그룹 참여하기"
+          }
+        }
+      }
+    },
+    "Join" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "참여"
+          }
+        }
+      }
+    },
+    "Let's practice speeches together in %@. In nawana speech, go to Challenges, tap the group name at the top, then Join with a code: %@" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@에서 같이 스피치 연습해요. nawana speech 챌린지 탭 맨 위 이름을 누르고 '코드로 참여하기'에 이 코드를 넣으면 돼요: %@"
+          }
+        }
+      }
+    },
+    "Share the invite" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "초대 보내기"
+          }
+        }
+      }
+    },
+    "Copy the code" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "코드 복사"
+          }
+        }
+      }
+    },
+    "Write a script under My scripts first, then post it here." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 원고에서 원고를 먼저 쓰고 여기서 올려요."
+          }
+        }
+      }
+    },
+    "No group has that code. Check it and try again." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 코드의 그룹이 없어요. 코드를 다시 확인해 주세요."
+          }
+        }
+      }
+    },
+    "That group is full." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그룹이 꽉 찼어요."
+          }
+        }
+      }
+    },
+    "You're in as many groups as you can be." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "들어갈 수 있는 그룹 수를 다 채웠어요."
+          }
+        }
+      }
+    },
+    "Posting your own script comes with a plan." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 원고 올리기는 구독하면 쓸 수 있어요."
+          }
+        }
+      }
+    },
+    "That didn't go through. Try again." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "잘 안 됐어요. 다시 해 주세요."
+          }
+        }
+      }
+    },
+    "Leading now" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지금 선두"
+          }
+        }
+      }
+    },
+    "My rank" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 순위"
+          }
+        }
+      }
+    },
+    "Challenges tried" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "해본 챌린지"
+          }
+        }
+      }
+    },
+    "Takes this week" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이번 주 테이크"
+          }
+        }
+      }
+    },
+    "New challenge" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새 챌린지"
+          }
+        }
+      }
+    },
+    "Popular" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "인기"
+          }
+        }
+      }
+    },
+    "Not tried" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "안 해본 것"
+          }
+        }
+      }
+    },
+    "Tried" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "해본 것"
+          }
+        }
+      }
+    },
+    "Nothing read yet." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 해본 챌린지가 없어요."
+          }
+        }
+      }
+    },
+    "You've read them all." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "전부 해봤어요."
+          }
+        }
+      }
+    },
+    "Use another account" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다른 계정으로 로그인"
+          }
+        }
+      }
+    },
+    "You can keep practicing. Your place stays as it is." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Üben kannst du weiter. Deine Platzierung bleibt."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Puedes seguir practicando. Tu puesto no cambia."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu peux continuer à t’entraîner. Ton classement ne change pas."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "練習は続けられます。順位はこのまま残ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "연습은 계속할 수 있어요. 순위는 이대로 남아요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可以继续练习，排名保持不变。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可以繼續練習，排名維持不變。"
+          }
+        }
+      }
+    },
     "speech.challenge.practice" : {
       "localizations" : {
         "de" : {
@@ -1483,6 +1879,322 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "練習"
+          }
+        }
+      }
+    },
+    "You can say this" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das kannst du schon sagen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ya puedes decirlo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu sais le dire"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "もう言えます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이제 말할 수 있어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已经会说了"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已經會說了"
+          }
+        }
+      }
+    },
+    "dev.firstCallSetup.subtitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The sheet before a new learner's first call. Nothing is saved"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새 학습자가 첫 통화 전에 보는 화면. 아무것도 저장하지 않아요"
+          }
+        }
+      }
+    },
+    "dev.firstCallSetup.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preview first-call setup"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "첫 통화 설정 미리 보기"
+          }
+        }
+      }
+    },
+    "Each time your future self says something, you see a line you could answer with." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jedes Mal, wenn dein fließendes Ich etwas sagt, siehst du einen Satz, mit dem du antworten kannst."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cada vez que tu yo fluido dice algo, ves una frase con la que podrías responder."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chaque fois que ton moi fluide dit quelque chose, tu vois une phrase pour lui répondre."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流暢な自分がひとこと話すたびに、こう答えればいいという文が出ます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "유창해진 내가 한마디 할 때마다, 이렇게 답하면 된다는 문장을 보여 줘요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流利的自己每说一句，就会出现一句你可以拿来回答的话。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "流利的自己每說一句，就會出現一句你可以拿來回答的話。"
+          }
+        }
+      }
+    },
+    "Each word is compared with the same script read by a native voice (%@). Intonation isn't scored yet: nothing measures it reliably." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jedes Wort wird mit demselben Text verglichen, gelesen von einer muttersprachlichen Stimme (%@). Die Satzmelodie wird noch nicht bewertet: Es gibt noch keine verlässliche Messung."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cada palabra se compara con el mismo texto leído por una voz nativa (%@). La entonación aún no se puntúa: todavía no hay forma fiable de medirla."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chaque mot est comparé au même texte lu par une voix native (%@). L’intonation n’est pas encore notée : rien ne la mesure de façon fiable."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同じ台本をネイティブの声（%@）で読んだものと、語ごとに比べています。イントネーションは確かな測り方がまだないため、点数に入れていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "원어민 목소리(%@)로 읽은 같은 대본과 단어마다 비교했어요. 억양은 믿을 만한 측정 방법이 아직 없어서 점수에 넣지 않았어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每个词都和母语人士声音（%@）读的同一份稿子比较。语调还没有可靠的测量方法，所以还没算进分数。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每個字都和母語人士聲音（%@）讀的同一份稿子比較。語調還沒有可靠的測量方法，所以還沒算進分數。"
+          }
+        }
+      }
+    },
+    "Ordered at a restaurant" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Im Restaurant bestellt"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pediste en el restaurante"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Commande au resto réussie"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "レストランで注文成功"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "식당 주문 성공"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "成功点餐"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "成功點餐"
+          }
+        }
+      }
+    },
+    "Overall ranking" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Overall ranking"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "전체 순위"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "総合ランキング"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gesamtrangliste"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clasificación general"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Classement général"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "總排名"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "总排名"
+          }
+        }
+      }
+    },
+    "Prime-time news anchor" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tagesschau-Sprecher"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Presentador de noticias"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Présentateur du 20 heures"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "9時のニュースキャスター"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "9시 뉴스 앵커"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "晚间新闻主播"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "晚間新聞主播"
           }
         }
       }
@@ -1625,52 +2337,6 @@
         }
       }
     },
-    "This season has ended. These are the final standings." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Diese Saison ist beendet. Das ist der Endstand."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Esta temporada ha terminado. Esta es la clasificación final."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cette saison est terminée. Voici le classement final."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このシーズンは終了しました。最終順位です。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이 시즌은 끝났어요. 최종 순위예요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "本赛季已结束，这是最终排名。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "本賽季已結束，這是最終排名。"
-          }
-        }
-      }
-    },
     "Trusted with the presentation" : {
       "localizations" : {
         "de" : {
@@ -1763,48 +2429,12 @@
         }
       }
     },
-    "You can keep practicing. Your place stays as it is." : {
+    "You're signed in as %@. Your plan is on the account you subscribed with." : {
       "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Üben kannst du weiter. Deine Platzierung bleibt."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Puedes seguir practicando. Tu puesto no cambia."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tu peux continuer à t’entraîner. Ton classement ne change pas."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "練習は続けられます。順位はこのまま残ります。"
-          }
-        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "연습은 계속할 수 있어요. 순위는 이대로 남아요."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "可以继续练习，排名保持不变。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "可以繼續練習，排名維持不變。"
+            "value" : "지금 %@ 계정이에요. 요금제는 구독한 계정에 있어요."
           }
         }
       }
@@ -19912,6 +20542,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "分數和名次將被移除。下次開啟相機的挑戰會重新進入排名。"
+          }
+        }
+      }
+    },
+    "Your scores and ranks stay on this account." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "점수와 순위는 이 계정에 남아요."
           }
         }
       }

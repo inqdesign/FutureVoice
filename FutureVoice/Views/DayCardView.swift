@@ -30,6 +30,17 @@ struct DayCardData: Codable, Equatable {
     /// of `topics`, or their own words. Nil is automatic. Optional with a
     /// default so snapshots written before it decode.
     var headline: String? = nil
+    /// Everything else done that day, each in the unit the app counts it in
+    /// (only a talk is measured in minutes). Optional so snapshots written
+    /// before 2026-11-10 decode; those days list what they have.
+    var sayItAgainRuns: Int? = nil
+    var speechTakes: Int? = nil
+    /// Podcast episodes and situations heard in the player.
+    var listens: Int? = nil
+    var reads: Int? = nil
+    var scenes: Int? = nil
+    /// Word and expression cards worked through.
+    var words: Int? = nil
 
     /// What the card prints at the top: the settled headline, else the main
     /// talk's title.
@@ -66,21 +77,31 @@ struct DayCardData: Codable, Equatable {
         return DayCardStore.shared.snapshot(for: day) ?? make(day: day, calendar: calendar)
     }
 
-    /// The numbers row: talk and study always, then whatever else the day
-    /// has, up to four cells — a zero is never printed.
-    struct Stat: Identifiable {
-        let label: LocalizedStringKey
+    /// The list at the card's bottom left: everything done that day, one
+    /// line each, a zero never printed. Talk is minutes (metered); the rest
+    /// are counts, because that is what the app records for them.
+    struct Line: Identifiable {
+        let label: String
         let value: String
-        var id: String { value + "\(label)" }
+        var id: String { label }
     }
-    var stats: [Stat] {
-        var out = [Stat(label: "Talk", value: "\(talkMinutes) min"),
-                   Stat(label: "Study", value: "\(studyMinutes) min")]
-        if streakDays > 0 { out.append(Stat(label: "Streak", value: "\(streakDays) days")) }
-        if talks > 0 { out.append(Stat(label: "Talks", value: "\(talks)")) }
-        if reviews > 0 { out.append(Stat(label: "Reviews", value: "\(reviews)")) }
-        if shadowTakes > 0 { out.append(Stat(label: "Shadow", value: "\(shadowTakes)")) }
-        return Array(out.prefix(4))
+    var lines: [Line] {
+        func n(_ count: Int?, _ one: String, _ many: String) -> String? {
+            guard let count, count > 0 else { return nil }
+            return "\(count) \(count == 1 ? one : many)"
+        }
+        let rows: [(String, String?)] = [
+            ("Talk", talkMinutes > 0 ? "\(talkMinutes) min" : n(talks, "talk", "talks")),
+            ("Say it again", n(sayItAgainRuns, "run", "runs")),
+            ("Speech", n(speechTakes, "take", "takes")),
+            ("Listening", n(listens, "episode", "episodes")),
+            ("Reading", n(reads, "article", "articles")),
+            ("Scenes", n(scenes, "scene", "scenes")),
+            ("Shadowing", n(shadowTakes, "take", "takes")),
+            ("Review", n(reviews, "card", "cards")),
+            ("Words", n(words, "word", "words")),
+        ]
+        return rows.compactMap { row in row.1.map { Line(label: row.0, value: $0) } }
     }
 
     /// Any day the Activity page can select — the card is the day's record,
@@ -109,6 +130,10 @@ struct DayCardData: Codable, Equatable {
         let talk = TalkTimeLog.seconds(on: day)
         let study = max(AppUsageLog.seconds(on: day), talk)
         let log = PracticeLog.shared.day(day)
+        let start = calendar.startOfDay(for: day)
+        let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start
+        let events = ActivityEventLog.shared.events(from: start, to: end)
+        func count(_ kind: ActivityEventLog.Kind) -> Int { events.filter { $0.kind == kind }.count }
         return DayCardData(
             date: day,
             // FLOORED, like the home ring (`todaySpokenSeconds / 60`) and the
@@ -121,18 +146,36 @@ struct DayCardData: Codable, Equatable {
             reviews: log?.drillReps ?? 0,
             shadowTakes: log?.shadowReps ?? 0,
             topics: Array(topics.prefix(maxTopics)),
-            headline: DayCardStore.shared.headline(for: day))
+            headline: DayCardStore.shared.headline(for: day),
+            sayItAgainRuns: count(.sayItAgain),
+            speechTakes: count(.speech),
+            listens: count(.listen),
+            reads: count(.read),
+            scenes: log?.sceneReps ?? 0,
+            words: (log?.wordReps ?? 0) + (log?.expressionReps ?? 0))
     }
 }
 
 enum DayCardFormat: String, CaseIterable, Identifiable {
-    /// 4:5 — Instagram's tall feed frame, which Threads takes as is. A 9:16
-    /// story was the first cut and read as a poster, not a card.
-    case feed, square
+    /// 9:16 — the tall card, with room for the whole day's list (2026-11-10).
+    /// 4:5 is Instagram's feed frame, which Threads takes as is.
+    case story, feed, square
     var id: String { rawValue }
-    /// Logical size in points; exported at `exportScale` → 1080×1350 / 1080×1080.
+    /// Logical size in points; exported at `exportScale` → 1080 wide.
     var size: CGSize {
-        self == .feed ? CGSize(width: 360, height: 450) : CGSize(width: 360, height: 360)
+        switch self {
+        case .story: CGSize(width: 360, height: 640)
+        case .feed: CGSize(width: 360, height: 450)
+        case .square: CGSize(width: 360, height: 360)
+        }
+    }
+    /// How many lines of the day's list fit under the headline.
+    var maxLines: Int {
+        switch self {
+        case .story: 9
+        case .feed: 5
+        case .square: 3
+        }
     }
     static let exportScale: CGFloat = 3
 }
@@ -156,9 +199,12 @@ struct DayCardView: View {
     private let ink = Color(red: 20 / 255, green: 19 / 255, blue: 16 / 255)
     private let paper = Color(red: 252 / 255, green: 251 / 255, blue: 248 / 255)
 
-    private var isFeed: Bool { format == .feed }
+    private var isFeed: Bool { format != .square }
     private var margin: CGFloat { isFeed ? 24 : 21 }
 
+    /// Top: the date pill and the streak. Bottom: the headline, then the
+    /// day's list at the left with the day's total at the right, then the
+    /// name. The photo keeps the middle.
     var body: some View {
         let size = format.size
         ZStack(alignment: .topLeading) {
@@ -171,28 +217,42 @@ struct DayCardView: View {
                     .clipped()
             }
             LinearGradient(
-                stops: isFeed
-                    ? [.init(color: ink.opacity(0.18), location: 0), .init(color: ink.opacity(0), location: 0.26),
-                       .init(color: ink.opacity(0), location: 0.40), .init(color: ink.opacity(0.86), location: 0.72),
-                       .init(color: ink.opacity(0.94), location: 1)]
-                    : [.init(color: ink.opacity(0.16), location: 0), .init(color: ink.opacity(0), location: 0.30),
-                       .init(color: ink.opacity(0.88), location: 0.72), .init(color: ink.opacity(0.94), location: 1)],
+                stops: [.init(color: ink.opacity(0.34), location: 0), .init(color: ink.opacity(0), location: 0.2),
+                        .init(color: ink.opacity(0), location: format == .story ? 0.38 : 0.26),
+                        .init(color: ink.opacity(0.88), location: format == .story ? 0.66 : 0.6),
+                        .init(color: ink.opacity(0.95), location: 1)],
                 startPoint: .top, endPoint: .bottom)
 
-            VStack(alignment: .leading, spacing: isFeed ? 15 : 11) {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack {
+                    datePill
+                    Spacer()
+                    if data.streakDays > 0 {
+                        Text(verbatim: "\(data.streakDays) day streak").brandPixel(isFeed ? 10.7 : 9.7)
+                    }
+                }
+                Spacer(minLength: 8)
                 if let topic = data.title {
                     Text(topic)
-                        .brandPixel(isFeed ? 35 : 29)
-                        .lineLimit(3)
+                        .brandPixel(isFeed ? 31 : 25)
+                        .lineLimit(format == .story ? 3 : 2)
                         .minimumScaleFactor(0.6)
                         .fixedSize(horizontal: false, vertical: true)
+                        .padding(.bottom, isFeed ? 14 : 10)
                 }
-                statsRow
+                rule
+                HStack(alignment: .bottom, spacing: 12) {
+                    list
+                    Spacer(minLength: 0)
+                    total
+                }
+                .padding(.vertical, isFeed ? 12 : 9)
+                rule
                 footer
             }
             .padding(.horizontal, margin)
-            .padding(.bottom, isFeed ? 26 : 21)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+            .padding(.top, margin)
+            .padding(.bottom, isFeed ? 22 : 18)
         }
         .frame(width: size.width, height: size.height)
         .clipped()
@@ -204,21 +264,34 @@ struct DayCardView: View {
         .environment(\.locale, Locale(identifier: "en"))
     }
 
-    /// Up to four numbers in a row — the value in the pixel face, the label
-    /// small and tracked beneath, like the stat row under a run.
-    private var statsRow: some View {
-        HStack(alignment: .top, spacing: 0) {
-            ForEach(data.stats) { stat in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(stat.value).brandPixel(isFeed ? 15 : 13)
-                    Text(stat.label)
-                        .font(.system(size: isFeed ? 7.3 : 6.7, design: .monospaced))
+    private var rule: some View { Rectangle().fill(paper.opacity(0.28)).frame(height: 0.5) }
+
+    /// What was done, one line each: the name small and tracked, the amount
+    /// in the pixel face beside it.
+    private var list: some View {
+        Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 14, verticalSpacing: isFeed ? 7 : 5) {
+            ForEach(data.lines.prefix(format.maxLines)) { line in
+                GridRow {
+                    Text(verbatim: line.label)
+                        .font(.system(size: isFeed ? 8 : 7.3, design: .monospaced))
                         .tracking(1)
                         .textCase(.uppercase)
                         .opacity(0.72)
+                    Text(verbatim: line.value).brandPixel(isFeed ? 13 : 12)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
+        }
+    }
+
+    /// The day's whole time in the app, large, at the bottom right.
+    private var total: some View {
+        VStack(alignment: .trailing, spacing: 2) {
+            Text(verbatim: "\(data.studyMinutes)").brandPixel(isFeed ? 40 : 32)
+            Text(verbatim: "min today")
+                .font(.system(size: isFeed ? 7.3 : 6.7, design: .monospaced))
+                .tracking(1)
+                .textCase(.uppercase)
+                .opacity(0.72)
         }
     }
 
@@ -246,19 +319,15 @@ struct DayCardView: View {
 
     private var footer: some View {
         HStack {
-            datePill
+            Text("Learn a language from your fluent self.")
+                .brandPixel(isFeed ? 8.7 : 8)
             Spacer()
-            VStack(alignment: .trailing, spacing: 3) {
-                Text("Learn a language from your fluent self.")
-                    .brandPixel(isFeed ? 8.7 : 8)
-                Text("nawana.app")
-                    .font(.system(size: isFeed ? 8.7 : 8, design: .monospaced))
-                    .tracking(1.2)
-                    .opacity(0.72)
-            }
+            Text("nawana.app")
+                .font(.system(size: isFeed ? 8.7 : 8, design: .monospaced))
+                .tracking(1.2)
+                .opacity(0.72)
         }
         .padding(.top, isFeed ? 10.7 : 8.7)
-        .overlay(alignment: .top) { Rectangle().fill(paper.opacity(0.28)).frame(height: 0.5) }
     }
 }
 

@@ -2,43 +2,127 @@
   "sourceLanguage" : "en",
   "strings" : {
     "${applicationName} call" : {
+      "extractionState" : "stale",
       "localizations" : {
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "${applicationName} 전화" } }
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${applicationName} 전화"
+          }
+        }
       }
     },
     "Call my future self in ${applicationName}" : {
+      "extractionState" : "extracted_with_value",
       "localizations" : {
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "${applicationName}에서 미래의 나한테 전화 걸어줘" } }
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "Call my future self in ${applicationName}",
+              "Start a talk in ${applicationName}",
+              "${applicationName} call"
+            ]
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "${applicationName}에서 미래의 나한테 전화 걸어줘"
+          }
+        }
       }
     },
     "Open my words in ${applicationName}" : {
+      "extractionState" : "extracted_with_value",
       "localizations" : {
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "${applicationName}에서 내 단어장 열어줘" } }
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "Open my words in ${applicationName}",
+              "Show my words in ${applicationName}"
+            ]
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "${applicationName}에서 내 단어장 열어줘"
+          }
+        }
       }
     },
     "Review my cards in ${applicationName}" : {
+      "extractionState" : "extracted_with_value",
       "localizations" : {
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "${applicationName}에서 복습하자" } }
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "Review my cards in ${applicationName}",
+              "Start my review in ${applicationName}"
+            ]
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "${applicationName}에서 복습하자"
+          }
+        }
       }
     },
     "Show my words in ${applicationName}" : {
+      "extractionState" : "stale",
       "localizations" : {
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "${applicationName} 단어장 보여줘" } }
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${applicationName} 단어장 보여줘"
+          }
+        }
       }
     },
     "Start a talk in ${applicationName}" : {
+      "extractionState" : "stale",
       "localizations" : {
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "${applicationName}에서 대화 시작해줘" } }
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${applicationName}에서 대화 시작해줘"
+          }
+        }
       }
     },
     "Start my review in ${applicationName}" : {
+      "extractionState" : "stale",
       "localizations" : {
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "${applicationName} 복습 시작해줘" } }
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "${applicationName} 복습 시작해줘"
+          }
+        }
       }
     },
     "Take my weekly test in ${applicationName}" : {
+      "extractionState" : "extracted_with_value",
       "localizations" : {
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "${applicationName}에서 주간 테스트 볼래" } }
+        "en" : {
+          "stringSet" : {
+            "state" : "new",
+            "values" : [
+              "Take my weekly test in ${applicationName}"
+            ]
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "${applicationName}에서 주간 테스트 볼래"
+          }
+        }
       }
     }
   },

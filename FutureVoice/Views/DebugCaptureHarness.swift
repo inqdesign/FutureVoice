@@ -896,7 +896,8 @@ enum DebugCapture {
             let sample = DayCardData(
                 date: Date(), talkMinutes: 12, studyMinutes: 25,
                 streakDays: 7, talks: 3, reviews: 18, shadowTakes: 4,
-                topics: ["Did you read about the study on AI replacing language teachers?", "Weekend plans", "Job interview"])
+                topics: ["Did you read about the study on AI replacing language teachers?", "Weekend plans", "Job interview"],
+                sayItAgainRuns: 1, speechTakes: 3, listens: 2, reads: 1, scenes: 1, words: 12)
             return AnyView(DayCardSheet(day: Date(), preview: sample).environmentObject(appState))
         case "speech":
             // The Speech tab: the bundled script plus two written ones.
@@ -1037,6 +1038,25 @@ enum DebugCapture {
             return AnyView(NavigationStack {
                 SpeechResultView(takeId: UUID(uuidString: "C4A11E00-0000-4000-8000-0000000000AA")!)
             })
+        case "speech-takes":
+            // The history button: the takes as pages, on the newest.
+            let script = seedSpeechChallenges(appState)
+            if SpeechStore.shared.takes(for: script.id).count < 3,
+               let base = SpeechStore.shared.takes.first(where: {
+                $0.id == UUID(uuidString: "C4A11E00-0000-4000-8000-0000000000AA")! }) {
+                for (i, score) in [64, 72].enumerated() {
+                    // `id` is a let: a copy under a new id, through JSON.
+                    guard let data = try? JSONEncoder().encode(base),
+                          var dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { continue }
+                    dict["id"] = UUID().uuidString
+                    guard let copy = try? JSONSerialization.data(withJSONObject: dict),
+                          var older = try? JSONDecoder().decode(SpeechTake.self, from: copy) else { continue }
+                    older.createdAt = Date().addingTimeInterval(-Double(2 - i) * 86_400)
+                    older.metrics.overall = score
+                    SpeechStore.shared.save(older)
+                }
+            }
+            return AnyView(SpeechTakesPager(scriptId: script.id))
         case "speech-result-v4":
             // Season 2's scoring (scoring 4) on a learner's take: what to
             // work on next, the five parts, and why it stays off the board.

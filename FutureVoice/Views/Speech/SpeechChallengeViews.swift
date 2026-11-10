@@ -9,6 +9,8 @@ import SwiftUI
 struct SpeechChallengeRow: View {
     let script: SpeechScript
     let standing: SpeechChallenges.Standing?
+    /// This phone's best take, for a challenge read but not on the board.
+    var localBest: Int? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -43,6 +45,10 @@ struct SpeechChallengeRow: View {
                             .font(.caption.weight(.semibold).monospacedDigit())
                             .foregroundStyle(SpeechScoreColor.color(best))
                     }
+                } else if let localBest {
+                    Text("\(localBest)")
+                        .font(.headline.monospacedDigit())
+                        .foregroundStyle(SpeechScoreColor.color(localBest))
                 }
             }
             // The title hangs under the disc; the meta line belongs to the
@@ -218,6 +224,9 @@ struct SpeechChallengeView: View {
     @State private var showingTakes = false
     @State private var confirmRetire = false
     @State private var confirmWithdraw = false
+    #if SPEECH_APP
+    @State private var groupReload = 0
+    #endif
 
     private var standing: SpeechChallenges.Standing? { challenges.standings[script.id] }
     /// Retired: the board is frozen and nobody can enter.
@@ -225,6 +234,10 @@ struct SpeechChallengeView: View {
 
     var body: some View {
         List {
+            #if SPEECH_APP
+            // The group being looked at, above everyone.
+            SpeechGroupBoardSection(scriptId: script.id, reloadToken: groupReload)
+            #endif
             Section {
                 if let board {
                     if board.isEmpty {
@@ -331,11 +344,16 @@ struct SpeechChallengeView: View {
         .sheet(isPresented: $showingScript) {
             SpeechScriptSheet(script: script)
         }
-        .sheet(isPresented: $showingTakes) {
-            SpeechTakesSheet(scriptId: script.id)
+        .fullScreenCover(isPresented: $showingTakes) {
+            SpeechTakesPager(scriptId: script.id)
         }
         .fullScreenCover(isPresented: $practicing, onDismiss: {
-            Task { await reload() }
+            Task {
+                await reload()
+                #if SPEECH_APP
+                groupReload += 1
+                #endif
+            }
         }) {
             SpeechPrompterView(script: script, native: appState.nativeLanguage,
                                level: appState.proficiency)
@@ -614,14 +632,26 @@ struct SpeechChallengeListView: View {
                 Section {
                     ForEach(challenges.live) { row($0) }
                 } header: {
-                    if let season = challenges.openSeason, season >= 2 {
+                    if !SpeechAppFlags.isSpeechApp, let season = challenges.openSeason, season >= 2 {
                         Text("Season \(season) · Live")
                     } else {
                         Text("Live")
                     }
                 }
             }
-            ForEach(challenges.pastSeasons, id: \.self) { season in
+            // The speech app has no seasons on screen: one list of what ended.
+            if SpeechAppFlags.isSpeechApp, !challenges.past.isEmpty {
+                Section {
+                    ForEach(challenges.past) { script in
+                        if challenges.season(of: script.id) != nil { pastRow(script) } else { row(script) }
+                    }
+                } header: {
+                    Text("Past challenges")
+                } footer: {
+                    Text("Ended challenges keep their final standings.")
+                }
+            }
+            ForEach(SpeechAppFlags.isSpeechApp ? [] : challenges.pastSeasons, id: \.self) { season in
                 Section {
                     ForEach(challenges.past.filter { challenges.season(of: $0.id) == season }) { pastRow($0) }
                 } header: {
@@ -631,7 +661,8 @@ struct SpeechChallengeListView: View {
                 }
             }
             // Retired before seasons, or from a server without them.
-            let unseasoned = challenges.past.filter { challenges.season(of: $0.id) == nil }
+            let unseasoned = SpeechAppFlags.isSpeechApp ? []
+                : challenges.past.filter { challenges.season(of: $0.id) == nil }
             if !unseasoned.isEmpty {
                 Section {
                     ForEach(unseasoned) { row($0) }
@@ -1096,13 +1127,15 @@ struct SpeechOverallBoardView: View {
     @State private var rows: [SpeechChallenges.BoardRow]?
     /// nil until picked: the season the banner showed.
     @State private var pickedSeason: Int?
+    /// A page of its own in the speech app's bottom tabs: the bar stays.
+    var inTab = false
 
     private var season: Int? { pickedSeason ?? challenges.overallSeason }
     private var isFinal: Bool { season.map(challenges.seasonEnded) ?? false }
 
     var body: some View {
         List {
-            if challenges.boardSeasons.count > 1 {
+            if !SpeechAppFlags.isSpeechApp, challenges.boardSeasons.count > 1 {
                 Section {
                     Picker("Season", selection: Binding(get: { season ?? 0 }, set: { pickedSeason = $0 })) {
                         ForEach(challenges.boardSeasons, id: \.self) { Text("Season \($0)").tag($0) }
@@ -1115,6 +1148,10 @@ struct SpeechOverallBoardView: View {
             }
             Section {
                 if let rows = rows ?? (pickedSeason == nil ? challenges.overall : nil) {
+                    if rows.isEmpty {
+                        Text("Nobody's on this board yet. Be the first.")
+                            .foregroundStyle(.secondary)
+                    }
                     ForEach(items(rows), id: \.id) { item in
                         switch item {
                         case .row(let row):
@@ -1129,7 +1166,7 @@ struct SpeechOverallBoardView: View {
             } header: {
                 if isFinal { Text("Final standings") }
             } footer: {
-                if isFinal {
+                if isFinal, !SpeechAppFlags.isSpeechApp {
                     Text("This season has ended. These are the final standings.")
                 } else {
                     Text("Your best score on each challenge, added up. Every challenge you take moves you up.")
@@ -1138,7 +1175,7 @@ struct SpeechOverallBoardView: View {
         }
         .navigationTitle("Overall ranking")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar(MacLayout.tabBarOnPhoneOnly, for: .tabBar)
+        .toolbar(inTab ? .automatic : MacLayout.tabBarOnPhoneOnly, for: .tabBar)
         .refreshable { await load() }
         .task(id: season) { await load() }
     }

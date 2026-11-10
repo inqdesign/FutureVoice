@@ -732,6 +732,8 @@ struct ConversationView: View {
     @State private var pronPlanning = false
     /// Takes in a row that came back with nothing usable on this sentence.
     @State private var pronUnheard = 0
+    /// How long the last take's assessment took (`assess_ms` on its event).
+    @State private var pronAssessMs = 0
     /// What each pronunciation take was a reading OF (the word or sentence
     /// on screen), shown in the learner's bubble instead of the live
     /// transcript. The verdict is the audio's; a transcript beside it said
@@ -3337,7 +3339,7 @@ struct ConversationView: View {
     private func tutorNudge(_ note: String, waitKind: String = "other") {
         if tutorWaitTurnAt != nil, tutorWaitNoteAt == nil {
             tutorWaitNoteAt = Date()
-            tutorWaitKind = waitKind
+            tutorWaitKind = pronThisCall ? "pron" : waitKind
         }
         if RealtimeMode.isEnabled, !phoneCallActive {
             pendingTutorNudge = note
@@ -5342,6 +5344,9 @@ struct ConversationView: View {
     /// (`PronunciationJudge`); the voice then says exactly one line for it.
     private func pronTurn(turnId: UUID, said: String) {
         guard pronThisCall else { return }
+        // `tutor_turn_wait` (kind pron): turn in hand → note → the voice.
+        tutorWaitTurnAt = Date()
+        tutorWaitNoteAt = nil
         if pronPlanning {
             tutorNudge("They spoke while the sentences are still being prepared. Say \"one moment\" in a few words.")
             return
@@ -5363,10 +5368,12 @@ struct ConversationView: View {
         Task { @MainActor in
             var result: PronunciationResult?
             var outcome = PronunciationAssessor.Outcome.skipped
+            let assessStart = Date()
             if let audioURL {
                 (result, outcome) = await PronunciationAssessor.assess(
                     audioURL: audioURL, reference: drill ?? line.text, language: target, surface: "pron_call")
             }
+            pronAssessMs = Int(Date().timeIntervalSince(assessStart) * 1000)
             guard !isTornDown, tutorStillSaid(turnId, said), var now = pronRound,
                   now.id == round.id, now.current == i else { return }
             if let result {
@@ -5414,14 +5421,14 @@ struct ConversationView: View {
                 "prosody": result?.prosody.map(String.init) ?? "",
                 "outcome": outcome.rawValue,
                 "try": String(line.tries + 1),
+                "assess_ms": String(pronAssessMs),
             ])
             if let result { now.lines[i].lastResult = result }
             // The note about the sentence left before this one has been read.
             now.carried = nil
-            if let fb = PronunciationJudge.feedback(for: verdict, result: result, line: line,
-                                                    phonemes: now.topic.phonemes) {
-                now.lines[i].feedback = fb
-            }
+            let fb = PronunciationJudge.feedback(for: verdict, result: result, line: line,
+                                                 phonemes: now.topic.phonemes)
+            if let fb { now.lines[i].feedback = fb }
             if case .notSmooth = verdict { now.lines[i].notSmooth = true } else { now.lines[i].notSmooth = false }
             if case .notYet(let w, _, _, let heard) = verdict, let heard {
                 now.lines[i].heardWord = w
@@ -5458,7 +5465,9 @@ struct ConversationView: View {
                 // Nothing moves on by itself (founder, 2026-11-04): only
                 // the learner's own "Next sentence" leaves a sentence.
                 withAnimation(.easeInOut(duration: 0.25)) { pronRound = now }
-                tutorNudge(PronunciationNotes.notSmooth(sentence: line.text))
+                tutorNudge(PronunciationNotes.notSmooth(sentence: line.text,
+                                                        pauseBefore: PronunciationJudge.pauseBefore(in: result),
+                                                        tries: now.lines[i].tries))
             case .notYet(let word, let sound, let score, let heard):
                 pronUnheard = 0
                 now.lines[i].tries += 1
@@ -5472,7 +5481,9 @@ struct ConversationView: View {
                     now.lines[i].drillWord = chunk
                     withAnimation(.easeInOut(duration: 0.25)) { pronRound = now }
                     sendTutorSystem()
-                    tutorNudge(PronunciationNotes.inFlow(chunk: chunk, word: word))
+                    tutorNudge(PronunciationNotes.inFlow(chunk: chunk, word: word, sound: sound,
+                                                         heardAs: fb?.heardAs, score: fb?.score,
+                                                         topic: now.topic))
                     return
                 }
                 now.lines[i].drillWord = PronunciationJudge.drillText(for: word, in: line.text, language: target)
@@ -5480,7 +5491,7 @@ struct ConversationView: View {
                 sendTutorSystem()
                 tutorNudge(PronunciationNotes.notYet(word: now.lines[i].drillWord ?? word, sound: sound, heard: heard,
                                                      topic: now.topic, sentence: line.text,
-                                                     heardAs: PronunciationJudge.heardAs(result: result, word: word, sound: sound)))
+                                                     heardAs: fb?.heardAs, score: fb?.score))
             }
         }
     }
@@ -5530,8 +5541,12 @@ struct ConversationView: View {
         guard !partial.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         let sentence = pronRound?.current.map { pronRound!.lines[$0].drillWord ?? pronRound!.lines[$0].text } ?? ""
         let whole = !sentence.isEmpty && PronunciationJudge.overlap(said: partial, line: sentence) >= 0.8
+        // A word practiced alone has no middle to pause in, and a word that
+        // came out wrong never matches the screen: waiting 2.5 s for it made
+        // every missed try the slowest one (2026-11-10).
+        let drilling = pronRound?.current.map { pronRound!.lines[$0].drillWord != nil } ?? false
         pronSendTask = Task { @MainActor in
-            try? await Task.sleep(for: .seconds(whole ? 1.0 : 2.5))
+            try? await Task.sleep(for: .seconds(whole ? 1.0 : (drilling ? 1.2 : 2.5)))
             // Still voicing (the transcript lags the mouth): give it a beat.
             var extra = 0
             while !Task.isCancelled, realtime.level > 0.25, extra < 10 {
@@ -5647,11 +5662,14 @@ struct ConversationView: View {
             "verdict": Self.pronVerdictName(verdict),
             "score": result.map { String($0.soundScore) } ?? "",
             "try": String(now.lines[i].drillTries + 1),
+            "assess_ms": String(pronAssessMs),
         ])
-        if let fb = PronunciationJudge.feedback(for: verdict, result: result, line: probe,
-                                                phonemes: now.topic.phonemes) {
-            now.lines[i].feedback = fb
-        }
+        // The last miss on this word, to say whether this one came closer.
+        let previous = now.lines[i].drillTries > 0 && now.lines[i].feedback?.ok == false
+            ? now.lines[i].feedback?.score : nil
+        let fb = PronunciationJudge.feedback(for: verdict, result: result, line: probe,
+                                             phonemes: now.topic.phonemes)
+        if let fb { now.lines[i].feedback = fb }
         switch verdict {
         case .pass, .notSmooth:
             // One word has no rhythm to judge: its sounds are the take.
@@ -5670,10 +5688,12 @@ struct ConversationView: View {
             pronUnheard = 0
             now.lines[i].drillTries += 1
             // The word stays until it is right or the learner leaves it
-            // ("Back to the sentence"); every third miss carries a tip.
+            // ("Back to the sentence"). Every miss says what was off and a
+            // new tip, never a bare "again" (founder, 2026-11-10).
             withAnimation(.easeInOut(duration: 0.25)) { pronRound = now }
             tutorNudge(PronunciationNotes.wordAgain(word: word, sound: sound, topic: now.topic,
-                                                   withTip: now.lines[i].drillTries % 3 == 0))
+                                                   heardAs: fb?.heardAs, score: fb?.score,
+                                                   previous: previous, tries: now.lines[i].drillTries))
         case .offScript:
             pronUnheard = 0
             tutorNudge(PronunciationNotes.wordOffScript(word: word))

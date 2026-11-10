@@ -504,6 +504,12 @@ final class SpeechTakeSession: ObservableObject {
         if script.isChallenge {
             SpeechChallenges.shared.enter(take: take, script: script, recordedOnCamera: fromCamera)
         }
+        #if SPEECH_APP
+        // A group board takes every scored take, camera or not.
+        if script.isChallenge || SpeechGroups.shared.script(id: script.id) != nil {
+            SpeechGroups.shared.record(score: take.metrics.overall, scriptId: script.id)
+        }
+        #endif
         let resultMs = ms(stoppedAt)
         // Flagged BEFORE the result shows, so it opens on "Preparing your
         // video…" rather than flashing the audio player first.

@@ -29,8 +29,9 @@ final class AvatarStore: ObservableObject {
         try? data.write(to: url, options: [.atomic])
         image = sized
         SyncEngine.noteChanged(.blobAvatar)
-        // A published profile wears this face too; no row, no write.
-        Task { await PublicPersonaService.pushMyPhoto() }
+        // A published profile wears this face too; no row, no write. The
+        // speech app's photo is for its boards: nawana's profile stays as is.
+        if !SpeechAppFlags.isSpeechApp { Task { await PublicPersonaService.pushMyPhoto() } }
     }
 
     func clear() {

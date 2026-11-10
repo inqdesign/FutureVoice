@@ -27,6 +27,9 @@
       },
       "shouldTranslate" : false
     },
+    "Future Voice" : {
+
+    },
     "NSAlarmKitUsageDescription" : {
       "extractionState" : "stale",
       "localizations" : {

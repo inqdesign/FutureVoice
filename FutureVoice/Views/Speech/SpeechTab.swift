@@ -26,7 +26,23 @@ struct SpeechTab: View {
     /// fetch that this account may write.
     @State private var choosingKind = false
     #if SPEECH_APP
-    @State private var showingSettings = false
+    /// The bottom tab this instance is: the tabs replace the page switch.
+    var fixedPage: Page = .challenges
+    private var shownPage: Page { fixedPage }
+    private var title: LocalizedStringKey { fixedPage == .challenges ? "Challenges" : "My scripts" }
+    private var showsNewScript: Bool { fixedPage == .mine }
+    /// The leaders' tap: the Ranking tab.
+    var openRanking: (() -> Void)? = nil
+    /// The header's face: the Me tab.
+    var openMe: (() -> Void)? = nil
+    @State private var filter: SpeechChallengeFilter = .all
+    @ObservedObject private var groups = SpeechGroups.shared
+    @State private var creatingGroup = false
+    @State private var joiningGroup = false
+    #else
+    private var showsNewScript: Bool { true }
+    private var shownPage: Page { page }
+    private var title: LocalizedStringKey { "Speech" }
     #endif
 
     private var canWrite: Bool { gate.account?.canWriteSpeechScripts ?? false }
@@ -55,11 +71,17 @@ struct SpeechTab: View {
     private let columns = [GridItem(.flexible(), spacing: 12, alignment: .top),
                            GridItem(.flexible(), spacing: 12, alignment: .top)]
 
+    /// The header's "Season N records" link is on screen.
+    private var showsSeasonRecords: Bool {
+        !SpeechAppFlags.isSpeechApp && (challenges.openSeason ?? 0) >= 2
+            && challenges.lastEndedSeason != nil
+    }
+
     private var challengesPage: some View {
         LazyVStack(alignment: .leading, spacing: 14) {
             // A language past its first season says which one this is, and
             // where the last one went.
-            if let season = challenges.openSeason, season >= 2 {
+            if !SpeechAppFlags.isSpeechApp, let season = challenges.openSeason, season >= 2 {
                 HStack(alignment: .firstTextBaseline) {
                     Text("Season \(season)")
                         .font(.title2.weight(.bold))
@@ -76,7 +98,7 @@ struct SpeechTab: View {
                 }
                 .padding(.horizontal, 4)
             }
-            if let overall = challenges.overall,
+            if !SpeechAppFlags.isSpeechApp, let overall = challenges.overall,
                overall.count >= SpeechChallenges.overallMinEntrants {
                 NavigationLink {
                     SpeechOverallBoardView()
@@ -86,6 +108,9 @@ struct SpeechTab: View {
                 }
                 .buttonStyle(.plain)
             }
+            #if SPEECH_APP
+            challengeSections
+            #else
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(challenges.live) { script in
                     NavigationLink {
@@ -98,11 +123,14 @@ struct SpeechTab: View {
                     .buttonStyle(.plain)
                 }
             }
+            #endif
             Text("Everyone reads the same script. Your best take goes on the board.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 4)
-            if !challenges.past.isEmpty {
+            // One door to the past: once the header carries "Season N
+            // records", this card would open the same list a second time.
+            if !SpeechAppFlags.isSpeechApp, !challenges.past.isEmpty, !showsSeasonRecords {
                 NavigationLink {
                     SpeechChallengeListView()
                         .environmentObject(appState)
@@ -124,6 +152,113 @@ struct SpeechTab: View {
             }
         }
     }
+
+    #if SPEECH_APP
+    /// Read at least once: on a board, or a take on this phone that didn't
+    /// reach one.
+    private func hasTried(_ script: SpeechScript) -> Bool {
+        let standing = challenges.standings[script.id]
+        return standing?.myBest != nil || (standing?.myAttempts ?? 0) > 0
+            || !store.takes(for: script.id).isEmpty
+    }
+
+    private func tries(_ script: SpeechScript) -> Int {
+        let standing = challenges.standings[script.id]
+        return standing?.attempts ?? standing?.entrants ?? 0
+    }
+
+    private func challengeCard(_ script: SpeechScript) -> some View {
+        NavigationLink {
+            SpeechChallengeView(script: script)
+                .environmentObject(appState)
+        } label: {
+            SpeechChallengeRow(script: script, standing: challenges.standings[script.id],
+                               localBest: store.best(for: script.id))
+                .frame(maxHeight: .infinity, alignment: .top)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func challengeHeading(_ title: LocalizedStringKey) -> some View {
+        Text(title)
+            .font(.title3.weight(.bold))
+            .padding(.horizontal, 4)
+    }
+
+    private func challengeGrid(_ title: LocalizedStringKey, _ scripts: [SpeechScript]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            challengeHeading(title)
+            LazyVGrid(columns: columns, spacing: 12) {
+                ForEach(scripts) { challengeCard($0) }
+            }
+        }
+    }
+
+    private var takesThisWeek: Int {
+        let since = Date().addingTimeInterval(-7 * 86_400)
+        let ids = Set(challenges.scripts.map(\.id))
+        return store.takes.filter { ids.contains($0.scriptId) && $0.createdAt > since }.count
+    }
+
+    /// Who leads and how this learner is doing, on the page's ground; the
+    /// newest challenge large under it; then every other one, narrowed by a
+    /// chip instead of split into sections (founder, 2026-11-10).
+    @ViewBuilder
+    private var challengeSections: some View {
+        let live = challenges.live
+        // No seasons here, so an ended challenge is just one more to read:
+        // the list holds them all, the open ones first.
+        let every = live + challenges.past
+        let group = groups.selected
+        if let group {
+            // One of my groups: its leaders and its own challenges first.
+            SpeechGroupSection(group: group,
+                               tried: every.filter(hasTried).count,
+                               total: every.count,
+                               takesThisWeek: takesThisWeek)
+        } else {
+            SpeechChallengeHero(overall: challenges.overall,
+                                tried: every.filter(hasTried).count,
+                                total: every.count,
+                                takesThisWeek: takesThisWeek,
+                                openRanking: { openRanking?() })
+                .padding(.bottom, 8)
+            if let newest = live.first {
+                VStack(alignment: .leading, spacing: 10) {
+                    challengeHeading("New challenge")
+                    challengeCard(newest)
+                }
+            }
+        }
+        let rest = Array(every.dropFirst(live.isEmpty || group != nil ? 0 : 1))
+        if !rest.isEmpty {
+            let shown: [SpeechScript] = {
+                switch filter {
+                case .all: return rest
+                case .popular: return rest.filter { tries($0) > 0 }.sorted { tries($0) > tries($1) }
+                case .notTried: return rest.filter { !hasTried($0) }
+                case .tried: return rest.filter(hasTried)
+                }
+            }()
+            VStack(alignment: .leading, spacing: 10) {
+                challengeHeading("All challenges")
+                SpeechChallengeFilterBar(selected: $filter)
+                if shown.isEmpty {
+                    Text(filter == .tried ? "Nothing read yet." : "You've read them all.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 28)
+                } else {
+                    LazyVGrid(columns: columns, spacing: 12) {
+                        ForEach(shown) { challengeCard($0) }
+                    }
+                }
+            }
+            .padding(.top, 8)
+        }
+    }
+    #endif
 
     private var minePage: some View {
         LazyVStack(alignment: .leading, spacing: 14) {
@@ -195,12 +330,14 @@ struct SpeechTab: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    #if !SPEECH_APP
                     Picker("Speech", selection: $page) {
                         Text("Challenges").tag(Page.challenges)
                         Text("My scripts").tag(Page.mine)
                     }
                     .pickerStyle(.segmented)
-                    switch page {
+                    #endif
+                    switch shownPage {
                     case .challenges: challengesPage
                     case .mine: minePage
                     }
@@ -209,7 +346,12 @@ struct SpeechTab: View {
                 .padding(.bottom, 24)
             }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
-            .navigationTitle("Speech")
+            #if SPEECH_APP
+            // Challenges has no title: whose board it is stands in for one.
+            .navigationTitle(fixedPage == .challenges ? Text(verbatim: "") : Text(title))
+            #else
+            .navigationTitle(title)
+            #endif
             .navigationDestination(item: $linkedChallenge) { script in
                 SpeechChallengeView(script: script)
                     .environmentObject(appState)
@@ -219,48 +361,40 @@ struct SpeechTab: View {
             .toolbarTitleDisplayMode(.inlineLarge)
             .toolbar {
                 #if SPEECH_APP
-                // The speech app has no Me tab: languages and the account live
-                // here. Trailing: the inline-large title owns the leading edge,
-                // and a leading item there folds into a "…" menu.
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { showingSettings = true } label: {
-                        Label("Settings", systemImage: "person.crop.circle")
-                    }
+                if fixedPage == .challenges {
+                    SpeechChallengesHeader(creating: $creatingGroup, joining: $joiningGroup,
+                                           openMe: { openMe?() })
                 }
                 #endif
-                ToolbarItem(placement: .topBarTrailing) {
-                    if canWrite {
-                        AppMenu {
-                            Button { composing = true } label: {
-                                Label("Write with AI", systemImage: "sparkles")
+                if showsNewScript {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        if canWrite {
+                            AppMenu {
+                                Button { composing = true } label: {
+                                    Label("Write with AI", systemImage: "sparkles")
+                                }
+                                Button { addingOwn = true } label: {
+                                    Label("Add my own script", systemImage: "pencil.line")
+                                }
+                            } label: {
+                                Label("New script", systemImage: "plus")
                             }
-                            Button { addingOwn = true } label: {
-                                Label("Add my own script", systemImage: "pencil.line")
+                        } else {
+                            // Not known to be Plus: ask fresh. A purchase a minute
+                            // ago must not be met with the upsell again.
+                            Button {
+                                Task {
+                                    if await BillingGate.shared.allowsSpeechScripts() { choosingKind = true }
+                                    else { showingUpsell = true }
+                                }
+                            } label: {
+                                Label("New script", systemImage: "plus")
                             }
-                        } label: {
-                            Label("New script", systemImage: "plus")
-                        }
-                    } else {
-                        // Not known to be Plus: ask fresh. A purchase a minute
-                        // ago must not be met with the upsell again.
-                        Button {
-                            Task {
-                                if await BillingGate.shared.allowsSpeechScripts() { choosingKind = true }
-                                else { showingUpsell = true }
-                            }
-                        } label: {
-                            Label("New script", systemImage: "plus")
                         }
                     }
                 }
             }
         }
-        #if SPEECH_APP
-        .sheet(isPresented: $showingSettings) {
-            SpeechSettingsView()
-                .environmentObject(appState)
-        }
-        #endif
         .onAppear {
             store.reloadIfLanguageChanged()
             if store.scripts.isEmpty { store.reload() }
@@ -268,7 +402,18 @@ struct SpeechTab: View {
         }
         .task(id: appState.targetLanguage) {
             await challenges.refresh(language: appState.targetLanguage)
+            #if SPEECH_APP
+            await groups.refresh(language: appState.targetLanguage)
+            #endif
         }
+        #if SPEECH_APP
+        .sheet(isPresented: $creatingGroup) {
+            SpeechGroupCreateSheet().environmentObject(appState)
+        }
+        .sheet(isPresented: $joiningGroup) {
+            SpeechGroupJoinSheet()
+        }
+        #endif
         .onChange(of: appState.pendingSpeechChallenge, initial: true) { _, _ in openLinkedChallenge() }
         .onChange(of: challenges.scripts) { _, _ in openLinkedChallenge() }
         .onChange(of: appState.targetLanguage) { _, _ in
@@ -1185,6 +1330,9 @@ struct SpeechPlusSheet: View {
     let isLight: Bool
     @Environment(\.dismiss) private var dismiss
     @State private var showingPaywall = false
+    #if SPEECH_APP
+    @EnvironmentObject private var auth: AuthService
+    #endif
 
     var body: some View {
         NavigationStack {
@@ -1225,6 +1373,23 @@ struct SpeechPlusSheet: View {
 
                 Spacer(minLength: 0)
 
+                #if SPEECH_APP
+                // The likely reason a nawana subscriber lands here: they
+                // signed in another way, so this is a different account.
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Have a nawana plan?").font(.subheadline.weight(.semibold))
+                    if let email = auth.session?.user.email {
+                        Text("You're signed in as \(email). Your plan is on the account you subscribed with.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Button("Use another account") {
+                        Task { await auth.signOut(); dismiss() }
+                    }
+                    .font(.footnote.weight(.medium))
+                }
+                #endif
+
                 VStack(spacing: 10) {
                     Button {
                         showingPaywall = true
@@ -1248,7 +1413,7 @@ struct SpeechPlusSheet: View {
                 }
             }
         }
-        .presentationDetents([.height(560), .large])
+        .presentationDetents([.height(SpeechAppFlags.isSpeechApp ? 680 : 560), .large])
         .sheet(isPresented: $showingPaywall, onDismiss: {
             // Bought Plus in the paywall: this sheet has nothing left to say.
             Task {
