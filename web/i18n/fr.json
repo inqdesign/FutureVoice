@@ -620,8 +620,8 @@
   "text": "      <summary><span class=\"ix\">03</span>Que m’apporte un abonnement ?</summary>"
  },
  {
-  "en": "      <p class=\"a\"><span>A month of talk time. Light comes with 150 minutes, Plus 450 and Max 900. A new Watch scene uses 5 of those minutes, and watching one again is free. Review, replay, and shadowing are unlimited on every plan.</span></p>",
-  "text": "      <p class=\"a\"><span>Un mois de temps de conversation. Light comprend 150 minutes, Plus 450 et Max 900. Une nouvelle scène utilise 5 de ces minutes, et revoir une scène est gratuit. La révision, la réécoute et le shadowing sont illimités avec chaque formule.</span></p>"
+  "en": "      <p class=\"a\"><span>A month of talk time. Light comes with 150 minutes, Plus 450 and Max 600. A new Watch scene uses 5 of those minutes, and watching one again is free. Review, replay, and shadowing are unlimited on every plan.</span></p>",
+  "text": "      <p class=\"a\"><span>Un mois de temps de conversation. Light comprend 150 minutes, Plus 450 et Max 600. Une nouvelle scène utilise 5 de ces minutes, et revoir une scène est gratuit. La révision, la réécoute et le shadowing sont illimités avec chaque formule.</span></p>"
  },
  {
   "en": "      <summary><span class=\"ix\">04</span>Can a complete beginner use it?</summary>",
@@ -700,32 +700,32 @@
   "text": "    talk: \"150 min / mois\", perDay: \"Environ 5 min par jour\","
  },
  {
-  "en": "    monthly: { id: \"light_monthly\", price: \"$8.99\",   was: \"$9.99\",   per: \"/ mo\" },",
-  "text": "    monthly: { id: \"light_monthly\", price: \"$8.99\",   was: \"$9.99\",   per: \"/ mois\" },"
+  "en": "    monthly: { id: \"light_monthly\", price: \"$8.99\",   was: \"$9.99\",   per: \"/ mo\", eur: \"€8.99\", eurWas: \"€9.99\" },",
+  "text": "    monthly: { id: \"light_monthly\", price: \"$8.99\",   was: \"$9.99\",   per: \"/ mois\", eur: \"8,99 €\", eurWas: \"9,99 €\" },"
  },
  {
-  "en": "    annual:  { id: \"light_annual\",  price: \"$89.99\",  was: \"$99.99\",  per: \"/ yr · 2 months free\" },",
-  "text": "    annual:  { id: \"light_annual\",  price: \"$89.99\",  was: \"$99.99\",  per: \"/ an · 2 mois offerts\" },"
+  "en": "    annual:  { id: \"light_annual\",  price: \"$89.99\",  was: \"$99.99\",  per: \"/ yr · 2 months free\", eur: \"€89.99\", eurWas: \"€99.99\" },",
+  "text": "    annual:  { id: \"light_annual\",  price: \"$89.99\",  was: \"$99.99\",  per: \"/ an · 2 mois offerts\", eur: \"89,99 €\", eurWas: \"99,99 €\" },"
  },
  {
   "en": "    talk: \"450 min / mo\", perDay: \"About 15 min a day\",",
   "text": "    talk: \"450 min / mois\", perDay: \"Environ 15 min par jour\","
  },
  {
-  "en": "    monthly: { id: \"plus_monthly\",  price: \"$22.49\",  was: \"$24.99\",  per: \"/ mo\" },",
-  "text": "    monthly: { id: \"plus_monthly\",  price: \"$22.49\",  was: \"$24.99\",  per: \"/ mois\" },"
+  "en": "    monthly: { id: \"plus_monthly\",  price: \"$22.49\",  was: \"$24.99\",  per: \"/ mo\", eur: \"€20.69\", eurWas: \"€22.99\" },",
+  "text": "    monthly: { id: \"plus_monthly\",  price: \"$22.49\",  was: \"$24.99\",  per: \"/ mois\", eur: \"20,69 €\", eurWas: \"22,99 €\" },"
  },
  {
-  "en": "    annual:  { id: \"plus_annual\",   price: \"$224.99\", was: \"$249.99\", per: \"/ yr · 2 months free\" },",
-  "text": "    annual:  { id: \"plus_annual\",   price: \"$224.99\", was: \"$249.99\", per: \"/ an · 2 mois offerts\" },"
+  "en": "    annual:  { id: \"plus_annual\",   price: \"$224.99\", was: \"$249.99\", per: \"/ yr · 2 months free\", eur: \"€206.99\", eurWas: \"€229.99\" },",
+  "text": "    annual:  { id: \"plus_annual\",   price: \"$224.99\", was: \"$249.99\", per: \"/ an · 2 mois offerts\", eur: \"206,99 €\", eurWas: \"229,99 €\" },"
  },
  {
-  "en": "    talk: \"900 min / mo\", perDay: \"About 30 min a day\",",
-  "text": "    talk: \"900 min / mois\", perDay: \"Environ 30 min par jour\","
+  "en": "    talk: \"600 min / mo\", perDay: \"About 20 min a day\",",
+  "text": "    talk: \"600 min / mois\", perDay: \"Environ 20 min par jour\","
  },
  {
-  "en": "    monthly: { id: \"max_monthly\",   price: \"$44.99\",  was: \"$49.99\",  per: \"/ mo\" },",
-  "text": "    monthly: { id: \"max_monthly\",   price: \"$44.99\",  was: \"$49.99\",  per: \"/ mois\" },"
+  "en": "    monthly: { id: \"max_monthly\",   price: \"$31.49\",  was: \"$34.99\",  per: \"/ mo\", eur: \"€35.99\", eurWas: \"€39.99\" },",
+  "text": "    monthly: { id: \"max_monthly\",   price: \"$31.49\",  was: \"$34.99\",  per: \"/ mois\", eur: \"35,99 €\", eurWas: \"39,99 €\" },"
  },
  {
   "en": "            ? p.price + ' <span>' + p.per + '</span><span class=\"p-was\" style=\"display:block;margin-top:6px;font-size:13px\">App Store <s>' + p.was + '</s> · 10% off on the web</span>'",
@@ -786,5 +786,25 @@
  {
   "en": "    <a href=\"#review\">Review</a>",
   "text": "    <a href=\"#review\">Révision</a>"
+ },
+ {
+  "en": "      <h3 id=\"ac-title\">This account hasn’t been used in the app</h3><p>You’re signed in with <b id=\"ac-who\"></b>. Your subscription goes to this account. If you sign in to the app another way, switch to that one. New to nawana? Go ahead, then sign in to the app the same way.</p>",
+  "text": "      <h3 id=\"ac-title\">Ce compte n’a pas encore servi dans l’app</h3><p>Tu es connecté avec <b id=\"ac-who\"></b>. Ton abonnement sera rattaché à ce compte. Si tu te connectes autrement dans l’app, choisis cette connexion ici. Tu découvres nawana ? Continue, puis connecte-toi de la même façon dans l’app.</p>"
+ },
+ {
+  "en": "      <button class=\"btn btn-black sp-btn\" type=\"button\" data-ac-go>Subscribe with this account</button>",
+  "text": "      <button class=\"btn btn-black sp-btn\" type=\"button\" data-ac-go>M’abonner avec ce compte</button>"
+ },
+ {
+  "en": "      <button class=\"btn sp-btn sp-g\" type=\"button\" data-ac-switch>Sign in another way</button>",
+  "text": "      <button class=\"btn sp-btn sp-g\" type=\"button\" data-ac-switch>Me connecter autrement</button>"
+ },
+ {
+  "en": "      <button class=\"sp-x\" type=\"button\" data-ac-close>Close</button>",
+  "text": "      <button class=\"sp-x\" type=\"button\" data-ac-close>Fermer</button>"
+ },
+ {
+  "en": "    annual:  { id: \"max_annual\",    price: \"$314.99\", per: \"/ yr · 2 months free\", eur: \"€359.99\", webOnly: true, note: \"Only on the web\" },",
+  "text": "    annual:  { id: \"max_annual\",    price: \"$314.99\", per: \"/ an · 2 mois offerts\", eur: \"359,99 €\", webOnly: true, note: \"Uniquement sur le web\" },"
  }
 ]

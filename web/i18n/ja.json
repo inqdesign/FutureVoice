@@ -620,8 +620,8 @@
   "text": "      <summary><span class=\"ix\">03</span>サブスクリプションで何が使えますか？</summary>"
  },
  {
-  "en": "      <p class=\"a\"><span>A month of talk time. Light comes with 150 minutes, Plus 450 and Max 900. A new Watch scene uses 5 of those minutes, and watching one again is free. Review, replay, and shadowing are unlimited on every plan.</span></p>",
-  "text": "      <p class=\"a\"><span>1か月分の通話時間です。Lightは150分、Plusは450分、Maxは900分。新しいシーン練習はこの時間から1回5分を使い、一度見たシーンをもう一度見るのは無料です。復習・会話の再生・シャドーイングはどのプランでも無制限です。</span></p>"
+  "en": "      <p class=\"a\"><span>A month of talk time. Light comes with 150 minutes, Plus 450 and Max 600. A new Watch scene uses 5 of those minutes, and watching one again is free. Review, replay, and shadowing are unlimited on every plan.</span></p>",
+  "text": "      <p class=\"a\"><span>1か月分の通話時間です。Lightは150分、Plusは450分、Maxは600分。新しいシーン練習はこの時間から1回5分を使い、一度見たシーンをもう一度見るのは無料です。復習・会話の再生・シャドーイングはどのプランでも無制限です。</span></p>"
  },
  {
   "en": "      <summary><span class=\"ix\">04</span>Can a complete beginner use it?</summary>",
@@ -700,32 +700,32 @@
   "text": "    talk: \"150分/月\", perDay: \"1日あたり約5分\","
  },
  {
-  "en": "    monthly: { id: \"light_monthly\", price: \"$8.99\",   was: \"$9.99\",   per: \"/ mo\" },",
-  "text": "    monthly: { id: \"light_monthly\", price: \"$8.99\",   was: \"$9.99\",   per: \"/ 月\" },"
+  "en": "    monthly: { id: \"light_monthly\", price: \"$8.99\",   was: \"$9.99\",   per: \"/ mo\", eur: \"€8.99\", eurWas: \"€9.99\" },",
+  "text": "    monthly: { id: \"light_monthly\", price: \"$8.99\",   was: \"$9.99\",   per: \"/ 月\", eur: \"€8.99\", eurWas: \"€9.99\" },"
  },
  {
-  "en": "    annual:  { id: \"light_annual\",  price: \"$89.99\",  was: \"$99.99\",  per: \"/ yr · 2 months free\" },",
-  "text": "    annual:  { id: \"light_annual\",  price: \"$89.99\",  was: \"$99.99\",  per: \"/ 年 · 2か月分無料\" },"
+  "en": "    annual:  { id: \"light_annual\",  price: \"$89.99\",  was: \"$99.99\",  per: \"/ yr · 2 months free\", eur: \"€89.99\", eurWas: \"€99.99\" },",
+  "text": "    annual:  { id: \"light_annual\",  price: \"$89.99\",  was: \"$99.99\",  per: \"/ 年 · 2か月分無料\", eur: \"€89.99\", eurWas: \"€99.99\" },"
  },
  {
   "en": "    talk: \"450 min / mo\", perDay: \"About 15 min a day\",",
   "text": "    talk: \"450分/月\", perDay: \"1日あたり約15分\","
  },
  {
-  "en": "    monthly: { id: \"plus_monthly\",  price: \"$22.49\",  was: \"$24.99\",  per: \"/ mo\" },",
-  "text": "    monthly: { id: \"plus_monthly\",  price: \"$22.49\",  was: \"$24.99\",  per: \"/ 月\" },"
+  "en": "    monthly: { id: \"plus_monthly\",  price: \"$22.49\",  was: \"$24.99\",  per: \"/ mo\", eur: \"€20.69\", eurWas: \"€22.99\" },",
+  "text": "    monthly: { id: \"plus_monthly\",  price: \"$22.49\",  was: \"$24.99\",  per: \"/ 月\", eur: \"€20.69\", eurWas: \"€22.99\" },"
  },
  {
-  "en": "    annual:  { id: \"plus_annual\",   price: \"$224.99\", was: \"$249.99\", per: \"/ yr · 2 months free\" },",
-  "text": "    annual:  { id: \"plus_annual\",   price: \"$224.99\", was: \"$249.99\", per: \"/ 年 · 2か月分無料\" },"
+  "en": "    annual:  { id: \"plus_annual\",   price: \"$224.99\", was: \"$249.99\", per: \"/ yr · 2 months free\", eur: \"€206.99\", eurWas: \"€229.99\" },",
+  "text": "    annual:  { id: \"plus_annual\",   price: \"$224.99\", was: \"$249.99\", per: \"/ 年 · 2か月分無料\", eur: \"€206.99\", eurWas: \"€229.99\" },"
  },
  {
-  "en": "    talk: \"900 min / mo\", perDay: \"About 30 min a day\",",
-  "text": "    talk: \"900分/月\", perDay: \"1日あたり約30分\","
+  "en": "    talk: \"600 min / mo\", perDay: \"About 20 min a day\",",
+  "text": "    talk: \"600分/月\", perDay: \"1日あたり約20分\","
  },
  {
-  "en": "    monthly: { id: \"max_monthly\",   price: \"$44.99\",  was: \"$49.99\",  per: \"/ mo\" },",
-  "text": "    monthly: { id: \"max_monthly\",   price: \"$44.99\",  was: \"$49.99\",  per: \"/ 月\" },"
+  "en": "    monthly: { id: \"max_monthly\",   price: \"$31.49\",  was: \"$34.99\",  per: \"/ mo\", eur: \"€35.99\", eurWas: \"€39.99\" },",
+  "text": "    monthly: { id: \"max_monthly\",   price: \"$31.49\",  was: \"$34.99\",  per: \"/ 月\", eur: \"€35.99\", eurWas: \"€39.99\" },"
  },
  {
   "en": "            ? p.price + ' <span>' + p.per + '</span><span class=\"p-was\" style=\"display:block;margin-top:6px;font-size:13px\">App Store <s>' + p.was + '</s> · 10% off on the web</span>'",
@@ -762,5 +762,25 @@
  {
   "en": "  s.fix({ text: \"Maybe, if it <b>were safer</b>, I'd <b>give it a try</b>.\", note: \"It’s hypothetical, so it takes were and I’d\" });",
   "text": "  s.fix({ text: \"Maybe, if it <b>were safer</b>, I'd <b>give it a try</b>.\", note: \"仮定の話なので were と I’d を使います\" });"
+ },
+ {
+  "en": "      <h3 id=\"ac-title\">This account hasn’t been used in the app</h3><p>You’re signed in with <b id=\"ac-who\"></b>. Your subscription goes to this account. If you sign in to the app another way, switch to that one. New to nawana? Go ahead, then sign in to the app the same way.</p>",
+  "text": "      <h3 id=\"ac-title\">このアカウントはまだアプリで使われていません</h3><p><b id=\"ac-who\"></b>でログインしています。サブスクリプションはこのアカウントに紐づきます。アプリで別の方法でログインしている場合は、その方法に切り替えてください。nawanaが初めてなら、このまま進んで、アプリでも同じ方法でログインしてください。</p>"
+ },
+ {
+  "en": "      <button class=\"btn btn-black sp-btn\" type=\"button\" data-ac-go>Subscribe with this account</button>",
+  "text": "      <button class=\"btn btn-black sp-btn\" type=\"button\" data-ac-go>このアカウントで登録する</button>"
+ },
+ {
+  "en": "      <button class=\"btn sp-btn sp-g\" type=\"button\" data-ac-switch>Sign in another way</button>",
+  "text": "      <button class=\"btn sp-btn sp-g\" type=\"button\" data-ac-switch>別の方法でログイン</button>"
+ },
+ {
+  "en": "      <button class=\"sp-x\" type=\"button\" data-ac-close>Close</button>",
+  "text": "      <button class=\"sp-x\" type=\"button\" data-ac-close>閉じる</button>"
+ },
+ {
+  "en": "    annual:  { id: \"max_annual\",    price: \"$314.99\", per: \"/ yr · 2 months free\", eur: \"€359.99\", webOnly: true, note: \"Only on the web\" },",
+  "text": "    annual:  { id: \"max_annual\",    price: \"$314.99\", per: \"/ 年 · 2か月分無料\", eur: \"€359.99\", webOnly: true, note: \"ウェブ限定\" },"
  }
 ]

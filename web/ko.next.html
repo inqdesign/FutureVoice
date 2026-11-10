@@ -1540,6 +1540,12 @@ h1, h2, h3, .w2-lead, .m-line, .s-cap h3 { text-wrap: balance; }
       <a class="btn sp-btn sp-g" href="#" data-signin="google">Google로 계속</a>
       <button class="sp-x" type="button" data-signin-close>닫기</button>
     </div></div>
+    <div class="signin-pop" id="account-check" hidden><div class="sp-card" role="dialog" aria-modal="true" aria-labelledby="ac-title">
+      <h3 id="ac-title">이 계정은 앱에서 쓴 적이 없어요</h3><p>지금 <b id="ac-who"></b>(으)로 로그인했어요. 구독은 이 계정에 연결돼요. 앱에서 다른 방법으로 로그인한다면 그 방법으로 바꿔 주세요. 나와나가 처음이라면 그대로 진행하고, 앱에서도 같은 방법으로 로그인하면 돼요.</p>
+      <button class="btn btn-black sp-btn" type="button" data-ac-go>이 계정으로 구독하기</button>
+      <button class="btn sp-btn sp-g" type="button" data-ac-switch>다른 방법으로 로그인</button>
+      <button class="sp-x" type="button" data-ac-close>닫기</button>
+    </div></div>
     <p class="p-fine" id="manage-sub" hidden>웹에서 구독 중이라면 <a href="#" id="manage-link">구독 관리</a>에서 변경·해지할 수 있습니다.</p>
     <p class="p-fine">통화 시간은 대화가 오가는 동안만 줄고, 말이 멈춘 동안은 세지 않습니다. 새 상황연습은 같은 통화 시간에서 1개에 5분을 쓰고, 이미 본 장면은 다시 봐도 무료입니다. 시간이 모자란 달에는 50분을 ₩5,900에 더할 수 있고, 구독은 App Store에서 언제든 해지할 수 있습니다.</p>
   </div>
@@ -1575,7 +1581,7 @@ h1, h2, h3, .w2-lead, .m-line, .s-cap h3 { text-wrap: balance; }
     </details>
     <details>
       <summary><span class="ix">03</span>구독하면 뭘 얻나요?</summary>
-      <p class="a"><span>한 달 치 통화 시간을 사는 거예요. 라이트는 150분, 플러스는 450분, 맥스는 900분이에요. 새 상황연습은 이 시간에서 1개에 5분씩 쓰고, 이미 본 장면은 다시 봐도 무료예요. 복습·다시 듣기·섀도잉은 어느 요금제든 무제한이에요.</span></p>
+      <p class="a"><span>한 달 치 통화 시간을 사는 거예요. 라이트는 150분, 플러스는 450분, 맥스는 600분이에요. 새 상황연습은 이 시간에서 1개에 5분씩 쓰고, 이미 본 장면은 다시 봐도 무료예요. 복습·다시 듣기·섀도잉은 어느 요금제든 무제한이에요.</span></p>
     </details>
     <details>
       <summary><span class="ix">04</span>완전 초보도 할 수 있나요?</summary>
@@ -2184,6 +2190,13 @@ var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 // Stays fully hidden until configured. To go live: fill supabaseUrl/anonKey,
 // set enabled=true, update the PLACEHOLDER prices, and follow web/README.md
 // (Stripe products + price IDs, webhook, Apple web sign-in in Supabase).
+// Eurozone visitors are shown euros and charged euros (2026-11-10): the Stripe
+// Prices have carried a eur option since they were made and no page asked for it,
+// so a buyer in Germany was sent to a dollar checkout. Read from the time zone,
+// like the App Store price the Spanish page prints. Euro countries only: a
+// visitor in London or Zurich keeps this page's own currency.
+const EURO = /^(Europe\/(Berlin|Busingen|Paris|Monaco|Madrid|Rome|San_Marino|Vatican|Amsterdam|Brussels|Luxembourg|Vienna|Dublin|Lisbon|Helsinki|Mariehamn|Athens|Malta|Bratislava|Ljubljana|Tallinn|Riga|Vilnius|Zagreb|Sofia|Andorra)|Asia\/(Nicosia|Famagusta)|Atlantic\/(Canary|Madeira|Azores)|Africa\/Ceuta)$/
+  .test(Intl.DateTimeFormat().resolvedOptions().timeZone || "")
 const BILLING = {
   // ON again 2026-10-11: the Stripe prices were re-cut to the App Store's live prices
   // (light/plus/max, no trial) and subscription_plans.stripe_price_id points at them
@@ -2200,7 +2213,7 @@ const BILLING = {
 // currency_option (see web/README.md). Do not flip billing on without it.
 //
 // Allowances are MONTHLY POOLS, bounded on every tier since 2026-09-26
-// (Light 150 min + 10 scenes, Plus 450 + 30, Max 900 + 30 — monthly only).
+// (Light 150 min + 10 scenes, Plus 450 + 30, Max 600 + 30 — monthly only).
 // What is printed here is `subscription_plans.monthly_seconds` ÷ 60 and
 // `monthly_scenes`; annual buys the same monthly pool, twelve times, at
 // "2 months free" (back on sale 2026-10-07). These figures are the ONE thing
@@ -2212,35 +2225,43 @@ const BILLING = {
 const PLANS = {
   light: {
     talk: "150분/월", perDay: "하루 5분꼴",
-    monthly: { id: "light_monthly", price: "₩13,500",  was: "₩15,000",  per: "/ 월" },
-    annual:  { id: "light_annual",  price: "₩134,000", was: "₩149,000", per: "/ 년 · 2개월 무료" },
+    monthly: { id: "light_monthly", price: "₩13,500",  was: "₩15,000",  per: "/ 월", eur: "€8.99", eurWas: "€9.99" },
+    annual:  { id: "light_annual",  price: "₩134,000", was: "₩149,000", per: "/ 년 · 2개월 무료", eur: "€89.99", eurWas: "€99.99" },
   },
   plus: {
     talk: "450분/월", perDay: "하루 15분꼴",
-    monthly: { id: "plus_monthly",  price: "₩26,000",  was: "₩29,000",  per: "/ 월" },
-    annual:  { id: "plus_annual",   price: "₩261,000", was: "₩290,000", per: "/ 년 · 2개월 무료" },
+    monthly: { id: "plus_monthly",  price: "₩26,000",  was: "₩29,000",  per: "/ 월", eur: "€20.69", eurWas: "€22.99" },
+    annual:  { id: "plus_annual",   price: "₩261,000", was: "₩290,000", per: "/ 년 · 2개월 무료", eur: "€206.99", eurWas: "€229.99" },
   },
   max: {
-    // Monthly only (the app's ladder greys it out under Annual).
-    talk: "900분/월", perDay: "하루 30분꼴",
-    monthly: { id: "max_monthly",   price: "₩52,000",  was: "₩58,000",  per: "/ 월" },
-    annual:  null,
+    // Annual is sold on the web only (2026-11-10): there is no App Store or Play
+    // product for it, so a page with checkout off still says monthly only.
+    talk: "600분/월", perDay: "하루 20분꼴",
+    monthly: { id: "max_monthly",   price: "₩40,500",  was: "₩45,000",  per: "/ 월", eur: "€35.99", eurWas: "€39.99" },
+    annual:  { id: "max_annual",    price: "₩405,000", per: "/ 년 · 2개월 무료", eur: "€359.99", webOnly: true, note: "웹에서만 구독할 수 있어요" },
   },
 }
 const TIERS = ["light", "plus", "max"]
+// In the eurozone the cards print the euro web price beside the euro App Store
+// price, and checkout below charges that figure.
+if (EURO && BILLING.enabled)
+  for (const t of Object.values(PLANS)) for (const p of [t.monthly, t.annual])
+    if (p && p.eur) { p.price = p.eur; p.was = p.eurWas }
 
 // Prices render ALWAYS — they are the section, and they need no backend.
 ;(function renderPricing() {
   let cycle = "monthly"
   function paint() {
     for (const tier of TIERS) {
-      const t = PLANS[tier], p = t[cycle]
+      const t = PLANS[tier], q = t[cycle], p = q && q.webOnly && !BILLING.enabled ? null : q
       const priceEl = document.querySelector(`[data-price="${tier}"]`)
       // `price` is the web (Stripe) price, App Store minus 10% since 2026-10-21;
       // `was` is the App Store's. With web checkout off the page sells through
       // the App Store, so it shows that price alone.
       priceEl.innerHTML = p
-        ? (BILLING.enabled
+        ? (p.webOnly
+            ? p.price + ' <span>' + p.per + '</span><span class="p-was" style="display:block;margin-top:6px;font-size:13px">' + p.note + '</span>'
+            : BILLING.enabled
             ? p.price + ' <span>' + p.per + '</span><span class="p-was" style="display:block;margin-top:6px;font-size:13px">App Store <s>' + p.was + '</s> · 웹에서 10% 할인</span>'
             : p.was + ' <span>' + p.per + "</span>")
         : '<span>월간만 있어요</span>'
@@ -2299,7 +2320,7 @@ if (BILLING.enabled && BILLING.supabaseUrl && BILLING.supabaseAnonKey) {
   }
 
   // What this page PRINTS is what Stripe must charge — the en page passes usd.
-  const CURRENCY = "krw"
+  const CURRENCY = EURO ? "eur" : "krw"
 
   async function callFn(session, fn, body) {
     const resp = await fetch(BILLING.supabaseUrl + "/functions/v1/" + fn, {
@@ -2357,6 +2378,56 @@ if (BILLING.enabled && BILLING.supabaseUrl && BILLING.supabaseAnonKey) {
     })
   })
 
+  // The purchase lands on whoever is signed in HERE, and nothing else ties it to
+  // the app. Someone who uses the app with Apple and signs in here with Google
+  // would pay for a new, empty account. So an account with no trace of the app
+  // (no voice, no metered use, no device) is asked once before checkout: go on
+  // (new to nawana), or sign in the way the app does. A failed read asks nothing.
+  const acRow = document.getElementById("account-check")
+  document.body.appendChild(acRow)
+  let acPending = null
+  async function usedInApp(session) {
+    try { if (sessionStorage.getItem("nawana.account-ok") === session.user.id) return true } catch (_) {}
+    try {
+      const any = (q) => q.limit(1).then((r) => (r.error ? true : r.data.length > 0))
+      const hits = await Promise.all([
+        any(sb.from("voice_clones").select("id")),
+        any(sb.from("usage_ledger").select("user_id").eq("kind", "debit")),
+        any(sb.from("device_tokens").select("user_id")),
+      ])
+      return hits.some(Boolean)
+    } catch (_) { return true }
+  }
+  function accountLabel(user) {
+    const p = (user.app_metadata && user.app_metadata.provider) || ""
+    const name = p === "apple" ? "Apple" : p === "google" ? "Google" : p
+    const mail = user.email && !/privaterelay\.appleid\.com$/.test(user.email) ? user.email : ""
+    return [name, mail].filter(Boolean).join(" · ")
+  }
+  async function proceed(session, planId) {
+    if (await usedInApp(session)) return checkout(session, planId)
+    acPending = { session, planId }
+    document.getElementById("ac-who").textContent = accountLabel(session.user)
+    acRow.hidden = false
+  }
+  const closeAccount = () => { acRow.hidden = true; acPending = null }
+  acRow.addEventListener("click", (ev) => { if (ev.target === acRow || ev.target.closest("[data-ac-close]")) closeAccount() })
+  addEventListener("keydown", (ev) => { if (ev.key === "Escape" && !acRow.hidden) closeAccount() })
+  acRow.querySelector("[data-ac-go]").addEventListener("click", () => {
+    const p = acPending
+    if (!p) return
+    try { sessionStorage.setItem("nawana.account-ok", p.session.user.id) } catch (_) {}
+    closeAccount()
+    checkout(p.session, p.planId).catch((e) => { showError(checkoutErrorMessage(e)); console.error(e) })
+  })
+  acRow.querySelector("[data-ac-switch]").addEventListener("click", async () => {
+    const p = acPending
+    closeAccount()
+    await sb.auth.signOut()
+    pendingAuth = p ? { plan: p.planId } : null
+    signinRow.hidden = false
+  })
+
   async function buy(planId, button) {
     errEl.style.display = "none"
     button.disabled = true
@@ -2368,7 +2439,7 @@ if (BILLING.enabled && BILLING.supabaseUrl && BILLING.supabaseAnonKey) {
         return
       }
       signinRow.hidden = true
-      await checkout(session, planId)
+      await proceed(session, planId)
     } catch (e) {
       showError(checkoutErrorMessage(e))
       console.error(e)
@@ -2419,7 +2490,7 @@ if (BILLING.enabled && BILLING.supabaseUrl && BILLING.supabaseAnonKey) {
     const { data: { session } } = await sb.auth.getSession()
     if (session) {
       history.replaceState(null, "", baseUrl())
-      checkout(session, pendingPlan).catch((e) => { showError(checkoutErrorMessage(e)); console.error(e) })
+      proceed(session, pendingPlan).catch((e) => { showError(checkoutErrorMessage(e)); console.error(e) })
     }
   } else if (params.get("manage") === "1") {
     const { data: { session } } = await sb.auth.getSession()

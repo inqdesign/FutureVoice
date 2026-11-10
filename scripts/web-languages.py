@@ -41,37 +41,43 @@ LANGS = [
 ]
 CJK = {"ja", "zh-Hans", "zh-Hant"}
 
-# The built pages do NOT sell on the web. Stripe carries usd/krw only, and the
-# English page's dollar price is dearer than the local App Store in Japan,
-# Taiwan, Mexico… (Plus $22.49 vs ¥3,000 ≈ $19, measured 2026-10-28). So each
-# page turns web checkout off, its buttons go to the App Store, and its cards
-# print that page's own App Store price (`was` is the App Store figure the
-# card shows when checkout is off). Read from App Store Connect 2026-10-28:
-# re-read them whenever a price changes there.
+# The built pages do NOT sell on the web outside the eurozone. Stripe carries
+# usd/krw/eur, and the English page's dollar price is dearer than the local App
+# Store in Japan, Taiwan, Mexico… (Plus $22.49 vs ¥3,000 ≈ $19, measured
+# 2026-10-28). So each page turns web checkout off, its buttons go to the App
+# Store, and its cards print that page's own App Store price (`was` is the App
+# Store figure the card shows when checkout is off). The exception, since
+# 2026-11-10: the German, French and Spanish pages sell on the web, in euros, to
+# a visitor in the eurozone (EURO in index.html, by time zone); anyone else on
+# those pages still gets the App Store. Read from App Store Connect 2026-10-28:
+# re-read them whenever a price changes there. Max re-read 2026-11-10 (it went to
+# $34.99 on 11-03).
 #   keys: the US `was` figure in index.html → this page's App Store price
 #   a (eu, elsewhere) pair is picked by the visitor's time zone (Europe/*).
 STORE_PRICES = {
-    "ja": ({"$9.99": "¥1,500", "$99.99": "¥15,000", "$24.99": "¥3,000", "$249.99": "¥30,000", "$49.99": "¥6,000"},
+    "ja": ({"$9.99": "¥1,500", "$99.99": "¥15,000", "$24.99": "¥3,000", "$249.99": "¥30,000", "$34.99": "¥6,000"},
            "日本のApp Storeでの価格です。ほかの国では、App Storeにその国の価格が表示されます。"),
-    "zh-Hant": ({"$9.99": "NT$320", "$99.99": "NT$2,990", "$24.99": "NT$690", "$249.99": "NT$6,990", "$49.99": "NT$1,380"},
+    "zh-Hant": ({"$9.99": "NT$320", "$99.99": "NT$2,990", "$24.99": "NT$690", "$249.99": "NT$6,990", "$34.99": "NT$1,190"},
                 "以上為台灣 App Store 的價格。其他地區請以 App Store 顯示的當地價格為準。"),
-    "zh-Hans": ({"$9.99": "US$9.99", "$99.99": "US$99.99", "$24.99": "US$24.99", "$249.99": "US$249.99", "$49.99": "US$49.99"},
+    "zh-Hans": ({"$9.99": "US$9.99", "$99.99": "US$99.99", "$24.99": "US$24.99", "$249.99": "US$249.99", "$34.99": "US$34.99"},
                 "以上为美国 App Store 的价格。其他地区请以 App Store 显示的当地价格为准。"),
-    "fr": ({"$9.99": "9,99 €", "$99.99": "99,99 €", "$24.99": "22,99 €", "$249.99": "229,99 €", "$49.99": "44,99 €"},
+    "fr": ({"$9.99": "9,99 €", "$99.99": "99,99 €", "$24.99": "22,99 €", "$249.99": "229,99 €", "$34.99": "39,99 €"},
            "Prix de l’App Store en France. Dans les autres pays, l’App Store affiche le prix local."),
-    "de": ({"$9.99": "9,99 €", "$99.99": "99,99 €", "$24.99": "22,99 €", "$249.99": "229,99 €", "$49.99": "44,99 €"},
+    "de": ({"$9.99": "9,99 €", "$99.99": "99,99 €", "$24.99": "22,99 €", "$249.99": "229,99 €", "$34.99": "39,99 €"},
            "Preise im App Store in Deutschland. In anderen Ländern zeigt der App Store den dortigen Preis."),
     "es": ({"$9.99": ("9,99 €", "$199 MXN"), "$99.99": ("99,99 €", "$1,999 MXN"), "$24.99": ("22,99 €", "$399 MXN"),
-            "$249.99": ("229,99 €", "$3,999 MXN"), "$49.99": ("44,99 €", "$799 MXN")},
+            "$249.99": ("229,99 €", "$3,999 MXN"), "$34.99": ("39,99 €", "$799 MXN")},
            ("Precios de la App Store en España. En otros países, la App Store muestra el precio local.",
             "Precios de la App Store en México. En otros países, la App Store muestra el precio local.")),
 }
+EURO_CHECKOUT = {"de", "fr", "es"}
 EU_JS = 'const IN_EU = /^Europe\\//.test((Intl.DateTimeFormat().resolvedOptions().timeZone) || "")\n'
 
 
 def store_prices(page, code):
     prices, note = STORE_PRICES[code]
-    page, n = re.subn(r"(const BILLING = \{.*?)enabled: true,", r"\1enabled: false,", page, count=1, flags=re.S)
+    on = "EURO" if code in EURO_CHECKOUT else "false"
+    page, n = re.subn(r"(const BILLING = \{.*?)enabled: true,", r"\1enabled: " + on + ",", page, count=1, flags=re.S)
     assert n == 1, f"{code}: BILLING.enabled not found"
 
     def js(v):

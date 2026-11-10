@@ -50,7 +50,18 @@ Deno.serve(async (req) => {
     .eq("id", planId)
     .single()
   if (planErr || !plan) return errorResponse(400, "unknown plan")
-  if (!plan.is_active) return errorResponse(400, "plan is not active")
+  if (!plan.is_active) {
+    // Off the stores' shelf is not off the web's: a plan with no App Store or
+    // Play product (max_annual) is kept inactive so no paywall lists it, and
+    // `sold_on_web` says the site may sell it. Asked for in its own query, so
+    // this function never depends on the column for a plan that is active.
+    const { data: web } = await supabase
+      .from("subscription_plans")
+      .select("sold_on_web")
+      .eq("id", planId)
+      .maybeSingle()
+    if (!web?.sold_on_web) return errorResponse(400, "plan is not active")
+  }
   if (!plan.stripe_price_id) return errorResponse(400, "plan not configured for web billing")
 
   // One row per user (user_id is the PK): a second purchase while an
@@ -65,7 +76,13 @@ Deno.serve(async (req) => {
     .eq("user_id", user.id)
     .maybeSingle()
 
-  const entitled = existing && ["trialing", "active", "grace"].includes(existing.status)
+  // A comp (a free code: beta testers, creators, a free month) is not a
+  // purchase and has no store to cancel it in, so it never blocks one: buying
+  // replaces it, the rule apple-claim has for a live Apple transaction. The
+  // webhook's upsert writes source = "stripe" over the row, and the comp sweep
+  // only ends rows whose source is still "comp".
+  const entitled = existing && existing.source !== "comp" &&
+    ["trialing", "active", "grace"].includes(existing.status)
   if (entitled) {
     return existing.source === "stripe"
       ? errorResponse(409, "already_subscribed")
@@ -95,6 +112,11 @@ Deno.serve(async (req) => {
         metadata: { project: "futurevoice", user_id: user.id, plan_id: plan.id },
       },
       ...(currency ? { currency } : {}),
+      // The Stripe account is Dear RoRo's, so the page said "Dear RoRo" above
+      // "Subscribe to Nawana Plus". The name is set per session; the SDK's
+      // types predate the field, the API takes it.
+      // deno-lint-ignore no-explicit-any
+      ...({ branding_settings: { display_name: "nawana" } } as any),
       allow_promotion_codes: true,
       // Reuse the Stripe customer when we have one; otherwise prefill the
       // receipt email (may be an Apple private-relay address — fine).
