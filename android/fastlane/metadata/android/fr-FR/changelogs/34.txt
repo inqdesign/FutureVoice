@@ -1,0 +1,9 @@
+Nouveautés
+• La carte du jour existe maintenant en format vertical 9:16, avec tout ce que tu as fait ce jour-là, ligne par ligne.
+• L’historique d’un discours ouvre toutes tes prises sur une seule page. Balaie pour passer de l’une à l’autre.
+
+Améliorations
+• Dans l’appel de prononciation, chaque erreur te dit ce qui sonnait différemment et une chose à changer.
+
+Corrections
+• Les boutons S’abonner et Ajouter des minutes ne faisaient rien. Ils ouvrent maintenant l’écran de paiement.

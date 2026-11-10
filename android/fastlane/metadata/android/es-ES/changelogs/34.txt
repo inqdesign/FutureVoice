@@ -1,0 +1,9 @@
+Novedades
+• La tarjeta del día ahora tiene un formato vertical 9:16, con todo lo que hiciste ese día, línea por línea.
+• El historial de un discurso abre todas tus tomas en una sola página. Desliza para pasar de una a otra.
+
+Mejoras
+• En la llamada de pronunciación, cada fallo te dice qué sonó distinto y una cosa que cambiar.
+
+Correcciones
+• Los botones Suscribirse y Añadir minutos no hacían nada al tocarlos. Ahora abren la pantalla de pago.
