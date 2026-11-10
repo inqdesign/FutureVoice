@@ -1,11 +1,6 @@
 package com.roro.futurevoice.ui
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
+import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,16 +29,25 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -82,21 +86,59 @@ fun FreeFeaturesMarquee(modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        // Animations switched off on the phone: every chip, in rows, still
+        // (iOS `FlowChips` under Reduce Motion).
+        val context = LocalContext.current
+        val still = remember {
+            runCatching {
+                Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+            }.getOrDefault(false)
+        }
+        if (still) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items.chunked(4).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { row.forEach { Chip(it.first, it.second) } }
+                }
+            }
+            return@Column
+        }
         var stripPx by remember { mutableIntStateOf(0) }
         val density = LocalDensity.current
         val gapPx = with(density) { 8.dp.roundToPx() }
         // 28 dp a second, like iOS: slow enough to read a chip as it passes.
+        // Moved by the frame clock, as iOS moves it by elapsed time. An
+        // infinite transition keeps the duration it started with (a changed
+        // spec is ignored), so the whole strip crossed in the 10 s it was
+        // given before the strip was measured: four to five times too fast.
         val speedPx = with(density) { 28.dp.toPx() }
-        val periodMs = if (stripPx > 0) ((stripPx + gapPx) / speedPx * 1000).toInt() else 10_000
-        val transition = rememberInfiniteTransition(label = "freeFeatures")
-        val phase by transition.animateFloat(
-            initialValue = 0f, targetValue = 1f,
-            animationSpec = infiniteRepeatable(tween(periodMs, easing = LinearEasing), RepeatMode.Restart),
-            label = "shift")
-        Box(Modifier.fillMaxWidth().clipToBounds()) {
+        var shift by remember { mutableFloatStateOf(0f) }
+        LaunchedEffect(stripPx) {
+            if (stripPx <= 0) return@LaunchedEffect
+            val loop = (stripPx + gapPx).toFloat()
+            var last = 0L
+            while (true) {
+                withFrameNanos { now ->
+                    if (last != 0L) shift = (shift + speedPx * (now - last) / 1e9f) % loop
+                    last = now
+                }
+            }
+        }
+        Box(
+            Modifier.fillMaxWidth().clipToBounds()
+                // The chips fade in and out at the edges, like iOS.
+                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                .drawWithContent {
+                    drawContent()
+                    drawRect(
+                        Brush.horizontalGradient(
+                            0f to Color.Transparent, 0.05f to Color.Black,
+                            0.95f to Color.Black, 1f to Color.Transparent),
+                        blendMode = BlendMode.DstIn)
+                },
+        ) {
             Row(
                 Modifier.wrapContentWidth(Alignment.Start, unbounded = true)
-                    .graphicsLayer { translationX = -phase * (stripPx + gapPx) },
+                    .graphicsLayer { translationX = -shift },
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Row(Modifier.onSizeChanged { stripPx = it.width },
