@@ -230,60 +230,15 @@ enum ConversationEngine {
                            languageName: languageName, history: personHistory)
         } ?? ""
 
-        // The very first call. Everything the app knows about this learner
-        // until now was typed into a setup form, which is not how anyone
-        // learns about a person — so the first conversation spends itself on
-        // the introduction, and what it hears is written down (`about_user`
-        // in the summary) and comes back as the "picked up in past calls"
-        // lines above. Never for a cast counterpart: a stranger with a
-        // getting-to-know-you script is the exact shape that block bans.
-        let firstMeetingBlock = (firstMeeting && counterpart == nil) ? """
-
-
-        FIRST CALL — you two have never spoken before, and today is the two of \
-        you meeting. Everything below still holds (level, length, one \
-        \(languageName)); this only decides what the time is SPENT on.
-        - YOU INTRODUCED YOURSELF FIRST, and that order holds for the whole \
-          call. Your opening line already said who you are — them, later, \
-          speaking \(languageName) fluently — and that you're glad to be \
-          starting this with them. Don't re-introduce yourself later, don't \
-          announce again that this is the first call, and don't make another \
-          speech; that part is done and now you're just talking.
-        - You GIVE before you ASK. Every question you put to them is followed \
-          — in a later turn, once they've answered — by your own version of \
-          it: "yeah, I still do that", "that was the hard part for me too". \
-          A turn that only takes is an interview, and an interview is what \
-          makes people hang up.
-        - NEVER invent their life to fill that in. You are them, so their \
-          facts are yours, and you only know what's in "About the user" \
-          above. Don't hand yourself a job, a city, a family or a story they \
-          haven't told you — if you haven't heard it yet, react to what they \
-          DID say instead. The one thing you can always say about yourself \
-          unprompted is what being the fluent version of them is like: what \
-          got easier, what stopped being scary, what you notice now.
-        - YOU ARE MEETING A PERSON, NOT FILLING IN A FORM. There is no list \
-          of things you need out of them and no order to get them in. Be \
-          curious about what they actually just said, the way you are with \
-          someone you've only just met and already like. If they mention \
-          their work, the interesting part is never that you now know their \
-          job — it's whether they like it, how they ended up there, what \
-          today was like.
-        - FOLLOW, don't move on. What they say is a door, not an item: ask \
-          the one thing you genuinely want to know about it, react to that, \
-          and stay there while it's alive. Two exchanges about something real \
-          beat six subjects touched once. Open new ground only when a thread \
-          has actually run out.
-        - So for TODAY the rule about not asking them about their own life is \
-          suspended, and most of your turns SHOULD end in a question. The two \
-          rules that replace it: never ask about something already listed \
-          above (you know it — say it back instead, that's what makes you \
-          them), and never ask two things in one turn.
-        - A short answer is not a problem to solve. Take the pressure off \
-          rather than pressing — offer something of your own, or let the \
-          subject go. A first call that ends with ONE thing you both enjoyed \
-          talking about went better than one that got through their \
-          biography.\(firstCallLanguageLine(targetLanguage))
-        """ : ""
+        // The very first call gets NO block of its own (2026-11-10, founder:
+        // "it's just a first conversation, leave it alone"). A FIRST CALL
+        // block told the model to give its own version of every answer
+        // without inventing the learner's life, so it filled turns with the
+        // call itself ("나도 요즘 이렇게 얘기하니까 좋다. 오늘 아침에 전화해서
+        // 그런지 기분이 상쾌하네") or a made-up past ("나도 한때 회사 다녔어").
+        // Probed in Korean on the live reply model, 36 replies each: with no
+        // block none of that came back. What makes a first call first is the
+        // opener (`FreeTalkOpeners.introOpener`); after it, it is a free talk.
 
         // A plain free talk is a call the LEARNER placed (2026-10-13, founder):
         // they rang for a reason, so the opener only hands them the floor
@@ -293,7 +248,7 @@ enum ConversationEngine {
         // that going?"). Not for the first meeting, whose block owns the call.
         // 2026-10-17 (founder): the news is never the opener, and not every
         // call's second line either — `freeTalkCue` is drawn once per call.
-        let isFreeTalk = topic.isEmpty && counterpart == nil && !firstMeeting && !learnerPicksTopic && !tutor
+        let isFreeTalk = topic.isEmpty && counterpart == nil && !learnerPicksTopic && !tutor
         // A later call the same day (2026-11-04, founder: "a second call
         // shouldn't ask 'did you sleep well?' again") opens on what came
         // earlier (`FreeTalkOpeners.callOpener`), so the line says so.
@@ -385,7 +340,7 @@ enum ConversationEngine {
         The point is for it to sound like two actual people talking — not a \
         language-class exchange. Read everything below, then talk like a real person.
 
-        \(counterpart.map { personaBlock(forCast: $0, persona: persona, languageName: languageName) } ?? personaBlock(persona, languageName: languageName))\(futureBlock)\(counterpartBlock)\(firstMeetingBlock)\(theyCalledBlock)\(earlierBlock)\(ownTopicBlock)\(clockBlock)
+        \(counterpart.map { personaBlock(forCast: $0, persona: persona, languageName: languageName) } ?? personaBlock(persona, languageName: languageName))\(futureBlock)\(counterpartBlock)\(theyCalledBlock)\(earlierBlock)\(ownTopicBlock)\(clockBlock)
 
         Language profile:
         - Native language: \(LanguageCatalog.englishName(nativeLanguage))

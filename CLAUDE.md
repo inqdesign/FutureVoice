@@ -1053,6 +1053,17 @@ Everything the fluent self knew about the learner used to come off a setup
 form, which is not how anyone learns about a person — so the FIRST plain free
 talk is spent meeting them, and what it hears is written down.
 
+- **The FIRST CALL prompt block was removed on 2026-11-10** (founder: "it's
+  just a first conversation, leave it alone"). It told the model to give its
+  own version of every answer without inventing the learner's life, so it
+  filled turns with the call itself ("나도 요즘 이렇게 얘기하니까 좋다. 오늘
+  아침에 전화해서 그런지 기분이 상쾌하네") or a made-up past ("나도 한때 회사
+  다녔어"), and the Korean line's fixed phrase was parroted. Probed in Korean
+  on the live reply model, 36 replies each way: with no block none of it came
+  back. A first call is now the intro opener and then an ordinary free talk
+  (same prompt, byte for byte, except the clock's talk history). The bullets
+  below that describe the block (give then ask, never invent, meeting a
+  person) are history; `metAt`, the opener and the memory are unchanged.
 - **`UserPersona.metAt == nil` is "we haven't met."** While it is nil, a free
   talk opens on `FreeTalkOpeners.introOpener` (bundled per language, so the
   first greeting of all never waits on Gemini, and it outranks both the

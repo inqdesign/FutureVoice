@@ -117,7 +117,7 @@ final class PromptClockTests: XCTestCase {
         let plain = prompt(firstMeeting: false)
         XCTAssertTrue(plain.contains("WHEN THIS IS"))
         XCTAssertTrue(plain.contains("already had 1 talk earlier today"))
-        // The first meeting's own block says what the relationship is.
+        // A first meeting has no earlier talk to name.
         let first = prompt(firstMeeting: true)
         XCTAssertTrue(first.contains("WHEN THIS IS"))
         XCTAssertFalse(first.contains("already had"))

@@ -41,23 +41,6 @@ extension ConversationEngine {
         }
     }
 
-    /// Appended to the FIRST CALL block. The shared "glad to be starting this"
-    /// came out as "목소리 들으니까 좋다" in 6/24 Korean first calls (English
-    /// 0), which is the longing `selfWarmth` rules out. Probe: 6/24 → 0/24;
-    /// Japanese longing 4/24 → 0.
-    static func firstCallLanguageLine(_ targetLanguage: String) -> String {
-        switch LanguageCatalog.base(targetLanguage) {
-        case "ko":
-            return "\n- KOREAN, FIRST CALL: when you're glad to be talking, the Korean for it"
-                + " is \"이렇게 얘기하니까 좋다\" — that is the whole of it."
-        case "ja":
-            return "\n- JAPANESE, FIRST CALL: when you're glad to be talking, the Japanese for"
-                + " it is 「話せてうれしい」 — that is the whole of it."
-        default:
-            return ""
-        }
-    }
-
     /// After the form-of-address rule, only while the model IS the learner's
     /// future self (no cast person, no scene to infer a role from): a barista
     /// or a colleague says さん, the learner's own self never does.

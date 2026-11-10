@@ -8,7 +8,6 @@ final class LanguageLineTests: XCTestCase {
     func testOtherLanguagesGetNothing() {
         for lang in ["en", "fr", "zh-Hans"] {
             XCTAssertEqual(ConversationEngine.beginnerQuestionLanguageLine(lang), "", lang)
-            XCTAssertEqual(ConversationEngine.firstCallLanguageLine(lang), "", lang)
             XCTAssertEqual(ConversationEngine.selfAddressLine(lang, asFutureSelf: true), "", lang)
             XCTAssertEqual(ConversationEngine.spanishGuard(lang, asFutureSelf: true, accentId: nil), "", lang)
         }
@@ -22,9 +21,6 @@ final class LanguageLineTests: XCTestCase {
         XCTAssertTrue(ConversationEngine.beginnerQuestions(.a2, targetLanguage: "ja").contains("JAPANESE, BEGINNER"))
         XCTAssertEqual(ConversationEngine.beginnerQuestionLanguageLine("de"), "")
         XCTAssertEqual(ConversationEngine.beginnerQuestionLanguageLine("es"), "")
-        XCTAssertTrue(ConversationEngine.firstCallLanguageLine("ko").contains("이렇게 얘기하니까 좋다"))
-        XCTAssertTrue(ConversationEngine.firstCallLanguageLine("ja").contains("話せてうれしい"))
-        XCTAssertEqual(ConversationEngine.firstCallLanguageLine("de"), "")
     }
 
     func testFutureSelfOnlyLines() {
