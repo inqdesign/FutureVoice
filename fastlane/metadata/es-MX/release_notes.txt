@@ -1,4 +1,2 @@
 Mejoras
-• La voz de un tutor de IA suena al instante cuando la eliges, sin esperar. Los botones de velocidad también.
-• En tu primera llamada, tu yo del futuro ya no responde de forma rígida. Habla como en cualquier otra llamada.
 • En la llamada de pronunciación, cada fallo te dice qué sonó distinto y una cosa que cambiar.
