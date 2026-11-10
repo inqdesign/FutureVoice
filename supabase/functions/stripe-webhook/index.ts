@@ -19,6 +19,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import Stripe from "npm:stripe@17"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
+import { reportStripeSubscriptionToRevenueCat } from "../_shared/revenuecat.ts"
 
 const SOURCE_FN = "stripe-webhook"
 
@@ -95,8 +96,11 @@ Deno.serve(async (req) => {
 
 // ── entitlement writes ─────────────────────────────────────────
 
-// deno-lint-ignore no-explicit-any
-async function upsertSubscription(db: any, sub: Stripe.Subscription, forceStatus?: string) {
+// Returns the owner's user id when the row was written, null when skipped.
+async function upsertSubscription(
+  // deno-lint-ignore no-explicit-any
+  db: any, sub: Stripe.Subscription, forceStatus?: string,
+): Promise<string | null> {
   // SHARED Stripe account (Dear RoRo): humhumhum and DeskSquat bill here too,
   // and every webhook endpoint on the account receives every matching event.
   // Ours is subscribed to subscription-shaped events only and both of those
@@ -107,12 +111,12 @@ async function upsertSubscription(db: any, sub: Stripe.Subscription, forceStatus
   const project = sub.metadata?.project
   if (project && project !== "futurevoice") {
     console.log("skipping another project's subscription", project, sub.id)
-    return
+    return null
   }
   const userId = sub.metadata?.user_id
   if (!userId) {
     console.warn("subscription without user_id metadata — not ours, skipping", sub.id)
-    return
+    return null
   }
   // The plan comes from the PRICE actually on the subscription, not from the
   // checkout metadata: a portal upgrade/downgrade swaps the price but keeps
@@ -151,10 +155,17 @@ async function upsertSubscription(db: any, sub: Stripe.Subscription, forceStatus
     // forever. (Same guard as humhumhum's tip webhook.)
     if (error.code === "23503") {
       console.warn("user gone, dropping subscription event", sub.id)
-      return
+      return null
     }
     throw new Error(`user_subscriptions upsert: ${error.message}`)
   }
+  // RevenueCat hears about every subscription event (2026-11-11), as on
+  // google-webhook: the first post makes the subscription known there under
+  // this user, a later one has it re-read Stripe (a renewal, a cancel). No
+  // Stripe webhook points at RevenueCat, because the account is shared with
+  // other projects. After the row above, which it never gates.
+  await reportStripeSubscriptionToRevenueCat({ userId, subscriptionId: sub.id })
+  return userId
 }
 
 // ── mapping helpers ────────────────────────────────────────────

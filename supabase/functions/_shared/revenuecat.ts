@@ -44,3 +44,39 @@ export async function reportPlayPurchaseToRevenueCat(p: {
     console.error("revenuecat report failed (non-fatal)", (e as Error)?.message ?? String(e))
   }
 }
+
+// A Stripe (web) subscription, the same way (2026-11-11). RevenueCat reads the
+// subscription from Stripe with its own connection to the account (the
+// RevenueCat app installed there); this post says which one and WHO it
+// belongs to. Posted on every event, since RevenueCat gets no Stripe webhook
+// of its own and "track new purchases" stays off: the Stripe account is
+// shared with other projects. Does nothing until
+// REVENUECAT_STRIPE_API_KEY (the Stripe app's public key in RC) is set.
+export async function reportStripeSubscriptionToRevenueCat(p: {
+  userId: string
+  subscriptionId: string  // sub_…
+}): Promise<void> {
+  const key = Deno.env.get("REVENUECAT_STRIPE_API_KEY")
+  if (!key) return
+  try {
+    const res = await fetch(ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${key}`,
+        "X-Platform": "stripe",
+      },
+      body: JSON.stringify({
+        app_user_id: p.userId,
+        fetch_token: p.subscriptionId,
+      }),
+      signal: AbortSignal.timeout(4000),
+    })
+    if (!res.ok) {
+      console.error("revenuecat refused", res.status, (await res.text()).slice(0, 300),
+        { subscription: p.subscriptionId })
+    }
+  } catch (e) {
+    console.error("revenuecat report failed (non-fatal)", (e as Error)?.message ?? String(e))
+  }
+}
