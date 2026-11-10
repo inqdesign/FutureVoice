@@ -2027,6 +2027,7 @@ struct VoiceCloneOnboardingView: View {
     private func openMeet() {
         meetBurst = true
         measureOfferedPreset()
+        seedBundledGreeting(for: meetVoiceKey)
         let ask = MeetSound.greeting(voice: meetVoiceKey)
         meetAsk = ask
         Task { @MainActor in
@@ -2070,11 +2071,24 @@ struct VoiceCloneOnboardingView: View {
     private func refreshGreetingForNewVoice() {
         guard let voiceId = appState.speakingVoiceId else { return }
         meetAsk = .greeting(voice: voiceId)
+        seedBundledGreeting(for: voiceId)
         if greetingTakes[voiceId] != nil {
             playGreeting()
             return
         }
         fetchGreeting(voiceId: voiceId)
+    }
+
+    /// An AI tutor says the same thing to everyone, so its arrival line is
+    /// the clip that ships with the app (`Resources/VoicePreviews`): no
+    /// request, no wait. A tutor the bundle lacks is synthesized as before.
+    private func seedBundledGreeting(for voiceId: String) {
+        guard greetingTakes[voiceId] == nil, voiceId == appState.fluentSelfPresetId else { return }
+        let language = appState.targetLanguage
+        let lang = language.split(separator: "-").first.map(String.init) ?? language
+        guard let url = Bundle.main.url(forResource: "preview-\(lang)-\(voiceId)", withExtension: "mp3"),
+              let data = try? Data(contentsOf: url) else { return }
+        greetingTakes[voiceId] = data
     }
 
     private func fetchGreeting(voiceId: String) {
