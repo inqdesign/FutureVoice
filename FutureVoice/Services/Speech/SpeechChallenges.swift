@@ -310,9 +310,10 @@ final class SpeechChallenges: ObservableObject {
             .value
     }
 
-    /// Below this many people the overall board is not drawn: a board of
-    /// two reads as empty, not as a race.
-    static let overallMinEntrants = 5
+    /// The overall board is drawn as soon as one person is on it (founder,
+    /// 2026-11-10: a new season's board must be there from its first day;
+    /// the 5-person floor of 2026-11-05 hid Season 2 with four people on it).
+    static let overallMinEntrants = 1
 
     // MARK: - Entering a take
 
