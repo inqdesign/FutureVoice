@@ -404,6 +404,19 @@ fun CloneFlowScreen(
         room.stop(); monitoring = false
     }
 
+    /** An AI tutor says the same thing to everyone, so its arrival line is
+     *  the clip that ships with the app (`assets/voice_previews`): no
+     *  request, no wait (iOS `seedBundledGreeting`). A tutor the bundle
+     *  lacks is synthesized as before. */
+    fun seedBundledGreeting(voiceId: String) {
+        if (sounds.greetings[voiceId] != null ||
+            !com.roro.futurevoice.talk.VoicePreset.isPreset(voiceId)) return
+        val lang = targetLanguage.substringBefore('-')
+        runCatching {
+            context.assets.open("voice_previews/preview-$lang-$voiceId.mp3").use { it.readBytes() }
+        }.getOrNull()?.let { sounds.greetings[voiceId] = it }
+    }
+
     fun playGreeting() {
         val g = meetVoiceId()?.let { sounds.greetings[it] } ?: return
         mp3.stop()
@@ -414,6 +427,7 @@ fun CloneFlowScreen(
      *  takes over the orb. Said ONCE on arrival. */
     fun openMeet() {
         meetBurst = true
+        meetVoiceId()?.let { seedBundledGreeting(it) }
         val ask = MeetSounds.greetingKey(meetVoiceId() ?: "")
         sounds.ask = ask
         scope.launch {
@@ -459,6 +473,7 @@ fun CloneFlowScreen(
     fun refreshGreetingForNewVoice() {
         val voiceId = meetVoiceId() ?: return
         sounds.ask = MeetSounds.greetingKey(voiceId)
+        seedBundledGreeting(voiceId)
         if (sounds.greetings[voiceId] != null) { playGreeting(); return }
         fetchGreeting(voiceId)
     }
@@ -496,6 +511,7 @@ fun CloneFlowScreen(
         // The voice the meet act speaks in, after the pick lands.
         val voiceId = clonedVoiceId?.let { presetId ?: it } ?: return
         sounds.ask = MeetSounds.greetingKey(voiceId)
+        seedBundledGreeting(voiceId)
         val g = sounds.greetings[voiceId]
         if (g != null) scope.launch { mp3.play(g) } else fetchGreeting(voiceId)
     }
