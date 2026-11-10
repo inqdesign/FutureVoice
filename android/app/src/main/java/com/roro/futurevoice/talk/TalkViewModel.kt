@@ -2302,7 +2302,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             outcome == PronunciationAssessor.Outcome.CAPPED || outcome == PronunciationAssessor.Outcome.SKIPPED ||
             noAudio || pronUnheard >= 2)
         var verdict = if (noReader) PronunciationJudge.fallback(probe, said, target)
-            else PronunciationJudge.verdict(result, probe, said, round.topic.phonemes, target)
+            else PronunciationJudge.verdict(result, probe, said, round.topic.phonemes, target, wordDrill = true)
         // One word has no rhythm to judge: its sounds are the take.
         if (verdict is PronunciationJudge.Verdict.NotSmooth) verdict = PronunciationJudge.Verdict.Pass(verdict.score)
         // A word read on its own that Azure couldn't match is that word not

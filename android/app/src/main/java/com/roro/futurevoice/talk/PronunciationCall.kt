@@ -464,10 +464,14 @@ object PronunciationJudge {
 
     /** [only]: judge just these words (keys) — a sentence read again after a
      *  miss is judged on what was wrong the first time ([PronunciationRound.Line.watch]).
-     *  [excluding]: skip these words, for listing every miss ([missedWords]). */
+     *  [excluding]: skip these words, for listing every miss ([missedWords]).
+     *  [wordDrill]: a word (or a short chunk) practiced on its own — every
+     *  sound of it is the take, so a sound Azure heard as ANOTHER sound is
+     *  "not yet" even when its score clears the bars ([swappedTo]). */
     fun verdict(result: PronunciationResult?, line: PronunciationRound.Line, said: String,
                 phonemes: List<String>, language: String,
-                only: Set<String>? = null, excluding: Set<String> = emptySet()): Verdict {
+                only: Set<String>? = null, excluding: Set<String> = emptySet(),
+                wordDrill: Boolean = false): Verdict {
         result ?: return Verdict.Unheard
         if ((result.completeness ?: 100) < COMPLETENESS_BAR) return Verdict.OffScript
         fun inScope(w: PronunciationResult.Word): Boolean {
@@ -510,6 +514,24 @@ object PronunciationJudge {
         }
         soundHits.minByOrNull { it.second.accuracy!! }?.let { (w, p) ->
             return Verdict.NotYet(w.word, p.phoneme.ifEmpty { null }, result.soundScore, null)
+        }
+        // 2b. A word on its own: a sound that came out as ANOTHER sound,
+        //     whatever its score. Scripted Azure scores a sound against the
+        //     word it was told to expect, so "sink" read as "think" kept θ at
+        //     73 and both drills passed (iOS e272f61f). Its list of what it
+        //     heard does not forgive: s at 100 with θ absent.
+        if (wordDrill) {
+            val swaps = judged.mapNotNull { w ->
+                val named = w.phonemes.filter { it.accuracy != null }
+                val off = named.filterIndexed { i, p ->
+                    val finalStop = i == named.size - 1 && p.phoneme in FINAL_STOPS
+                    !finalStop && swappedTo(p) != null
+                }
+                off.minByOrNull { it.accuracy!! }?.let { w to it }
+            }
+            swaps.minByOrNull { it.second.accuracy!! }?.let { (w, p) ->
+                return Verdict.NotYet(w.word, p.phoneme, result.soundScore, null)
+            }
         }
         // 3. Any word that came out badly, or a word left out.
         result.referenceWords.filter { inScope(it) && (it.isOmission || (it.isJudged && (it.accuracy ?: 100) < WORD_BAR)) }
@@ -627,7 +649,35 @@ object PronunciationJudge {
     private const val VOWEL_CHARS = "aeiouɪʊəɛæʌɔɑɒɐɜɝɚy"
     private fun hasVowel(p: String) = p.any { it in VOWEL_CHARS }
 
+    /** A sound under this whose list puts another sound on top and its own
+     *  at [SWAP_OWN_MAX] or below (or not at all) came out as that other
+     *  sound. Measured 2026-11-07 on iOS (en-US, single words): every
+     *  minimal-pair swap the bars missed sat at 50–82 with its own sound at
+     *  38 or absent; every native word kept its own sound above 50 in the
+     *  list or scored 75+. */
+    const val SWAP_BAR = 75
+    const val SWAP_OWN_MAX = 50
+
+    /** The sound [p] came out as, when Azure heard it as another one.
+     *  Reduced vowels don't count: a schwa said as ɪ or ʌ is a dialect, not
+     *  another word. */
+    fun swappedTo(p: PronunciationResult.Phoneme): String? {
+        if (p.phoneme.isEmpty()) return null
+        val list = p.heard ?: return null
+        val top = list.firstOrNull() ?: return null
+        if (top.phoneme == p.phoneme || top.score < 70) return null
+        if ((p.accuracy ?: 100) >= SWAP_BAR) return null
+        if ((list.firstOrNull { it.phoneme == p.phoneme }?.score ?: 0) > SWAP_OWN_MAX) return null
+        val loose = setOf("ə", "ɚ")
+        if (p.phoneme in loose || top.phoneme in loose ||
+            setOf(p.phoneme, top.phoneme) == setOf("ɝ", "ɚ")) return null
+        return top.phoneme
+    }
+
     fun heardAs(p: PronunciationResult.Phoneme): HeardAs? {
+        swappedTo(p)?.takeIf { (p.accuracy ?: 100) >= 70 }?.let { other ->
+            return if (!hasVowel(p.phoneme) && hasVowel(other)) HeardAs.VowelAdded else HeardAs.Sound(other)
+        }
         val list = p.heard
         if (list.isNullOrEmpty() || (p.accuracy ?: 100) >= 70) return null
         val isConsonant = !hasVowel(p.phoneme)

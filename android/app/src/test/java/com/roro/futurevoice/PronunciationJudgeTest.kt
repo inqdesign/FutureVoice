@@ -79,4 +79,63 @@ class PronunciationJudgeTest {
         assertEquals("is my mother", PronunciationJudge.flowText("mother", "This is my mother."))
         assertEquals("Not that", PronunciationJudge.flowText("that", "Not that."))
     }
+
+    // A word on its own: a sound heard as another (iOS e272f61f)
+
+    private class Heard(val phoneme: String, val accuracy: Int, vararg val list: Pair<String, Int>)
+
+    private fun drillWord(w: String, accuracy: Int, vararg ps: Heard) = take(
+        PronunciationResult.Word(word = w, accuracy = accuracy, error = "None", offsetMs = 0, durationMs = 400,
+            phonemes = ps.map { p ->
+                PronunciationResult.Phoneme(p.phoneme, p.accuracy,
+                    p.list.map { PronunciationResult.Phoneme.Candidate(it.first, it.second) })
+            }))
+
+    private fun drill(r: PronunciationResult, text: String, lesson: List<String> = th) =
+        PronunciationJudge.verdict(r, line(text), "", lesson, "en", wordDrill = true)
+
+    @Test fun sinkReadAsThinkIsNotYet() {
+        val r = drillWord("think", 86,
+            Heard("θ", 73, "s" to 100, "z" to 54, "ɪ" to 45),
+            Heard("ɪ", 68, "ɪ" to 100, "æ" to 100),
+            Heard("ŋ", 100, "ŋ" to 100), Heard("k", 93, "k" to 100))
+        val v = drill(r, "think")
+        assertTrue("sink is not think", v is Verdict.NotYet)
+        assertEquals("θ", (v as Verdict.NotYet).sound)
+        // The same take inside a sentence keeps the sentence rules.
+        assertEquals(Verdict.Pass(90), PronunciationJudge.verdict(r, line("think"), "", th, "en"))
+    }
+
+    @Test fun shipReadAsSheepIsNotYet() {
+        val r = drillWord("sheep", 71,
+            Heard("ʃ", 72, "ʃ" to 100), Heard("i", 50, "ɪ" to 99, "eɪ" to 92, "ɛ" to 60),
+            Heard("p", 61, "t" to 100, "d" to 85, "p" to 85))
+        val v = drill(r, "sheep", listOf("i"))
+        assertTrue(v is Verdict.NotYet)
+        assertEquals("i", (v as Verdict.NotYet).sound)
+        assertEquals(PronunciationJudge.HeardAs.Sound("ɪ"), PronunciationJudge.heardAs(r, "sheep", "i"))
+    }
+
+    @Test fun aNativeWordStillPasses() {
+        // Native "thank": s on top of θ, but θ itself at 94 in the list.
+        val thank = drillWord("thank", 98,
+            Heard("θ", 98, "s" to 100, "θ" to 94), Heard("æ", 100, "æ" to 100),
+            Heard("ŋ", 100, "ŋ" to 100), Heard("k", 85, "k" to 100))
+        assertEquals(Verdict.Pass(90), drill(thank, "thank"))
+        // Native "bad": m on top of b at 78 — over the swap bar.
+        val bad = drillWord("bad", 96,
+            Heard("b", 78, "m" to 100, "b" to 46), Heard("æ", 99, "æ" to 100), Heard("d", 100, "d" to 100))
+        assertEquals(Verdict.Pass(90), drill(bad, "bad", emptyList()))
+        // Native "sheep": its final p heard as g — a final stop never counts.
+        val sheep = drillWord("sheep", 94,
+            Heard("ʃ", 100, "ʃ" to 100), Heard("i", 98, "i" to 100),
+            Heard("p", 44, "g" to 100, "k" to 93, "i" to 42))
+        assertEquals(Verdict.Pass(90), drill(sheep, "sheep", emptyList()))
+    }
+
+    @Test fun aSchwaSaidAnotherWayIsNotASwap() {
+        val r = drillWord("decision", 85,
+            Heard("d", 92, "d" to 100), Heard("ə", 40, "ɪ" to 100), Heard("s", 90, "s" to 100))
+        assertEquals(Verdict.Pass(90), drill(r, "decision", emptyList()))
+    }
 }
