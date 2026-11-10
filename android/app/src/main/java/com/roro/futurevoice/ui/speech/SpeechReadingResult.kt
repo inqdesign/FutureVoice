@@ -1,5 +1,7 @@
 package com.roro.futurevoice.ui.speech
 
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import android.media.MediaPlayer
 import androidx.annotation.ArrayRes
 import androidx.annotation.StringRes
@@ -237,7 +239,13 @@ private fun partFocus(part: SpeechReadingScore.Part, r: SpeechReadingScore): Str
 @Composable
 internal fun SpeechTakePage(take: SpeechTake, script: SpeechScript, pendingVideo: Boolean,
                             entry: SpeechChallenges.Entry?, standing: SpeechChallenges.Standing?,
-                            onBack: () -> Unit, onAgain: (() -> Unit)?) {
+                            onBack: () -> Unit, onAgain: (() -> Unit)?,
+                            /** Every take of the script, oldest first (the takes' pager): a
+                             *  swipe across the picture goes to the one beside it while the
+                             *  score, the sheet and the buttons stay and change to it. */
+                            pages: List<String>? = null, onPage: ((String) -> Unit)? = null,
+                            /** Where you are among the takes, at the top centre. */
+                            indicator: (@Composable () -> Unit)? = null) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
@@ -336,7 +344,22 @@ internal fun SpeechTakePage(take: SpeechTake, script: SpeechScript, pendingVideo
             }
         },
     ) {
-        Box(Modifier.fillMaxSize().background(Color.Black)) {
+        // Older to the left, like Photos (iOS `TakesBackdrop`).
+        val swipe = if (pages != null && pages.size > 1 && onPage != null && !playing) {
+            Modifier.pointerInput(take.id, pages) {
+                var dx = 0f
+                detectHorizontalDragGestures(
+                    onDragStart = { dx = 0f },
+                    onHorizontalDrag = { change, amount -> change.consume(); dx += amount },
+                    onDragEnd = {
+                        val i = pages.indexOf(take.id)
+                        val limit = 56.dp.toPx()
+                        if (dx > limit && i > 0) onPage(pages[i - 1])
+                        else if (dx < -limit && i in 0 until pages.lastIndex) onPage(pages[i + 1])
+                    })
+            }
+        } else Modifier
+        Box(Modifier.fillMaxSize().background(Color.Black).then(swipe)) {
             if (heroFile != null) {
                 HeroVideo(hero, Modifier.fillMaxSize())
             } else {
@@ -408,6 +431,9 @@ internal fun SpeechTakePage(take: SpeechTake, script: SpeechScript, pendingVideo
                     modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                 )
+                indicator?.let {
+                    Box(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 14.dp)) { it() }
+                }
             }
         }
     }

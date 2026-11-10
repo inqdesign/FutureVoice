@@ -116,7 +116,9 @@ import java.util.Date
  */
 @Composable
 internal fun SpeechResultScreen(takeId: String, live: SpeechTake?, onBack: () -> Unit, onAgain: (() -> Unit)?,
-                                onSeeBoard: (() -> Unit)? = null) {
+                                onSeeBoard: (() -> Unit)? = null,
+                                pages: List<String>? = null, onPage: ((String) -> Unit)? = null,
+                                indicator: (@Composable () -> Unit)? = null) {
     val context = LocalContext.current
     val store = remember { SpeechStore.shared(context) }
     val takes by store.takes.collectAsStateWithLifecycle()
@@ -134,7 +136,8 @@ internal fun SpeechResultScreen(takeId: String, live: SpeechTake?, onBack: () ->
     }
 
     if (take != null && script != null) {
-        SpeechTakePage(take, script, take.id in pending, entries[take.id], standings[script.id], onBack, onAgain)
+        SpeechTakePage(take, script, take.id in pending, entries[take.id], standings[script.id], onBack, onAgain,
+            pages, onPage, indicator)
         return
     }
 

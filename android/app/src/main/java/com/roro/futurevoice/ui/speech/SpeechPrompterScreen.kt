@@ -410,7 +410,7 @@ private fun SpeechTakeLayout(
     if (showScript) {
         SpeechScriptSheet(script, native, onEdited = { session.replaceScript(it) }, onDismiss = { showScript = false })
     }
-    if (showTakes) SpeechTakesSheet(script.id, onDismiss = { showTakes = false })
+    if (showTakes) SpeechTakesPager(script.id, onDismiss = { showTakes = false })
 }
 
 /**

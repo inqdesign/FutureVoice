@@ -1142,6 +1142,94 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
 
 // MARK: - Takes
 
+/**
+ * Every take of one script on one result page, opening on the newest — iOS
+ * `SpeechTakesPager` (founder, 2026-11-10: the history button went list →
+ * take, one level too deep). A swipe across the picture goes to the take
+ * beside it, older to the left; the score, the sheet and the buttons stay
+ * and change to it. The indicator at the top says where you are, and a tap
+ * on it is a menu of every take to jump to, and deleting the one shown.
+ *
+ * Differs from iOS: the picture changes on the swipe's release instead of
+ * sliding under the finger, and there is no first-frame poster.
+ */
+@Composable
+internal fun SpeechTakesPager(scriptId: String, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val store = remember { SpeechStore.shared(context) }
+    val all by store.takes.collectAsStateWithLifecycle()
+    // Oldest first, so the newest is the last page.
+    val takes = all.filter { it.scriptId == scriptId }.sortedBy { it.createdAt }
+    var current by remember { mutableStateOf<String?>(null) }
+    val shown = takes.firstOrNull { it.id == current } ?: takes.lastOrNull()
+    Dialog(onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        Box(Modifier.fillMaxSize().background(AppSurfaces.ground)) {
+            if (shown == null) {
+                Column(Modifier.fillMaxSize().statusBarsPadding()) {
+                    SheetHeader("", leading = { IosGlassTextButton(stringResource(R.string.done), onClick = onDismiss) },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                    Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically)) {
+                        Icon(Icons.Filled.RadioButtonChecked, null, tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(40.dp))
+                        Text(stringResource(R.string.no_takes_yet), style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold)
+                        Text(stringResource(R.string.your_recordings_of_this_script_will_be_here),
+                            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            } else {
+                val index = takes.indexOfFirst { it.id == shown.id }
+                run {
+                    SpeechResultScreen(takeId = shown.id, live = null, onBack = onDismiss, onAgain = null,
+                        pages = takes.map { it.id }, onPage = { current = it },
+                        indicator = if (takes.size > 1) ({
+                            var menu by remember { mutableStateOf(false) }
+                            Box {
+                                TakesIndicator(index, takes.size, Modifier.clickable { menu = true })
+                                androidx.compose.material3.DropdownMenu(menu, onDismissRequest = { menu = false }) {
+                                    takes.asReversed().forEach { take ->
+                                        androidx.compose.material3.DropdownMenuItem(
+                                            text = { Text("${takeDateLabel(take.createdAt)} · ${take.metrics.overall}") },
+                                            leadingIcon = if (take.id == shown.id) ({
+                                                Icon(Icons.Filled.Check, null, modifier = Modifier.size(18.dp))
+                                            }) else null,
+                                            onClick = { menu = false; current = take.id })
+                                    }
+                                    androidx.compose.material3.HorizontalDivider()
+                                    androidx.compose.material3.DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.delete), color = Color(0xFFFF3B30)) },
+                                        leadingIcon = { Icon(Icons.Filled.Delete, null, tint = Color(0xFFFF3B30),
+                                            modifier = Modifier.size(18.dp)) },
+                                        onClick = { menu = false; store.deleteTake(shown.id); current = null })
+                                }
+                            }
+                        }) else null)
+                }
+            }
+        }
+    }
+}
+
+/** Where you are among the takes: dots while they fit, a count past that
+ *  (iOS `TakesIndicator`). */
+@Composable
+private fun TakesIndicator(index: Int, count: Int, modifier: Modifier = Modifier) {
+    Row(modifier.clip(androidx.compose.foundation.shape.CircleShape).background(Color.Black.copy(alpha = 0.35f))
+        .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (count <= 9) {
+            repeat(count) { i ->
+                Box(Modifier.size(7.dp).background(Color.White.copy(alpha = if (i == index) 1f else 0.4f), androidx.compose.foundation.shape.CircleShape))
+            }
+        } else {
+            Text("${index + 1} / $count", color = Color.White, style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
 /** Every take of one script, newest first, each opening its result — iOS
  *  `SpeechTakesSheet`. */
 @Composable

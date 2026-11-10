@@ -419,7 +419,7 @@ internal fun SpeechChallengeScreen(
         SpeechScriptSheet(script, native, onEdited = {}, onDismiss = { showingScript = false })
     }
     if (showingTakes) {
-        SpeechTakesSheet(scriptId = challengeId, onDismiss = { showingTakes = false })
+        SpeechTakesPager(scriptId = challengeId, onDismiss = { showingTakes = false })
     }
     if (practicing && script != null) {
         Dialog(

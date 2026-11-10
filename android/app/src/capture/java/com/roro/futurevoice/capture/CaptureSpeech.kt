@@ -33,6 +33,7 @@ import com.roro.futurevoice.ui.speech.SpeechComposerSheet
 import com.roro.futurevoice.ui.speech.SpeechOwnScriptSheet
 import com.roro.futurevoice.ui.speech.SpeechPlusSheet
 import com.roro.futurevoice.ui.speech.SpeechPrompterScreen
+import com.roro.futurevoice.ui.speech.SpeechTakesPager
 import com.roro.futurevoice.ui.speech.SpeechResultScreen
 import com.roro.futurevoice.ui.speech.SpeechScriptSheet
 
@@ -226,6 +227,19 @@ object CaptureSpeech {
                 val take = base.copy(id = "capture-season2",
                     metrics = base.metrics.copy(overall = reading.total, scoring = 6, reading = reading))
                 SpeechResultScreen(take.id, take, onBack = {}, onAgain = {})
+            }
+        },
+        // Every take of one script on one page (iOS `SpeechTakesPager`).
+        "speech-takes" to { ctx ->
+            Seeded(ctx) {
+                val store = SpeechStore.shared(ctx)
+                val first = store.takes.value.first()
+                listOf(1 to 71, 2 to 78).forEach { (n, score) ->
+                    store.save(first.copy(id = "C0FFEE00-0000-4000-8000-0000000000B$n",
+                        createdAt = first.createdAt - n * 86_400_000L,
+                        metrics = first.metrics.copy(overall = score)))
+                }
+                SpeechTakesPager(first.scriptId, onDismiss = {})
             }
         },
         "speech-result" to { ctx ->

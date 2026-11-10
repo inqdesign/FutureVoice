@@ -144,6 +144,7 @@ object CaptureRouter {
         "speech-plus",
         "speech-prompter",
         "speech-result",
+        "speech-takes",
         "speech-script-edit",
         "speech-script-sheet",
         "speech-study-card",
