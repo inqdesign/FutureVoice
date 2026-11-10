@@ -1,2 +1,6 @@
+Neu
+• Die Tageskarte gibt es jetzt im Hochformat 9:16, mit allem, was du an dem Tag gemacht hast, Zeile für Zeile.
+• Der Verlauf einer Rede zeigt jetzt alle Aufnahmen auf einer Seite. Wische, um zu wechseln.
+
 Verbessert
 • Im Aussprache-Gespräch erfährst du bei jedem Fehler, was anders klang und was du ändern kannst.
