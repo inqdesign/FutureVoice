@@ -66,6 +66,32 @@ final class ShadowEngineTests: XCTestCase {
         XCTAssertFalse(a.steps.allSatisfy { $0.op == .match })
     }
 
+    func testGermanSpanishKoreanNumberReadings() {
+        for (language, target, learner) in [
+            ("de", "Das war neunzehnhundertelf in Paris", "Das war 1911 in Paris"),
+            ("de", "Das war 1911 in Paris", "Das war neunzehnhundertelf in Paris"),
+            ("de", "Ich bin einundzwanzig Jahre alt", "Ich bin 21 Jahre alt"),
+            ("de", "Wir treffen uns um ein Uhr", "Wir treffen uns um 1 Uhr"),
+            ("de", "Das kostet hundert Euro", "Das kostet 100 Euro"),
+            ("es", "Tengo veintiún años", "Tengo 21 años"),
+            ("es", "Quiero un café", "Quiero 1 café"),
+            ("es", "Fue en mil novecientos once", "Fue en 1911"),
+            ("es", "Hay doscientas personas", "Hay 200 personas"),
+            ("ko", "세 시에 만나요", "3시에 만나요"),
+            ("ko", "3시에 만나요", "세 시에 만나요"),
+            ("ko", "저는 스무 살이에요", "저는 20살이에요"),
+            ("ko", "사과 다섯 개 주세요", "사과 5개 주세요"),
+            ("ko", "천구백십일 년에 사라졌어요", "1911년에 사라졌어요"),
+            ("ja", "千九百十一年のことです", "1911年のことです"),
+        ] {
+            let a = ShadowEngine.analyze(target: target, learner: learner, language: language)
+            XCTAssertTrue(a.steps.allSatisfy { $0.op == .match }, "\(target) | \(learner): \(a.steps)")
+        }
+        // 삼 시 for 세 시 is a slip, and stays one.
+        let wrong = ShadowEngine.analyze(target: "세 시에 만나요", learner: "삼 시에 만나요", language: "ko")
+        XCTAssertFalse(wrong.steps.allSatisfy { $0.op == .match })
+    }
+
     /// A model-written target carries a typographic apostrophe; every
     /// recognizer writes the ASCII one. Both must expand to the same tokens
     /// or "I’m" against "I'm" is a substitution the learner never made.

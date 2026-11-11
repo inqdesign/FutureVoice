@@ -552,7 +552,11 @@ enum ShadowEngine {
                 guard let r = Range(m.range, in: out),
                       let n = Int(out[r]),
                       let spelled = formatter.string(from: NSNumber(value: n)) else { continue }
-                let flat = spelled.lowercased().replacingOccurrences(of: "-", with: " ")
+                // German comes back with soft hyphens between its parts,
+                // which split "21" into three tokens against the one word
+                // (einundzwanzig) a transcriber writes.
+                let flat = spelled.lowercased().replacingOccurrences(of: "\u{00AD}", with: "")
+                    .replacingOccurrences(of: "-", with: " ")
                 out.replaceSubrange(r, with: " \(flat) ")
             }
         }
@@ -602,96 +606,210 @@ enum ShadowEngine {
     /// writes digits for all of them: a script saying "nineteen eleven" read
     /// exactly came back "1911", was spelled "one thousand nine hundred
     /// eleven", and the take showed three added words and a wrong one
-    /// (speech challenge, 2026-11-11). Two directions, English only:
-    /// digits HEARD take the reading found in the target's words, and words
-    /// heard for digits in the TARGET become the target's own spelling.
+    /// (speech challenge, 2026-11-11). German years (neunzehnhundertelf),
+    /// Spanish un/una and Korean native numbers (3시 is 세 시, not 삼 시) are
+    /// the same problem. Two directions: digits HEARD take whichever reading
+    /// matches the target best, and words heard for digits in the TARGET
+    /// become the target's own spelling. The plain spell-out wins a tie.
     /// The target's tokens never change, so `tokenSpans` still lines up.
+    /// Japanese needs none of it: its spell-out is kanji, which carries no
+    /// reading.
     private static func heardTokens(_ heard: String, target: String, targetTokens: [String],
                                     language: String, style: LanguageCatalog.TokenStyle) -> [String] {
-        guard language.hasPrefix("en"), style == .word, let re = digitRun else {
-            return tokenize(expandForDiff(heard, language: language), style: style)
+        let plainTokens = { tokenize(expandForDiff(heard, language: language), style: style) }
+        func hasDigits(_ t: String) -> Bool {
+            t.unicodeScalars.contains { CharacterSet.decimalDigits.contains($0) }
         }
-        var text = heard
-        for m in re.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
-            guard let r = Range(m.range, in: text) else { continue }
-            let readings = englishReadings(of: String(text[r]))
-            // The first is the plain spell-out, which `expandForDiff` writes anyway.
-            if let fit = readings.dropFirst().first(where: { firstIndex(of: $0, in: targetTokens) != nil }),
-               firstIndex(of: readings[0], in: targetTokens) == nil {
-                text.replaceSubrange(r, with: " " + fit.joined(separator: " ") + " ")
+        guard hasReadings(language), let re = digitRun, hasDigits(heard) || hasDigits(target) else {
+            return plainTokens()
+        }
+        // Judged by edit distance, not matches: "one hundred and five" for
+        // "105" matches every target word and still leaves an added "and".
+        func cost(_ tokens: [String]) -> Int {
+            let (matched, steps) = align(targetTokens, tokens)
+            return steps.count - matched
+        }
+
+        // Digits heard: one reading per run, each tried against the target.
+        let runs = re.matches(in: heard, range: NSRange(heard.startIndex..., in: heard))
+            .compactMap { Range($0.range, in: heard) }
+        var tokens = plainTokens()
+        if !runs.isEmpty, runs.count <= maxNumberRuns {
+            let options = runs.map { readings(of: String(heard[$0]), language: language) }
+            var picked = [Int](repeating: 0, count: runs.count)
+            func build(_ picked: [Int]) -> [String] {
+                var text = heard
+                for (i, r) in runs.enumerated().reversed() where picked[i] > 0 {
+                    text.replaceSubrange(r, with: " " + options[i][picked[i]] + " ")
+                }
+                return tokenize(expandForDiff(text, language: language), style: style)
             }
-        }
-        var tokens = tokenize(expandForDiff(text, language: language), style: style)
-        for m in re.matches(in: target, range: NSRange(target.startIndex..., in: target)) {
-            guard let r = Range(m.range, in: target) else { continue }
-            let readings = englishReadings(of: String(target[r]))
-            guard let plain = readings.first, firstIndex(of: plain, in: tokens) == nil else { continue }
-            for other in readings.dropFirst() {
-                if let at = firstIndex(of: other, in: tokens) {
-                    tokens.replaceSubrange(at..<(at + other.count), with: plain)
-                    break
+            var best = cost(tokens)
+            for i in runs.indices where options[i].count > 1 {
+                for c in 1..<options[i].count {
+                    var trial = picked
+                    trial[i] = c
+                    let built = build(trial)
+                    let score = cost(built)
+                    if score < best { best = score; picked = trial; tokens = built }
                 }
             }
+        }
+
+        // Digits in the target, words heard: the heard run becomes the
+        // target's own spelling, wherever that raises the match.
+        let targetRuns = re.matches(in: target, range: NSRange(target.startIndex..., in: target))
+            .compactMap { Range($0.range, in: target) }
+        guard !targetRuns.isEmpty, targetRuns.count <= maxNumberRuns else { return tokens }
+        var best = cost(tokens)
+        for r in targetRuns {
+            let all = readings(of: String(target[r]), language: language)
+                .map { tokenize(expandForDiff($0, language: language), style: style) }
+            guard let plain = all.first else { continue }
+            var winner: [String]?
+            for other in all.dropFirst() where !other.isEmpty && other != plain && other.count <= tokens.count {
+                for at in 0...(tokens.count - other.count) where Array(tokens[at..<(at + other.count)]) == other {
+                    var trial = tokens
+                    trial.replaceSubrange(at..<(at + other.count), with: plain)
+                    let score = cost(trial)
+                    if score < best { best = score; winner = trial }
+                }
+            }
+            if let winner { tokens = winner }
         }
         return tokens
     }
 
-    private static func firstIndex(of run: [String], in tokens: [String]) -> Int? {
-        guard !run.isEmpty, tokens.count >= run.count else { return nil }
-        return (0...(tokens.count - run.count)).first { Array(tokens[$0..<($0 + run.count)]) == run }
+    /// Past this many numbers in one text the search is skipped (a table of
+    /// figures, not a line to read).
+    private static let maxNumberRuns = 24
+
+    private static func hasReadings(_ language: String) -> Bool {
+        ["en", "de", "es", "ko"].contains { language.hasPrefix($0) }
     }
 
-    /// The ways an English speaker reads a digit run, as tokens. First is
-    /// the spell-out `expandForDiff` produces; then "and" after hundred /
-    /// thousand, the year reading of four digits (nineteen eleven, nineteen
-    /// oh five, nineteen hundred), and digit by digit (one oh one).
-    static func englishReadings(of digits: String) -> [[String]] {
-        guard let n = Int(digits), digits.count <= 9 else { return [] }
+    /// The ways a digit run is read aloud in `language`, the plain spell-out
+    /// (what `expandForDiff` writes) first.
+    static func readings(of digits: String, language: String) -> [String] {
+        guard digits.count <= 9, let n = Int(digits) else { return [] }
+        let code = String(language.prefix(2))
         let formatter = NumberFormatter()
         formatter.numberStyle = .spellOut
-        formatter.locale = Locale(identifier: "en")
-        func spell(_ v: Int) -> [String] {
+        formatter.locale = Locale(identifier: code)
+        func spell(_ v: Int) -> String {
             (formatter.string(from: NSNumber(value: v)) ?? "").lowercased()
+                .replacingOccurrences(of: "\u{00AD}", with: "")
                 .replacingOccurrences(of: "-", with: " ")
-                .split(separator: " ").map(String.init)
         }
         let plain = spell(n)
         guard !plain.isEmpty else { return [] }
+        let each = digits.compactMap { $0.wholeNumberValue }
         var out = [plain]
-
-        // "one hundred and five", "two thousand and five".
-        var withAnd: [String] = []
-        for (i, word) in plain.enumerated() {
-            withAnd.append(word)
-            let rest = plain.count - i - 1
-            if rest > 0, word == "hundred" || (word == "thousand" && n % 1000 < 100) {
-                if plain[i + 1] != "thousand" && plain[i + 1] != "million" { withAnd.append("and") }
-            }
+        switch code {
+        case "en": out += englishReadings(n, digits: digits, each: each, plain: plain, spell: spell)
+        case "de": out += germanReadings(n, digits: digits, each: each, plain: plain, spell: spell)
+        case "es": out += spanishReadings(n, digits: digits, each: each, plain: plain, spell: spell)
+        case "ko": out += koreanReadings(n, digits: digits, each: each)
+        default: break
         }
-        if withAnd != plain { out.append(withAnd) }
+        var seen = Set<String>()
+        return out.filter { !$0.isEmpty && seen.insert($0).inserted }
+    }
 
+    /// "and" after hundred / thousand, the year reading of four digits
+    /// (nineteen eleven, nineteen oh five, nineteen hundred), digit by digit
+    /// (one oh one).
+    private static func englishReadings(_ n: Int, digits: String, each: [Int], plain: String,
+                                        spell: (Int) -> String) -> [String] {
+        var out: [String] = []
+        let words = plain.split(separator: " ").map(String.init)
+        var withAnd: [String] = []
+        for (i, word) in words.enumerated() {
+            withAnd.append(word)
+            guard i + 1 < words.count, words[i + 1] != "thousand", words[i + 1] != "million" else { continue }
+            if word == "hundred" || (word == "thousand" && n % 1000 < 100) { withAnd.append("and") }
+        }
+        out.append(withAnd.joined(separator: " "))
         if digits.count == 4, n >= 1000 {
             let hi = n / 100, lo = n % 100
             if lo == 0 {
-                if hi % 10 != 0 { out.append(spell(hi) + ["hundred"]) }
-            } else if lo < 10 {
-                out.append(spell(hi) + ["oh"] + spell(lo))
-                if hi % 10 != 0 {
-                    out.append(spell(hi) + ["hundred", "and"] + spell(lo))
-                    out.append(spell(hi) + ["hundred"] + spell(lo))
-                }
+                if hi % 10 != 0 { out.append("\(spell(hi)) hundred") }
             } else {
-                out.append(spell(hi) + spell(lo))
+                out.append(lo < 10 ? "\(spell(hi)) oh \(spell(lo))" : "\(spell(hi)) \(spell(lo))")
                 if hi % 10 != 0 {
-                    out.append(spell(hi) + ["hundred", "and"] + spell(lo))
-                    out.append(spell(hi) + ["hundred"] + spell(lo))
+                    out.append("\(spell(hi)) hundred and \(spell(lo))")
+                    out.append("\(spell(hi)) hundred \(spell(lo))")
                 }
             }
         }
         if digits.count >= 2 {
-            let each = digits.compactMap { $0.wholeNumberValue }
-            out.append(each.flatMap { $0 == 0 ? ["oh"] : spell($0) })
-            if each.contains(0) { out.append(each.flatMap { spell($0) }) }
+            out.append(each.map { $0 == 0 ? "oh" : spell($0) }.joined(separator: " "))
+            out.append(each.map(spell).joined(separator: " "))
+        }
+        return out
+    }
+
+    /// The year reading (neunzehnhundertelf), hundert / tausend without the
+    /// leading "ein", ein / eine for a final "eins", digit by digit.
+    private static func germanReadings(_ n: Int, digits: String, each: [Int], plain: String,
+                                       spell: (Int) -> String) -> [String] {
+        var out: [String] = []
+        if digits.count == 4, (1100...1999).contains(n) {
+            let lo = n % 100
+            out.append(spell(n / 100) + "hundert" + (lo > 0 ? spell(lo) : ""))
+        }
+        var stems = [plain]
+        if plain.hasPrefix("einhundert") || plain.hasPrefix("eintausend") {
+            stems.append(String(plain.dropFirst(3)))
+        }
+        out += stems.dropFirst()
+        for stem in stems where stem.hasSuffix("eins") {
+            let base = String(stem.dropLast(1))
+            out += [base, base + "e", base + "en", base + "em", base + "er"]
+        }
+        if digits.count >= 2 { out.append(each.map(spell).joined(separator: " ")) }
+        return out
+    }
+
+    /// un / una for a final "uno" (veintiún, treinta y una), feminine
+    /// hundreds (doscientas), digit by digit.
+    private static func spanishReadings(_ n: Int, digits: String, each: [Int], plain: String,
+                                        spell: (Int) -> String) -> [String] {
+        var out: [String] = []
+        var stems = [plain]
+        if plain.contains("cientos") || plain.contains("quinientos") {
+            stems.append(plain.replacingOccurrences(of: "cientos", with: "cientas")
+                .replacingOccurrences(of: "quinientos", with: "quinientas"))
+            out.append(stems[1])
+        }
+        for stem in stems {
+            if stem.hasSuffix("veintiuno") {
+                let base = String(stem.dropLast(3))
+                out += [base + "ún", base + "una"]
+            } else if stem == "uno" || stem.hasSuffix(" uno") {
+                let base = String(stem.dropLast(1))
+                out += [base, base + "a"]
+            }
+        }
+        if digits.count >= 2 { out.append(each.map(spell).joined(separator: " ")) }
+        return out
+    }
+
+    /// Native numbers under a hundred, counting form first (세 시, 스무 살),
+    /// then the full form (셋, 스물), and digit by digit with 공 or 영.
+    private static func koreanReadings(_ n: Int, digits: String, each: [Int]) -> [String] {
+        var out: [String] = []
+        if (1...99).contains(n) {
+            let ones = ["", "하나", "둘", "셋", "넷", "다섯", "여섯", "일곱", "여덟", "아홉"]
+            let counting = ["", "한", "두", "세", "네", "다섯", "여섯", "일곱", "여덟", "아홉"]
+            let tens = ["", "열", "스물", "서른", "마흔", "쉰", "예순", "일흔", "여든", "아흔"]
+            out.append(n == 20 ? "스무" : tens[n / 10] + counting[n % 10])
+            out.append(tens[n / 10] + ones[n % 10])
+        }
+        if digits.count >= 2 {
+            let sino = ["영", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"]
+            out.append(each.map { $0 == 0 ? "공" : sino[$0] }.joined())
+            out.append(each.map { sino[$0] }.joined())
         }
         return out
     }
