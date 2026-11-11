@@ -97,6 +97,9 @@ struct VoiceCloneOnboardingView: View {
     @State private var startedAt: Date?
     @State private var elapsedSeconds: Double = 0
     @State private var ticker: Timer?
+    /// The step last sent as `voice_step`, and when it came up.
+    @State private var reportedStep: Status?
+    @State private var reportedStepAt = Date()
     /// Recording captured this session, awaiting the user's review (listen +
     /// quality check) before we commit to cloning.
     @State private var recordedSampleURL: URL?
@@ -202,6 +205,22 @@ struct VoiceCloneOnboardingView: View {
         case meet        // clone landed; greeting + theme pick
         case account     // sign-up: keep the voice they just heard
         case queued      // the month's voices are spent: recording kept, voice made later
+
+        var name: String {
+            switch self {
+            case .intro: "intro"
+            case .consent: "consent"
+            case .mic: "mic"
+            case .spot: "spot"
+            case .script: "script"
+            case .recording: "recording"
+            case .reviewing: "reviewing"
+            case .uploading: "uploading"
+            case .meet: "meet"
+            case .account: "account"
+            case .queued: "queued"
+            }
+        }
     }
 
     /// Which language the user reads the script in. The clone captures a
@@ -404,6 +423,11 @@ struct VoiceCloneOnboardingView: View {
                 recorder.stopMonitoring()
             }
         }
+        // Which screen of the voice step is up (2026-11-11). Between the
+        // consent and the upload there was no event, so a learner who left
+        // could not be placed on the mic, spot, script or recording screen.
+        .task { reportStep(status) }
+        .onChange(of: status) { _, new in reportStep(new) }
         .onDisappear {
             stopTicker()
             recorder.stopMonitoring()
@@ -1765,6 +1789,18 @@ struct VoiceCloneOnboardingView: View {
                 error = explain("Microphone access denied. Enable it in Settings.")
             }
         }
+    }
+
+    private func reportStep(_ step: Status) {
+        guard step != reportedStep else { return }
+        var props: [String: Any] = ["step": step.name, "from_settings": fromSettings]
+        if let from = reportedStep {
+            props["from"] = from.name
+            props["from_s"] = Int(Date().timeIntervalSince(reportedStepAt))
+        }
+        reportedStep = step
+        reportedStepAt = Date()
+        Analytics.capture("voice_step", props)
     }
 
     /// The ONLY way recording starts: the explicit "Record my voice" tap on
