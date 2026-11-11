@@ -35,6 +35,7 @@ import androidx.compose.material3.TextButton
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -307,6 +308,22 @@ fun CloneFlowScreen(
      *  they kept. */
     val takeFile = remember { File(context.filesDir, "voice/clone-take.wav") }
     var elapsed by remember { mutableFloatStateOf(if (debugStage == "recording") 47f else 0f) }
+    // Which screen of the voice step is up (iOS `voice_step`, 2026-11-11):
+    // between the consent and the upload there was no event.
+    var reportedAct by remember { mutableStateOf<CloneAct?>(null) }
+    var reportedActAt by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(act) {
+        if (act == reportedAct) return@LaunchedEffect
+        fun name(a: CloneAct) = if (a == CloneAct.REVIEW) "reviewing" else a.name.lowercase()
+        val props = mutableMapOf<String, Any>("step" to name(act), "from_settings" to fromSettings)
+        reportedAct?.let { from ->
+            props["from"] = name(from)
+            props["from_s"] = ((System.currentTimeMillis() - reportedActAt) / 1000).toInt()
+        }
+        reportedAct = act
+        reportedActAt = System.currentTimeMillis()
+        com.roro.futurevoice.core.Analytics.capture("voice_step", props)
+    }
     var level by remember { mutableFloatStateOf(0f) }
     var quality by remember { mutableStateOf<SampleQuality?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
