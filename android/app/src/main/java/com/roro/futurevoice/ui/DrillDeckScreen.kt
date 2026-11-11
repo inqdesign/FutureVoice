@@ -135,7 +135,7 @@ fun DrillDeckScreen(
     var deck by remember { mutableStateOf<List<DrillCard>>(emptyList()) }
     var dealt by remember { mutableStateOf(false) }
     var resolved by remember { mutableIntStateOf(0) }
-    var revealed by remember { mutableStateOf(false) }
+    var flipped by remember { mutableStateOf(false) }
     /** Everything not due now: the three delay windows, plus Known for the
      *  cards that retired there. */
     var scheduled by remember { mutableStateOf<Map<DrillBin, Int>>(emptyMap()) }
@@ -207,12 +207,15 @@ fun DrillDeckScreen(
     }
 
     val top = deck.firstOrNull()
+    // A card with no "You said" has nothing to recall from, so it is dealt
+    // face up (iOS `needsReveal`). Concealed, it was a card with no words.
+    val revealed = flipped || (top != null && top.sourcePhrase.isBlank())
     LaunchedEffect(top?.id) {
-        revealed = false
+        flipped = false
         // Capture seams: the tray is drag-only and a folder is tap-only, so a
         // screenshot can't reach either without being put there.
         if (top != null && com.roro.futurevoice.capture.flags.PracticeCaptureFlags.previewDrillTray) {
-            revealed = true; dragging = true; activeBin = DrillBin.TOMORROW
+            flipped = true; dragging = true; activeBin = DrillBin.TOMORROW
             cardOffset.snapTo(with(density) { Offset(40.dp.toPx(), 150.dp.toPx()) })
         }
     }
@@ -490,7 +493,7 @@ fun DrillDeckScreen(
                             }
                             .clickable(indication = null,
                                 interactionSource = remember { MutableInteractionSource() }) {
-                                if (!revealed) revealed = true
+                                if (!revealed) flipped = true
                             },
                     )
                 }
