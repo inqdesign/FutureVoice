@@ -35,7 +35,7 @@ object ShadowScore {
     fun analyze(target: String, learner: String, language: String = "en"): Analysis {
         val style = LanguageCatalog.tokenStyle(language)
         val targetTokens = tokenize(expandForDiff(target, language), style)
-        val learnerTokens = tokenize(expandForDiff(learner, language), style)
+        val learnerTokens = heardTokens(learner, target, targetTokens, language, style)
         // Japanese compares by SOUND: the transcriber picks the script
         // (ナワナ / なわな / nawana are the same three morae), so a token is
         // keyed in hiragana — the steps still carry what each side wrote.
@@ -65,7 +65,7 @@ object ShadowScore {
     fun heardLineEnd(target: String, heard: String, language: String): Boolean {
         val style = LanguageCatalog.tokenStyle(language)
         val t = tokenize(expandForDiff(target, language), LanguageCatalog.TokenStyle.WORD)
-        val h = tokenize(expandForDiff(heard, language), LanguageCatalog.TokenStyle.WORD)
+        val h = heardTokens(heard, target, t, language, LanguageCatalog.TokenStyle.WORD)
         val key: (String) -> String =
             if (language.startsWith("ja")) com.roro.futurevoice.data.JapaneseMorph::soundSpelling else { x -> x }
         return when (style) {
@@ -361,6 +361,97 @@ object ShadowScore {
         }
         for ((suffix, expansion) in SUFFIXES) {
             out = Regex("(?<=[a-z])${Regex.escape(suffix)}\\b").replace(out, expansion)
+        }
+        return out
+    }
+
+    /**
+     * The heard side's tokens, with every number brought to the reading the
+     * TARGET uses (iOS `heardTokens`). A transcriber writes digits for every
+     * spoken form of a number: a script saying "nineteen eleven" read exactly
+     * came back "1911", was spelled "one thousand nine hundred eleven", and
+     * the take showed three added words and a wrong one. English only.
+     * Digits HEARD take the reading found in the target's words; words heard
+     * for digits in the TARGET become the target's own spelling. The
+     * target's tokens never change.
+     */
+    private fun heardTokens(
+        heard: String, target: String, targetTokens: List<String>,
+        language: String, style: LanguageCatalog.TokenStyle,
+    ): List<String> {
+        if (!language.startsWith("en") || style != LanguageCatalog.TokenStyle.WORD) {
+            return tokenize(expandForDiff(heard, language), style)
+        }
+        val digits = Regex("\\d+")
+        val text = digits.replace(heard) { m ->
+            val readings = englishReadings(m.value)
+            if (readings.isEmpty() || indexOfRun(readings[0], targetTokens) != null) return@replace m.value
+            val fit = readings.drop(1).firstOrNull { indexOfRun(it, targetTokens) != null }
+                ?: return@replace m.value
+            " " + fit.joinToString(" ") + " "
+        }
+        val tokens = tokenize(expandForDiff(text, language), style).toMutableList()
+        for (m in digits.findAll(target)) {
+            val readings = englishReadings(m.value)
+            val plain = readings.firstOrNull() ?: continue
+            if (indexOfRun(plain, tokens) != null) continue
+            for (other in readings.drop(1)) {
+                val at = indexOfRun(other, tokens) ?: continue
+                repeat(other.size) { tokens.removeAt(at) }
+                tokens.addAll(at, plain)
+                break
+            }
+        }
+        return tokens
+    }
+
+    private fun indexOfRun(run: List<String>, tokens: List<String>): Int? {
+        if (run.isEmpty() || tokens.size < run.size) return null
+        return (0..tokens.size - run.size).firstOrNull { tokens.subList(it, it + run.size) == run }
+    }
+
+    /**
+     * The ways an English speaker reads a digit run, as tokens (iOS
+     * `englishReadings`). First is the plain spell-out; then "and" after
+     * hundred / thousand, the year reading of four digits (nineteen eleven,
+     * nineteen oh five, nineteen hundred), and digit by digit (one oh one).
+     */
+    fun englishReadings(digits: String): List<List<String>> {
+        if (digits.length > 9) return emptyList()
+        val n = digits.toIntOrNull() ?: return emptyList()
+        fun spell(v: Int): List<String> =
+            (spellOut(v, "en") ?: "").lowercase().replace("-", " ").split(" ").filter { it.isNotEmpty() }
+        val plain = spell(n)
+        if (plain.isEmpty()) return emptyList()
+        val out = mutableListOf(plain)
+
+        val withAnd = mutableListOf<String>()
+        for ((i, word) in plain.withIndex()) {
+            withAnd.add(word)
+            val rest = plain.size - i - 1
+            if (rest > 0 && (word == "hundred" || (word == "thousand" && n % 1000 < 100))) {
+                if (plain[i + 1] != "thousand" && plain[i + 1] != "million") withAnd.add("and")
+            }
+        }
+        if (withAnd != plain) out.add(withAnd)
+
+        if (digits.length == 4 && n >= 1000) {
+            val hi = n / 100
+            val lo = n % 100
+            if (lo == 0) {
+                if (hi % 10 != 0) out.add(spell(hi) + "hundred")
+            } else {
+                out.add(if (lo < 10) spell(hi) + "oh" + spell(lo) else spell(hi) + spell(lo))
+                if (hi % 10 != 0) {
+                    out.add(spell(hi) + listOf("hundred", "and") + spell(lo))
+                    out.add(spell(hi) + "hundred" + spell(lo))
+                }
+            }
+        }
+        if (digits.length >= 2) {
+            val each = digits.map { it - '0' }
+            out.add(each.flatMap { if (it == 0) listOf("oh") else spell(it) })
+            if (0 in each) out.add(each.flatMap { spell(it) })
         }
         return out
     }
