@@ -526,15 +526,7 @@ enum ShadowEngine {
     /// they meet in the middle. The rendered diff already shows lowercased
     /// tokens, so expanded forms are consistent with the existing display.
     static func expandForDiff(_ text: String, language: String) -> String {
-        var out = text.lowercased()
-        // Typographic apostrophes → ASCII. A model-written target says
-        // "I’m" (U+2019) and every recognizer writes "I'm"; the suffix table
-        // below only knows the ASCII form, so the target tokenized to
-        // `i`,`m` against the learner's `i am` and a word they said
-        // perfectly was scored a substitution.
-        for curly in ["\u{2019}", "\u{2018}", "\u{02BC}"] {
-            out = out.replacingOccurrences(of: curly, with: "'")
-        }
+        var out = written(text, language: language)
         // Hyphens → spaces so "twenty-one"/"check-in" (written) match
         // "twenty one"/"check in" (how STT writes them). Spell-out below
         // strips its own hyphens at insertion for the same reason.
@@ -599,6 +591,129 @@ enum ShadowEngine {
         return out
     }
 
+    // MARK: - Written forms a mouth never chooses
+
+    /// Lowercased, apostrophes folded, and the WRITTEN shapes of numbers put
+    /// back into words and bare digits: "1,500" → "1500", "$5" → "5 dollars",
+    /// "50%" → "50 percent", "3.5" → "3 point 5", and in English "21st" →
+    /// "twenty first", "1960s" → "nineteen sixties", "Dr." → "doctor". A
+    /// transcriber picks these; the reader said the words (measured on the
+    /// number fix's own probe, 2026-11-11: each was a missed or wrong word on
+    /// a script read exactly). Every change stays inside one
+    /// whitespace-delimited word, which `tokenSpans` depends on, and running
+    /// it twice changes nothing.
+    static func written(_ text: String, language: String) -> String {
+        var out = text.lowercased()
+        // Typographic apostrophes → ASCII. A model-written target says
+        // "I’m" (U+2019) and every recognizer writes "I'm"; the suffix table
+        // in `expandForDiff` only knows the ASCII form, so the target
+        // tokenized to `i`,`m` against the learner's `i am` and a word they
+        // said perfectly was scored a substitution.
+        for curly in ["\u{2019}", "\u{2018}", "\u{02BC}"] {
+            out = out.replacingOccurrences(of: curly, with: "'")
+        }
+        let code = String(language.prefix(2))
+        let hasDigit = out.unicodeScalars.contains { CharacterSet.decimalDigits.contains($0) }
+        let commaDecimal = code == "de" || code == "es"
+
+        if hasDigit {
+            // Thousands separators, then the decimal mark.
+            out = replace(out, commaDecimal ? #"(?<=\d)\.(?=\d{3}(?!\d))"# : #"(?<=\d),(?=\d{3}(?!\d))"#) { _ in "" }
+        }
+        if let units = currencyWords[code], out.unicodeScalars.contains(where: { currencySigns.contains($0) }) {
+            out = replace(out, #"([$€£₩¥])(\d+(?:[.,]\d+)?)"#) { g in
+                guard let unit = units[g[1]] else { return nil }
+                return "\(g[2]) \(g[2] == "1" ? unit.one : unit.many)"
+            }
+            out = replace(out, #"[$€£₩¥]"#) { g in units[g[0]].map { " \($0.many) " } }
+        }
+        if out.contains("%"), let percent = percentWord[code] {
+            out = out.replacingOccurrences(of: "%", with: " \(percent) ")
+        }
+        if hasDigit, let point = decimalWord[code] {
+            out = replace(out, commaDecimal ? #"(\d+),(\d+)"# : #"(\d+)\.(\d+)"#) { g in
+                "\(g[1]) \(point) " + g[2].map(String.init).joined(separator: " ")
+            }
+        }
+        guard code == "en" else { return out }
+
+        if hasDigit {
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .spellOut
+            formatter.locale = Locale(identifier: "en")
+            func spell(_ v: Int) -> [String] {
+                (formatter.string(from: NSNumber(value: v)) ?? "").lowercased()
+                    .replacingOccurrences(of: "-", with: " ").split(separator: " ").map(String.init)
+            }
+            func ending(_ words: [String], _ change: (String) -> String) -> String {
+                guard let last = words.last else { return "" }
+                return (words.dropLast() + [change(last)]).joined(separator: " ")
+            }
+            out = replace(out, #"(?<![\d.,])(\d{1,9})(st|nd|rd|th)(?![a-z])"#) { g in
+                guard let n = Int(g[1]) else { return nil }
+                return " " + ending(spell(n)) { ordinalWord[$0] ?? ($0.hasSuffix("y") ? $0.dropLast() + "ieth" : $0 + "th") } + " "
+            }
+            // Decades: the 1960s are "the nineteen sixties", the 80s "the eighties".
+            out = replace(out, #"(?<![\d.,])(\d{2,4})'?s(?![a-z])"#) { g in
+                guard let n = Int(g[1]) else { return nil }
+                let plural: (String) -> String = { $0.hasSuffix("y") ? $0.dropLast() + "ies" : $0 + "s" }
+                if g[1].count == 4, (1100...2099).contains(n), (n / 100) % 10 != 0 {
+                    let hi = spell(n / 100), lo = n % 100
+                    return " " + (lo == 0 ? ending(hi + ["hundred"], plural) : ending(hi + spell(lo), plural)) + " "
+                }
+                return " " + ending(spell(n), plural) + " "
+            }
+        }
+        if out.contains("dr") || out.contains("mr") {
+            for (short, long) in [("dr", "doctor"), ("mrs", "missus"), ("mr", "mister")] {
+                out = replace(out, "(?<![a-z0-9'])\(short)\\.?(?![a-z0-9'])") { _ in long }
+            }
+        }
+        return out
+    }
+
+    private static let currencySigns = CharacterSet(charactersIn: "$€£₩¥")
+    private static let currencyWords: [String: [String: (one: String, many: String)]] = [
+        "en": ["$": ("dollar", "dollars"), "€": ("euro", "euros"), "£": ("pound", "pounds"),
+               "₩": ("won", "won"), "¥": ("yen", "yen")],
+        "de": ["$": ("dollar", "dollar"), "€": ("euro", "euro"), "£": ("pfund", "pfund"),
+               "₩": ("won", "won"), "¥": ("yen", "yen")],
+        "es": ["$": ("dólar", "dólares"), "€": ("euro", "euros"), "£": ("libra", "libras"),
+               "₩": ("won", "wones"), "¥": ("yen", "yenes")],
+        "ko": ["$": ("달러", "달러"), "€": ("유로", "유로"), "£": ("파운드", "파운드"),
+               "₩": ("원", "원"), "¥": ("엔", "엔")],
+        "ja": ["$": ("ドル", "ドル"), "€": ("ユーロ", "ユーロ"), "£": ("ポンド", "ポンド"),
+               "₩": ("ウォン", "ウォン"), "¥": ("円", "円")],
+    ]
+    private static let percentWord = ["en": "percent", "de": "prozent", "es": "por ciento",
+                                      "ko": "퍼센트", "ja": "パーセント"]
+    private static let decimalWord = ["en": "point", "de": "komma", "es": "coma", "ko": "점", "ja": "点"]
+    private static let ordinalWord = ["one": "first", "two": "second", "three": "third", "five": "fifth",
+                                      "eight": "eighth", "nine": "ninth", "twelve": "twelfth"]
+
+    /// Regex replace with a closure over the capture groups (nil keeps the
+    /// match). Patterns are compiled once: this runs per word per frame
+    /// under the karaoke line.
+    private static func replace(_ text: String, _ pattern: String, _ body: ([String]) -> String?) -> String {
+        patternLock.lock()
+        var re = patterns[pattern]
+        if re == nil {
+            re = try? NSRegularExpression(pattern: pattern)
+            patterns[pattern] = re
+        }
+        patternLock.unlock()
+        guard let re else { return text }
+        var out = text
+        for m in re.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
+            guard let whole = Range(m.range, in: out) else { continue }
+            let groups = (0..<m.numberOfRanges).map { i in Range(m.range(at: i), in: text).map { String(text[$0]) } ?? "" }
+            if let new = body(groups) { out.replaceSubrange(whole, with: new) }
+        }
+        return out
+    }
+    private static var patterns: [String: NSRegularExpression] = [:]
+    private static let patternLock = NSLock()
+
     // MARK: - Numbers read more than one way
 
     /// The heard side's tokens, with every number brought to the reading the
@@ -623,6 +738,10 @@ enum ShadowEngine {
         guard hasReadings(language), let re = digitRun, hasDigits(heard) || hasDigits(target) else {
             return plainTokens()
         }
+        // Written shapes first ("1,500" is one number, "21st" no number at
+        // all), so a run below is always a whole spoken number.
+        let heard = written(heard, language: language)
+        let target = written(target, language: language)
         // Judged by edit distance, not matches: "one hundred and five" for
         // "105" matches every target word and still leaves an added "and".
         func cost(_ tokens: [String]) -> Int {

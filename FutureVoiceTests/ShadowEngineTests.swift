@@ -66,6 +66,40 @@ final class ShadowEngineTests: XCTestCase {
         XCTAssertFalse(a.steps.allSatisfy { $0.op == .match })
     }
 
+    /// The transcriber's written shapes of what the reader said in words.
+    func testWrittenFormsAreTheWordsSaid() {
+        for (language, target, learner) in [
+            ("en", "about one thousand five hundred people", "about 1,500 people"),
+            ("en", "it costs five dollars", "it costs $5"),
+            ("en", "just one dollar", "just $1"),
+            ("en", "fifty percent of them", "50% of them"),
+            ("en", "on the twenty-first of May", "on the 21st of May"),
+            ("en", "the first time, the third try", "the 1st time, the 3rd try"),
+            ("en", "in the nineteen sixties", "in the 1960s"),
+            ("en", "back in the eighties", "back in the 80s"),
+            ("en", "three point five million", "3.5 million"),
+            ("en", "Doctor Smith and Mister Lee", "Dr. Smith and Mr. Lee"),
+            ("en", "Dr. Smith is in", "Doctor Smith is in"),
+            ("en", "at three thirty", "at 3:30"),
+            ("de", "fünfzig Prozent der Leute", "50% der Leute"),
+            ("de", "Das kostet fünf Euro", "Das kostet 5 €"),
+            ("es", "el cincuenta por ciento", "el 50%"),
+            ("ko", "오십 퍼센트예요", "50%예요"),
+            ("ko", "천오백 원이에요", "1,500원이에요"),
+        ] {
+            let a = ShadowEngine.analyze(target: target, learner: learner, language: language)
+            XCTAssertTrue(a.steps.allSatisfy { $0.op == .match }, "\(target) | \(learner): \(a.steps)")
+        }
+        // Each change stays inside its word, so the word map still lines up.
+        let line = "It was $5 on the 21st, 50% off, says Dr. Lee of the 1960s"
+        let words = line.split(separator: " ").map(String.init)
+        let spans = ShadowEngine.tokenSpans(for: words)
+        XCTAssertEqual(spans.last?.upperBound, ShadowEngine.analyze(target: line, learner: "").targetTokenCount)
+        // Ordinary words are left alone.
+        XCTAssertEqual(ShadowEngine.written("a hundred dreams, Mr Darcy", language: "en"),
+                       "a hundred dreams, mister darcy")
+    }
+
     func testGermanSpanishKoreanNumberReadings() {
         for (language, target, learner) in [
             ("de", "Das war neunzehnhundertelf in Paris", "Das war 1911 in Paris"),
