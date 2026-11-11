@@ -347,7 +347,10 @@ object ShadowScore {
         out = Regex("\\d+").replace(out) { m ->
             val n = m.value.toIntOrNull() ?: return@replace m.value
             val spelled = spellOut(n, language) ?: return@replace m.value
-            " " + spelled.lowercase().replace("-", " ") + " "
+            // German comes back with soft hyphens between its parts, which
+            // split "21" into three tokens against the one word a
+            // transcriber writes.
+            " " + spelled.lowercase().replace("\u00AD", "").replace("-", " ") + " "
         }
         // A romaji word in a Japanese line (nawana) is six letters on one side
         // and three kana on the other — the recognizer writes it ナワナ. Cut
@@ -370,90 +373,158 @@ object ShadowScore {
      * TARGET uses (iOS `heardTokens`). A transcriber writes digits for every
      * spoken form of a number: a script saying "nineteen eleven" read exactly
      * came back "1911", was spelled "one thousand nine hundred eleven", and
-     * the take showed three added words and a wrong one. English only.
-     * Digits HEARD take the reading found in the target's words; words heard
-     * for digits in the TARGET become the target's own spelling. The
-     * target's tokens never change.
+     * the take showed three added words and a wrong one. German years
+     * (neunzehnhundertelf), Spanish un/una and Korean native numbers (3시 is
+     * 세 시) are the same problem. Digits HEARD take whichever reading is
+     * closest to the target; words heard for digits in the TARGET become the
+     * target's own spelling. The plain spell-out wins a tie, and the
+     * target's tokens never change. Japanese spells out in kanji, which
+     * carries no reading.
      */
     private fun heardTokens(
         heard: String, target: String, targetTokens: List<String>,
         language: String, style: LanguageCatalog.TokenStyle,
     ): List<String> {
-        if (!language.startsWith("en") || style != LanguageCatalog.TokenStyle.WORD) {
-            return tokenize(expandForDiff(heard, language), style)
-        }
+        var tokens = tokenize(expandForDiff(heard, language), style)
         val digits = Regex("\\d+")
-        val text = digits.replace(heard) { m ->
-            val readings = englishReadings(m.value)
-            if (readings.isEmpty() || indexOfRun(readings[0], targetTokens) != null) return@replace m.value
-            val fit = readings.drop(1).firstOrNull { indexOfRun(it, targetTokens) != null }
-                ?: return@replace m.value
-            " " + fit.joinToString(" ") + " "
-        }
-        val tokens = tokenize(expandForDiff(text, language), style).toMutableList()
-        for (m in digits.findAll(target)) {
-            val readings = englishReadings(m.value)
-            val plain = readings.firstOrNull() ?: continue
-            if (indexOfRun(plain, tokens) != null) continue
-            for (other in readings.drop(1)) {
-                val at = indexOfRun(other, tokens) ?: continue
-                repeat(other.size) { tokens.removeAt(at) }
-                tokens.addAll(at, plain)
-                break
+        val known = listOf("en", "de", "es", "ko").any { language.startsWith(it) }
+        if (!known || (!digits.containsMatchIn(heard) && !digits.containsMatchIn(target))) return tokens
+        // Edit distance, not matches: "one hundred and five" for "105"
+        // matches every target word and still leaves an added "and".
+        fun cost(t: List<String>): Int { val (m, steps) = align(targetTokens, t); return steps.size - m }
+
+        val runs = digits.findAll(heard).toList()
+        if (runs.isNotEmpty() && runs.size <= MAX_NUMBER_RUNS) {
+            val options = runs.map { readings(it.value, language) }
+            var picked = IntArray(runs.size)
+            fun build(p: IntArray): List<String> {
+                val sb = StringBuilder(heard)
+                for (i in runs.indices.reversed()) if (p[i] > 0) {
+                    sb.replace(runs[i].range.first, runs[i].range.last + 1, " " + options[i][p[i]] + " ")
+                }
+                return tokenize(expandForDiff(sb.toString(), language), style)
             }
+            var best = cost(tokens)
+            for (i in runs.indices) for (c in 1 until options[i].size) {
+                val trial = picked.copyOf().also { it[i] = c }
+                val built = build(trial)
+                val score = cost(built)
+                if (score < best) { best = score; picked = trial; tokens = built }
+            }
+        }
+
+        val targetRuns = digits.findAll(target).toList()
+        if (targetRuns.isEmpty() || targetRuns.size > MAX_NUMBER_RUNS) return tokens
+        var best = cost(tokens)
+        for (run in targetRuns) {
+            val all = readings(run.value, language).map { tokenize(expandForDiff(it, language), style) }
+            val plain = all.firstOrNull() ?: continue
+            var winner: List<String>? = null
+            for (other in all.drop(1)) {
+                if (other.isEmpty() || other == plain || other.size > tokens.size) continue
+                for (at in 0..tokens.size - other.size) {
+                    if (tokens.subList(at, at + other.size) != other) continue
+                    val trial = tokens.subList(0, at) + plain + tokens.subList(at + other.size, tokens.size)
+                    val score = cost(trial)
+                    if (score < best) { best = score; winner = trial }
+                }
+            }
+            winner?.let { tokens = it }
         }
         return tokens
     }
 
-    private fun indexOfRun(run: List<String>, tokens: List<String>): Int? {
-        if (run.isEmpty() || tokens.size < run.size) return null
-        return (0..tokens.size - run.size).firstOrNull { tokens.subList(it, it + run.size) == run }
-    }
+    private const val MAX_NUMBER_RUNS = 24
 
     /**
-     * The ways an English speaker reads a digit run, as tokens (iOS
-     * `englishReadings`). First is the plain spell-out; then "and" after
-     * hundred / thousand, the year reading of four digits (nineteen eleven,
-     * nineteen oh five, nineteen hundred), and digit by digit (one oh one).
+     * The ways a digit run is read aloud in [language], the plain spell-out
+     * (what [expandForDiff] writes) first. iOS `readings(of:language:)`.
      */
-    fun englishReadings(digits: String): List<List<String>> {
+    fun readings(digits: String, language: String): List<String> {
         if (digits.length > 9) return emptyList()
         val n = digits.toIntOrNull() ?: return emptyList()
-        fun spell(v: Int): List<String> =
-            (spellOut(v, "en") ?: "").lowercase().replace("-", " ").split(" ").filter { it.isNotEmpty() }
+        val code = language.take(2)
+        fun spell(v: Int): String =
+            (spellOut(v, code) ?: "").lowercase().replace("­", "").replace("-", " ")
         val plain = spell(n)
         if (plain.isEmpty()) return emptyList()
+        val each = digits.map { it - '0' }
         val out = mutableListOf(plain)
-
-        val withAnd = mutableListOf<String>()
-        for ((i, word) in plain.withIndex()) {
-            withAnd.add(word)
-            val rest = plain.size - i - 1
-            if (rest > 0 && (word == "hundred" || (word == "thousand" && n % 1000 < 100))) {
-                if (plain[i + 1] != "thousand" && plain[i + 1] != "million") withAnd.add("and")
+        when (code) {
+            "en" -> {
+                val words = plain.split(" ")
+                val withAnd = mutableListOf<String>()
+                for ((i, word) in words.withIndex()) {
+                    withAnd.add(word)
+                    if (i + 1 >= words.size || words[i + 1] == "thousand" || words[i + 1] == "million") continue
+                    if (word == "hundred" || (word == "thousand" && n % 1000 < 100)) withAnd.add("and")
+                }
+                out.add(withAnd.joinToString(" "))
+                if (digits.length == 4 && n >= 1000) {
+                    val hi = n / 100
+                    val lo = n % 100
+                    if (lo == 0) {
+                        if (hi % 10 != 0) out.add("${spell(hi)} hundred")
+                    } else {
+                        out.add(if (lo < 10) "${spell(hi)} oh ${spell(lo)}" else "${spell(hi)} ${spell(lo)}")
+                        if (hi % 10 != 0) {
+                            out.add("${spell(hi)} hundred and ${spell(lo)}")
+                            out.add("${spell(hi)} hundred ${spell(lo)}")
+                        }
+                    }
+                }
+                if (digits.length >= 2) {
+                    out.add(each.joinToString(" ") { if (it == 0) "oh" else spell(it) })
+                    out.add(each.joinToString(" ") { spell(it) })
+                }
             }
-        }
-        if (withAnd != plain) out.add(withAnd)
-
-        if (digits.length == 4 && n >= 1000) {
-            val hi = n / 100
-            val lo = n % 100
-            if (lo == 0) {
-                if (hi % 10 != 0) out.add(spell(hi) + "hundred")
-            } else {
-                out.add(if (lo < 10) spell(hi) + "oh" + spell(lo) else spell(hi) + spell(lo))
-                if (hi % 10 != 0) {
-                    out.add(spell(hi) + listOf("hundred", "and") + spell(lo))
-                    out.add(spell(hi) + "hundred" + spell(lo))
+            "de" -> {
+                if (digits.length == 4 && n in 1100..1999) {
+                    val lo = n % 100
+                    out.add(spell(n / 100) + "hundert" + (if (lo > 0) spell(lo) else ""))
+                }
+                val stems = mutableListOf(plain)
+                if (plain.startsWith("einhundert") || plain.startsWith("eintausend")) stems.add(plain.drop(3))
+                out.addAll(stems.drop(1))
+                for (stem in stems) if (stem.endsWith("eins")) {
+                    val base = stem.dropLast(1)
+                    out.addAll(listOf(base, base + "e", base + "en", base + "em", base + "er"))
+                }
+                if (digits.length >= 2) out.add(each.joinToString(" ") { spell(it) })
+            }
+            "es" -> {
+                val stems = mutableListOf(plain)
+                if ("cientos" in plain || "quinientos" in plain) {
+                    stems.add(plain.replace("cientos", "cientas").replace("quinientos", "quinientas"))
+                    out.add(stems[1])
+                }
+                for (stem in stems) {
+                    if (stem.endsWith("veintiuno")) {
+                        val base = stem.dropLast(3)
+                        out.addAll(listOf(base + "ún", base + "una"))
+                    } else if (stem == "uno" || stem.endsWith(" uno")) {
+                        val base = stem.dropLast(1)
+                        out.addAll(listOf(base, base + "a"))
+                    }
+                }
+                if (digits.length >= 2) out.add(each.joinToString(" ") { spell(it) })
+            }
+            "ko" -> {
+                if (n in 1..99) {
+                    val ones = listOf("", "하나", "둘", "셋", "넷", "다섯", "여섯", "일곱", "여덟", "아홉")
+                    val counting = listOf("", "한", "두", "세", "네", "다섯", "여섯", "일곱", "여덟", "아홉")
+                    val tens = listOf("", "열", "스물", "서른", "마흔", "쉰", "예순", "일흔", "여든", "아흔")
+                    out.add(if (n == 20) "스무" else tens[n / 10] + counting[n % 10])
+                    out.add(tens[n / 10] + ones[n % 10])
+                }
+                if (digits.length >= 2) {
+                    val sino = listOf("영", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구")
+                    out.add(each.joinToString("") { if (it == 0) "공" else sino[it] })
+                    out.add(each.joinToString("") { sino[it] })
                 }
             }
         }
-        if (digits.length >= 2) {
-            val each = digits.map { it - '0' }
-            out.add(each.flatMap { if (it == 0) listOf("oh") else spell(it) })
-            if (0 in each) out.add(each.flatMap { spell(it) })
-        }
-        return out
+        return out.filter { it.isNotEmpty() }.distinct()
     }
 
     private fun tokenize(text: String, style: LanguageCatalog.TokenStyle): List<String> {
