@@ -107,6 +107,12 @@ struct ConversationView: View {
     @State private var showingPaywall = false
     /// The call's own settings sheet — the mic pill's only neighbour.
     @State private var showingCallSettings = false
+    /// The tutor's card over the top of the call (`CallIsland`): open when
+    /// the call starts, folded into the bar once the learner speaks.
+    @State private var islandExpanded = false
+    @State private var showingIslandTopics = false
+    /// Where the bar puts its title, in screen points.
+    @State private var islandBarY: CGFloat?
     /// Screen state the learner owns while the call runs (`CallSettings`).
     /// Persisted, so a call opens the way the last one was left.
     @AppStorage(CallSettings.showsTranscriptKey) private var showsTranscript = true
@@ -1019,6 +1025,14 @@ struct ConversationView: View {
             // The Mac: lines across a whole window are hard to read.
             .macReadingColumn()
             .background(Color(.systemBackground))
+            .onChange(of: learnerSpokeThisCall) { _, spoke in
+                guard spoke, islandExpanded else { return }
+                withAnimation(CallIsland.motion) { islandExpanded = false }
+            }
+            .sheet(isPresented: $showingIslandTopics) {
+                TutorTopicSheet { picked, _ in islandPicked(picked) }
+                    .environmentObject(appState)
+            }
             .overlay { endingOverlay }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
@@ -1033,6 +1047,7 @@ struct ConversationView: View {
                 guard !didAutoStart else { return }
                 didAutoStart = true
                 phoneCallActive = true
+                islandExpanded = !pronThisCall
                 #if DEBUG
                 // `-trialhandoff normal|close`: the free pool runs out and the
                 // summary is closed with Done (`endAndClose`, what its
@@ -1157,19 +1172,7 @@ struct ConversationView: View {
             .onChange(of: tutorWasOn) { _, on in
                 if on { realtime.tutorCall = true }
             }
-            .onChange(of: tutorModeChoice) { _, on in
-                guard on != tutorThisCall, !pronThisCall else { return }
-                tutorThisCall = on
-                if on { tutorWasOn = true }
-                // The classic path reads `tutorThisCall` at its next turn.
-                guard RealtimeMode.isEnabled, phoneCallActive else { return }
-                realtime.setMeterFromStart(on)
-                realtime.setCallMode(on ? "tutor" : "free")
-                realtime.setSystem(systemPrompt() + Self.realtimeStyleRules)
-                if on, tutorLesson == nil {
-                    realtime.nudge("Tutor mode was just turned on. Ask them, in one short question, what they want to be able to say today — they can also pick a topic from the button on their screen.")
-                }
-            }
+            .onChange(of: tutorModeChoice) { _, on in applyTutorMode(on) }
             #if targetEnvironment(macCatalyst)
             // The Mac: the curriculum opens as a column beside the call, so
             // the topics and the talk are on screen together.
@@ -1488,6 +1491,21 @@ struct ConversationView: View {
                 Task { await openConversation() }
             }
         }
+        .overlay(alignment: .top) {
+            if !pronThisCall, let barY = islandBarY {
+                GeometryReader { geo in
+                    CallIsland(title: islandTitle, level: appState.proficiency,
+                               minutesLeft: meter.minutesRemaining.flatMap { $0 <= 10 ? $0 : nil },
+                               callClock: (phoneCallActive || !didSaveCurrentSession) ? meter.clock : nil,
+                               guidance: islandCanChange ? islandGuidance : nil,
+                               onChangeTopic: islandCanChange ? { islandChangeTopic() } : nil,
+                               onSettings: { showingCallSettings = true },
+                               expanded: $islandExpanded)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, max(0, barY - geo.frame(in: .global).minY))
+                }
+            }
+        }
     }
 
     // MARK: - Toolbar
@@ -1505,20 +1523,31 @@ struct ConversationView: View {
             // A news call is titled "News": its topic is a whole spoken line
             // ("Did you see the news about…?"), which only ever fit the bar
             // cut off with an ellipsis.
-            LevelHeaderTitle(title: topicIsNews ? explain("News")
-                                 : topic.isEmpty ? emptyTopicTitle : topic,
-                             level: appState.proficiency,
-                             surface: .talk,
-                             minutesLeft: meter.minutesRemaining.flatMap { $0 <= 10 ? $0 : nil },
-                             // Talk time, phone-style — every tier. The meter's
-                             // own count, so silence doesn't move it; shown from
-                             // the start, since the call is billed from the start
-                             // (2026-10-27), and gone once the talk is wrapped up.
-                             callClock: (phoneCallActive || !didSaveCurrentSession)
-                                 ? meter.clock : nil,
-                             halfRate: pronThisCall)
-                .environmentObject(appState)
+            if pronThisCall {
+                LevelHeaderTitle(title: topicIsNews ? explain("News")
+                                     : topic.isEmpty ? emptyTopicTitle : topic,
+                                 level: appState.proficiency,
+                                 surface: .talk,
+                                 minutesLeft: meter.minutesRemaining.flatMap { $0 <= 10 ? $0 : nil },
+                                 // Talk time, phone-style — every tier. The meter's
+                                 // own count, so silence doesn't move it; shown from
+                                 // the start, since the call is billed from the start
+                                 // (2026-10-27), and gone once the talk is wrapped up.
+                                 callClock: (phoneCallActive || !didSaveCurrentSession)
+                                     ? meter.clock : nil,
+                                 halfRate: pronThisCall)
+                    .environmentObject(appState)
+            } else {
+                // The island is drawn over the whole stack (it grows past
+                // the bar), so the title slot only says where the bar puts it.
+                Color.clear
+                    .frame(width: 1, height: CallIsland.pillHeight)
+                    .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { islandBarY = $0 }
+            }
         }
+        // The open island lies over the bar; its buttons would show through
+        // the glass at both ends, so they step out while it is open.
+        if !islandExpanded {
         ToolbarItem(placement: .topBarLeading) {
             Button {
                 // A talk with unsaved turns doesn't just vanish on a stray ✕
@@ -1570,6 +1599,7 @@ struct ConversationView: View {
                 // 2026-09-01). `endSession` already stops the mic, the
                 // player and the realtime socket from any phase.
             }
+        }
         }
     }
 
@@ -2394,6 +2424,57 @@ struct ConversationView: View {
     private func cancelIdleWatch() {
         idleWatchTask?.cancel()
         idleWatchTask = nil
+    }
+
+    // MARK: - The tutor's island
+
+    private var islandTitle: String {
+        topicIsNews ? explain("News") : callDisplayTitle
+    }
+
+    /// A scene or a person's call keeps the topic and the way it was launched.
+    private var islandCanChange: Bool {
+        counterpart == nil && sessionScenarioId == nil
+    }
+
+    private var islandGuidance: Binding<CallGuidance> {
+        Binding(get: { tutorThisCall ? .tutor : (coachMode ? .coach : .free) },
+                set: { picked in
+                    if picked != .tutor { coachModeChoice = picked == .coach }
+                    tutorModeChoice = picked == .tutor
+                    // A call opened from the ring's tutor page is in tutor
+                    // mode without the setting, so the setting may not move.
+                    applyTutorMode(picked == .tutor)
+                })
+    }
+
+    private func islandChangeTopic() {
+        if tutorThisCall { showingTutorTopics = true } else { showingIslandTopics = true }
+    }
+
+    /// A new topic picked mid-call in a plain call: the prompt follows and
+    /// the fluent self opens it.
+    private func islandPicked(_ picked: String) {
+        topic = picked
+        topicBlurb = ""
+        topicIsNews = false
+        guard RealtimeMode.isEnabled, phoneCallActive else { return }
+        realtime.setSystem(systemPrompt() + Self.realtimeStyleRules)
+        realtime.nudge("The learner picked a new topic on their screen: \"\(picked)\". Say sure in a few words and open it with one short question.")
+    }
+
+    private func applyTutorMode(_ on: Bool) {
+        guard on != tutorThisCall, !pronThisCall else { return }
+        tutorThisCall = on
+        if on { tutorWasOn = true }
+        // The classic path reads `tutorThisCall` at its next turn.
+        guard RealtimeMode.isEnabled, phoneCallActive else { return }
+        realtime.setMeterFromStart(on)
+        realtime.setCallMode(on ? "tutor" : "free")
+        realtime.setSystem(systemPrompt() + Self.realtimeStyleRules)
+        if on, tutorLesson == nil {
+            realtime.nudge("Tutor mode was just turned on. Ask them, in one short question, what they want to be able to say today — they can also pick a topic from the button on their screen.")
+        }
     }
 
     /// What the lock screen calls this call. The same words the toolbar shows.
