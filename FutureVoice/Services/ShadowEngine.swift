@@ -42,7 +42,8 @@ enum ShadowEngine {
     static func analyze(target: String, learner: String, language: String = "en") -> ShadowAnalysis {
         let style = LanguageCatalog.tokenStyle(language)
         let targetTokens = tokenize(expandForDiff(target, language: language), style: style)
-        let learnerTokens = tokenize(expandForDiff(learner, language: language), style: style)
+        let learnerTokens = heardTokens(learner, target: target, targetTokens: targetTokens,
+                                        language: language, style: style)
 
         // Japanese compares by sound: the transcriber picks the script
         // (ナワナ / なわな), so a kana token is keyed in hiragana — the
@@ -210,7 +211,7 @@ enum ShadowEngine {
     static func heardLineEnd(target: String, heard: String, language: String) -> Bool {
         let style = LanguageCatalog.tokenStyle(language)
         let t = tokenize(expandForDiff(target, language: language), style: .word)
-        let h = tokenize(expandForDiff(heard, language: language), style: .word)
+        let h = heardTokens(heard, target: target, targetTokens: t, language: language, style: .word)
         let key: (String) -> String = language.hasPrefix("ja") ? JapaneseMorph.soundSpelling : { $0 }
         switch style {
         case .word:
@@ -590,6 +591,107 @@ enum ShadowEngine {
             out = out.replacingOccurrences(
                 of: "(?<=[a-z])\(suffix)\\b", with: expansion,
                 options: .regularExpression)
+        }
+        return out
+    }
+
+    // MARK: - Numbers read more than one way
+
+    /// The heard side's tokens, with every number brought to the reading the
+    /// TARGET uses. A number has several spoken forms and a transcriber
+    /// writes digits for all of them: a script saying "nineteen eleven" read
+    /// exactly came back "1911", was spelled "one thousand nine hundred
+    /// eleven", and the take showed three added words and a wrong one
+    /// (speech challenge, 2026-11-11). Two directions, English only:
+    /// digits HEARD take the reading found in the target's words, and words
+    /// heard for digits in the TARGET become the target's own spelling.
+    /// The target's tokens never change, so `tokenSpans` still lines up.
+    private static func heardTokens(_ heard: String, target: String, targetTokens: [String],
+                                    language: String, style: LanguageCatalog.TokenStyle) -> [String] {
+        guard language.hasPrefix("en"), style == .word, let re = digitRun else {
+            return tokenize(expandForDiff(heard, language: language), style: style)
+        }
+        var text = heard
+        for m in re.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {
+            guard let r = Range(m.range, in: text) else { continue }
+            let readings = englishReadings(of: String(text[r]))
+            // The first is the plain spell-out, which `expandForDiff` writes anyway.
+            if let fit = readings.dropFirst().first(where: { firstIndex(of: $0, in: targetTokens) != nil }),
+               firstIndex(of: readings[0], in: targetTokens) == nil {
+                text.replaceSubrange(r, with: " " + fit.joined(separator: " ") + " ")
+            }
+        }
+        var tokens = tokenize(expandForDiff(text, language: language), style: style)
+        for m in re.matches(in: target, range: NSRange(target.startIndex..., in: target)) {
+            guard let r = Range(m.range, in: target) else { continue }
+            let readings = englishReadings(of: String(target[r]))
+            guard let plain = readings.first, firstIndex(of: plain, in: tokens) == nil else { continue }
+            for other in readings.dropFirst() {
+                if let at = firstIndex(of: other, in: tokens) {
+                    tokens.replaceSubrange(at..<(at + other.count), with: plain)
+                    break
+                }
+            }
+        }
+        return tokens
+    }
+
+    private static func firstIndex(of run: [String], in tokens: [String]) -> Int? {
+        guard !run.isEmpty, tokens.count >= run.count else { return nil }
+        return (0...(tokens.count - run.count)).first { Array(tokens[$0..<($0 + run.count)]) == run }
+    }
+
+    /// The ways an English speaker reads a digit run, as tokens. First is
+    /// the spell-out `expandForDiff` produces; then "and" after hundred /
+    /// thousand, the year reading of four digits (nineteen eleven, nineteen
+    /// oh five, nineteen hundred), and digit by digit (one oh one).
+    static func englishReadings(of digits: String) -> [[String]] {
+        guard let n = Int(digits), digits.count <= 9 else { return [] }
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .spellOut
+        formatter.locale = Locale(identifier: "en")
+        func spell(_ v: Int) -> [String] {
+            (formatter.string(from: NSNumber(value: v)) ?? "").lowercased()
+                .replacingOccurrences(of: "-", with: " ")
+                .split(separator: " ").map(String.init)
+        }
+        let plain = spell(n)
+        guard !plain.isEmpty else { return [] }
+        var out = [plain]
+
+        // "one hundred and five", "two thousand and five".
+        var withAnd: [String] = []
+        for (i, word) in plain.enumerated() {
+            withAnd.append(word)
+            let rest = plain.count - i - 1
+            if rest > 0, word == "hundred" || (word == "thousand" && n % 1000 < 100) {
+                if plain[i + 1] != "thousand" && plain[i + 1] != "million" { withAnd.append("and") }
+            }
+        }
+        if withAnd != plain { out.append(withAnd) }
+
+        if digits.count == 4, n >= 1000 {
+            let hi = n / 100, lo = n % 100
+            if lo == 0 {
+                if hi % 10 != 0 { out.append(spell(hi) + ["hundred"]) }
+            } else if lo < 10 {
+                out.append(spell(hi) + ["oh"] + spell(lo))
+                if hi % 10 != 0 {
+                    out.append(spell(hi) + ["hundred", "and"] + spell(lo))
+                    out.append(spell(hi) + ["hundred"] + spell(lo))
+                }
+            } else {
+                out.append(spell(hi) + spell(lo))
+                if hi % 10 != 0 {
+                    out.append(spell(hi) + ["hundred", "and"] + spell(lo))
+                    out.append(spell(hi) + ["hundred"] + spell(lo))
+                }
+            }
+        }
+        if digits.count >= 2 {
+            let each = digits.compactMap { $0.wholeNumberValue }
+            out.append(each.flatMap { $0 == 0 ? ["oh"] : spell($0) })
+            if each.contains(0) { out.append(each.flatMap { spell($0) }) }
         }
         return out
     }

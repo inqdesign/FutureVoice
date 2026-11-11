@@ -35,6 +35,37 @@ final class ShadowEngineTests: XCTestCase {
         XCTAssertEqual(subs.first?.learner, "go")
     }
 
+    /// A script that spells a year the way it is said, read exactly: the
+    /// transcriber writes "1911", and the plain spell-out of that is not
+    /// what the script (or the reader) said.
+    func testYearHeardAsDigitsMatchesItsSpokenForm() {
+        let a = ShadowEngine.analyze(target: "in August of nineteen eleven, while the museum was closed",
+                                     learner: "in August of 1911 while the museum was closed")
+        XCTAssertTrue(a.steps.allSatisfy { $0.op == .match }, "\(a.steps)")
+        XCTAssertEqual(a.score, 100)
+    }
+
+    func testNumbersMeetWhicheverSideWroteDigits() {
+        for (target, learner) in [
+            ("back in 1911 it was gone", "back in nineteen eleven it was gone"),
+            ("it was nineteen oh five then", "it was 1905 then"),
+            ("we sold one hundred and five tickets", "we sold 105 tickets"),
+            ("we sold 105 tickets", "we sold one hundred and five tickets"),
+            ("room one oh one is free", "room 101 is free"),
+            ("twenty twenty-four was long", "2024 was long"),
+            ("about 1911 people came", "about one thousand nine hundred eleven people came"),
+        ] {
+            let a = ShadowEngine.analyze(target: target, learner: learner)
+            XCTAssertTrue(a.steps.allSatisfy { $0.op == .match }, "\(target) | \(learner): \(a.steps)")
+        }
+    }
+
+    /// A different number is still a different number.
+    func testWrongYearIsStillWrong() {
+        let a = ShadowEngine.analyze(target: "in nineteen eleven", learner: "in 1912")
+        XCTAssertFalse(a.steps.allSatisfy { $0.op == .match })
+    }
+
     /// A model-written target carries a typographic apostrophe; every
     /// recognizer writes the ASCII one. Both must expand to the same tokens
     /// or "I’m" against "I'm" is a substitution the learner never made.
