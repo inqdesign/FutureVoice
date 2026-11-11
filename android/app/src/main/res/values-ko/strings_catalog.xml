@@ -1648,7 +1648,7 @@
     <string name="lld_vs_last_week_18fe4c">"지난주 대비 %d"</string>
     <!-- '+%lld vs last week' -->
     <string name="lld_vs_last_week_51657e">"지난주 대비 +%d"</string>
-    <string name="lld_waiting">" · %d명 대기 중"</string>
+    <string name="lld_waiting">" · %d장 대기 중"</string>
     <string name="lld_watch_scenes_a_month">"한 달에 상황연습 %d개"</string>
     <string name="lld_weeks_running">"%d주 연속"</string>
     <string name="lld_word_or_phrase_inflect_true_became_yours">"단어·표현 %d개가 내 것이 됐어요"</string>
