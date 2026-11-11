@@ -1484,6 +1484,25 @@ fun RootScreen() {
                     } else routineReview = deck
                 }
             },
+            // The shadowing block deals its own lines (iOS `open(.shadow)`:
+            // `shadowPicks` at the block's hand size, the browser when there
+            // is nothing to pick). It opened the put-off deck.
+            onOpenShadow = {
+                gateScope.launch {
+                    val picks = com.roro.futurevoice.data.ShadowPicks.pick(
+                        sessions = com.roro.futurevoice.data.SessionStore.shared(context)
+                            .load(state.targetLanguage).filter { it.endedAt != null },
+                        attempts = com.roro.futurevoice.data.ShadowAttemptStore.shared(context)
+                            .load(state.targetLanguage),
+                        level = state.level,
+                        language = state.targetLanguage,
+                        limit = com.roro.futurevoice.data.GoalStore.handSize(context,
+                            com.roro.futurevoice.data.StudyPlan.Kind.SHADOW),
+                    )
+                    if (picks.isEmpty()) { showActivity = false; showShadowBrowser = true }
+                    else { shadowHand = picks; shadowAt = 0 }
+                }
+            },
             onOpenTest = { showActivity = false; tab = HomeTab.PRACTICE },
         )
 

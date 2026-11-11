@@ -148,6 +148,9 @@ fun <K : Any> IosNavStack(
             mover != null && under == newTop && off >= 0.999f -> {
                 val gone = mover
                 top = newTop; mover = null; under = null; off = 0f
+                // A push may still be playing (a page popped on the frame it
+                // was pushed has off = 1 too): stop it, see below.
+                moveId++
                 dropState(gone, newTop)
             }
             newTop == shown && mover == null -> top = newTop
@@ -159,6 +162,12 @@ fun <K : Any> IosNavStack(
                 job?.cancel()
                 if (!animate) {
                     top = newTop; mover = null; under = null; off = 0f
+                    // Restart the effect below so a push still playing stops
+                    // here. Left running, it finished and put its page back
+                    // on top of a stack that page had already left: drawn,
+                    // alive, and out of reach of every back (a routine page
+                    // that swapped to another page while it slid in).
+                    moveId++
                     dropState(shown, newTop)
                 } else if (isPush) {
                     mover = newTop; under = shown; off = 1f; movePush = true; moveId++

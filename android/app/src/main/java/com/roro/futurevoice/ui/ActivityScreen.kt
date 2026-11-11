@@ -134,6 +134,9 @@ fun ActivityScreen(
     /** The Review block: one mixed sitting of words, expressions, sentence
      *  cards and shadow lines (iOS `DueReviewView.routineDeck`). */
     onOpenRoutineReview: () -> Unit = onOpenReview,
+    /** A shadowing line: today's shadow hand, over this page (iOS
+     *  `ActivityView.open(.shadow)`). */
+    onOpenShadow: () -> Unit = onOpenReview,
     /** The weekly test line. */
     onOpenTest: () -> Unit = {},
     /** Capture: open on this view, or straight in the editor. */
@@ -216,6 +219,7 @@ fun ActivityScreen(
             StudyPlan.Kind.LISTEN -> com.roro.futurevoice.data.PlanReminder.pendingListen.value = true
             StudyPlan.Kind.TEST -> onOpenTest()
             StudyPlan.Kind.REVIEW -> onOpenRoutineReview()
+            StudyPlan.Kind.SHADOW -> onOpenShadow()
             else -> onOpenReview()
         }
     }
