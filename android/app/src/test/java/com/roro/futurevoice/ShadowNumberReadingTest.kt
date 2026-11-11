@@ -68,4 +68,35 @@ class ShadowNumberReadingTest {
     @Test fun wrongYearIsStillWrong() {
         assertFalse(clean("in nineteen eleven", "in 1912"))
     }
+
+    @Test fun writtenFormsAreTheWordsSaid() {
+        assertTrue(clean("about one thousand five hundred people", "about 1,500 people"))
+        assertTrue(clean("it costs five dollars", "it costs $5"))
+        assertTrue(clean("just one dollar", "just $1"))
+        assertTrue(clean("fifty percent of them", "50% of them"))
+        assertTrue(clean("on the twenty-first of May", "on the 21st of May"))
+        assertTrue(clean("the first time, the third try", "the 1st time, the 3rd try"))
+        assertTrue(clean("in the nineteen sixties", "in the 1960s"))
+        assertTrue(clean("back in the eighties", "back in the 80s"))
+        assertTrue(clean("three point five million", "3.5 million"))
+        assertTrue(clean("Doctor Smith and Mister Lee", "Dr. Smith and Mr. Lee"))
+        assertTrue(clean("Dr. Smith is in", "Doctor Smith is in"))
+        assertTrue(clean("at three thirty", "at 3:30"))
+        org.junit.Assert.assertEquals("a hundred dreams, mister darcy",
+            ShadowScore.written("a hundred dreams, Mr Darcy", "en"))
+    }
+
+    @Test fun writtenFormsInOtherLanguages() {
+        withSpeller(mapOf(50 to "fünfzig", 5 to "fünf", 0 to "null")) {
+            assertTrue(clean("fünfzig Prozent der Leute", "50% der Leute", "de"))
+            assertTrue(clean("Das kostet fünf Euro", "Das kostet 5 €", "de"))
+        }
+        withSpeller(mapOf(50 to "cincuenta", 5 to "cinco", 0 to "cero")) {
+            assertTrue(clean("el cincuenta por ciento", "el 50%", "es"))
+        }
+        withSpeller(mapOf(50 to "오십", 1500 to "천오백", 5 to "오", 0 to "영", 1 to "일")) {
+            assertTrue(clean("오십 퍼센트예요", "50%예요", "ko"))
+            assertTrue(clean("천오백 원이에요", "1,500원이에요", "ko"))
+        }
+    }
 }

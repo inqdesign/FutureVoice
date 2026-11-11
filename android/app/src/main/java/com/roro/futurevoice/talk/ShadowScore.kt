@@ -336,14 +336,98 @@ object ShadowScore {
         "'ll" to " will", "'d" to " would", "'s" to " is",
     )
 
-    fun expandForDiff(text: String, language: String): String {
+    /**
+     * Lowercased, apostrophes folded, and the WRITTEN shapes of numbers put
+     * back into words and bare digits (iOS `written`): "1,500" → "1500",
+     * "$5" → "5 dollars", "50%" → "50 percent", "3.5" → "3 point 5", and in
+     * English "21st" → "twenty first", "1960s" → "nineteen sixties", "Dr." →
+     * "doctor". A transcriber picks these; the reader said the words. Every
+     * change stays inside one whitespace-delimited word, and running it
+     * twice changes nothing.
+     */
+    fun written(text: String, language: String): String {
         // A model-written target says "I’m" and the recognizer writes "I'm";
-        // that is a choice no mouth makes, so folding the typographic forms
-        // keeps a perfectly-said word from scoring as a substitution
-        // (iOS `17d0b56`).
+        // that is a choice no mouth makes (iOS `17d0b56`).
         var out = text.lowercase()
-            .replace('\u2019', '\'').replace('\u2018', '\'').replace('\u02BC', '\'')
-            .replace("-", " ")
+            .replace('’', '\'').replace('‘', '\'').replace('ʼ', '\'')
+        val code = language.take(2)
+        val hasDigit = out.any { it.isDigit() }
+        val commaDecimal = code == "de" || code == "es"
+        if (hasDigit) {
+            out = (if (commaDecimal) GROUP_DOT else GROUP_COMMA).replace(out, "")
+        }
+        val units = CURRENCY_WORDS[code]
+        if (units != null && out.any { it in "$€£₩¥" }) {
+            out = MONEY.replace(out) { m ->
+                val unit = units[m.groupValues[1]] ?: return@replace m.value
+                "${m.groupValues[2]} ${if (m.groupValues[2] == "1") unit.first else unit.second}"
+            }
+            out = MONEY_SIGN.replace(out) { m -> units[m.value]?.let { " ${it.second} " } ?: m.value }
+        }
+        PERCENT_WORD[code]?.let { if ('%' in out) out = out.replace("%", " $it ") }
+        DECIMAL_WORD[code]?.let { point ->
+            if (hasDigit) out = (if (commaDecimal) DECIMAL_COMMA else DECIMAL_DOT).replace(out) { m ->
+                "${m.groupValues[1]} $point " + m.groupValues[2].map { it.toString() }.joinToString(" ")
+            }
+        }
+        if (code != "en") return out
+
+        if (hasDigit) {
+            fun spell(v: Int): List<String> =
+                (spellOut(v, "en") ?: "").lowercase().replace("-", " ").split(" ").filter { it.isNotEmpty() }
+            fun ending(words: List<String>, change: (String) -> String): String =
+                if (words.isEmpty()) "" else (words.dropLast(1) + change(words.last())).joinToString(" ")
+            out = ORDINAL.replace(out) { m ->
+                val n = m.groupValues[1].toIntOrNull() ?: return@replace m.value
+                " " + ending(spell(n)) { ORDINAL_WORD[it] ?: if (it.endsWith("y")) it.dropLast(1) + "ieth" else it + "th" } + " "
+            }
+            // Decades: the 1960s are "the nineteen sixties", the 80s "the eighties".
+            out = DECADE.replace(out) { m ->
+                val n = m.groupValues[1].toIntOrNull() ?: return@replace m.value
+                val plural: (String) -> String = { if (it.endsWith("y")) it.dropLast(1) + "ies" else it + "s" }
+                if (m.groupValues[1].length == 4 && n in 1100..2099 && (n / 100) % 10 != 0) {
+                    val hi = spell(n / 100)
+                    val lo = n % 100
+                    " " + (if (lo == 0) ending(hi + "hundred", plural) else ending(hi + spell(lo), plural)) + " "
+                } else " " + ending(spell(n), plural) + " "
+            }
+        }
+        if ("dr" in out || "mr" in out) {
+            for ((re, long) in TITLES) out = re.replace(out, long)
+        }
+        return out
+    }
+
+    private val GROUP_COMMA = Regex("(?<=\\d),(?=\\d{3}(?!\\d))")
+    private val GROUP_DOT = Regex("(?<=\\d)\\.(?=\\d{3}(?!\\d))")
+    private val MONEY = Regex("([$€£₩¥])(\\d+(?:[.,]\\d+)?)")
+    private val MONEY_SIGN = Regex("[$€£₩¥]")
+    private val DECIMAL_DOT = Regex("(\\d+)\\.(\\d+)")
+    private val DECIMAL_COMMA = Regex("(\\d+),(\\d+)")
+    private val ORDINAL = Regex("(?<![\\d.,])(\\d{1,9})(st|nd|rd|th)(?![a-z])")
+    private val DECADE = Regex("(?<![\\d.,])(\\d{2,4})'?s(?![a-z])")
+    private val TITLES = listOf("dr" to "doctor", "mrs" to "missus", "mr" to "mister")
+        .map { (short, long) -> Regex("(?<![a-z0-9'])$short\\.?(?![a-z0-9'])") to long }
+    private val CURRENCY_WORDS: Map<String, Map<String, Pair<String, String>>> = mapOf(
+        "en" to mapOf("$" to ("dollar" to "dollars"), "€" to ("euro" to "euros"), "£" to ("pound" to "pounds"),
+            "₩" to ("won" to "won"), "¥" to ("yen" to "yen")),
+        "de" to mapOf("$" to ("dollar" to "dollar"), "€" to ("euro" to "euro"), "£" to ("pfund" to "pfund"),
+            "₩" to ("won" to "won"), "¥" to ("yen" to "yen")),
+        "es" to mapOf("$" to ("dólar" to "dólares"), "€" to ("euro" to "euros"), "£" to ("libra" to "libras"),
+            "₩" to ("won" to "wones"), "¥" to ("yen" to "yenes")),
+        "ko" to mapOf("$" to ("달러" to "달러"), "€" to ("유로" to "유로"), "£" to ("파운드" to "파운드"),
+            "₩" to ("원" to "원"), "¥" to ("엔" to "엔")),
+        "ja" to mapOf("$" to ("ドル" to "ドル"), "€" to ("ユーロ" to "ユーロ"), "£" to ("ポンド" to "ポンド"),
+            "₩" to ("ウォン" to "ウォン"), "¥" to ("円" to "円")),
+    )
+    private val PERCENT_WORD = mapOf("en" to "percent", "de" to "prozent", "es" to "por ciento",
+        "ko" to "퍼센트", "ja" to "パーセント")
+    private val DECIMAL_WORD = mapOf("en" to "point", "de" to "komma", "es" to "coma", "ko" to "점", "ja" to "点")
+    private val ORDINAL_WORD = mapOf("one" to "first", "two" to "second", "three" to "third", "five" to "fifth",
+        "eight" to "eighth", "nine" to "ninth", "twelve" to "twelfth")
+
+    fun expandForDiff(text: String, language: String): String {
+        var out = written(text, language).replace("-", " ")
         out = Regex("\\d+").replace(out) { m ->
             val n = m.value.toIntOrNull() ?: return@replace m.value
             val spelled = spellOut(n, language) ?: return@replace m.value
@@ -385,6 +469,10 @@ object ShadowScore {
         heard: String, target: String, targetTokens: List<String>,
         language: String, style: LanguageCatalog.TokenStyle,
     ): List<String> {
+        // Written shapes first ("1,500" is one number, "21st" no number at
+        // all), so a run below is always a whole spoken number.
+        @Suppress("NAME_SHADOWING") val heard = written(heard, language)
+        @Suppress("NAME_SHADOWING") val target = written(target, language)
         var tokens = tokenize(expandForDiff(heard, language), style)
         val digits = Regex("\\d+")
         val known = listOf("en", "de", "es", "ko").any { language.startsWith(it) }
