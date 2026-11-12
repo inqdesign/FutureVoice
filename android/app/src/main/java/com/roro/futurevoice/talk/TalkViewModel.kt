@@ -1398,7 +1398,9 @@ class TalkViewModel(context: Context) : ViewModel() {
     private fun armEarlyCorrection(partial: String) {
         earlyCorrectionJob?.cancel()
         val cfg = config ?: return
-        if (!sendToAnswerOn || !tutorThisCall || !tutorJudging || pronThisCall || !REALTIME) return
+        // Without Send too (iOS, 2026-11-12): the check starts the moment the
+        // words stand still, as free talk's reply does.
+        if (!tutorThisCall || !tutorJudging || pronThisCall || !REALTIME) return
         val text = partial.trim()
         if (com.roro.futurevoice.data.WordSplitter.count(text, cfg.targetLanguage) < 3 ||
             earlyCorrectionFires >= MAX_EARLY_CORRECTIONS || earlyCorrection?.first == text) return
