@@ -47,6 +47,9 @@ object StudyWidgetRefresher {
         // store funnels call `SyncEngine.noteChanged`).
         com.roro.futurevoice.sync.SyncEngine.noteChanged()
         com.roro.futurevoice.data.LearnerRecordUploader.schedule(context)
+        // A call ending, a saved speech take and the app coming forward all
+        // land here: a challenger's day checks in from the same three places.
+        com.roro.futurevoice.data.ChallengeDays.schedule(context)
         val app = context.applicationContext
         observe(app)
         pending?.cancel()
