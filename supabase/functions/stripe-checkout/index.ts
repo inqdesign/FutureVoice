@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
   const stripeKey = Deno.env.get("STRIPE_SECRET_KEY")
   if (!stripeKey) return errorResponse(500, "server missing STRIPE_SECRET_KEY")
 
-  let body: { plan_id?: string; return_url?: string; currency?: string }
+  let body: { plan_id?: string; return_url?: string; currency?: string; challenge_ref?: string }
   try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
   const planId = body.plan_id
   if (!planId) return errorResponse(400, "missing plan_id")
@@ -32,7 +32,11 @@ Deno.serve(async (req) => {
   // The page passes the currency it DISPLAYED (ko page prints ₩, en page $),
   // so the buyer is charged the number they read. Only honored when the
   // Stripe Price carries that currency_option — see web/README.md.
-  const currency = body.currency && ["usd", "eur", "krw"].includes(body.currency)
+  // The 100-day challenge is priced in every currency the App Store prices Light in; a
+  // currency its Price does not carry is refused by Stripe, so only those are let through.
+  const CHALLENGE_CURRENCIES = ["aed", "aud", "brl", "cad", "chf", "clp", "cny", "cop", "czk", "dkk", "egp", "gbp", "hkd", "huf", "idr", "ils", "inr", "kzt", "mxn", "myr", "ngn", "nok", "nzd", "pen", "php", "pkr", "pln", "qar", "ron", "sar", "sek", "sgd", "thb", "try", "twd", "tzs", "vnd", "zar"]
+  const currency = body.currency && (["usd", "eur", "krw", "jpy"].includes(body.currency) ||
+    (CHALLENGE_CURRENCIES.includes(body.currency) && /_challenge$/.test(planId)))
     ? body.currency
     : undefined
 
@@ -46,7 +50,7 @@ Deno.serve(async (req) => {
   // Plan catalog is public-read; stripe_price_id must be configured.
   const { data: plan, error: planErr } = await supabase
     .from("subscription_plans")
-    .select("id, stripe_price_id, is_active")
+    .select("id, stripe_price_id, is_active, period")
     .eq("id", planId)
     .single()
   if (planErr || !plan) return errorResponse(400, "unknown plan")
@@ -95,9 +99,32 @@ Deno.serve(async (req) => {
 
   const stripe = new Stripe(stripeKey, { httpClient: Stripe.createFetchHttpClient() })
 
+  // The 100-day challenge package is paid ONCE: a payment, not a subscription.
+  // stripe-webhook writes its 100 days from this session's metadata.
+  const once = plan.period === "challenge"
+  // The challenger's application, when the buyer came from the form.
+  const applicationId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.challenge_ref ?? "")
+    ? { application_id: body.challenge_ref as string } : {}
+
   let session: Stripe.Checkout.Session
   try {
-    session = await stripe.checkout.sessions.create({
+    session = once ? await stripe.checkout.sessions.create({
+      mode: "payment",
+      line_items: [{ price: plan.stripe_price_id, quantity: 1 }],
+      success_url: `${returnUrl}?checkout=success`,
+      cancel_url: `${returnUrl}?checkout=cancelled`,
+      client_reference_id: user.id,
+      metadata: { project: "futurevoice", kind: "challenge", user_id: user.id, plan_id: plan.id, ...applicationId },
+      payment_intent_data: {
+        metadata: { project: "futurevoice", kind: "challenge", user_id: user.id, plan_id: plan.id },
+      },
+      ...(currency ? { currency } : {}),
+      // deno-lint-ignore no-explicit-any
+      ...({ branding_settings: { display_name: "nawana" } } as any),
+      ...(existing?.stripe_customer_id
+        ? { customer: existing.stripe_customer_id }
+        : { customer_creation: "always", ...(user.email ? { customer_email: user.email } : {}) }),
+    }) : await stripe.checkout.sessions.create({
       mode: "subscription",
       line_items: [{ price: plan.stripe_price_id, quantity: 1 }],
       success_url: `${returnUrl}?checkout=success`,

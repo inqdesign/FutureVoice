@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>100일 챌린지 결제 · 나와나</title>
+<meta name="robots" content="noindex" />
+<meta name="theme-color" content="#F7F8FA" />
+<link rel="icon" href="/favicon.ico" sizes="32x32" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<!-- The challenger's payment, on a page of its own (founder, 2026-11-12): reached from the mail's button
+     (/pay?id=<application id>&cur=<currency>). Sign in the way the app does, then Stripe's checkout,
+     then back here to "done". Nothing else is on this page. The program's page is web/creators.html. -->
+<style>
+@font-face{font-family:"Nanum Pen Script";font-weight:400;font-display:swap;src:url(/creators/fonts/nanum-pen-script.woff2) format("woff2")}
+:root{color-scheme:light;--bg:#F7F8FA;--grid:rgba(10,40,90,.026);--tx:#1B1A18;--dim:#5C5A54;--faint:#8C8983;--accent:#0A5CF5;--line-2:#D5D2CB;--ink:#1C2133;--paper:#FFFEFB;
+  --sans:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR","Helvetica Neue",Arial,sans-serif;--pen:"Nanum Pen Script","Apple SD Gothic Neo",cursive}
+*{box-sizing:border-box;margin:0}
+html{background:var(--bg)}
+body{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;align-items:center;padding:28px 18px 40px;color:var(--tx);font-family:var(--sans);font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased;word-break:keep-all;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:28px 28px}
+a{color:inherit}
+.brand{display:flex;align-items:center;gap:8px;text-decoration:none;font-family:var(--pen);font-size:26px;line-height:1;color:var(--ink)}
+.brand img{width:30px;height:30px;border-radius:7px}
+.card{width:100%;max-width:440px;margin-top:22px;padding:30px 24px 28px;background:var(--paper);box-shadow:0 1px 2px rgba(28,33,51,.08),0 14px 34px -14px rgba(28,33,51,.28);text-align:center}
+.tabs{display:flex;gap:4px;margin:18px auto 0;padding:4px;max-width:330px;border-radius:999px;background:#EDEEF2}
+.tabs button{flex:1;min-height:40px;border:0;border-radius:999px;background:transparent;font:inherit;font-weight:700;font-size:15px;color:var(--dim);cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--ink);color:#fff}
+.talk{margin-top:14px;display:flex;flex-direction:column;gap:1px}
+.talk b{font-size:18px;color:var(--ink)}
+.talk span{font-size:14px;color:var(--dim)}
+.hint{margin-top:8px;font-size:14px;color:var(--dim)}
+h1{font-family:var(--pen);font-weight:400;font-size:44px;line-height:1.1;color:var(--ink)}
+.what{margin-top:6px;color:var(--dim)}
+.amount{margin-top:20px;font-size:40px;font-weight:800;letter-spacing:-.02em;color:var(--ink);line-height:1.1}
+.unit{color:var(--dim);font-size:14.5px}
+ul{margin:18px auto 0;padding:0 0 0 20px;max-width:330px;text-align:left;font-size:15px;color:var(--dim)}
+.btns{display:flex;flex-direction:column;gap:10px;margin-top:24px}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:0 22px;border-radius:999px;border:1px solid transparent;background:var(--ink);color:#fff;text-decoration:none;font:inherit;font-weight:700;font-size:16px;cursor:pointer}
+.btn svg{width:18px;height:18px;margin-top:-3px}
+.btn.line{background:transparent;border-color:var(--line-2);color:var(--tx)}
+.btn[disabled]{opacity:.55;cursor:default}
+.note{margin-top:14px;font-size:14px;color:var(--dim)}
+.status{margin-top:14px;font-size:14.5px;font-weight:600;color:var(--accent);min-height:1.65em}
+.status.bad{color:#C0392B}
+.stores{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:20px}
+.store-apple{display:inline-flex;align-items:center;gap:10px;height:52px;padding:0 20px 0 15px;border-radius:12px;background:#000;color:#fff;box-shadow:inset 0 0 0 1px #A6A6A6;text-decoration:none;font-family:-apple-system,"Helvetica Neue","Apple SD Gothic Neo",sans-serif}
+.store-apple svg{width:24px;height:24px;flex:none}
+.store-apple span{display:flex;flex-direction:column;line-height:1.16;text-align:left}
+.store-apple small{font-size:11.5px}
+.store-apple b{font-size:18px;font-weight:600;letter-spacing:-.01em}
+.store-play img{height:52px;display:block}
+.foot{margin-top:22px;font-size:13px;color:var(--faint);text-align:center}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<a class="brand" href="/creators"><img src="/apple-touch-icon.png" alt="" />nawana 100일 챌린지</a>
+
+<main class="card" id="pay">
+  <h1>참가비 결제</h1>
+  <!-- The sizes, picked like on a paywall. Light is where everyone starts. -->
+  <div class="tabs" role="tablist" aria-label="요금제">
+    <button type="button" role="tab" data-tier="0" aria-selected="true">Light</button>
+    <button type="button" role="tab" data-tier="1" aria-selected="false">Plus</button>
+    <button type="button" role="tab" data-tier="2" aria-selected="false">Max</button>
+  </div>
+  <p class="amount" id="amount">₩40,500</p>
+  <p class="what"><span id="tier_name">Light</span> 3개월 구독료</p>
+  <p class="talk"><b id="tier_talk">한 달에 통화 150분</b><span id="tier_day">하루 5분꼴</span></p>
+  <p class="hint" id="tier_hint">가볍게 시작하기 좋아요. 하다가 모자라면 그때 올려도 돼요.</p>
+  <ul>
+    <li>복습, 섀도잉, 스피치 연습은 어느 요금제든 마음껏 해요.</li>
+    <li>한 번만 결제되고, 자동으로 다시 결제되지 않아요.</li>
+    <li>마지막 10일은 나와나가 무료로 드려요.</li>
+    <li>결제한 날부터 앱을 쓸 수 있어요.</li>
+    <li>시작하기 전에는 전액 환불해 드려요. 시작한 뒤에도 결제한 날부터 14일 안에는 취소할 수 있어요. <a href="mailto:hello@nawana.app">hello@nawana.app</a>으로 알려주세요.</li>
+  </ul>
+  <div class="btns">
+    <button class="btn" type="button" data-pay="apple"><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 140.3 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>Apple로 로그인하고 결제</button>
+    <button class="btn line" type="button" data-pay="google">Google로 로그인하고 결제</button>
+  </div>
+  <p class="note">나와나 앱에서 가입한 방법으로 로그인해 주세요. 결제가 그 계정에 바로 적용돼요.</p>
+  <p class="status" id="status" role="status"></p>
+</main>
+
+<main class="card" id="paid" hidden>
+  <h1>신청과 결제,<br>모두 끝났어요</h1>
+  <p class="what">12월 1일(예정)에 같이 시작해요.</p>
+  <p class="note"><b>앱은 지금부터 쓸 수 있어요. 시작 전에 꼭 써보세요.</b><br>결제한 계정으로 로그인하면 돼요.</p>
+  <div class="stores">
+    <a class="store-apple" href="https://apps.apple.com/app/id6792794655"><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 140.3 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg><span><small>App Store에서</small><b>다운로드</b></span></a>
+    <a class="store-play" href="https://play.google.com/store/apps/details?id=com.roro.futurevoice"><img src="/badges/google-play-ko.png" alt="Google Play에서 다운로드" /></a>
+  </div>
+</main>
+
+<p class="foot">이미 나와나를 구독하고 있다면 결제하지 말고 <a href="mailto:hello@nawana.app">hello@nawana.app</a>으로 알려주세요.<br><a href="/creators">100일 챌린지 안내 보기</a> · <a href="/terms-ko.html">이용약관</a></p>
+
+<script>
+const SUPABASE_URL = "https://chhzjtigzdotacutwcyo.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoaHpqdGlnemRvdGFjdXR3Y3lvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5OTk3NDUsImV4cCI6MjA5NjU3NTc0NX0.tcGaH-m2jJklxsQ8YaHU1UaxtJAZkoRBq0B--inPHVU";
+// One path segment on purpose: the sign-in may only come back to an address the auth allow-list matches
+// (https://nawana.app/*), and its * stops at a slash.
+const HERE = location.origin + "/pay";
+const REF = "nawana.challenge-ref", GO = "nawana.challenge-go", CUR = "nawana.challenge-cur";
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const stored = (k) => { try { return sessionStorage.getItem(k) || ""; } catch { return ""; } };
+const store = (k, v) => { try { v ? sessionStorage.setItem(k, v) : sessionStorage.removeItem(k); } catch {} };
+const track = (ev, props) => { try { if (localStorage.getItem("nawana-internal") === "1") return; } catch {} try { window.posthog?.capture(ev, props); } catch {} };
+
+// What each size costs a month on the web, per currency: [Light, Plus, Max]. The package is three months of it.
+// The same figures as the application page's fee and the challenge-upgrade function (App Store price minus 10%).
+const MONTHLY = { aed: [35.99, 71.99, 116.99], aud: [13.49, 26.99, 53.99], brl: [53.91, 116.91, 206.91], cad: [11.69, 22.49, 44.99], chf: [8, 16, 27], clp: [8991, 20691, 35991], cny: [61, 133, 205], cop: [44910, 89910, 134910], czk: [224, 449, 899], dkk: [80, 161, 269], egp: [449.99, 899.99, 1799.99], eur: [8.99, 20.69, 35.99], gbp: [8.99, 17.99, 31.49], hkd: [79, 133, 259], huf: [4041, 8091, 13491], idr: [152100, 314100, 629100], ils: [31.41, 62.91, 89.91], inr: [899, 1799, 3149], jpy: [1350, 2700, 5400], krw: [13500, 26000, 40500], kzt: [5391, 10791, 17991], mxn: [179, 359, 719], myr: [44.91, 89.91, 134.91], ngn: [13410, 26910, 53910], nok: [116, 224, 404], nzd: [17.99, 35.99, 53.99], pen: [40.41, 80.91, 134.91], php: [539, 1161, 2061], pkr: [2610, 4410, 8910], pln: [44.99, 89.99, 134.99], qar: [35.99, 62.99, 116.99], ron: [44.99, 89.99, 179.99], sar: [35.99, 80.99, 134.99], sek: [116, 224, 449], sgd: [13.48, 26.98, 44.98], thb: [359, 629, 1161], try: [449.99, 899.99, 1799.99], twd: [288, 621, 1071], tzs: [26910, 53910, 89910], usd: [8.99, 22.49, 31.49], vnd: [269100, 539100, 899100], zar: [179.99, 359.99, 629.99] };
+const TIERS = [
+  { plan: "light_challenge", name: "Light", talk: "한 달에 통화 150분", day: "하루 5분꼴", hint: "가볍게 시작하기 좋아요. 하다가 모자라면 그때 올려도 돼요." },
+  { plan: "plus_challenge", name: "Plus", talk: "한 달에 통화 450분", day: "하루 15분꼴", hint: "매일 넉넉하게 통화하고 싶을 때요." },
+  { plan: "max_challenge", name: "Max", talk: "한 달에 통화 600분", day: "하루 20분꼴", hint: "100일을 통화로 꽉 채우고 싶을 때요." },
+];
+const ZERO_DECIMAL = ["krw", "jpy", "clp", "vnd"];
+function money(cur, amount) {
+  amount = Math.round(amount * 100) / 100;
+  if (cur === "krw") return "₩" + amount.toLocaleString("en-US");
+  try { return new Intl.NumberFormat("en-US", { style: "currency", currency: cur.toUpperCase(), minimumFractionDigits: Number.isInteger(amount) ? 0 : 2, maximumFractionDigits: 2 }).format(amount); }
+  catch { return `${cur.toUpperCase()} ${amount}`; }
+}
+function currencyHere() {
+  let tz = ""; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch {}
+  return tz === "Asia/Seoul" ? "krw" : tz === "Asia/Tokyo" ? "jpy" : /^Europe\/(Berlin|Busingen|Paris|Monaco|Madrid|Rome|San_Marino|Vatican|Amsterdam|Brussels|Luxembourg|Vienna|Dublin|Lisbon|Helsinki|Mariehamn|Athens|Malta|Bratislava|Ljubljana|Tallinn|Riga|Vilnius|Zagreb|Sofia|Andorra)$/.test(tz) ? "eur" : "usd";
+}
+
+const q = new URLSearchParams(location.search);
+const statusEl = document.getElementById("status"), buttons = [...document.querySelectorAll("[data-pay]")];
+const say = (text, bad) => { statusEl.textContent = text; statusEl.classList.toggle("bad", !!bad); };
+const busy = (on) => buttons.forEach((b) => { b.disabled = on; });
+
+// What the mail's link carried stays for this tab: signing in and the checkout both leave the page.
+if (UUID.test(q.get("id") || "")) store(REF, q.get("id"));
+if (MONTHLY[q.get("cur")]) store(CUR, q.get("cur"));
+if (!MONTHLY[stored(CUR)]) store(CUR, currencyHere());
+
+// The size picked: Light unless they choose another. Kept for the tab, like the rest, across the sign-in.
+const TIER = "nawana.challenge-tier";
+let tier = Math.min(2, Math.max(0, Number(stored(TIER)) || 0));
+const tabs = [...document.querySelectorAll(".tabs [data-tier]")];
+function showTier() {
+  const t = TIERS[tier];
+  tabs.forEach((b) => b.setAttribute("aria-selected", String(Number(b.dataset.tier) === tier)));
+  document.getElementById("amount").textContent = money(stored(CUR), MONTHLY[stored(CUR)][tier] * 3);
+  document.getElementById("tier_name").textContent = t.name;
+  document.getElementById("tier_talk").textContent = t.talk;
+  document.getElementById("tier_day").textContent = t.day;
+  document.getElementById("tier_hint").textContent = t.hint;
+}
+tabs.forEach((b) => b.addEventListener("click", () => { tier = Number(b.dataset.tier); store(TIER, String(tier)); showTier(); track("creators_pay_tier", { tier: TIERS[tier].name }); }));
+showTier();
+
+let supa = null;
+async function client() {
+  if (!supa) {
+    const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
+    supa = createClient(SUPABASE_URL, SUPABASE_ANON);
+  }
+  return supa;
+}
+async function toCheckout(session) {
+  busy(true); say("결제창으로 가는 중이에요");
+  const ref = stored(REF);
+  const r = await fetch(`${SUPABASE_URL}/functions/v1/stripe-checkout`, {
+    method: "POST",
+    headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ plan_id: TIERS[tier].plan, return_url: HERE, currency: stored(CUR), ...(UUID.test(ref) ? { challenge_ref: ref } : {}) }),
+  });
+  const out = await r.json().catch(() => ({}));
+  if (r.ok && out.url) { location.href = out.url; return; }
+  busy(false);
+  track("creators_pay_error", { error: String(out.error || r.status).slice(0, 40) });
+  say(out.error === "already_subscribed" ? "이 계정은 이미 결제했어요. 더 하실 일은 없어요."
+    : out.error === "store_subscription_active" ? "이 계정은 이미 앱에서 구독 중이에요. 결제하지 말고 hello@nawana.app으로 알려주세요."
+    : "결제창을 열지 못했어요. 다시 눌러주세요.", true);
+}
+async function pay(provider) {
+  say(""); track("creators_pay_start", { provider });
+  try {
+    const sb = await client();
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) return toCheckout(session);
+    // Signing in leaves the page; coming back with this mark goes on to the checkout by itself.
+    store(GO, "1");
+    await sb.auth.signInWithOAuth({ provider, options: { redirectTo: HERE + "?go=1" } });
+  } catch { busy(false); say("로그인을 열지 못했어요. 다시 눌러주세요.", true); }
+}
+buttons.forEach((b) => b.addEventListener("click", () => pay(b.dataset.pay)));
+
+(async () => {
+  if (q.get("checkout") === "success") {
+    document.getElementById("pay").hidden = true; document.getElementById("paid").hidden = false;
+    store(REF, ""); store(GO, ""); store(TIER, "");
+    track("creators_paid", {});
+    history.replaceState(null, "", location.pathname);
+    return;
+  }
+  if (q.get("checkout") === "upgraded") {
+    document.getElementById("pay").hidden = true; document.getElementById("paid").hidden = false;
+    document.querySelector("#paid h1").textContent = "요금제를 올렸어요";
+    document.querySelector("#paid .what").textContent = "앱을 다시 열면 바로 적용돼 있어요.";
+    history.replaceState(null, "", location.pathname);
+    return;
+  }
+  const go = stored(GO) === "1" && q.get("go") === "1";
+  store(GO, "");
+  if (!go) { if (q.get("checkout") === "cancelled") say("결제가 끝나지 않았어요. 다시 눌러 이어서 할 수 있어요."); history.replaceState(null, "", location.pathname); return; }
+  try {
+    busy(true); say("로그인을 확인하는 중이에요");
+    const sb = await client();   // reads the sign-in out of the address first
+    const { data: { session } } = await sb.auth.getSession();
+    history.replaceState(null, "", location.pathname);
+    if (session) await toCheckout(session); else { busy(false); say("로그인이 끝나지 않았어요. 다시 눌러주세요.", true); }
+  } catch { busy(false); say("결제창을 열지 못했어요. 다시 눌러주세요.", true); }
+})();
+</script>
+</body>
+</html>

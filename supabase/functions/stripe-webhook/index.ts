@@ -56,6 +56,7 @@ Deno.serve(async (req) => {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session
+        if (session.mode === "payment") { await grantChallenge(db, session); break }
         if (session.mode !== "subscription" || !session.subscription) break
         const subId = typeof session.subscription === "string"
           ? session.subscription : session.subscription.id
@@ -166,6 +167,109 @@ async function upsertSubscription(
   // other projects. After the row above, which it never gates.
   await reportStripeSubscriptionToRevenueCat({ userId, subscriptionId: sub.id })
   return userId
+}
+
+// The 100-day challenge package: paid once, so there is no Stripe subscription
+// and this session is the only event there will ever be. The row it writes is
+// the entitlement for 100 days; the nightly sweep ends it
+// (expire_comp_subscriptions, 20261112100000). The account is shared with
+// projects that sell one-time payments too, so anything that is not ours by
+// its own metadata is skipped quietly.
+const CHALLENGE_DAYS = 100
+
+// deno-lint-ignore no-explicit-any
+async function grantChallenge(db: any, session: Stripe.Checkout.Session): Promise<void> {
+  const m = session.metadata ?? {}
+  if (m.project === "futurevoice" && m.kind === "challenge_upgrade") return await upgradeChallenge(db, session)
+  if (m.project !== "futurevoice" || m.kind !== "challenge") return
+  if (session.payment_status !== "paid") return
+  const userId = m.user_id, planId = m.plan_id
+  if (!userId || !planId) { console.warn("challenge session without user or plan", session.id); return }
+
+  const { data: plan } = await db.from("subscription_plans")
+    .select("id, period").eq("id", planId).maybeSingle()
+  if (!plan || plan.period !== "challenge") { console.warn("challenge session for a non-challenge plan", session.id, planId); return }
+
+  // The application this payment belongs to, when the buyer came from the form:
+  // it now knows its app account. Before anything that can return early, and
+  // only ever filled once.
+  if (m.application_id) {
+    const { error: linkErr } = await db.from("creator_applications")
+      .update({ user_id: userId, paid_at: new Date(session.created * 1000).toISOString(), paid_plan: planId, status: "active", started_at: new Date(session.created * 1000).toISOString(), updated_at: new Date().toISOString() })
+      .eq("id", m.application_id).eq("kind", "challenger").is("paid_at", null)
+    if (linkErr) console.error("challenge application not linked", session.id, linkErr.message)
+  }
+
+  // Paid ahead, started together: the 100 days (three months, and ten days on
+  // the house) run from the cohort's first day when it is set and still ahead
+  // (billing_config.challenge_starts_at, set in the admin), otherwise from the
+  // payment. The app works from the payment on either way. While the day is
+  // not set yet, the admin moves these rows when it is. session.created keeps
+  // a retried event from moving the dates.
+  const paidAt = new Date(session.created * 1000)
+  const { data: cfg } = await db.from("billing_config").select("challenge_starts_at").maybeSingle()
+  const cohort = new Date(cfg?.challenge_starts_at ?? "")
+  // Everyone ends on the same day, so someone who joins after the first day
+  // still counts from it (unless the cohort is already over).
+  const cohortEnd = new Date(cohort.getTime() + CHALLENGE_DAYS * 86_400_000)
+  const from = !isNaN(cohort.getTime()) && cohortEnd > paidAt ? cohort : paidAt
+  const end = new Date(from.getTime() + CHALLENGE_DAYS * 86_400_000)
+
+  // A retry of this same event must not shorten a row the reward has since
+  // lengthened, and a live subscription from a store is never overwritten.
+  const { data: held } = await db.from("user_subscriptions")
+    .select("plan_id, source, status, current_period_start, stripe_subscription_id").eq("user_id", userId).maybeSingle()
+  if (held && held.plan_id === planId && held.source === "stripe" && !held.stripe_subscription_id &&
+      new Date(held.current_period_start ?? 0).getTime() === paidAt.getTime()) return
+  if (held && held.source !== "comp" && ["trialing", "active", "grace"].includes(held.status)) {
+    console.error("challenge paid while another plan is live — not written, needs a person", session.id, userId)
+    return
+  }
+
+  const { error } = await db.from("user_subscriptions").upsert({
+    user_id: userId,
+    plan_id: planId,
+    source: "stripe",
+    stripe_customer_id: typeof session.customer === "string" ? session.customer : session.customer?.id ?? null,
+    stripe_subscription_id: null,
+    status: "active",
+    current_period_start: paidAt.toISOString(),
+    current_period_end: end.toISOString(),
+    trial_ends_at: null,
+    cancel_at_period_end: true,
+    updated_at: new Date().toISOString(),
+  })
+  if (error) {
+    if (error.code === "23503") { console.warn("user gone, dropping challenge session", session.id); return }
+    throw new Error(`user_subscriptions upsert (challenge): ${error.message}`)
+  }
+}
+
+// A challenger paid the difference to move up a size (the checkout is made by
+// challenge-upgrade for the admin desk). Only the package's size changes: its
+// dates stay, and the new pool counts from the same month.
+// deno-lint-ignore no-explicit-any
+async function upgradeChallenge(db: any, session: Stripe.Checkout.Session): Promise<void> {
+  const m = session.metadata ?? {}
+  if (session.payment_status !== "paid" || !m.user_id || !m.plan_id) return
+  const { data: plan } = await db.from("subscription_plans").select("id, period").eq("id", m.plan_id).maybeSingle()
+  if (!plan || plan.period !== "challenge") { console.warn("upgrade to a non-challenge plan", session.id, m.plan_id); return }
+  const { data: held } = await db.from("user_subscriptions")
+    .select("plan_id, source, stripe_subscription_id").eq("user_id", m.user_id).maybeSingle()
+  // Only the package itself is changed; anything else is a person's call (the money is in Stripe either way).
+  if (!held || held.source !== "stripe" || held.stripe_subscription_id || !String(held.plan_id ?? "").endsWith("_challenge")) {
+    console.error("upgrade paid but no package to change — needs a person", session.id, m.user_id)
+    return
+  }
+  const { error } = await db.from("user_subscriptions")
+    .update({ plan_id: m.plan_id, updated_at: new Date().toISOString() }).eq("user_id", m.user_id)
+  if (error) throw new Error(`user_subscriptions update (upgrade): ${error.message}`)
+  if (m.application_id) {
+    const { error: appErr } = await db.from("creator_applications")
+      .update({ paid_plan: m.plan_id, upgraded_at: new Date(session.created * 1000).toISOString(), upgrade_amount: session.amount_total ?? null, upgrade_currency: session.currency ?? null, updated_at: new Date().toISOString() })
+      .eq("id", m.application_id).eq("kind", "challenger")
+    if (appErr) console.error("upgrade not written on the application", session.id, appErr.message)
+  }
 }
 
 // ── mapping helpers ────────────────────────────────────────────
