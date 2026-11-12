@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>방문자 지도 · 어드민</title>
+<!-- The web pages' visits on a map, like the 라이브 지도 for the app. Borrows the
+     console stylesheet (pins, map, tiles) at request time. Server half:
+     visitors.ts. Every value from PostHog reaches the DOM escaped. -->
+<!--__SHARED_STYLE__-->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+.vz{max-width:1400px}
+.vz h1{font-size:24px; font-weight:700; letter-spacing:-.01em; margin:0 0 4px}
+.vz .sub{color:var(--muted); font-size:13.5px; margin:0 0 14px}
+.vz .sub a{color:inherit}
+.ctl{display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin:0 0 12px}
+.ctl .seg{margin:0}
+.beat{font-size:12.5px; color:var(--muted); display:flex; align-items:center; gap:6px}
+.beat i{width:8px; height:8px; border-radius:50%; background:var(--good); display:inline-block}
+.beat.err i{background:var(--crit)}
+#vMap{width:100%; height:clamp(320px, 54vh, 660px); border-radius:16px; border:1px solid var(--ring); overflow:hidden;
+  isolation:isolate; margin:12px 0 16px;
+  background:radial-gradient(120% 90% at 50% 35%, #e9f0f6 0%, #dbe5ee 60%, #cfdbe7 100%);
+  box-shadow:0 1px 2px rgba(0,0,0,.05), 0 18px 36px -20px rgba(15,30,60,.35)}
+@media (max-width:560px){ #vMap{height:42vh} }
+#vMap .leaflet-bar{border:0; border-radius:10px; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,.08), 0 6px 18px -8px rgba(0,0,0,.3)}
+#vMap .leaflet-bar a{width:32px; height:32px; line-height:32px; color:var(--ink); background:rgba(255,255,255,.92); border-bottom:1px solid var(--grid)}
+#vMap .leaflet-control-attribution{background:rgba(255,255,255,.6); border-radius:8px 0 0 0; font-size:10px; color:var(--muted)}
+.vrow{display:grid; grid-template-columns:22px 1fr auto; gap:4px 12px; align-items:start; width:100%; text-align:left;
+  background:var(--surface); border:1px solid var(--ring); border-radius:10px; padding:10px 14px; margin-top:6px;
+  cursor:pointer; font:inherit; color:inherit}
+.vrow:hover{border-color:var(--ink-2)}
+.vrow.sel{border-color:var(--s1); box-shadow:0 0 0 1.5px var(--s1)}
+.vrow .dot{width:10px; height:10px; border-radius:50%; margin-top:6px; background:var(--muted)}
+.vrow .dot.live{background:var(--good); box-shadow:0 0 0 4px color-mix(in srgb, var(--good) 20%, transparent)}
+.vrow .dot.recent{background:var(--s2)}
+.vrow .l1{display:flex; gap:8px; flex-wrap:wrap; align-items:baseline}
+.vrow .l1 b{font-size:14.5px}
+.vrow .l1 .m{color:var(--ink-2); font-size:13px}
+.vrow .t{color:var(--muted); font-size:12.5px; white-space:nowrap; text-align:right}
+.vrow .l2{grid-column:2 / 4; display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:12.5px; color:var(--ink-2)}
+.depth{display:flex; gap:2px}
+.depth i{width:13px; height:6px; border-radius:2px; background:var(--grid)}
+.depth i.on{background:var(--s1)}
+.depth i.form.on{background:var(--s2)}
+.vtag{font-size:11.5px; padding:1px 7px; border-radius:5px; background:var(--chip); color:var(--ink-2)}
+.vtag.hot{background:var(--ink); color:var(--page)}
+.vtag.go{background:color-mix(in srgb, var(--good) 18%, transparent); color:var(--good-text)}
+.more{margin-top:10px}
+.empty{color:var(--muted); font-size:13.5px; padding:16px 0}
+</style>
+</head>
+<body>
+
+<aside class="side" id="side">
+  <div class="sbrand">
+    <p class="eyebrow">내부 운영</p>
+    <nav class="appsw" aria-label="앱"><a href="__ADMIN_BASE__/">나와나</a><a href="__ADMIN_BASE__/roro">Dear RoRo</a></nav>
+    <div class="stitle">방문자 지도</div>
+  </div>
+  <div class="sctl"><a class="linkbtn" href="__ADMIN_BASE__/creators">크리에이터</a> · <a class="linkbtn" href="__ADMIN_BASE__/logout">나가기</a></div>
+</aside>
+
+<main class="main">
+  <div class="vz">
+    <h1>방문자 지도</h1>
+    <p class="sub">nawana.app 웹페이지 방문을 PostHog에서 읽어요. 방문 1개 = 페이지를 한 번 연 것(크리에이터 페이지는 쿠키가 없어서 다시 오면 새 방문). 운영자 브라우저는 안 셉니다. 20초마다 새로 읽어요.</p>
+    <div class="ctl">
+      <div class="seg" id="pageSeg" role="group" aria-label="페이지"></div>
+      <div class="seg" id="rangeSeg" role="group" aria-label="기간"></div>
+      <span class="beat" id="beat"><i></i><span>불러오는 중</span></span>
+    </div>
+    <div class="tiles" id="tiles"></div>
+    <div id="vMap"></div>
+    <div id="list"></div>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+<script>
+const BASE = '__ADMIN_BASE__';
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const flagOf = cc => cc && /^[A-Z]{2}$/.test(cc) ? String.fromCodePoint(...[...cc].map(c=>0x1F1E6 + c.charCodeAt(0) - 65)) : '';
+const TZ = {berlin:'Europe/Berlin', seoul:'Asia/Seoul', utc:'UTC'}[(()=>{ try{ return localStorage.getItem('nawana.admin.tz') || 'berlin'; }catch(e){ return 'berlin'; } })()] || 'Europe/Berlin';
+const clock = iso => new Date(iso).toLocaleString('ko-KR', {timeZone:TZ, month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false});
+const ago = ms => ms < 60e3 ? '방금' : ms < 3600e3 ? `${Math.round(ms/60e3)}분 전` : ms < 86400e3 ? `${Math.round(ms/3600e3)}시간 전` : `${Math.round(ms/86400e3)}일 전`;
+const dur = s => s == null ? null : s < 60 ? `${s}초` : `${Math.floor(s/60)}분 ${s%60 ? s%60+'초' : ''}`.trim();
+
+const PAGES = [['creators','크리에이터'], ['pay','결제'], ['home','홈'], ['ko','한국어 홈'], ['community','커뮤니티'], ['all','전체']];
+const PAGE_NAME = Object.fromEntries(PAGES);
+// web/creators.html's PARTS, in order. 8 is the form.
+const PARTS = ['맨 위','약속','샘플','재료','아이디어','성장','방법','FAQ','지원서','파트너','방명록'];
+const FORM_N = 8;
+const FROM = d => !d || d === '$direct' ? '직접' : /threads/.test(d) ? '스레드' : /instagram/.test(d) ? '인스타' : /google/.test(d) ? '구글' : /naver/.test(d) ? '네이버' : d;
+
+let pageKey = 'creators', days = 1, data = null, selId = null, showAll = false;
+try { pageKey = localStorage.getItem('nawana.admin.visitors.page') || 'creators'; } catch(e){}
+
+/* ---- the map (the 라이브 지도's own drawing: Natural Earth land, night band, kept pins) ---- */
+let map = null, layer = null, night = null;
+function nightPolygon(date){
+  const rad = Math.PI/180, jd = date.getTime()/86400000 + 2440587.5, n = jd - 2451545.0;
+  const L0 = (280.460 + 0.9856474*n) % 360, g = ((357.528 + 0.9856003*n) % 360)*rad;
+  const lambda = (L0 + 1.915*Math.sin(g) + 0.020*Math.sin(2*g))*rad, eps = (23.439 - 0.0000004*n)*rad;
+  const dec = Math.asin(Math.sin(eps)*Math.sin(lambda)), ra = Math.atan2(Math.cos(eps)*Math.sin(lambda), Math.cos(lambda));
+  const gmst = (18.697374558 + 24.06570982441908*n) % 24, sunLon = ((ra/rad - gmst*15) % 360 + 540) % 360 - 180;
+  const pts = [];
+  for(let lon=-180; lon<=180; lon+=2){ const ha = (lon - sunLon)*rad; pts.push([Math.atan(-Math.cos(ha)/Math.tan(dec))/rad, lon]); }
+  const pole = dec > 0 ? -90 : 90;
+  return [[pole,-180], ...pts, [pole,180]];
+}
+function ensureMap(){
+  if(map || typeof L === 'undefined') return;
+  map = L.map('vMap', {worldCopyJump:true, zoomSnap:0.25, zoomDelta:0.5, minZoom:1, maxZoom:9});
+  map.fitBounds([[-40,-150],[68,160]]);
+  map.attributionControl.addAttribution('Natural Earth');
+  map.createPane('grat').style.zIndex = 330; map.createPane('land').style.zIndex = 340; map.createPane('night').style.zIndex = 360;
+  for(const p of ['grat','land','night']) map.getPane(p).style.pointerEvents = 'none';
+  map.getPane('land').style.filter = 'drop-shadow(0 1.5px 1.5px rgba(40,60,90,.16))';
+  map.getPane('night').style.filter = 'blur(10px)';
+  const grat = [];
+  for(let lat=-60; lat<=75; lat+=15) grat.push([[lat,-540],[lat,540]]);
+  for(let lon=-540; lon<=540; lon+=15) grat.push([[-85,lon],[85,lon]]);
+  L.polyline(grat, {pane:'grat', interactive:false, color:'#9fb3c8', weight:.6, opacity:.35, dashArray:'2 4'}).addTo(map);
+  fetch('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json').then(r => r.json()).then(topo => {
+    const fc = topojson.feature(topo, topo.objects.countries);
+    const fixRing = ring => ring.some(c=>c[0]>150) && ring.some(c=>c[0]<-150) ? ring.map(([x,y]) => [x<0 ? x+360 : x, y]) : ring;
+    fc.features = fc.features.filter(f => f.id !== '010').map(f => {
+      const g = f.geometry; if(!g) return f;
+      if(g.type==='Polygon') g.coordinates = g.coordinates.map(fixRing);
+      if(g.type==='MultiPolygon') g.coordinates = g.coordinates.map(p=>p.map(fixRing));
+      return f;
+    });
+    L.geoJSON(fc, {pane:'land', interactive:false, style:{color:'#d9d5ca', weight:.6, fillColor:'#fbfaf6', fillOpacity:1}}).addTo(map);
+  }).catch(() => {});
+  night = L.polygon(nightPolygon(new Date()), {pane:'night', stroke:false, fillColor:'#1b2a4e', fillOpacity:.13, interactive:false}).addTo(map);
+  layer = L.layerGroup().addTo(map);
+}
+const ST_COLOR = {live:'var(--good)', recent:'var(--s2)', today:'var(--muted)', quiet:'var(--muted)'};
+const PIN_Z = {live:1000, recent:500, today:100, quiet:0};
+const pinRecs = new Map();
+function syncPins(pins){
+  for(const p of pins){
+    let r = pinRecs.get(p.id);
+    if(r && r.gone){ clearTimeout(r.gone); r.gone = null; r.lm.classList.remove('leave'); }
+    if(!r){
+      const mk = L.marker([p.lat, p.lon], {riseOnHover:true, icon: L.divIcon({className:'lmicon', iconSize:[34,34], iconAnchor:[17,17],
+        html:'<div class="lmw"><div class="tag"></div><div class="lm enter"><div class="face"><span class="emo"></span></div></div></div>'})});
+      mk.bindTooltip('', {className:'lt', direction:'top', offset:[0,-14]});
+      mk.addTo(layer);
+      const el = mk.getElement();
+      r = {mk, wrap: el.querySelector('.lmw'), lm: el.querySelector('.lm'), tag: el.querySelector('.tag'), emo: el.querySelector('.emo'), key:'', gone:null};
+      mk.on('click', () => select(p.id, false));
+      pinRecs.set(p.id, r);
+      requestAnimationFrame(() => requestAnimationFrame(() => r.lm.classList.remove('enter')));
+    }
+    r.mk.setZIndexOffset(PIN_Z[p.kind] + (p.sel ? 2000 : 0));
+    r.wrap.style.transform = `translate(${p.dx||0}px, ${p.dy||0}px)`;
+    r.lm.classList.remove('live','recent','today','quiet'); r.lm.classList.add(p.kind);
+    r.lm.classList.toggle('sel', !!p.sel);
+    r.lm.style.setProperty('--st', ST_COLOR[p.kind]);
+    if(r.emo.textContent !== p.emoji) r.emo.textContent = p.emoji;
+    r.tag.textContent = p.tag || '';
+    r.wrap.classList.toggle('hastag', !!p.tag);
+    r.mk.getTooltip().options.offset = L.point(p.dx||0, (p.dy||0) - 14);
+    if(r.key !== p.tip){ r.key = p.tip; r.mk.setTooltipContent(p.tip); }
+  }
+  const keep = new Set(pins.map(p => p.id));
+  for(const [id, r] of pinRecs){
+    if(keep.has(id) || r.gone) continue;
+    r.wrap.classList.remove('hastag'); r.lm.classList.add('leave');
+    r.gone = setTimeout(() => { layer.removeLayer(r.mk); pinRecs.delete(id); }, 340);
+  }
+}
+function spread(list){
+  const by = new Map();
+  for(const it of list){ const k = `${it.lat},${it.lon}`; if(!by.has(k)) by.set(k, []); by.get(k).push(it); }
+  const ord = {live:0, recent:1, today:2, quiet:3};
+  for(const g of by.values()){
+    g.sort((a,b) => ord[a.kind] - ord[b.kind]);
+    g.forEach((it,i) => { const ang = i*2.4, rr = i ? 20*Math.sqrt(i) : 0; it.dx = Math.round(rr*Math.cos(ang)); it.dy = Math.round(rr*Math.sin(ang)); });
+  }
+  return list;
+}
+
+/* ---- one visit ---- */
+function kindOf(v, now){
+  const since = now - new Date(v.last).getTime();
+  if(since <= 5*60e3 && !v.left) return 'live';
+  if(since <= 3600e3) return 'recent';
+  if(since <= 86400e3) return 'today';
+  return 'quiet';
+}
+const emojiOf = v => v.applied ? '✅' : v.started ? '✍️' : (v.device === 'Desktop' ? '💻' : '📱');
+const placeOf = v => `${flagOf(v.cc)} ${v.city || v.cc || '위치 모름'}`.trim();
+function reached(v){
+  if(v.applied) return '지원 완료';
+  if(v.started) return '지원서 쓰다 멈춤';
+  if(v.deepest == null) return '맨 위만';
+  return `${PARTS[v.deepest] || v.deepestName || v.deepest}까지`;
+}
+function depthBar(v){
+  if(v.page !== 'creators') return '';
+  const d = v.deepest ?? -1;
+  return `<span class="depth" title="${esc(reached(v))}">${PARTS.map((name, i) => `<i class="${i<=d?'on':''}${i===FORM_N?' form':''}" title="${esc(name)}"></i>`).join('')}</span>`;
+}
+function tipOf(v, now){
+  const bits = [
+    `<b>${esc(placeOf(v))}</b> · ${esc(PAGE_NAME[v.page] || v.page)}`,
+    `${esc(clock(v.first))} 들어옴 · ${esc(ago(now - new Date(v.last).getTime()))}`,
+    `${esc(v.device || '')}${v.os ? ' · '+esc(v.os) : ''} · ${esc(FROM(v.from))}${v.ref ? ' · ref '+esc(v.ref) : ''}`,
+  ];
+  if(v.page === 'creators') bits.push(`${esc(reached(v))}${v.seconds != null ? ' · '+esc(dur(v.seconds)) : ''}${v.samples ? ' · 샘플 '+v.samples+'번' : ''}`);
+  return bits.join('<br>');
+}
+
+function visible(){
+  if(!data) return [];
+  return data.visits.filter(v => pageKey === 'all' || v.page === pageKey);
+}
+
+function render(){
+  const now = Date.now();
+  const vs = visible().map(v => ({...v, kind: kindOf(v, now)}));
+  // tiles
+  const live = vs.filter(v => v.kind === 'live').length;
+  const n = (f) => vs.filter(f).length;
+  const threads = n(v => /threads/.test(v.from || ''));
+  const tiles = [
+    ['지금 보는 중', live, '5분 안에 움직임'],
+    [days === 1 ? '24시간 방문' : '7일 방문', vs.length, `${new Set(vs.map(v=>v.cc).filter(Boolean)).size}개 나라`],
+    ['스레드에서', threads, vs.length ? `${Math.round(threads/vs.length*100)}%` : ''],
+  ];
+  if(pageKey === 'creators' || pageKey === 'all'){
+    const cr = vs.filter(v => v.page === 'creators');
+    tiles.push(['지원서까지 내려옴', n(v => v.page==='creators' && (v.deepest ?? -1) >= FORM_N), cr.length ? `${Math.round(n(v => v.page==='creators' && (v.deepest ?? -1) >= FORM_N)/cr.length*100)}%` : '']);
+    tiles.push(['지원서 쓰기 시작', n(v => v.started), '']);
+    tiles.push(['지원 완료', n(v => v.applied), '']);
+  }
+  document.getElementById('tiles').innerHTML = tiles.map(([k, v, d]) =>
+    `<div class="tile"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div><div class="d">${esc(d)}</div></div>`).join('');
+
+  // map
+  ensureMap();
+  if(map){
+    night.setLatLngs(nightPolygon(new Date()));
+    syncPins(spread(vs.filter(v => v.lat != null && v.lon != null).map(v => ({
+      id: v.id, lat: +v.lat, lon: +v.lon, kind: v.kind, sel: v.id === selId, emoji: emojiOf(v),
+      tag: v.kind === 'live' || v.id === selId ? (v.city || v.cc || '') : '', tip: tipOf(v, now),
+    }))));
+  }
+
+  // list
+  const rows = showAll ? vs : vs.slice(0, 60);
+  document.getElementById('list').innerHTML = vs.length ? rows.map(v => `
+    <button type="button" class="vrow${v.id===selId?' sel':''}" data-id="${esc(v.id)}">
+      <span class="dot ${v.kind}"></span>
+      <span class="l1"><b>${esc(placeOf(v))}</b><span class="m">${esc(PAGE_NAME[v.page] || v.page)} · ${esc(v.device === 'Desktop' ? '컴퓨터' : v.device === 'Mobile' ? '휴대폰' : (v.device || ''))} · ${esc(FROM(v.from))}${v.ref ? ' · ref '+esc(v.ref) : ''}</span></span>
+      <span class="t">${v.kind === 'live' ? '<b style="color:var(--good)">지금</b>' : esc(clock(v.first))}</span>
+      <span class="l2">${depthBar(v)}${v.page === 'creators' ? `<span>${esc(reached(v))}</span>` : ''}${v.seconds != null ? `<span>${esc(dur(v.seconds))} 머묾</span>` : ''}${v.samples ? `<span class="vtag">샘플 ${v.samples}</span>` : ''}${v.applied ? '<span class="vtag go">지원 완료</span>' : v.started ? '<span class="vtag hot">지원서 시작</span>' : ''}</span>
+    </button>`).join('') + (vs.length > rows.length ? `<button type="button" class="linkbtn more" id="more">${vs.length - rows.length}개 더 보기</button>` : '')
+    : `<p class="empty">이 기간에 방문이 없어요.</p>`;
+}
+
+function select(id, pan){
+  selId = selId === id ? null : id;
+  const v = data && data.visits.find(x => x.id === id);
+  if(pan && v && v.lat != null && map) map.flyTo([+v.lat, +v.lon], Math.max(map.getZoom(), 5), {duration:.6});
+  render();
+  if(!pan){ const el = document.querySelector(`.vrow[data-id="${CSS.escape(id)}"]`); el && el.scrollIntoView({block:'nearest', behavior:'smooth'}); }
+}
+
+function renderSegs(){
+  document.getElementById('pageSeg').innerHTML = PAGES.map(([k, lab]) => {
+    const c = data ? (k === 'all' ? data.visits.length : data.visits.filter(v => v.page === k).length) : '';
+    return `<button type="button" data-k="${k}" aria-pressed="${k===pageKey}">${lab}${c !== '' ? ` <span style="opacity:.6">${c}</span>` : ''}</button>`;
+  }).join('');
+  document.getElementById('rangeSeg').innerHTML = [[1,'24시간'],[7,'7일']].map(([d, lab]) =>
+    `<button type="button" data-d="${d}" aria-pressed="${d===days}">${lab}</button>`).join('');
+}
+
+async function load(){
+  const beat = document.getElementById('beat');
+  try{
+    const r = await fetch(`${BASE}/visitors/data.json?days=${days}`, {cache:'no-store', credentials:'same-origin'});
+    const j = await r.json();
+    if(!r.ok) throw new Error(j.error || r.status);
+    data = j;
+    beat.className = 'beat';
+    beat.lastChild.textContent = `${new Date(j.now).toLocaleTimeString('ko-KR', {timeZone:TZ, hour12:false})}에 읽음`;
+  }catch(e){
+    beat.className = 'beat err';
+    beat.lastChild.textContent = `못 읽었어요 (${e.message})`;
+  }
+  renderSegs(); render();
+}
+
+document.getElementById('pageSeg').addEventListener('click', e => {
+  const b = e.target.closest('button[data-k]'); if(!b) return;
+  pageKey = b.dataset.k; selId = null; showAll = false;
+  try { localStorage.setItem('nawana.admin.visitors.page', pageKey); } catch(e){}
+  renderSegs(); render();
+});
+document.getElementById('rangeSeg').addEventListener('click', e => {
+  const b = e.target.closest('button[data-d]'); if(!b) return;
+  days = +b.dataset.d; selId = null; showAll = false; load();
+});
+document.getElementById('list').addEventListener('click', e => {
+  if(e.target.id === 'more'){ showAll = true; render(); return; }
+  const b = e.target.closest('.vrow'); if(b) select(b.dataset.id, true);
+});
+load();
+setInterval(() => { if(!document.hidden) load(); }, 20000);
+document.addEventListener('visibilitychange', () => { if(!document.hidden) load(); });
+</script>
+</body>
+</html>
