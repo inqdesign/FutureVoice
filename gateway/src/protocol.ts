@@ -64,6 +64,10 @@ export interface StartMessage {
    *  "free" · "tutor" · "pron". Rides on every billing tick; anything else
    *  is dropped. Absent on older builds. */
   mode?: string
+  /** Free talk (2026-11-12): the app's prompt is facts only, and the reply
+   *  gets no one-question rule (claude-reply.ts `CLAUDE_SPOKEN_ONLY`).
+   *  Absent = the rule, as before. */
+  openTalk?: boolean
   /** Ignored since 2026-10-27: every call is counted from the start. Was
    *  tutor mode's switch to count from the start (2026-10-25); older builds
    *  still send it. */
@@ -119,6 +123,8 @@ export interface SetMessage {
   type: "set"
   /** `StartMessage.mode`, changed mid-call (tutor mode switched on). */
   mode?: string
+  /** `StartMessage.openTalk`, changed mid-call. */
+  openTalk?: boolean
   /** 0.7–1.2, clamped the same way `start.speed` is. */
   speed?: number
   /** Coach mode (2026-09-28): a short instruction appended to the system

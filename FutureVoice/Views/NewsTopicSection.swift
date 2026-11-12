@@ -20,6 +20,9 @@ struct DiscoverSection: View {
     /// The settings page, opened from the HOST's header (the page's nav bar),
     /// not from the chip row: the row is for switching ideas.
     @Binding var showingSettings: Bool
+    /// Inside a call the row leaves out situations: a scene casts the other
+    /// side, which a call already running can't become.
+    var showsScenarios = true
 
     @EnvironmentObject private var appState: AppState
 
@@ -56,7 +59,8 @@ struct DiscoverSection: View {
     /// their own situations. Never answered = the row as it always was.
     private var chips: [DiscoverChip] {
         _ = settingsVersion
-        return LearningPurposeStore.chips(level: appState.proficiency)
+        let all = LearningPurposeStore.chips(level: appState.proficiency)
+        return showsScenarios ? all : all.filter { $0 != .scenarios }
     }
 
     private var interests: [String] { appState.persona?.interests ?? [] }

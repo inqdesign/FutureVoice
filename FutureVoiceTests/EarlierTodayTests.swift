@@ -97,35 +97,26 @@ final class EarlierTodayTests: XCTestCase {
         XCTAssertEqual(e.kind, .talk)
     }
 
-    // MARK: - The opener
-
-    func testFirstTalkOfTheDayIsTheHelloForTheTimeOfDay() {
-        let now = Calendar.current.date(bySettingHour: 8, minute: 0, second: 0, of: Date())!
-        let pick = FreeTalkOpeners.callOpener(language: "en", earlier: nil, talkedEarlierToday: false, at: now)
-        XCTAssertEqual(pick.line, "Hi, did you sleep well?")
-        XCTAssertNil(pick.usedKey)
-    }
-
-    func testASecondCallNeverAsksAboutSleepAgain() {
-        let now = Calendar.current.date(bySettingHour: 8, minute: 0, second: 0, of: Date())!
-        let earlier = EarlierToday(kind: .talk, key: UUID().uuidString,
-                                   endedAt: now.addingTimeInterval(-3600), record: "A talk.")
-        let pick = FreeTalkOpeners.callOpener(language: "en", earlier: earlier, talkedEarlierToday: true, at: now)
-        XCTAssertNotEqual(pick.line, "Hi, did you sleep well?")
-        // Only a talk with someone else earlier: still not the first hello.
-        let other = FreeTalkOpeners.callOpener(language: "en", earlier: nil, talkedEarlierToday: true, at: now)
-        XCTAssertEqual(other.line, FreeTalkOpeners.againLine(language: "en"))
-    }
-
-    func testATalkCutOffMinutesAgoIsCarriedOn() {
-        let now = Date()
-        let earlier = EarlierToday(kind: .talk, key: UUID().uuidString,
-                                   endedAt: now.addingTimeInterval(-120), record: "A talk.")
-        let pick = FreeTalkOpeners.callOpener(language: "ko", earlier: earlier, talkedEarlierToday: true, at: now)
-        XCTAssertEqual(pick.line, FreeTalkOpeners.resumeLine(language: "ko"))
-    }
-
     // MARK: - The prompt
+
+    // Free talk is facts only (2026-11-12, founder): who you are, what we
+    // know, nothing on how to talk.
+    func testFreeModePromptIsFactsOnly() {
+        let earlier = EarlierToday(kind: .talk, key: "k", endedAt: Date(),
+                                   record: "A talk that ended about 2 hours ago.")
+        let p = ConversationEngine.conversationSystemPrompt(
+            targetLanguage: "en", nativeLanguage: "ko", level: .b1,
+            topPatterns: [LearnerPattern(mistake: "I go yesterday", correction: "I went yesterday",
+                                         context: "past", frequency: 3, lastSeenAt: Date())],
+            weakVocabAreas: [], topic: "", earlierToday: earlier, freeMode: true)
+        XCTAssertTrue(p.contains("Talk with them freely, about anything"))
+        XCTAssertTrue(p.contains("B1"))
+        XCTAssertTrue(p.contains("I go yesterday → I went yesterday"))
+        XCTAssertTrue(p.contains("A talk that ended about 2 hours ago."))
+        for rule in ["HOW TO TALK", "HARD CEILING", "PITCH TO THEIR LEVEL", "STRICT", "THEY CALLED YOU"] {
+            XCTAssertFalse(p.contains(rule), rule)
+        }
+    }
 
     func testFreeTalkPromptCarriesEarlierTodayOnlyWhenThereIsOne() {
         func prompt(_ e: EarlierToday?) -> String {

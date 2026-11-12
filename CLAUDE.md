@@ -2852,6 +2852,18 @@ silent. `pendingSay` holds it and `applySay` runs the moment `ready` goes out.
 A `say` is only ever the FIRST line: it is ignored once a turn has happened, so
 a late greeting can never talk over a conversation already under way.
 
+**A free talk's hello is the model's, said live** (2026-11-12, founder).
+No bundled hello for the time of day and no line written ahead any more: a
+no-topic free talk connects with no opener and sends one `nudge`
+(`FreeTalkOpeners.sayHelloNote`), and the fluent self says hello from the
+free-talk prompt (profile, earlier today, the clock). The lines written ahead
+fell back to "Hi again! What have you been up to since?" whenever theirs
+wasn't ready, which was most calls; the live hello costs ~1–2 s, which the
+founder judged fine. The phrase-cache path below still serves the first
+call's introduction, a "my own topic" line and the stored scenario openers.
+A free talk also sends `openTalk` (gateway): the reply gets the spoken-only
+rule and no one-question rule, in the prompt or in `SpokenGate`.
+
 **The greeting is played from the phrase cache, and the gateway is never
 asked for it** (2026-09-13). The Talk launcher already synthesizes the pool
 openers into `PhraseAudioStore` (`FreeTalkOpeners.warmAudio` — since 2026-10-02

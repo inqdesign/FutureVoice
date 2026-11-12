@@ -32,10 +32,16 @@ export type Line = { role: "user" | "model"; text: string }
  *  stopped that (0/378 with thinking off; the residue with thinking on is
  *  what `SpokenGate` catches). The question rules are restated because
  *  Haiku keeps them far better when they come last. */
-export const CLAUDE_ADDENDUM = `
+export const CLAUDE_SPOKEN_ONLY = `
 
 HOW YOUR WORDS REACH THEM: everything you write is read aloud, as it is written, to the person on the call, the moment you write it. So write only the words you say to them, once. No notes, no plans, no drafts, no checking your own line, no "wait" followed by a correction, nothing in brackets. Decide what to say before you write; then say it.
+`
 
+/** Free talk (2026-11-12, founder: "it should be just natural conversation,
+ *  we shouldn't say more than one question and so on"): the app's free-talk
+ *  prompt is facts only, and an `openTalk` call gets the spoken-only half
+ *  above and none of the question rules, in the prompt or in `SpokenGate`. */
+export const CLAUDE_ADDENDUM = CLAUDE_SPOKEN_ONLY + `
 ONE QUESTION MARK PER TURN, at most, and it ends the turn. A reaction is a statement, not a question: "Oh, tired." not "Oh, tired?"; "Busy with work, I see." not "Busy with work, huh?". After your question, stop — no second question, not even a guess at their answer ("…? At home?"). If you want to offer a choice, put it inside the one question ("Coffee or tea?").
 If the prompt above has a "HOW TO ASK — THIS LEARNER IS A BEGINNER" section, it holds for every turn, the first one too: the question is short and answerable in a few words ("Are you at home?", "Did you work today?"), never "how was your day?" or "tell me about…".
 `
@@ -104,7 +110,12 @@ export class SpokenGate {
   private sentences = 0
   private asked = false
   emitted = ""
-  constructor(private language: string, private emit: (text: string) => void) {}
+  constructor(
+    private language: string,
+    private emit: (text: string) => void,
+    /** false = free talk: any number of questions (see `CLAUDE_SPOKEN_ONLY`). */
+    private oneQuestion = true,
+  ) {}
 
   /** Returns false once the reply should stop after what was already said:
    *  the caller stops the stream and keeps `emitted`. Throws when the very
@@ -148,7 +159,7 @@ export class SpokenGate {
     const trimmed = text.trim()
     const question = /[?？]$/.test(trimmed)
     const choice = /^(or\b|oder\b|아니면|それとも|o\b|ou\b)/i.test(trimmed)
-    if (question && this.asked && !choice) return false
+    if (this.oneQuestion && question && this.asked && !choice) return false
     if (question && !isEchoQuestion(trimmed, this.sentences === 0)) this.asked = true
     this.sentences += 1
     this.emitted += text
@@ -209,6 +220,8 @@ export async function streamClaude(opts: {
   thinking?: string
   /** "" = the model default (medium on Haiku 5.5); low | medium | high. */
   effort?: string
+  /** Free talk: no question rule (`CLAUDE_SPOKEN_ONLY`). */
+  openTalk?: boolean
   signal: AbortSignal
   onDelta: (text: string) => void
   /** The model's first raw text, before the gate holds it to a sentence —
@@ -246,7 +259,7 @@ export async function streamClaude(opts: {
       // Unused headroom costs nothing.
       max_tokens: 2048,
       stream: true,
-      system: [{ type: "text", text: opts.system + CLAUDE_ADDENDUM, cache_control: { type: "ephemeral" } }],
+      system: [{ type: "text", text: opts.system + (opts.openTalk ? CLAUDE_SPOKEN_ONLY : CLAUDE_ADDENDUM), cache_control: { type: "ephemeral" } }],
       messages: opts.messages,
       ...(opts.thinking ? { thinking: { type: opts.thinking } } : {}),
       ...(opts.effort ? { output_config: { effort: opts.effort } } : {}),
@@ -262,7 +275,7 @@ export async function streamClaude(opts: {
     throw new Error(`reply upstream ${opts.model} ${resp.status}: ${(await resp.text()).slice(0, 300)}`)
   }
 
-  const gate = new SpokenGate(opts.language, opts.onDelta)
+  const gate = new SpokenGate(opts.language, opts.onDelta, !opts.openTalk)
   let cut = false
   let startedText = false
   reader = resp.body.getReader()

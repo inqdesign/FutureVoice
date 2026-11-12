@@ -1091,13 +1091,6 @@ struct RootTabView: View {
             // swap to the real ring underneath is pixel-identical.
             appState.talkRingProxyActive = false
             freeTalkClosing = false
-            // The call consumed a warmed greeting — top the cache back up so
-            // the NEXT call opens instantly too (no-op once every pool line
-            // is cached).
-            await FreeTalkOpeners.shared.warmAudio(
-                language: appState.targetLanguage,
-                personaName: appState.persona?.displayName,
-                voiceId: appState.speakingVoiceId)
         }
     }
 }

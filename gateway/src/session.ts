@@ -205,6 +205,8 @@ export class CallSession implements DurableObject {
   /** Coach mode's steer, kept so one that arrives before `start` has built
    *  the reply engine still applies. */
   private pendingSteer = ""
+  /** Free talk: no one-question rule on the reply (`StartMessage.openTalk`). */
+  private openTalk = false
   /** A `set.system` that arrived before `start` built the reply engine. */
   private pendingSystem: string | null = null
 
@@ -723,6 +725,10 @@ export class CallSession implements DurableObject {
       // cannot honour is dropped, never raised.
       if (msg.speed !== undefined) this.tts?.setSpeed(clampSpeed(msg.speed))
       if (typeof msg.mode === "string" && CallSession.callModes.has(msg.mode)) this.callMode = msg.mode
+      if (typeof msg.openTalk === "boolean") {
+        this.openTalk = msg.openTalk
+        if (this.replyEngine) this.replyEngine.openTalk = msg.openTalk
+      }
       if (typeof msg.steer === "string") {
         const steer = msg.steer.trim().slice(0, MAX_STEER_CHARS)
         this.pendingSteer = steer
@@ -871,6 +877,7 @@ export class CallSession implements DurableObject {
     this.manualTurns = msg.manualTurns === true
     this.repeatAfterMe = msg.repeatAfterMe === true
     this.callMode = msg.mode && CallSession.callModes.has(msg.mode) ? msg.mode : null
+    this.openTalk = msg.openTalk === true
     const base = (code: string) => code.toLowerCase().split("-")[0]
     this.native = msg.native && base(msg.native) !== base(this.language) ? msg.native : null
     this.replyEngine = new ReplyEngine({
@@ -899,6 +906,7 @@ export class CallSession implements DurableObject {
       claudeEffort: this.env.CLAUDE_REPLY_EFFORT || "low",
     })
     this.replyEngine.steer = this.pendingSteer
+    this.replyEngine.openTalk = this.openTalk
     // Once per call, not per turn: during an outage every turn falls back,
     // and a warning row per turn is the telemetry flood of 2026-09-26.
     let fellBack = false

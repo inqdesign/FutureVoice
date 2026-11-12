@@ -509,6 +509,9 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// What kind of call this is — "free" · "tutor" · "pron" — for the
     /// usage page's split (`StartMessage.mode`). Set before `connect`.
     var callMode = "free"
+    /// Free talk: the reply gets no one-question rule (`StartMessage.openTalk`,
+    /// 2026-11-12). An older gateway ignores it. Set before `connect`.
+    var openTalk = false
     private var manualTurns: Bool { SendToAnswer.isOn || forceManualTurns }
     /// The words thrown away by the last `discardTurn`, until the next turn.
     /// A final the gateway was already re-reading when the reset landed, or
@@ -581,7 +584,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             let token = try await Self.accessToken()
             Self.step("connect: got token")
             // The greeting the launcher already synthesized (see
-            // `FreeTalkOpeners.warmAudio`) is on disk in the learner's own
+            // `FreeTalkOpeners.warmFirstCall`) is on disk in the learner's own
             // voice. Play it from there and the gateway is never asked for
             // it: the line starts when `ready` lands instead of a further
             // synthesis round trip later, and the pool warm-up finally pays
@@ -1009,10 +1012,11 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     }
 
     /// The call's kind changed mid-call (tutor mode switched on or off).
-    func setCallMode(_ mode: String) {
+    func setCallMode(_ mode: String, openTalk: Bool) {
         callMode = mode
+        self.openTalk = openTalk
         guard !isTornDown else { return }
-        sendControl(["type": "set", "mode": mode])
+        sendControl(["type": "set", "mode": mode, "openTalk": openTalk])
     }
 
     /// Send-to-answer switched mid-call. Off with words held: the gateway
@@ -2185,6 +2189,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         // (`StartMessage.repeatAfterMe`). An older gateway ignores it.
         if forceManualTurns { payload["repeatAfterMe"] = true }
         payload["mode"] = callMode
+        if openTalk { payload["openTalk"] = true }
         // Tutor mode is counted from the start (2026-10-25): the tutor talks
         // first and that is the lesson. A gateway before this counts from
         // the first turn, as before.

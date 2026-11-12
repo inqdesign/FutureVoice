@@ -5,14 +5,18 @@ import SwiftUI
 /// pill in the bar's title slot once the learner speaks, and a tap on the
 /// pill opens it again at any point of the call. It lies OVER the bar and
 /// the transcript and never pushes them.
+///
+/// The three ways a call can run (2026-11-12, founder: Free talk · Tutor ·
+/// Pronunciation). Coach mode is not one of them and is not on the island:
+/// "Try saying" stays a Call settings switch.
 enum CallGuidance: Hashable {
-    case free, coach, tutor
+    case free, tutor, pronunciation
 
     var title: String {
         switch self {
         case .free: return explain("Free talk")
-        case .coach: return explain("Coach mode")
-        case .tutor: return explain("Tutor mode")
+        case .tutor: return explain("Tutor")
+        case .pronunciation: return explain("Pronunciation")
         }
     }
 }
@@ -25,6 +29,8 @@ struct CallIsland: View {
     let level: CEFRLevel
     var minutesLeft: Int? = nil
     var callClock: TalkClock? = nil
+    /// A pronunciation call uses half the talk time: "½" beside the clock.
+    var halfRate = false
     /// nil hides the row: a scene or a person's call keeps the way it was
     /// launched.
     let guidance: Binding<CallGuidance>?
@@ -78,6 +84,12 @@ struct CallIsland: View {
                 .truncationMode(.tail)
             if let callClock {
                 CallIslandClock(clock: callClock)
+            }
+            if halfRate {
+                Text(verbatim: "½")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(.green)
+                    .accessibilityLabel(Text(explain("Uses half the talk time")))
             }
             if let minutesLeft {
                 Text("\(minutesLeft) min")
@@ -136,7 +148,7 @@ struct CallIsland: View {
             if let guidance {
                 Divider()
                 Picker("", selection: guidance) {
-                    ForEach([CallGuidance.free, .coach, .tutor], id: \.self) { g in
+                    ForEach([CallGuidance.free, .tutor, .pronunciation], id: \.self) { g in
                         Text(g.title).tag(g)
                     }
                 }

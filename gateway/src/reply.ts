@@ -60,6 +60,8 @@ export class ReplyEngine {
    *  system instruction's tail until the system instruction became a cache —
    *  see `steer-turn.ts`). Empty = none. */
   steer = ""
+  /** Free talk (`StartMessage.openTalk`): Claude gets no question rule. */
+  openTalk = false
 
   /** Per model: the hedge's fallback is priced differently from the primary. */
   readonly usageByModel = new Map<string, ReplyUsage>()
@@ -333,6 +335,7 @@ export class ReplyEngine {
         apiKey: this.config.anthropicKey, model, system, signal, onDelta, onFirstText, usage: raw,
         language: this.config.language ?? "en",
         thinking: this.config.claudeThinking, effort: this.config.claudeEffort,
+        openTalk: this.openTalk,
         messages: claudeMessages(steered, ReplyEngine.settledPrefix(history).length),
       })
     } finally {

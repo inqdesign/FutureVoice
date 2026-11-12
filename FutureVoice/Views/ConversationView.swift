@@ -1030,8 +1030,12 @@ struct ConversationView: View {
                 withAnimation(CallIsland.motion) { islandExpanded = false }
             }
             .sheet(isPresented: $showingIslandTopics) {
-                TutorTopicSheet { picked, _ in islandPicked(picked) }
-                    .environmentObject(appState)
+                // The same ideas the home's "Find a topic" shows (2026-11-12,
+                // founder): not the tutor's things to practise.
+                CallTopicIdeasSheet { picked, blurb, isNews, facts in
+                    islandPicked(picked, blurb: blurb, isNews: isNews, facts: facts)
+                }
+                .environmentObject(appState)
             }
             .overlay { endingOverlay }
             .navigationBarTitleDisplayMode(.inline)
@@ -1492,11 +1496,12 @@ struct ConversationView: View {
             }
         }
         .overlay(alignment: .top) {
-            if !pronThisCall, let barY = islandBarY {
+            if let barY = islandBarY {
                 GeometryReader { geo in
                     CallIsland(title: islandTitle, level: appState.proficiency,
                                minutesLeft: meter.minutesRemaining.flatMap { $0 <= 10 ? $0 : nil },
                                callClock: (phoneCallActive || !didSaveCurrentSession) ? meter.clock : nil,
+                               halfRate: pronThisCall,
                                guidance: islandCanChange ? islandGuidance : nil,
                                onChangeTopic: islandCanChange ? { islandChangeTopic() } : nil,
                                onSettings: { showingCallSettings = true },
@@ -1523,27 +1528,13 @@ struct ConversationView: View {
             // A news call is titled "News": its topic is a whole spoken line
             // ("Did you see the news about…?"), which only ever fit the bar
             // cut off with an ellipsis.
-            if pronThisCall {
-                LevelHeaderTitle(title: topicIsNews ? explain("News")
-                                     : topic.isEmpty ? emptyTopicTitle : topic,
-                                 level: appState.proficiency,
-                                 surface: .talk,
-                                 minutesLeft: meter.minutesRemaining.flatMap { $0 <= 10 ? $0 : nil },
-                                 // Talk time, phone-style — every tier. The meter's
-                                 // own count, so silence doesn't move it; shown from
-                                 // the start, since the call is billed from the start
-                                 // (2026-10-27), and gone once the talk is wrapped up.
-                                 callClock: (phoneCallActive || !didSaveCurrentSession)
-                                     ? meter.clock : nil,
-                                 halfRate: pronThisCall)
-                    .environmentObject(appState)
-            } else {
-                // The island is drawn over the whole stack (it grows past
-                // the bar), so the title slot only says where the bar puts it.
-                Color.clear
-                    .frame(width: 1, height: CallIsland.pillHeight)
-                    .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { islandBarY = $0 }
-            }
+            // The island is drawn over the whole stack (it grows past the
+            // bar), so the title slot only says where the bar puts it. A
+            // pronunciation call has it too (2026-11-12): it is one of the
+            // island's three modes, and the island is the way back out.
+            Color.clear
+                .frame(width: 1, height: CallIsland.pillHeight)
+                .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { islandBarY = $0 }
         }
         // The open island lies over the bar; its buttons would show through
         // the glass at both ends, so they step out while it is open.
@@ -2437,10 +2428,14 @@ struct ConversationView: View {
         counterpart == nil && sessionScenarioId == nil
     }
 
+    /// Free talk · Tutor · Pronunciation (2026-11-12). Coach mode is not one
+    /// of them; "Try saying" stays in Call settings.
     private var islandGuidance: Binding<CallGuidance> {
-        Binding(get: { tutorThisCall ? .tutor : (coachMode ? .coach : .free) },
+        Binding(get: { pronThisCall ? .pronunciation : (tutorThisCall ? .tutor : .free) },
                 set: { picked in
-                    if picked != .tutor { coachModeChoice = picked == .coach }
+                    // Out of the pronunciation coach first: tutor mode
+                    // refuses to start while it runs.
+                    applyPronMode(picked == .pronunciation)
                     tutorModeChoice = picked == .tutor
                     // A call opened from the ring's tutor page is in tutor
                     // mode without the setting, so the setting may not move.
@@ -2449,18 +2444,54 @@ struct ConversationView: View {
     }
 
     private func islandChangeTopic() {
-        if tutorThisCall { showingTutorTopics = true } else { showingIslandTopics = true }
+        if pronThisCall { showingPronTopics = true }
+        else if tutorThisCall { showingTutorTopics = true }
+        else { showingIslandTopics = true }
     }
 
-    /// A new topic picked mid-call in a plain call: the prompt follows and
-    /// the fluent self opens it.
-    private func islandPicked(_ picked: String) {
+    /// A new topic picked mid-call in a plain call, from the same ideas the
+    /// home's "Find a topic" shows: the prompt follows and the fluent self
+    /// opens it.
+    private func islandPicked(_ picked: String, blurb: String = "", isNews: Bool = false,
+                              facts: [String] = []) {
         topic = picked
-        topicBlurb = ""
-        topicIsNews = false
+        topicBlurb = blurb
+        topicIsNews = isNews
+        newsFacts = facts
         guard RealtimeMode.isEnabled, phoneCallActive else { return }
-        realtime.setSystem(systemPrompt() + Self.realtimeStyleRules)
+        realtime.setSystem(systemPrompt() + realtimeStyleRules)
         realtime.nudge("The learner picked a new topic on their screen: \"\(picked)\". Say sure in a few words and open it with one short question.")
+    }
+
+    /// The pronunciation coach switched on or off mid-call from the island.
+    /// On: the call is held for the app's verdicts and the first round of
+    /// the course is written, as a call opened on the ring's page does. Off:
+    /// the round is put away and the call is an ordinary one again.
+    private func applyPronMode(_ on: Bool) {
+        guard on != pronThisCall else { return }
+        if on {
+            applyTutorMode(false)
+            tutorThisCall = false
+        }
+        pronThisCall = on
+        if !on {
+            pronSendTask?.cancel()
+            pronSendTask = nil
+            pronWindowOpen = false
+            pronPlanning = false
+            pronTopic = nil
+            pronRound = nil
+        }
+        guard RealtimeMode.isEnabled, phoneCallActive else { return }
+        realtime.setCallMode(on ? "pron" : (tutorThisCall ? "tutor" : "free"), openTalk: isFreeMode)
+        sendTutorSystem()
+        guard on else { return }
+        guard let topic = PronunciationCall.startingTopic(language: appState.targetLanguage,
+                                                          level: appState.proficiency) else {
+            tutorNudge(PronunciationNotes.planFailed)
+            return
+        }
+        startPronRound(topic: topic, note: nil, first: true)
     }
 
     private func applyTutorMode(_ on: Bool) {
@@ -2470,8 +2501,8 @@ struct ConversationView: View {
         // The classic path reads `tutorThisCall` at its next turn.
         guard RealtimeMode.isEnabled, phoneCallActive else { return }
         realtime.setMeterFromStart(on)
-        realtime.setCallMode(on ? "tutor" : "free")
-        realtime.setSystem(systemPrompt() + Self.realtimeStyleRules)
+        realtime.setCallMode(on ? "tutor" : "free", openTalk: isFreeMode)
+        realtime.setSystem(systemPrompt() + realtimeStyleRules)
         if on, tutorLesson == nil {
             realtime.nudge("Tutor mode was just turned on. Ask them, in one short question, what they want to be able to say today — they can also pick a topic from the button on their screen.")
         }
@@ -3061,19 +3092,16 @@ struct ConversationView: View {
                 // Gemini.
                 opener = FreeTalkOpeners.introOpener(language: appState.targetLanguage)
             } else if topic.isEmpty, counterpart == nil {
-                // Free talk: one light hello for the time of day, bundled
-                // (`FreeTalkOpeners.pickUpLines`) — the texts repeat
-                // verbatim, so the TTS content cache makes the voice free
-                // after each line's first play. Recent news is the call's
-                // second line, not its first (THEY CALLED YOU). A later
-                // call the same day picks up what came earlier instead
-                // (`FreeTalkOpeners.callOpener`, 2026-11-04).
+                // Free talk: the fluent self says hello itself, from
+                // everything its prompt knows, earlier today included
+                // (2026-11-12, founder). It replaced bundled hellos and
+                // lines written ahead, whose fallback was the same line on
+                // every call.
                 if promptClock == nil { pinPromptClock() }
-                let pick = FreeTalkOpeners.callOpener(
-                    language: appState.targetLanguage, earlier: earlierToday,
-                    talkedEarlierToday: (promptClock?.talksEarlierToday ?? 0) > 0)
-                if let key = pick.usedKey { FreeTalkOpeners.markSameDayUsed(key) }
-                opener = pick.line
+                await startRealtimeCall(opener: nil)
+                guard !isTornDown else { return }
+                realtime.nudge(FreeTalkOpeners.sayHelloNote)
+                return
             } else if let line = learnerOpensLine {
                 // A starter the LEARNER opens (asking a stranger the way):
                 // the other side waits to be spoken to, and the coach's own
@@ -3365,13 +3393,14 @@ struct ConversationView: View {
         realtime.tutorCall = tutorWasOn || tutorThisCall
         realtime.forceManualTurns = pronThisCall
         realtime.callMode = pronThisCall ? "pron" : (tutorThisCall ? "tutor" : "free")
+        realtime.openTalk = isFreeMode
         await realtime.connect(
             voiceId: voiceId,
             language: appState.targetLanguage,
-            system: systemPrompt() + Self.realtimeStyleRules,
+            system: systemPrompt() + realtimeStyleRules,
             opener: opener,
             // The launcher warms the next pool greetings' TTS into the phrase
-            // cache (`FreeTalkOpeners.warmAudio`), so the line is usually
+            // cache (`FreeTalkOpeners.warmFirstCall`), so the line is usually
             // already here in the learner's own voice — the client plays it
             // the moment the call is up instead of waiting on the gateway's
             // own round trip for a line the phone already has. A miss is a
@@ -3432,7 +3461,7 @@ struct ConversationView: View {
     /// The gateway speaks prose, not the `{reply, suggestion}` JSON the HTTP
     /// turn returns — so the schema instruction is replaced by the two rules
     /// that actually matter out loud.
-    private static let realtimeStyleRules = """
+    private static let callStyleRules = """
 
         This is a LIVE phone call. Speak in one to three short sentences, \
         never write JSON, never add labels or stage directions — just say \
@@ -6468,7 +6497,7 @@ struct ConversationView: View {
 
     private func sendTutorSystem() {
         guard RealtimeMode.isEnabled, phoneCallActive else { return }
-        realtime.setSystem(systemPrompt() + Self.realtimeStyleRules)
+        realtime.setSystem(systemPrompt() + realtimeStyleRules)
         // While a lesson runs the tutor answers only with the app's verdict,
         // so an answer is never met twice and the checklist never disagrees
         // with what the tutor says (device, 2026-10-28).
@@ -6508,8 +6537,21 @@ struct ConversationView: View {
             tutorLesson: tutorLesson,
             tutorJustTicked: tutorJustTicked,
             tutorLastFixes: tutorLastFixes,
-            tutorPlanning: tutorPlanning
+            tutorPlanning: tutorPlanning,
+            freeMode: isFreeMode
         )
+    }
+
+    /// What the island calls Free talk (2026-11-12): no person, no scene,
+    /// not tutor or pronunciation. Its prompt is facts only
+    /// (`ConversationEngine.freeTalkPrompt`), with no style rules after it.
+    private var isFreeMode: Bool {
+        counterpart == nil && sessionScenarioId == nil && !tutorThisCall && !pronThisCall
+    }
+
+    /// The live call's style rules, left off in free mode.
+    private var realtimeStyleRules: String {
+        isFreeMode ? "" : Self.callStyleRules
     }
 }
 
