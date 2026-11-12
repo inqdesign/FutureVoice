@@ -5224,20 +5224,59 @@ struct ConversationView: View {
                 log("no_line"); return
             }
             guard !Task.isCancelled, !isTornDown else { return }
-            goodbye = line
+            // Streamed, and the card goes up with the FIRST chunk: the whole
+            // file took ~1.7 s upstream before a sound, the first chunk ~0.15 s
+            // (measured 2026-11-12), and the founder heard the words appear
+            // and then wait for the voice. Nothing is shown ahead of the voice,
+            // the same rule the call's correction card follows.
+            let ttsStarted = Date()
+            var streaming = false
+            let finished: () -> Void = {
+                if goodbyePlaying { log("played", ["chars": "\(line.spoken.count)"]) }
+                goodbyePlaying = false
+            }
             do {
-                let audio = try await VoiceClient.shared.synthesize(
+                let result = try await VoiceClient.shared.synthesizeStreaming(
                     voiceId: voiceId, text: line.spoken,
                     idempotencyKey: "goodbye-tts:\(id.uuidString)",
-                    purpose: "goodbye", speed: SpeechSpeed.current)
-                guard !Task.isCancelled, !isTornDown else { return }
-                try player.play(audio, source: "call_goodbye") {
-                    if goodbyePlaying { log("played", ["chars": "\(line.spoken.count)"]) }
-                    goodbyePlaying = false
+                    purpose: "goodbye"
+                ) { chunk, sampleRate in
+                    guard !Task.isCancelled, !isTornDown else { return }
+                    if !streaming {
+                        // The call is over: a playback session, like Watch.
+                        guard (try? player.startPCMStream(sampleRate: sampleRate, voiceKey: voiceId,
+                                                          completion: finished)) != nil else { return }
+                        streaming = true
+                        goodbye = line
+                        goodbyePlaying = true
+                        Telemetry.log("call_goodbye_voice", [
+                            "text_ms": "\(Int(ttsStarted.timeIntervalSince(started) * 1000))",
+                            "voice_ms": "\(Int(Date().timeIntervalSince(ttsStarted) * 1000))",
+                        ])
+                    }
+                    player.feedPCMStream(chunk)
                 }
-                goodbyePlaying = true
+                guard !Task.isCancelled, !isTornDown else { return }
+                if streaming {
+                    player.finishPCMStream()
+                } else {
+                    // The stream never started playing (an engine refusal, or
+                    // a server that answered with the whole file): play what
+                    // came back in one piece.
+                    let audio: Data
+                    switch result {
+                    case .pcm(let pcm, let rate): audio = AudioLoudness.wavData(fromPCM16: pcm, sampleRate: Int(rate))
+                    case .mp3(let data): audio = data
+                    }
+                    guard !audio.isEmpty else { throw VoiceError.invalidResponse }
+                    goodbye = line
+                    try player.play(audio, source: "call_goodbye", completion: finished)
+                    goodbyePlaying = true
+                }
             } catch {
-                // The words stay on the board; only the voice is missing.
+                // The words still go up; only the voice is missing.
+                if !streaming { goodbye = line }
+                goodbyePlaying = false
                 log("no_audio", ["error": (error as NSError).domain + ":\((error as NSError).code)"])
             }
         }
