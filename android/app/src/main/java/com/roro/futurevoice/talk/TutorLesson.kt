@@ -276,7 +276,13 @@ object TutorJudge {
          *  try is judged; a remark, a question or a request for help was
          *  answered as a miss before. */
         val kind: String? = null,
+        /** A goal's lesson (iOS 2026-11-12): the person on the other side of
+         *  the real situation would count this answer against them, grammar
+         *  aside, at every level. Only asked for a goal's lesson. */
+        val weak: Boolean? = null,
+        @SerialName("weak_note") val weakNote: String? = null,
     ) {
+        val isWeak: Boolean get() = weak == true && done
         val wantsOtherTopic: Boolean get() = otherTopic == true
         enum class Kind { ATTEMPT, TALK, HELP }
         /** A missing or unknown kind is a try, the old reading. */
@@ -292,17 +298,18 @@ object TutorJudge {
      *  they want out of the lesson? [ownLanguage]: the gateway heard the
      *  line in the learner's native language. */
     suspend fun read(line: String, challenge: TutorLesson.Challenge, targetLanguage: String,
-                     askedWith: String, ownLanguage: Boolean = false): Verdict? =
+                     askedWith: String, ownLanguage: Boolean = false, realGoal: String? = null): Verdict? =
         withTimeoutOrNull(10_000) {
             runCatching {
                 val target = LanguageCatalog.englishName(targetLanguage)
                 GeminiClient(AuthRepository()).sendJson(
-                    system = TutorPrompts.judgeSystem(target),
+                    system = TutorPrompts.judgeSystem(target, realGoal),
                     messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER,
                         TutorPrompts.judgeContent(challenge.task, challenge.example, askedWith, line,
                             target, ownLanguage))),
                     serializer = Verdict.serializer(),
-                    model = GeminiClient.Model.FLASH_LITE_31, maxTokens = 160, purpose = "tutor",
+                    model = GeminiClient.Model.FLASH_LITE_31, maxTokens = if (realGoal == null) 160 else 240,
+                    purpose = "tutor",
                     idempotencyKey = "tutor-judge:${StoreJson.newId()}",
                     fastThinking = true,
                 )
@@ -437,6 +444,7 @@ object TutorNudges {
         "Result: NOT YET. $what In at most 10 words: name only what to fix, the way a coach would (\"Service, no s. Again.\"), and ask them to say it again. No reaction to the content, no whole sentence read back, no \"great\"."
     else
         "Result: NOT YET, it doesn't do the challenge yet. $what In at most 15 words: say what's missing and give the example fitted to them, then ask them to say it. No reaction to the content, no \"great\"."
+    fun weak(note: String) = "Result: NOT YET. As an answer in the real situation it is weak: $note. In at most 25 words: say plainly how the person on the other side would hear it, give one concrete way to make it stronger from their own life, and ask them to try again. No grammar talk, no \"great\"."
     const val ONCE_MORE = "Result: ONCE MORE. That was right. In at most 8 words: say it was right and ask for it once more, so it sticks. No reaction to the content. Don't move on yet."
     const val DONE_LAST = "Result: DONE — that was the last challenge. In a few words say that's every part, then ask them to say it all now, in their own words, in one go — no example, no list of the parts, no hints. That is the final check."
     fun doneNext(i: Int, n: Int, task: String, example: String) = "Result: DONE — challenge ${i + 1} is checked off. A short, real \"you got it\" that reacts to what they said, then move the conversation on to challenge ${n + 1} (\"$task\"): a natural question that asks for it, about their life, and how they could say it (\"$example\", fitted to them)."

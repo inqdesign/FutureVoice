@@ -64,7 +64,12 @@ object TutorPrompts {
     }
 
     /** iOS `TutorJudge.read`'s system prompt. */
-    fun judgeSystem(target: String): String =
+    fun judgeSystem(target: String, realGoal: String? = null): String = judgeSystemBase(target, realGoal) +
+        (realGoal?.let { goal ->
+            "\n\nTHIS IS PRACTICE FOR A REAL SITUATION: " + goal + ". Also decide, for a try that is done:\n\"weak\": true when the person on the other side of that situation (the interviewer, the examiner, the audience) would count this answer AGAINST them — the same bar at every level, because that person won't lower it: empty or generic (\"I love Lufthansa\", \"I like people\", \"it's my dream\"), a claim with no reason or example where one is expected, something any other candidate could say word for word, or something off-putting or risky to say there. Grammar and accent don't count here (someone else checks those). False when it would hold up there, even if plain.\n\"weak_note\": if weak, what that person would think, in a few English words (\"generic — why us and not any airline?\"); else \"\"."
+        } ?: "")
+
+    private fun judgeSystemBase(target: String, realGoal: String?): String =
         "A " +
         target +
         " learner is talking with their tutor, working on one speaking challenge. Read the line they just said (transcribed from speech) and decide:\n\"kind\": \"try\" when it is an attempt at the challenge — answering what the challenge asks, in " +
@@ -73,7 +78,7 @@ object TutorPrompts {
         target +
         ".\n\"done\": only for a try — true when it DOES the challenge: it says, in " +
         target +
-        ", what the challenge asks for — all of it, as a full answer, not a fragment of it or a different thing. Their own words and their own facts are fine; it doesn't have to match the example. Ignore grammar and spelling (someone else checks those) and ignore anything extra they added. False for \"talk\" and \"help\".\n\"other_topic\": true ONLY when they ask to change the topic, stop or skip this lesson, or practice something else instead (in any language) — not for a mistake, a question about the challenge, or \"I don't know\".\n\"missing_note\": for a try that isn't done, what the line still lacks, in a few English words (\"didn't say which size\"); else \"\".\nReturn STRICT JSON only: {\"kind\": \"try\"|\"talk\"|\"help\", \"done\": true|false, \"other_topic\": true|false, \"missing_note\": \"...\"}"
+        ", what the challenge asks for — all of it, as a full answer, not a fragment of it or a different thing. Their own words and their own facts are fine; it doesn't have to match the example. Ignore grammar and spelling (someone else checks those) and ignore anything extra they added. False for \"talk\" and \"help\".\n\"other_topic\": true ONLY when they ask to change the topic, stop or skip this lesson, or practice something else instead (in any language) — not for a mistake, a question about the challenge, or \"I don't know\".\n\"missing_note\": for a try that isn't done, what the line still lacks, in a few English words (\"didn't say which size\"); else \"\".\nReturn STRICT JSON only: {\"kind\": \"try\"|\"talk\"|\"help\", \"done\": true|false, \"other_topic\": true|false, \"missing_note\": \"...\"" + (if (realGoal == null) "" else ", \"weak\": true|false, \"weak_note\": \"...\"") + "}"
 
     /** iOS `TutorJudge.read`'s user message. */
     fun judgeContent(task: String, example: String, askedWith: String, line: String,

@@ -2657,6 +2657,16 @@ class TalkViewModel(context: Context) : ViewModel() {
      * - right on the first try, or right again after "once more" → DONE,
      *   ticked, and the tutor starts the next challenge (or the final check).
      */
+    /** The real situation a goal's lesson prepares for ("interview: … at …"),
+     *  null for any other lesson (iOS `realGoalLine`). */
+    private fun realGoalLine(lesson: TutorLesson): String? {
+        val id = lesson.topicId ?: return null
+        if (!id.startsWith("goal:")) return null
+        val goalId = id.split(":").getOrNull(1)?.uppercase() ?: return null
+        return com.roro.futurevoice.data.UpcomingGoalStore.active(appContext, lesson.language)
+            .firstOrNull { it.id.uppercase() == goalId }?.promptLine()
+    }
+
     private fun tutorCheck(turnId: String, said: String, correction: Deferred<List<TurnFix>?>,
                            ownLanguage: Boolean = false) {
         val cfg = config ?: return
@@ -2667,7 +2677,8 @@ class TalkViewModel(context: Context) : ViewModel() {
         viewModelScope.launch {
             // Asked on every try, fixes or not: a request to change the
             // topic can come with a mistake in it.
-            val judged = async { TutorJudge.read(said, challenge, cfg.targetLanguage, asked, ownLanguage) }
+            val judged = async { TutorJudge.read(said, challenge, cfg.targetLanguage, asked, ownLanguage,
+                realGoal = realGoalLine(lesson)) }
             // The judge (~0.7 s) is read before the correction (~3 s on
             // Haiku): a turn that isn't a try is answered without waiting
             // for it (iOS, 2026-11-06: the wait after Send was ~4–5 s).
@@ -2703,6 +2714,19 @@ class TalkViewModel(context: Context) : ViewModel() {
             val slips = fixes.map { "\"${it.was}\" → \"${it.now}\"" }
             if (verdict == null) { tutorNudge(TutorNudges.LINE_UNCHECKED, waitKind = "unchecked"); return@launch }
             tutorLastTry = said
+            // A goal's lesson (an interview): an answer the interviewer would
+            // count against them is not done, whatever the grammar and the
+            // level (iOS 2026-11-12). The slips stay on the card.
+            if (verdict.isWeak) {
+                tutorMissedThisChallenge = true
+                tutorCleanOnce = false
+                tutorLastFixes = slips
+                tutorJustTicked = false
+                sendTutorSystem()
+                log("tutor_turn_weak", mapOf("slips" to slips.size.toString()))
+                tutorNudge(TutorNudges.weak(verdict.weakNote ?: "generic"), waitKind = "weak")
+                return@launch
+            }
             if (slips.isNotEmpty() || !verdict.done) {
                 tutorMissedThisChallenge = true
                 tutorCleanOnce = false
