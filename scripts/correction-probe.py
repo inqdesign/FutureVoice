@@ -131,14 +131,20 @@ def ask_claude(line, system):
     JSON read out of the text). Key from ~/keys/anthropic.txt."""
     body = {"model": os.environ["MODEL"], "max_tokens": 2048, "system": system,
             "messages": [{"role": "user", "content": line}]}
+    # CLAUDE_THINKING=off sends thinking disabled; unset is Haiku 5.5's
+    # default, which THINKS (the live correction runs that way).
+    if os.environ.get("CLAUDE_THINKING") == "off":
+        body["thinking"] = {"type": "disabled"}
     req = urllib.request.Request("https://api.anthropic.com/v1/messages", json.dumps(body).encode(), {
         "content-type": "application/json", "anthropic-version": "2023-06-01",
         "x-api-key": open(os.path.expanduser("~/keys/anthropic.txt")).read().strip()})
     err = None
     for attempt in range(5):
         try:
+            t0 = time.time()
             r = json.load(urllib.request.urlopen(req, timeout=60))
             with USAGE_LOCK:
+                USAGE.setdefault("secs", []).append(time.time() - t0)
                 USAGE["calls"] += 1
                 USAGE["out"] += r.get("usage", {}).get("output_tokens", 0)
             text = "".join(b.get("text", "") for b in r["content"])
@@ -246,3 +252,7 @@ print(f"\nfalse grammar accusations: {fp}/{n_ok}   missed real errors: {fn}/{n_e
 print(f"thinking={os.environ.get('THINKING', 'low')}  calls={USAGE['calls']}"
       f"  thought tokens/call={USAGE['thoughts'] / max(1, USAGE['calls']):.0f}"
       f"  output tokens/call={USAGE['out'] / max(1, USAGE['calls']):.0f}")
+if USAGE.get("secs"):
+    t = sorted(USAGE["secs"])
+    print(f"claude thinking={os.environ.get('CLAUDE_THINKING', 'default')}"
+          f"  seconds/call median={t[len(t) // 2]:.2f}  p90={t[int(len(t) * 0.9)]:.2f}")

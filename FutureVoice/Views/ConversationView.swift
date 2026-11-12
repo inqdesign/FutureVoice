@@ -6308,7 +6308,15 @@ struct ConversationView: View {
                 let what = slips.isEmpty
                     ? "It doesn't do challenge \(i + 1) yet (\"\(challenge.task)\")\(verdict.missing_note.map { ": \($0)" } ?? "")."
                     : "Slips: \(slips.joined(separator: "; "))."
-                tutorNudge("Result: NOT YET. \(what) First a few words reacting to what they MEANT (not to how they said it). Then say their line back the right way as ONE sentence (their words, only that fixed)\(slips.isEmpty ? ", or give them the example fitted to them" : ""), and ask them to say it again. Not \"great\", nothing that sounds like it's done.", waitKind: "not_yet")
+                // Short, the way a coach says it (2026-11-12, founder: "just
+                // 'no s at the end, again' — the rest is filler"). The fix is
+                // already on their screen; the whole sentence read back and a
+                // reaction to the content made every miss a paragraph.
+                if !slips.isEmpty {
+                    tutorNudge("Result: NOT YET. \(what) In at most 10 words: name only what to fix, the way a coach would (\"Service, no s. Again.\"), and ask them to say it again. No reaction to the content, no whole sentence read back, no \"great\".", waitKind: "not_yet")
+                } else {
+                    tutorNudge("Result: NOT YET, it doesn't do the challenge yet. \(what) In at most 15 words: say what's missing and give the example fitted to them, then ask them to say it. No reaction to the content, no \"great\".", waitKind: "not_yet")
+                }
                 return
             }
             tutorLastFixes = []
@@ -6316,7 +6324,7 @@ struct ConversationView: View {
                 tutorCleanOnce = true
                 tutorJustTicked = false
                 sendTutorSystem()
-                tutorNudge("Result: ONCE MORE. That was right. Say so in a few words and ask them to say it one more time, so it sticks. Don't move on yet.", waitKind: "once_more")
+                tutorNudge("Result: ONCE MORE. That was right. In at most 8 words: say it was right and ask for it once more, so it sticks. No reaction to the content. Don't move on yet.", waitKind: "once_more")
                 return
             }
             tutorLastTry = ""

@@ -174,8 +174,11 @@ def gemini(model, system, user, thinking="low", tokens=2000):
     return "".join(p.get("text", "") for p in j["candidates"][0]["content"]["parts"] if not p.get("thought"))
 
 gw = read("gateway/src/claude-reply.ts")
-ADDENDUM = re.search(r"CLAUDE_ADDENDUM = `(.*?)`", gw, re.S).group(1)
-STYLE = re.search(r'realtimeStyleRules = """\n(.*?)"""', CV, re.S).group(1)
+# CLAUDE_ADDENDUM = CLAUDE_SPOKEN_ONLY + `…` since 2026-11-12; read either shape.
+_spoken = re.search(r"CLAUDE_SPOKEN_ONLY = `(.*?)`", gw, re.S)
+_add = re.search(r"CLAUDE_ADDENDUM = (?:CLAUDE_SPOKEN_ONLY \+ )?`(.*?)`", gw, re.S)
+ADDENDUM = ((_spoken.group(1) if _spoken and "CLAUDE_SPOKEN_ONLY +" in gw else "") + _add.group(1))
+STYLE = re.search(r'(?:realtimeStyleRules|callStyleRules)\s*=\s*"""\n(.*?)"""', CV, re.S).group(1)
 STYLE = re.sub(r"\\\n\s*", "", "\n" + re.sub(r"^ {8}", "", STYLE, flags=re.M))
 
 def haiku(system, history):

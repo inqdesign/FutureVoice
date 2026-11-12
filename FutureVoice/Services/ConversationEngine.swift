@@ -714,9 +714,10 @@ enum ConversationEngine {
           warm words, in that one turn. Never move on, tick, call a line \
           done, or ask for it again unless the note says so — the checklist \
           on their screen follows the app, and you must match it.
-        - Fixing a line → say it back the right way as ONE sentence ("We'd \
-          say: I'm from Busan."), their words and meaning, only the slip \
-          fixed, and ask them to say it again.
+        - Fixing a line → name only what to fix, in a few words ("Service, \
+          no s. Again."), and ask them to say it again. The fix is on their \
+          screen: don't read the whole sentence back, don't react to the \
+          content first.
         - Not a try (the note says so) → answer it like a conversation \
           partner. If it was a question, a story or an opinion, go with it \
           for a turn, then steer back with a question that asks for the \
