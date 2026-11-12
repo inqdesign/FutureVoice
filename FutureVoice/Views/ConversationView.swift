@@ -6126,6 +6126,16 @@ struct ConversationView: View {
         }
     }
 
+    /// The real situation a goal's lesson prepares for ("interview: … at …"),
+    /// nil for any other lesson. The judge holds a goal's answers to the bar
+    /// of the person on the other side.
+    private func realGoalLine(for lesson: TutorLesson) -> String? {
+        guard let id = lesson.topicId, id.hasPrefix("goal:") else { return nil }
+        let goalId = id.split(separator: ":").dropFirst().first.map(String.init)?.uppercased()
+        return UpcomingGoalStore.shared.goals
+            .first { $0.id.uuidString.uppercased() == goalId }?.promptLine()
+    }
+
     /// Write the curriculum for `request` and start it. `picked`: chosen on
     /// screen, so the tutor says so right away (nobody spoke). A new pick
     /// replaces the lesson in progress, which stays saved, unfinished.
@@ -6264,7 +6274,8 @@ struct ConversationView: View {
             // topic can come with a mistake in it.
             async let judged = TutorJudge.read(said, challenge: challenge,
                                                targetLanguage: target, askedWith: asked,
-                                               ownLanguage: ownLanguage)
+                                               ownLanguage: ownLanguage,
+                                               realGoal: realGoalLine(for: lesson))
             // The judge (~0.7 s) is read before the correction (~3 s on
             // Haiku): a turn that isn't a try is answered without waiting
             // for it (2026-11-06, the wait after Send was ~4–5 s).
@@ -6299,6 +6310,19 @@ struct ConversationView: View {
                 return
             }
             tutorLastTry = said
+            // A goal's lesson (an interview): an answer the interviewer would
+            // count against them is not done, whatever the grammar and the
+            // level (2026-11-12, founder). The slips stay on the card.
+            if verdict.isWeak {
+                tutorMissedThisChallenge = true
+                tutorCleanOnce = false
+                tutorLastFixes = slips
+                tutorJustTicked = false
+                sendTutorSystem()
+                Telemetry.log("tutor_turn_weak", ["slips": String(slips.count)])
+                tutorNudge("Result: NOT YET. As an answer in the real situation it is weak: \(verdict.weak_note ?? "generic"). In at most 25 words: say plainly how the person on the other side would hear it, give one concrete way to make it stronger from their own life, and ask them to try again. No grammar talk, no \"great\".", waitKind: "weak")
+                return
+            }
             if !slips.isEmpty || !verdict.done {
                 tutorMissedThisChallenge = true
                 tutorCleanOnce = false

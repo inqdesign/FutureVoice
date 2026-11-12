@@ -422,6 +422,14 @@ enum TutorJudge {
         /// remark, a question or a request for help was answered as a miss
         /// before, and a line said in the learner's own language always was.
         var kind: String? = nil
+        /// A lesson for a real goal (an interview, an exam): the person on the
+        /// other side would count this answer against them, grammar aside
+        /// (2026-11-12, founder: "I love Lufthansa" must be called out, at
+        /// every level). Only asked for a goal's lesson.
+        var weak: Bool? = nil
+        /// What that person would think, in a few English words.
+        var weak_note: String? = nil
+        var isWeak: Bool { weak == true && done }
 
         enum Kind { case attempt, talk, help }
         /// A missing or unknown kind is a try, the old reading.
@@ -441,7 +449,7 @@ enum TutorJudge {
     /// learner's native language.
     static func read(_ line: String, challenge: TutorLesson.Challenge,
                      targetLanguage: String, askedWith: String,
-                     ownLanguage: Bool = false) async -> Verdict? {
+                     ownLanguage: Bool = false, realGoal: String? = nil) async -> Verdict? {
         let target = LanguageCatalog.englishName(targetLanguage)
         let system = """
         A \(target) learner is talking with their tutor, working on one \
@@ -467,8 +475,23 @@ enum TutorJudge {
         "I don't know".
         "missing_note": for a try that isn't done, what the line still \
         lacks, in a few English words ("didn't say which size"); else "".
-        Return STRICT JSON only: {"kind": "try"|"talk"|"help", "done": true|false, "other_topic": true|false, "missing_note": "..."}
-        """
+        Return STRICT JSON only: {"kind": "try"|"talk"|"help", "done": true|false, "other_topic": true|false, "missing_note": "..."\(realGoal == nil ? "" : ", \"weak\": true|false, \"weak_note\": \"...\"")}
+        """ + (realGoal.map { goal in """
+
+        THIS IS PRACTICE FOR A REAL SITUATION: \(goal). Also decide, for a \
+        try that is done:
+        "weak": true when the person on the other side of that situation \
+        (the interviewer, the examiner, the audience) would count this \
+        answer AGAINST them — the same bar at every level, because that \
+        person won't lower it: empty or generic ("I love Lufthansa", "I \
+        like people", "it's my dream"), a claim with no reason or example \
+        where one is expected, something any other candidate could say word \
+        for word, or something off-putting or risky to say there. Grammar \
+        and accent don't count here (someone else checks those). False when \
+        it would hold up there, even if plain.
+        "weak_note": if weak, what that person would think, in a few \
+        English words ("generic — why us and not any airline?"); else "".
+        """ } ?? "")
         let content = """
         Challenge: \(challenge.task)
         Example of a line that does it: \(challenge.example)
@@ -478,7 +501,7 @@ enum TutorJudge {
         let verdict: Verdict? = try? await GeminiClient.background.sendJSON(
             system: system,
             messages: [GeminiClient.Message(role: .user, content: content)],
-            model: .flashLite31, maxTokens: 160, purpose: "tutor",
+            model: .flashLite31, maxTokens: realGoal == nil ? 160 : 240, purpose: "tutor",
             idempotencyKey: "tutor-judge:\(UUID().uuidString)", requestTimeout: 10,
             fastThinking: true)
         return verdict

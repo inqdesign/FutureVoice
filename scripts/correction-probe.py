@@ -50,13 +50,28 @@ def swift_guard(fn):
             out += literals(block.split("\n        }", 1)[0])
     return out
 
+def spoken_grammar_guard():
+    """`spokenGrammarGuard` (ConversationEngine+LanguageLines.swift): a
+    `case "xx":` per language, each a `return "…" + "…"` of literals."""
+    ll = open(os.path.join(ROOT, "FutureVoice/Services/ConversationEngine+LanguageLines.swift")).read()
+    body = ll[ll.index("static func spokenGrammarGuard("):]
+    body = body[:body.index("default:")]
+    m = re.search(r'case "%s":\s*return (.*?)(?=\n\s*case "|\Z)' % lang, body, re.S)
+    if not m:
+        return ""
+    return "".join(json.loads('"' + x + '"') for x in re.findall(r'"((?:[^"\\]|\\.)*)"', m.group(1)))
+
 m = re.search(r'static func correctionOnlyPrompt\(.*?return """\n(.*?)\n        """', src, re.S)
 prompt = "\n".join(l[8:] if l.startswith("        ") else l for l in m.group(1).splitlines())
 prompt = (prompt.replace("\\(targetName)", target_name).replace("\\(nativeName)", "English")
   .replace("\\(level.rawValue)", os.environ.get("LEVEL", "A2"))
   .replace("\\(scriptGuard(targetLanguage))", swift_guard("scriptGuard"))
   .replace("\\(spacingGuard(targetLanguage))", swift_guard("spacingGuard"))
-  .replace("\\(registerGuard(targetLanguage))", "" if os.environ.get("NO_REGISTER") else swift_guard("registerGuard")))
+  .replace("\\(registerGuard(targetLanguage))", "" if os.environ.get("NO_REGISTER") else swift_guard("registerGuard"))
+  # Notes in the native language (ja/de only, 2026-11-06): about the notes'
+  # language, not what is corrected; the probe's native is English.
+  .replace("\\(notesLanguageGuard(targetLanguage, nativeLanguage: nativeLanguage))", "")
+  .replace("\\(spokenGrammarGuard(targetLanguage))", spoken_grammar_guard()))
 
 def variety_guard():
     """Mirror `varietyGuard(_:accentId:)` for VARIETY=<accent id> (en-GB,
