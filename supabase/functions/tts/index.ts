@@ -53,7 +53,9 @@ const FREE_PURPOSES = new Set([
 // free under a chars-per-talk-minute floor (charge_turn_tts_floored) — the
 // floor is what makes under-reporting call time pointless. Includes the
 // free-talk greeting prewarm, which the floor's 2-minute grace covers.
-const TALK_PURPOSES = new Set(["turn", "opener"])
+// "goodbye" (2026-11-12): the fluent self's ~12 s of feedback after End,
+// part of the call it closes, so it rides the same floor.
+const TALK_PURPOSES = new Set(["turn", "opener", "goodbye"])
 
 // Verified (user, voice) ownership pairs, remembered per edge instance so the
 // ownership check below adds a DB round-trip at most ONCE per warm instance

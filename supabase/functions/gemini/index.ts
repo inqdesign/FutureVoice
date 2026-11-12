@@ -63,7 +63,8 @@ const DAILY_CAPS: Record<string, number> = {
   "report-narration": 30,      // the report's spoken script, 2–4 calls per report
   "tutor-bot": 200,            // the Talk tab's tutor: one call per question asked
   "goal-prep": 20,             // a day's reading + model answer per upcoming goal, written on tap
-  "level-tag": 60,             // learner state: one per summarized talk + a 15-talk backfill
+  "level-tag": 60,
+  "goodbye": 60,               // the fluent self's spoken feedback, one per finished call             // learner state: one per summarized talk + a 15-talk backfill
 }
 const DEFAULT_DAILY_CAP = 300
 

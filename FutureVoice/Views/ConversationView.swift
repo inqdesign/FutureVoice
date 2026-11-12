@@ -876,6 +876,11 @@ struct ConversationView: View {
 
     /// The call is billed from the moment it starts (founder, 2026-10-27):
     /// the opener and the fluent self's first lines count like every other
+    /// The fluent self's spoken goodbye after End (`CallGoodbye`): the words,
+    /// whether the voice is still saying them, and the task making them.
+    @State private var goodbye: CallGoodbye.Line?
+    @State private var goodbyePlaying = false
+    @State private var goodbyeTask: Task<Void, Never>?
     /// line. Until then nothing counted before the learner's first turn
     /// (2026-09-07), with tutor mode the one exception (2026-10-25). Silence
     /// is still free: only seconds where something is happening count.
@@ -1604,10 +1609,17 @@ struct ConversationView: View {
         if isEnding {
             ZStack {
                 Color(.systemBackground).opacity(0.95).ignoresSafeArea()
-                SummaryProgressView(progress: summaryProgress, facts: talkFacts,
-                                    banner: freeCallSpent
-                                        ? explain("Your free talk time is used up")
-                                        : nil)
+                VStack(spacing: 8) {
+                    SummaryProgressView(progress: summaryProgress, facts: talkFacts,
+                                        banner: freeCallSpent
+                                            ? explain("Your free talk time is used up")
+                                            : nil)
+                    if let goodbye {
+                        CallGoodbyeCard(line: goodbye, isPlaying: goodbyePlaying, onStop: stopGoodbye)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
+                }
+                .animation(.easeInOut(duration: 0.25), value: goodbye)
             }
             .transition(.opacity)
         }
@@ -5097,6 +5109,9 @@ struct ConversationView: View {
             // that stays one.
             coached: prior?.coached == true ? true : nil,
             tutorLesson: learnerSpokeThisCall ? (tutorLesson?.record ?? prior?.tutorLesson) : prior?.tutorLesson
+        // The turns are final now (the held corrections have landed), so the
+        // fluent self's goodbye can be written from them while the book builds.
+        startGoodbye()
         )
         if learnerSpokeThisCall, var lesson = tutorLesson, !lesson.sessionIds.contains(sessionId) {
             lesson.sessionIds.append(sessionId)
@@ -5179,6 +5194,62 @@ struct ConversationView: View {
                 try? await Task.sleep(nanoseconds: 350_000_000)
                 showingFirstCallCheck = true
             }
+    /// The fluent self's ~12 s of feedback on the call just ended, spoken in
+    /// the learner's voice while the book builds (`CallGoodbye`). Skipped when
+    /// nothing in the call can be honestly praised. Fire and forget: nothing
+    /// in the wrap-up waits on it, and a failure at any step is silence, which
+    /// is what the wrap-up was before.
+    private func startGoodbye() {
+        guard learnerSpokeThisCall, goodbyeTask == nil,
+              let voiceId = appState.speakingVoiceId else { return }
+        let used = goalItems.filter { usedGoalKeys.contains($0.key) }.map(\.text)
+        let target = appState.targetLanguage
+        guard let facts = CallGoodbye.facts(turns: turns, wordsUsed: used, target: target) else {
+            Telemetry.log("call_goodbye", ["outcome": "nothing_to_praise"])
+            return
+        }
+        let started = Date()
+        let id = sessionId
+        let topic = topic
+        goodbyeTask = Task {
+            func log(_ outcome: String, _ extra: [String: String] = [:]) {
+                Telemetry.log("call_goodbye", extra.merging([
+                    "outcome": outcome,
+                    "ms": "\(Int(Date().timeIntervalSince(started) * 1000))",
+                ]) { a, _ in a })
+            }
+            guard let line = await CallGoodbye.write(
+                facts: facts, topic: topic.isEmpty ? nil : topic, target: target,
+                native: appState.nativeLanguage, level: appState.proficiency, sessionId: id) else {
+                log("no_line"); return
+            }
+            guard !Task.isCancelled, !isTornDown else { return }
+            goodbye = line
+            do {
+                let audio = try await VoiceClient.shared.synthesize(
+                    voiceId: voiceId, text: line.spoken,
+                    idempotencyKey: "goodbye-tts:\(id.uuidString)",
+                    purpose: "goodbye", speed: SpeechSpeed.current)
+                guard !Task.isCancelled, !isTornDown else { return }
+                try player.play(audio, source: "call_goodbye") {
+                    if goodbyePlaying { log("played", ["chars": "\(line.spoken.count)"]) }
+                    goodbyePlaying = false
+                }
+                goodbyePlaying = true
+            } catch {
+                // The words stay on the board; only the voice is missing.
+                log("no_audio", ["error": (error as NSError).domain + ":\((error as NSError).code)"])
+            }
+        }
+    }
+
+    private func stopGoodbye() {
+        guard goodbyePlaying else { return }
+        goodbyePlaying = false
+        player.stop()
+        Telemetry.log("call_goodbye", ["outcome": "stopped"])
+    }
+
             return
         }
         if let onClose { onClose() } else { dismiss() }
@@ -5269,6 +5340,8 @@ struct ConversationView: View {
             )
             Task { await openConversation() }
         }
+        goodbyeTask?.cancel()
+        goodbyePlaying = false
     }
 
     /// The summary sheet is GONE (its `onDismiss`, Done or swipe) → leave the
@@ -5288,6 +5361,11 @@ struct ConversationView: View {
         // after it — the next tap could not open a call either way.
         if let cached = BillingGate.shared.account, cached.isEntitled || cached.unlimited {
             // Entitlement doesn't lapse mid-call; no round trip on every exit.
+        // The last call's goodbye ends with it; a new call is a new one.
+        goodbyeTask?.cancel()
+        goodbyeTask = nil
+        goodbye = nil
+        if goodbyePlaying { goodbyePlaying = false; player.stop() }
             logPostCallPitch("skipped_entitled")
             endAndCloseAfterPitch()
             return

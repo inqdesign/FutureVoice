@@ -1572,6 +1572,38 @@ beside Replay (다시 듣기) the pair says listen-again / speak-again.
   two running states are SEEDED (`DebugCapture.sayItAgainStage`) because a
   capture run has no mic, the same trick `captureShadow` plays.
 
+## The goodbye after End (2026-11-12)
+
+Founder: the wait for the book after End was silence, and a call should end
+with someone saying goodbye. Now the fluent self speaks ~12 s of feedback on
+the call, in the learner's voice, while the board fills (`CallGoodbye.swift`,
+`CallGoodbyeCard`, `ConversationView.startGoodbye`). Settled by ear on three
+of the founder's own calls (samples in `~/Desktop/beta audio/end-of-call-goodbye/`).
+
+- **Feedback on THIS call only**: one thing done well, one tip if a slip was
+  left unfixed, a short bye. No "next time" (cut by the founder) and **never
+  a question**: the call is over, nothing can be answered. Code cuts any
+  sentence ending in `?` as well as the prompt forbidding it.
+- **Code picks what may be praised, the model only phrases it.** Given the
+  transcript, the first sample praised a line carrying a correction and set
+  a slip already fixed as homework. `CallGoodbye.facts` hands over clean
+  lines (live correction ran and found nothing, 5+ words), slips said right
+  LATER in the call, and ticked notebook chips as praise; slips never said
+  right as tips. A turn whose correction never arrived is neither. Nothing
+  to praise = no goodbye (`call_goodbye` outcome `nothing_to_praise`).
+- **Only what exists at hang-up**, never the summary (still being written),
+  so it starts ~2 s after End and nothing waits on it.
+- Material: target language, informal, at the learner's level; the native
+  line under it is for the screen. No names (a Korean translation misspelled
+  the founder's).
+- Server: `purpose: "goodbye"` on both calls. The text is a Haiku move with
+  thinking off (`CLAUDE_PURPOSE_ADDENDA`, listed in `CLAUDE_PURPOSES` to
+  take effect); the voice is a TALK purpose in `tts` (free under the call's
+  floor). **Deploy `tts` + `gemini` before a build with this ships**: on the
+  old `tts` an unknown purpose is charged per character from the pool.
+- Telemetry `call_goodbye` (outcome: played · stopped · no_line · no_audio ·
+  nothing_to_praise, ms). Android: owed.
+
 ## The learning loop (keep it closed)
 
 ```
