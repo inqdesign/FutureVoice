@@ -35,7 +35,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>141</string>
+	<string>142</string>
 	<key>FVGoogleDriveClientID</key>
 	<string>$(GOOGLE_DRIVE_CLIENT_ID)</string>
 	<key>FVICloudContainer</key>
