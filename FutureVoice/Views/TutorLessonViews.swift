@@ -156,15 +156,48 @@ struct TutorTopicSheet: View {
     /// Close calls it, and a pick leaves the page open so the curriculum
     /// stays in view while the lesson runs.
     var onClose: (() -> Void)? = nil
+    /// The lesson running in this call, drawn on top so the page says what
+    /// is being practiced now (2026-11-12, founder: a goal's interview lesson
+    /// and this page read as two unrelated things).
+    var current: TutorLesson? = nil
 
     @State private var progress: [String: TutorTopicProgress] = [:]
     @State private var stepUp: TutorCurriculum.Topic?
+    /// The learner's own goals and the questions each is practiced on — the
+    /// same questions, and the same lesson ids, as the goal's page.
+    @State private var goalQuestions: [(goal: UpcomingGoal, questions: [GoalPrep.Question])] = []
+    @State private var lessons: [TutorLesson] = []
 
     private var level: CEFRLevel { appState.proficiency }
 
     var body: some View {
         NavigationStack {
             List {
+                if let current, current.droppedAt == nil, !current.isFinished {
+                    Section(explain("Now")) {
+                        Button { afterPick() } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "graduationcap.fill")
+                                    .font(.title3)
+                                    .foregroundStyle(Color.themeAccent)
+                                Text(current.title).foregroundStyle(.primary)
+                                Spacer(minLength: 4)
+                                Text(verbatim: "\(current.doneCount)/\(current.challenges.count)")
+                                    .font(.footnote.monospacedDigit())
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+                ForEach(goalQuestions, id: \.goal.id) { entry in
+                    Section {
+                        ForEach(entry.questions) { q in
+                            Button { pickGoal(entry.goal, q) } label: { goalRow(entry.goal, q) }
+                        }
+                    } header: {
+                        Label(entry.goal.title, systemImage: entry.goal.kind.symbol)
+                    }
+                }
                 if let next = TutorCurriculum.next(progress: progress, level: level) {
                     Section(explain("Next up")) {
                         Button { pick(next.topic) } label: {
@@ -250,7 +283,47 @@ struct TutorTopicSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
-        .onAppear { progress = TutorProgressStore.all(language: appState.targetLanguage) }
+        .onAppear {
+            progress = TutorProgressStore.all(language: appState.targetLanguage)
+            lessons = TutorLessonStore.all(language: appState.targetLanguage)
+            goalQuestions = UpcomingGoalStore.shared.active(language: appState.targetLanguage)
+                .compactMap { g in
+                    guard let qs = GoalPrep.cachedQuestions(for: g), !qs.isEmpty else { return nil }
+                    return (g, qs)
+                }
+        }
+    }
+
+    private func goalRow(_ goal: UpcomingGoal, _ q: GoalPrep.Question) -> some View {
+        let state = GoalPrep.state(of: q.text, goal: goal, lessons: lessons)
+        let isNow = current?.topicId == GoalPrep.topicId(goal: goal, question: q.text)
+            && current?.droppedAt == nil
+        return HStack(spacing: 12) {
+            Group {
+                switch state {
+                case .ready:      Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                case .practicing: Image(systemName: "circle.dotted").foregroundStyle(Color.themeAccent)
+                case .untouched:  Image(systemName: "circle").foregroundStyle(.tertiary)
+                }
+            }
+            .font(.title3)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(q.text).foregroundStyle(.primary)
+                if isNow {
+                    Text(explain("Now")).font(.footnote).foregroundStyle(Color.themeAccent)
+                } else if state == .practicing {
+                    Text(explain("In progress")).font(.footnote).foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    /// The same lesson the goal's page opens on this question.
+    private func pickGoal(_ goal: UpcomingGoal, _ q: GoalPrep.Question) {
+        Analytics.capture("tutor_topic_goal_picked", ["kind": goal.kind.rawValue])
+        onPick("\u{201C}\(q.text)\u{201D} — \(goal.title). \(goal.drillBlurb)",
+               GoalPrep.topicId(goal: goal, question: q.text))
+        afterPick()
     }
 
     private func chapterRow(_ chapter: TutorCurriculum.Chapter) -> some View {

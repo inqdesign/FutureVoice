@@ -1199,15 +1199,15 @@ struct ConversationView: View {
             .inspector(isPresented: $showingTutorTopics) {
                 TutorTopicSheet(onPick: { picked, topicId in
                     startTutorLesson(request: picked, picked: true, topicId: topicId)
-                }, onClose: { showingTutorTopics = false })
+                }, onClose: { showingTutorTopics = false }, current: tutorLesson)
                     .environmentObject(appState)
                     .inspectorColumnWidth(min: 340, ideal: 400, max: 520)
             }
             #else
             .sheet(isPresented: $showingTutorTopics) {
-                TutorTopicSheet { picked, topicId in
+                TutorTopicSheet(onPick: { picked, topicId in
                     startTutorLesson(request: picked, picked: true, topicId: topicId)
-                }
+                }, current: tutorLesson)
                     .environmentObject(appState)
             }
             #endif
@@ -2443,8 +2443,17 @@ struct ConversationView: View {
 
     // MARK: - The tutor's island
 
+    /// What the call is about right now: a running lesson or sound is the
+    /// topic, not the mode's name (2026-11-12, founder: a tutor call on the
+    /// interview lesson read "Topic: Tutor").
     private var islandTitle: String {
-        topicIsNews ? explain("News") : callDisplayTitle
+        if tutorThisCall, let lesson = tutorLesson, lesson.droppedAt == nil {
+            return lesson.title
+        }
+        if pronThisCall, let pronTopic {
+            return pronTopic.symbol
+        }
+        return topicIsNews ? explain("News") : callDisplayTitle
     }
 
     /// A scene or a person's call keeps the topic and the way it was launched.
