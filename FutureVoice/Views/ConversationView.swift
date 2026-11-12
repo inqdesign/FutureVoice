@@ -3625,9 +3625,15 @@ struct ConversationView: View {
     /// held still for `earlyCorrectionSettle` (2026-11-06); at Send it is
     /// used if the turn says the same thing, else asked again. At most
     /// `maxEarlyCorrections` per turn.
+    ///
+    /// And without Send (2026-11-12, founder: "why can't the tutor answer as
+    /// fast as free talk?"): free talk starts its reply the moment the words
+    /// stand still, while a tutor try started its check only once the
+    /// gateway committed the turn (~1 s later) and then waited ~3 s for it.
+    /// The check now starts at the same moment free talk's reply does.
     private func armEarlyCorrection(_ partial: String) {
         earlyCorrectionTimer?.cancel()
-        guard sendToAnswer, tutorThisCall, tutorJudging, !pronThisCall,
+        guard tutorThisCall, tutorJudging, !pronThisCall,
               RealtimeMode.isEnabled, phoneCallActive else { return }
         let text = partial.trimmingCharacters(in: .whitespacesAndNewlines)
         guard WordSplitter.count(text) >= 3, earlyCorrectionFires < Self.maxEarlyCorrections,
