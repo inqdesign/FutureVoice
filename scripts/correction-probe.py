@@ -181,7 +181,10 @@ def ask(line, system=None):
     err = None
     for _ in range(3):
         try:
+            t0 = time.time()
             r = json.load(urllib.request.urlopen(req, timeout=60))
+            with USAGE_LOCK:
+                USAGE.setdefault("secs", []).append(time.time() - t0)
             u = r.get("usageMetadata", {})
             with USAGE_LOCK:
                 USAGE["calls"] += 1
@@ -269,5 +272,5 @@ print(f"thinking={os.environ.get('THINKING', 'low')}  calls={USAGE['calls']}"
       f"  output tokens/call={USAGE['out'] / max(1, USAGE['calls']):.0f}")
 if USAGE.get("secs"):
     t = sorted(USAGE["secs"])
-    print(f"claude thinking={os.environ.get('CLAUDE_THINKING', 'default')}"
+    print(f"model={os.environ.get('MODEL', 'gemini-3.6-flash')} claude thinking={os.environ.get('CLAUDE_THINKING', 'default')}"
           f"  seconds/call median={t[len(t) // 2]:.2f}  p90={t[int(len(t) * 0.9)]:.2f}")

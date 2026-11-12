@@ -748,6 +748,9 @@ struct ConversationView: View {
     /// screen, never the transcript, so it starts at Send; `pronTurn` uses
     /// it when the turn's audio is the same take.
     @State private var pronEarly: PronEarlyRead?
+    /// Each finished fluent-self line's text, by turn id: the app reads what
+    /// the tutor said about a try it judged itself (`tutorReconcile`).
+    @State private var finishedReplies: [UUID: String] = [:]
     /// The last take's verdict came from the early read (`early` on its event).
     @State private var pronEarlyUsed = false
     /// What each pronunciation take was a reading OF (the word or sentence
@@ -3421,6 +3424,7 @@ struct ConversationView: View {
             }
             didSaveCurrentSession = false
             lastFinishedReply = (id, text)
+            if tutorThisCall { finishedReplies[id] = text }
             advanceCoach(afterReply: text, turnId: id)
         }
         realtime.tutorCall = tutorWasOn || tutorThisCall
@@ -3470,7 +3474,7 @@ struct ConversationView: View {
         syncCoachSteer()
         // A picked-up call is a new gateway session: the final check's hold
         // has to be set on it again.
-        if tutorJudging { realtime.setHoldReplies(true) }
+        if tutorHolds { realtime.setHoldReplies(true) }
         if let note = pendingTutorNudge {
             pendingTutorNudge = nil
             realtime.nudge(note)
@@ -6084,7 +6088,7 @@ struct ConversationView: View {
         if let saved = TutorLessonStore.resumable(language: appState.targetLanguage) {
             tutorLesson = saved
             await startRealtimeCall(opener: nil)
-            realtime.setHoldReplies(true)
+            realtime.setHoldReplies(tutorHolds)
             if saved.inFinalCheck {
                 realtime.nudge("The learner is back for the final check of last time's lesson (see TUTOR MODE). Greet them in a few words, say the only thing left is the final check, and ask them to say it all in their own words, in one go — no example, no hints.")
             } else {
@@ -6124,6 +6128,72 @@ struct ConversationView: View {
         } else {
             tutorCheck(turnId: turnId, said: said, ownLanguage: ownLanguage, correction: correction)
         }
+    }
+
+    /// A try the tutor judged itself, checked behind it (2026-11-13): the
+    /// app's verdict (judge + correction, as for a held turn) against what
+    /// the tutor's line did. Both clean and the tutor moved on → tick. The
+    /// app found a slip, a missing part or a weak answer but the tutor moved
+    /// on → a note makes it take that back, and the challenge stays. The
+    /// tutor asked again → nothing to do; the next try is judged the same way.
+    private func tutorReconcile(turnId: UUID, said: String, lessonId: UUID, index i: Int,
+                                challenge: TutorLesson.Challenge, verdict: TutorJudge.Verdict,
+                                slips: [String]) async {
+        let appClean = slips.isEmpty && verdict.done && !verdict.isWeak
+        let reply = await tutorReply(after: turnId)
+        let tutorSaid: TutorReplyRead.Said? = if let reply {
+            await TutorReplyRead.read(reply, challenge: challenge, targetLanguage: appState.targetLanguage)
+        } else { nil }
+        guard !isTornDown, var now = tutorLesson, now.id == lessonId, now.current == i else { return }
+        Telemetry.log("tutor_self_judge", [
+            "app": appClean ? "clean" : (verdict.isWeak ? "weak" : (!slips.isEmpty ? "slips" : "not_done")),
+            "tutor": tutorSaid?.rawValue ?? "unknown",
+            "index": String(i + 1),
+        ])
+        if appClean {
+            guard tutorSaid == .movedOn else { return }
+            tutorLastTry = ""
+            tutorLastFixes = []
+            tutorMissedThisChallenge = false
+            tutorCleanOnce = false
+            now.challenges[i].doneAt = Date()
+            now.challenges[i].line = said
+            if now.current == nil { beginFinalCheck(&now) }
+            TutorLessonStore.save(now)
+            withAnimation(.easeInOut(duration: 0.3)) { tutorLesson = now }
+            // The tutor already moved on: nothing for its next turn to do.
+            tutorJustTicked = false
+            HapticEngine.success()
+            Telemetry.log("tutor_challenge_done", ["index": String(i + 1),
+                                                   "of": String(now.challenges.count),
+                                                   "by": "self"])
+            sendTutorSystem()
+            return
+        }
+        tutorMissedThisChallenge = true
+        tutorCleanOnce = false
+        tutorLastFixes = slips
+        sendTutorSystem()
+        guard tutorSaid == .movedOn else { return }
+        let what = verdict.isWeak
+            ? "as an answer in the real situation it is weak: \(verdict.weak_note ?? "generic")"
+            : !slips.isEmpty ? "slips: \(slips.joined(separator: "; "))"
+            : "it doesn't do challenge \(i + 1) yet (\"\(challenge.task)\")\(verdict.missing_note.map { ": \($0)" } ?? "")"
+        tutorNudge("You moved on, but the app's check of their last try found what you missed: \(what). In at most 15 words take it back (\"Wait, one thing: …\"), name only that, and ask them to say that line once more. The lesson stays on challenge \(i + 1).", waitKind: "self_takeback")
+    }
+
+    /// The tutor's line that answered `turnId`, once it has finished.
+    private func tutorReply(after turnId: UUID, limit: TimeInterval = 25) async -> String? {
+        let start = Date()
+        while Date().timeIntervalSince(start) < limit, !isTornDown {
+            if let idx = turns.firstIndex(where: { $0.id == turnId }),
+               let reply = turns[(idx + 1)...].first(where: { $0.role == .fluentSelf }),
+               let text = finishedReplies[reply.id] {
+                return text
+            }
+            try? await Task.sleep(for: .milliseconds(250))
+        }
+        return nil
     }
 
     /// The real situation a goal's lesson prepares for ("interview: … at …"),
@@ -6269,6 +6339,13 @@ struct ConversationView: View {
         let asked = tutorLine(answeredBy: turnId)
         let challenge = lesson.challenges[i]
         let target = appState.targetLanguage
+        // The tutor already answered this try itself (not held); the app
+        // checks behind it and never speaks first (`tutorReconcile`).
+        let selfJudged = tutorSelfJudges
+        if selfJudged, tutorWaitTurnAt != nil {
+            tutorWaitNoteAt = Date()
+            tutorWaitKind = "self"
+        }
         Task { @MainActor in
             // Asked on every try, fixes or not: a request to change the
             // topic can come with a mistake in it.
@@ -6282,6 +6359,11 @@ struct ConversationView: View {
             let verdict = await judged
             guard !isTornDown, tutorStillSaid(turnId, said), tutorLesson?.id == lesson.id,
                   tutorLesson?.current == i else { return }
+            if verdict?.wantsOtherTopic == true, selfJudged {
+                // The tutor already agreed (its TUTOR MODE block says so).
+                dropTutorLesson(said: said)
+                return
+            }
             if verdict?.wantsOtherTopic == true {
                 // The held turn's one line, before the lesson changes.
                 tutorNudge("They asked to leave this lesson. Agree right away in a few words — never \"let's finish this one first\". If they named what they'd like instead, say that's the new lesson and you're setting it up; otherwise ask what they'd like to practice.", waitKind: "leave")
@@ -6291,6 +6373,10 @@ struct ConversationView: View {
             // A line in their own language is a request for the words, never
             // a miss — and with no judge to say otherwise, still help.
             let kind: TutorJudge.Verdict.Kind = ownLanguage ? .help : (verdict?.turnKind ?? .attempt)
+            if selfJudged, kind != .attempt {
+                Telemetry.log(kind == .help ? "tutor_turn_help" : "tutor_turn_talk", ["self": "1"])
+                return
+            }
             if kind == .help {
                 Telemetry.log("tutor_turn_help", ["own_language": ownLanguage ? "1" : "0"])
                 tutorNudge("Not a try: they \(ownLanguage ? "said this in their own language — they couldn't find the \(LanguageCatalog.englishName(target))" : "asked for help with how to say it, or are stuck"). Teach it: give them the \(LanguageCatalog.englishName(target)) line for what they meant, short and at their level, fitted to challenge \(i + 1) (\"\(challenge.task)\"; e.g. \"\(challenge.example)\"), and invite them to say it. No \"not yet\" — this is help, not a miss.", waitKind: "help")
@@ -6306,10 +6392,19 @@ struct ConversationView: View {
                   now.id == lesson.id, now.current == i else { return }
             let slips = fixes.map { "\"\($0.was)\" → \"\($0.now)\"" }
             guard let verdict else {
-                tutorNudge("The app couldn't check that line. Ask them, in a few words, to say it once more.", waitKind: "unchecked")
+                // The tutor already answered it; with no check there is
+                // nothing to add or tick.
+                if !selfJudged {
+                    tutorNudge("The app couldn't check that line. Ask them, in a few words, to say it once more.", waitKind: "unchecked")
+                }
                 return
             }
             tutorLastTry = said
+            if selfJudged {
+                await tutorReconcile(turnId: turnId, said: said, lessonId: lesson.id, index: i,
+                                     challenge: challenge, verdict: verdict, slips: slips)
+                return
+            }
             // A goal's lesson (an interview): an answer the interviewer would
             // count against them is not done, whatever the grammar and the
             // level (2026-11-12, founder). The slips stay on the card.
@@ -6701,6 +6796,19 @@ struct ConversationView: View {
         return lesson.droppedAt == nil
     }
 
+    /// The tutor judges a challenge's tries itself and answers at once, like
+    /// free talk (2026-11-13, founder); the app checks behind it
+    /// (`tutorReconcile`). The final check and what follows a lesson are
+    /// still answered with the app's verdict.
+    private var tutorSelfJudges: Bool {
+        guard tutorThisCall, !tutorPlanning, let lesson = tutorLesson,
+              lesson.droppedAt == nil, !lesson.isFinished, !lesson.inFinalCheck else { return false }
+        return lesson.current != nil
+    }
+
+    /// Every learner turn waits at the gateway for the app's note.
+    private var tutorHolds: Bool { tutorJudging && !tutorSelfJudges }
+
     private var tutorInFinalCheck: Bool {
         tutorThisCall && tutorLesson?.inFinalCheck == true
     }
@@ -6711,7 +6819,7 @@ struct ConversationView: View {
         // While a lesson runs the tutor answers only with the app's verdict,
         // so an answer is never met twice and the checklist never disagrees
         // with what the tutor says (device, 2026-10-28).
-        realtime.setHoldReplies(tutorJudging)
+        realtime.setHoldReplies(tutorHolds)
     }
 
     private func systemPrompt() -> String {
@@ -6748,6 +6856,8 @@ struct ConversationView: View {
             tutorJustTicked: tutorJustTicked,
             tutorLastFixes: tutorLastFixes,
             tutorPlanning: tutorPlanning,
+            tutorSelfJudges: tutorSelfJudges,
+            tutorRealGoal: tutorLesson.flatMap(realGoalLine(for:)),
             freeMode: isFreeMode
         )
     }

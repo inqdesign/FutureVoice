@@ -78,6 +78,16 @@ final class ConversationPromptDumpTests: XCTestCase {
                     try p.write(to: url.appendingPathComponent("\(lang)-\(level.rawValue)-tutor-\(name).txt"),
                                 atomically: true, encoding: .utf8)
                 }
+                // The tutor judging a challenge's tries itself (2026-11-13),
+                // plain and for a real goal.
+                for (name, goal) in [("self", nil), ("self-goal", "interview: Lufthansa flight attendant at Munich, no date set")] as [(String, String?)] {
+                    let p = ConversationEngine.conversationSystemPrompt(
+                        targetLanguage: lang, nativeLanguage: lang == "ko" ? "en" : "ko",
+                        level: level, topPatterns: [], weakVocabAreas: [], topic: "",
+                        tutor: true, tutorLesson: lesson, tutorSelfJudges: true, tutorRealGoal: goal)
+                    try p.write(to: url.appendingPathComponent("\(lang)-\(level.rawValue)-tutor-\(name).txt"),
+                                atomically: true, encoding: .utf8)
+                }
             }
         }
     }

@@ -166,6 +166,8 @@ enum ConversationEngine {
         tutorJustTicked: Bool = false,
         tutorLastFixes: [String] = [],
         tutorPlanning: Bool = false,
+        tutorSelfJudges: Bool = false,
+        tutorRealGoal: String? = nil,
         freeMode: Bool = false
     ) -> String {
         if freeMode {
@@ -547,7 +549,7 @@ enum ConversationEngine {
           or truncate; (2) re-read it against PITCH TO THEIR LEVEL
           (\(levelName)) — a word or clause above that line that isn't the one
           deliberate stretch gets the plainer version. Check (2) is the one
-          that carries their level; (1) is only about not monologuing.\(beginnerQuestions(level, targetLanguage: targetLanguage))\(tutor ? tutorBlock(targetLanguage: targetLanguage, languageName: languageName, lesson: tutorLesson, justTicked: tutorJustTicked, lastFixes: tutorLastFixes, planning: tutorPlanning) : "")
+          that carries their level; (1) is only about not monologuing.\(beginnerQuestions(level, targetLanguage: targetLanguage))\(tutor ? tutorBlock(targetLanguage: targetLanguage, languageName: languageName, lesson: tutorLesson, justTicked: tutorJustTicked, lastFixes: tutorLastFixes, planning: tutorPlanning, selfJudges: tutorSelfJudges, realGoal: tutorRealGoal) : "")
         """
     }
 
@@ -571,7 +573,8 @@ enum ConversationEngine {
     /// on, so every other prompt is byte-identical (`TutorModeTests`).
     static func tutorBlock(targetLanguage: String, languageName: String,
                            lesson: TutorLesson? = nil, justTicked: Bool = false,
-                           lastFixes: [String] = [], planning: Bool = false) -> String {
+                           lastFixes: [String] = [], planning: Bool = false,
+                           selfJudges: Bool = false, realGoal: String? = nil) -> String {
         let lessonPart: String
         if planning, let lesson {
             // The next round (or a picked topic) is being written. Left on
@@ -632,6 +635,56 @@ enum ConversationEngine {
             anything on your own. Never end the call or say goodbye on your \
             own.
             """
+        } else if selfJudges, let lesson, let now = lesson.current {
+            // The tutor judges each try ITSELF and answers at once, like a
+            // free talk (2026-11-13, founder: "why can't it answer as fast as
+            // free talk?" — the voice waited ~3 s on the app's correction
+            // every turn). The app checks behind it and keeps the checklist;
+            // when it finds what the tutor missed, a note says so.
+            let rows = lesson.challenges.enumerated().map { i, c in
+                let mark = c.doneAt != nil ? "DONE" : (i == now ? "NOW " : "    ")
+                return "  [\(mark)] \(i + 1). \(c.task) — e.g. \"\(c.example)\""
+            }.joined(separator: "\n")
+            let weakRule = realGoal.map { goal in """
+
+            - A clean try that the person on the other side of the real \
+              situation (\(goal)) would hold against them — generic ("I love \
+              Lufthansa", "it's my dream"), a claim with no reason or example, \
+              something any candidate could say → in at most 25 words say how \
+              that person would hear it and one way to make it stronger from \
+              their own life, and ask them to try again. The same bar at every \
+              level: that person won't lower it.
+            """ } ?? ""
+            lessonPart = """
+            TODAY'S LESSON: "\(lesson.titleTarget)". The goal: by the end they \
+            can say all of it properly, out loud, with no mistakes. The \
+            checklist:
+            \(rows)
+            You are on challenge \(now + 1). YOU judge each try, the moment \
+            they finish, and answer it in that same turn:
+            - A try with a slip you can HEAR (a wrong word or form, a missing \
+              or extra ending) → in at most 10 words name only what to fix \
+              ("Service, no s. Again.") and ask them to say it again. Don't \
+              read the whole sentence back, don't react to the content first.
+            - A try that doesn't do challenge \(now + 1) yet (a fragment, or a \
+              different thing) → in at most 15 words say what's missing and \
+              give the example fitted to them, then ask them to say it.\(weakRule)
+            - A clean try right after you asked them to fix it → in at most 8 \
+              words: that was right, once more so it sticks.
+            - A clean try otherwise → a short, real "you got it", then move on \
+              to the next challenge: a natural question that asks for it, and \
+              how they could say it (its example, fitted to them). After the \
+              last one, start the FINAL CHECK: ask them to say it all in their \
+              own words, in one go — no example, no list of the parts, no hints.
+            - Not a try (they're talking with you, asking something, asking \
+              for help, or said it in their own language) → answer it as their \
+              conversation partner and help. No verdict.
+            Judge only what you can hear (see NEVER TEACH WHAT THE TRANSCRIBER \
+            DID below); when you're not sure it's a slip, it isn't. The app \
+            checks every try a moment after you answer and keeps the \
+            checklist: when it found something you didn't, a note in square \
+            brackets tells you — take it back in a few words in your next line.
+            """
         } else if let lesson, let now = lesson.current {
             let rows = lesson.challenges.enumerated().map { i, c in
                 let mark = c.doneAt != nil ? "DONE" : (i == now ? "NOW " : "    ")
@@ -674,6 +727,17 @@ enum ConversationEngine {
             practice that?").
             """
         }
+        // Byte-identical to before when the app judges (the held turn).
+        let tryRule = selfJudges && lesson?.current != nil
+            ? "- A TRY → judge it yourself and answer it in that turn, as the lesson above says."
+            : """
+            - A TRY comes with the app's result: NOT YET (a slip, or it doesn't \
+              do the challenge yet), ONCE MORE (right, say it again so it \
+              sticks) or DONE (move on). Say what the note says, in your own \
+              warm words, in that one turn. Never move on, tick, call a line \
+              done, or ask for it again unless the note says so — the checklist \
+              on their screen follows the app, and you must match it.
+            """
         return """
 
 
@@ -708,12 +772,7 @@ enum ConversationEngine {
           say it — the example line, fitted to them ("So what do you do? \
           You could say: I work as a designer."). On the final check: no \
           example and no list of the parts.
-        - A TRY comes with the app's result: NOT YET (a slip, or it doesn't \
-          do the challenge yet), ONCE MORE (right, say it again so it \
-          sticks) or DONE (move on). Say what the note says, in your own \
-          warm words, in that one turn. Never move on, tick, call a line \
-          done, or ask for it again unless the note says so — the checklist \
-          on their screen follows the app, and you must match it.
+        \(tryRule)
         - Fixing a line → name only what to fix, in a few words ("Service, \
           no s. Again."), and ask them to say it again. The fix is on their \
           screen: don't read the whole sentence back, don't react to the \
@@ -762,7 +821,7 @@ enum ConversationEngine {
           them to match it — your own words stay informal (Korean 반말, never \
           해요체, 여러분 or 당신; Japanese plain form; German du), and only \
           the quoted example line is in its own register.\(tutorRegisterLine(targetLanguage))
-        - All of it in \(languageName) only, like everything else.\(tutorNow(lesson: lesson, justTicked: justTicked && !planning))
+        - All of it in \(languageName) only, like everything else.\(tutorNow(lesson: lesson, justTicked: justTicked && !planning && !selfJudges))
         """
     }
 

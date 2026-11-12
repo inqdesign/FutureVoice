@@ -508,6 +508,39 @@ enum TutorJudge {
     }
 }
 
+// MARK: - What the tutor said
+
+/// When the tutor judges a try itself (`ConversationView.tutorSelfJudges`,
+/// 2026-11-13), the app reads what its line DID, so the checklist ticks only
+/// when the tutor moved on and the app's own check found nothing.
+enum TutorReplyRead {
+    enum Said: String { case movedOn = "moved_on", again, other }
+
+    static func read(_ reply: String, challenge: TutorLesson.Challenge,
+                     targetLanguage: String) async -> Said? {
+        struct R: Decodable { let said: String }
+        let target = LanguageCatalog.englishName(targetLanguage)
+        let system = """
+        A tutor is drilling a \(target) learner on one line at a time. The \
+        learner just tried this one: "\(challenge.task)" (for example: \
+        "\(challenge.example)"). Read the tutor's reply and say what it does:
+        "moved_on" — accepts the try and moves on: to the next part, or asks \
+        them to say it all in one go.
+        "again" — asks them to say it again (fixed, once more, or with \
+        something added), points out a slip, or says what is missing.
+        "other" — neither: answers a question, chats, or helps them find words.
+        Return STRICT JSON only: {"said": "moved_on"|"again"|"other"}
+        """
+        let r: R? = try? await GeminiClient.background.sendJSON(
+            system: system,
+            messages: [GeminiClient.Message(role: .user, content: "The tutor said: \(reply)")],
+            model: .flashLite31, maxTokens: 60, purpose: "tutor",
+            idempotencyKey: "tutor-said:\(UUID().uuidString)", requestTimeout: 10,
+            fastThinking: true)
+        return r.flatMap { Said(rawValue: $0.said) }
+    }
+}
+
 // MARK: - Final check
 
 /// The lesson's final check (founder, 2026-10-28): every challenge said in
