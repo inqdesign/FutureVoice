@@ -158,16 +158,17 @@ Deno.serve(async (req) => {
   // 16 kHz mono PCM16 WAV: 44-byte header, 32,000 bytes a second.
   const audioMs = Math.round(((audio.byteLength - 44) / 32_000) * 1000)
 
+  // The usage record runs BESIDE the Azure call, not in front of it
+  // (2026-11-12): a pronunciation call's learner waits on this answer, and
+  // the record was a database round trip before Azure even started. The cap
+  // is abuse insurance at a fraction of a cent a read, so a capped request
+  // that already reached Azure costs nothing worth the wait.
   const idemKey = req.headers.get("X-Idempotency-Key") ?? crypto.randomUUID()
-  const rec = await recordFreeUsage({
+  const recording = recordFreeUsage({
     supabase, userId: user.id, action: "pronunciation", purpose: "pronunciation",
     dailyCap: DAILY_CAP, sourceFn: SOURCE_FN, idempotencyKey: idemKey,
     metadata: { locale, audio_ms: audioMs, surface: body.surface ?? null },
   })
-  if (!rec.ok) {
-    if (rec.reason === "rate_limited") return rateLimitedResponse(cors())
-    return errorResponse(500, "usage record failed", rec.detail)
-  }
 
   const assessment = {
     ReferenceText: reference,
@@ -206,7 +207,13 @@ Deno.serve(async (req) => {
       signal: AbortSignal.timeout(20_000),
     })
   } catch (e) {
+    await recording
     return errorResponse(502, "azure unreachable", String(e))
+  }
+  const rec = await recording
+  if (!rec.ok) {
+    if (rec.reason === "rate_limited") return rateLimitedResponse(cors())
+    return errorResponse(500, "usage record failed", rec.detail)
   }
   if (!upstream.ok) {
     const detail = await upstream.text().catch(() => "")

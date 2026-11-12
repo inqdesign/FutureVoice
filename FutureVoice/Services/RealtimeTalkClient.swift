@@ -971,6 +971,18 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         }
     }
 
+    /// The learner's turn so far, as the WAV `user_turn` would hand over if
+    /// it landed now (same trim), and its length. The pronunciation call
+    /// reads it at Send, so Azure runs while the gateway waits for the final
+    /// (`PronEarlyRead`). nil when nothing has been recorded.
+    func currentTurnWAV() -> (url: URL, ms: Int)? {
+        guard !userPCM.isEmpty else { return nil }
+        let rate = userPCMRate
+        let trimmed = Self.trimSilence(pcm: userPCM, sampleRate: rate)
+        guard let url = Self.saveWAV(pcm: trimmed, sampleRate: rate) else { return nil }
+        return (url, Int(Double(trimmed.count / 2) / rate * 1000))
+    }
+
     /// `text` without the discarded words in front of it: "" when it is
     /// only (a part of) them. Compared word by word on letters alone, since
     /// a re-read final rarely matches the interim's punctuation or case.

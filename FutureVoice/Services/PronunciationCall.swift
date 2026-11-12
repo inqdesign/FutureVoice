@@ -1214,3 +1214,27 @@ enum PronunciationNotes {
 
     static let goodbye = "They're done for today. Say a warm, short goodbye and that they can hang up whenever they like."
 }
+
+// MARK: - Early read
+
+/// A take sent to Azure the moment the app sent the turn, before the
+/// gateway's `user_turn` came back (`ConversationView.pronEarly`).
+struct PronEarlyRead {
+    let roundId: UUID
+    let index: Int
+    /// What it was judged against: the word drilled, or the sentence.
+    let reference: String
+    /// Length of the trimmed take that was read.
+    let ms: Int
+    let task: Task<(result: PronunciationResult?, outcome: PronunciationAssessor.Outcome), Never>
+
+    /// The turn that came back is this take: same line, and the audio is the
+    /// same length within a breath. More audio means they kept talking after
+    /// the send, and the take is read again whole.
+    func matches(roundId: UUID, index: Int, reference: String, turnMs: Int) -> Bool {
+        roundId == self.roundId && index == self.index && reference == self.reference
+            && abs(turnMs - ms) <= Self.tolerance
+    }
+
+    static let tolerance = 300
+}

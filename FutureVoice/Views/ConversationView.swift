@@ -740,6 +740,16 @@ struct ConversationView: View {
     @State private var pronUnheard = 0
     /// How long the last take's assessment took (`assess_ms` on its event).
     @State private var pronAssessMs = 0
+    /// The take read by Azure from the moment it was SENT (2026-11-12,
+    /// founder: "the answer takes forever"). The read used to start only when
+    /// the gateway's `user_turn` arrived — after its wait for the final
+    /// transcript (up to 2.5 s) — and Azure alone is ~2.5 s, so the two
+    /// waits ran end to end. The verdict needs the audio and the line on
+    /// screen, never the transcript, so it starts at Send; `pronTurn` uses
+    /// it when the turn's audio is the same take.
+    @State private var pronEarly: PronEarlyRead?
+    /// The last take's verdict came from the early read (`early` on its event).
+    @State private var pronEarlyUsed = false
     /// What each pronunciation take was a reading OF (the word or sentence
     /// on screen), shown in the learner's bubble instead of the live
     /// transcript. The verdict is the audio's; a transcript beside it said
@@ -1928,6 +1938,7 @@ struct ConversationView: View {
                 if sendReady {
                     guard !realtime.sendPending else { return }
                     HapticEngine.selection()
+                    if pronThisCall { pronStartEarlyRead() }
                     realtime.sendTurn()
                     return
                 }
@@ -5593,16 +5604,26 @@ struct ConversationView: View {
         let drill = line.drillWord
         pronReadTexts[turnId] = drill ?? line.text
         let audioURL = turns.first(where: { $0.id == turnId })?.audioURL
+        let turnMs = turns.first(where: { $0.id == turnId })?.durationMs ?? -1
         let target = appState.targetLanguage
+        let early = pronEarly
+        pronEarly = nil
+        let reuse = early?.matches(roundId: round.id, index: i, reference: drill ?? line.text,
+                                   turnMs: turnMs) == true
+        if !reuse { early?.task.cancel() }
         Task { @MainActor in
             var result: PronunciationResult?
             var outcome = PronunciationAssessor.Outcome.skipped
             let assessStart = Date()
-            if let audioURL {
+            if reuse, let early {
+                (result, outcome) = await early.task.value
+            } else if let audioURL {
                 (result, outcome) = await PronunciationAssessor.assess(
                     audioURL: audioURL, reference: drill ?? line.text, language: target, surface: "pron_call")
             }
+            // From the turn in hand: with an early read, only what was left.
             pronAssessMs = Int(Date().timeIntervalSince(assessStart) * 1000)
+            pronEarlyUsed = reuse
             guard !isTornDown, tutorStillSaid(turnId, said), var now = pronRound,
                   now.id == round.id, now.current == i else { return }
             if let result {
@@ -5651,6 +5672,7 @@ struct ConversationView: View {
                 "outcome": outcome.rawValue,
                 "try": String(line.tries + 1),
                 "assess_ms": String(pronAssessMs),
+                "early": pronEarlyUsed ? "1" : "0",
             ])
             if let result { now.lines[i].lastResult = result }
             // The note about the sentence left before this one has been read.
@@ -5785,8 +5807,29 @@ struct ConversationView: View {
             guard !Task.isCancelled, pronWindowOpen, realtime.partial == partial,
                   !realtime.sendPending, realtime.state != .speaking else { return }
             pronWindowOpen = false
+            pronStartEarlyRead()
             realtime.sendTurn()
         }
+    }
+
+    /// Starts Azure on the take being sent, so it runs while the gateway
+    /// waits for the final transcript (`pronEarly`).
+    private func pronStartEarlyRead() {
+        pronEarly?.task.cancel()
+        pronEarly = nil
+        guard pronThisCall, !pronPlanning, let round = pronRound, !round.isFinished,
+              let i = round.current, let take = realtime.currentTurnWAV() else { return }
+        let line = round.lines[i]
+        let reference = line.drillWord ?? line.text
+        let target = appState.targetLanguage
+        let url = take.url
+        let task = Task { () -> (result: PronunciationResult?, outcome: PronunciationAssessor.Outcome) in
+            defer { try? FileManager.default.removeItem(at: url) }
+            return await PronunciationAssessor.assess(audioURL: url, reference: reference,
+                                                      language: target, surface: "pron_call")
+        }
+        pronEarly = PronEarlyRead(roundId: round.id, index: i, reference: reference,
+                                  ms: take.ms, task: task)
     }
 
     /// The learner's own "Next sentence": the only way a sentence is left
@@ -5892,6 +5935,7 @@ struct ConversationView: View {
             "score": result.map { String($0.soundScore) } ?? "",
             "try": String(now.lines[i].drillTries + 1),
             "assess_ms": String(pronAssessMs),
+            "early": pronEarlyUsed ? "1" : "0",
         ])
         // The last miss on this word, to say whether this one came closer.
         let previous = now.lines[i].drillTries > 0 && now.lines[i].feedback?.ok == false
