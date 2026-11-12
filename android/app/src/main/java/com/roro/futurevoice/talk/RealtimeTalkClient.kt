@@ -654,6 +654,18 @@ class RealtimeTalkClient(private val context: Context) {
     private var startSent = false
     private val heldNudges = mutableListOf<String>()
 
+    /** The learner's turn so far, as the WAV `user_turn` would hand over if
+     *  it landed now (same trim), and its length in ms. The pronunciation
+     *  call reads it at Send, so Azure runs while the gateway waits for the
+     *  final (iOS `currentTurnWAV`). null when nothing has been recorded. */
+    fun currentTurnWav(): Pair<File, Int>? {
+        val pcm = userPCM.toByteArray()
+        if (pcm.isEmpty()) return null
+        val trimmed = trimSilence(pcm, MIC_RATE)
+        val wav = saveWav(trimmed, MIC_RATE) ?: return null
+        return wav to (trimmed.size / 2 * 1000L / MIC_RATE).toInt()
+    }
+
     /** Send-to-answer: what has been said is the turn — answer it. The
      *  gateway waits at most a beat for the last words to be finalized. */
     fun sendTurn() {

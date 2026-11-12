@@ -1048,3 +1048,24 @@ object PronunciationNotes {
     const val GOODBYE = "They're done for today. Say a warm, short goodbye and that they can hang up whenever they like."
     const val SPOKE_WHILE_PLANNING = "They spoke while the sentences are still being prepared. Say \"one moment\" in a few words."
 }
+
+/** A take sent to Azure the moment the app sent the turn, before the
+ *  gateway's `user_turn` came back (iOS `PronEarlyRead`). */
+class PronEarlyRead(
+    val roundId: String,
+    val index: Int,
+    /** What it was judged against: the word drilled, or the sentence. */
+    val reference: String,
+    /** Length of the trimmed take that was read. */
+    val ms: Int,
+    val task: kotlinx.coroutines.Deferred<PronunciationAssessor.Answer>,
+) {
+    /** The turn that came back is this take: same line, and the audio is
+     *  the same length within a breath. More audio means they kept talking
+     *  after the send, and the take is read again whole. */
+    fun matches(roundId: String, index: Int, reference: String, turnMs: Int): Boolean =
+        roundId == this.roundId && index == this.index && reference == this.reference &&
+            kotlin.math.abs(turnMs - ms) <= TOLERANCE
+
+    companion object { const val TOLERANCE = 300 }
+}

@@ -353,6 +353,13 @@ class TalkViewModel(context: Context) : ViewModel() {
     private var pronSendJob: Job? = null
     /** How long the last take's assessment took (`assess_ms` on its event). */
     private var pronAssessMs = 0L
+    /** The take read by Azure from the moment it was SENT (iOS `pronEarly`,
+     *  2026-11-12): the read used to start only once `user_turn` came back,
+     *  after the gateway's wait for the final transcript, and Azure alone is
+     *  ~2.5 s. The verdict needs the audio and the line, never the words. */
+    private var pronEarly: PronEarlyRead? = null
+    /** The last take's verdict came from the early read (`early` on its event). */
+    private var pronEarlyUsed = false
     /** When the words now held started — to tell reading along (started
      *  early in the fluent self's line) from answering at its end. */
     private var pronHeardSince: Long? = null
@@ -1478,6 +1485,7 @@ class TalkViewModel(context: Context) : ViewModel() {
     fun sendHeldTurn() {
         if (!sendToAnswerOn || _state.value.sendPending || _state.value.partial.isBlank()) return
         _state.update { it.copy(sendPending = true) }
+        if (pronThisCall) pronStartEarlyRead()
         realtime.sendTurn()
         // Never leave the pill spinning on a gateway that answered nothing.
         sendPendingJob?.cancel()
@@ -2032,6 +2040,27 @@ class TalkViewModel(context: Context) : ViewModel() {
         }
     }
 
+    /** Starts Azure on the take being sent, so it runs while the gateway
+     *  waits for the final transcript ([pronEarly]). */
+    private fun pronStartEarlyRead() {
+        pronEarly?.task?.cancel()
+        pronEarly = null
+        val cfg = config ?: return
+        if (!pronThisCall || _state.value.pronPlanning) return
+        val round = _state.value.pronRound ?: return
+        if (round.isFinished) return
+        val i = round.current ?: return
+        val (file, ms) = realtime.currentTurnWav() ?: return
+        val line = round.lines[i]
+        val reference = line.drillWord ?: line.text
+        val target = cfg.targetLanguage
+        val task = viewModelScope.async {
+            try { PronunciationAssessor.assess(appContext, file, reference, target, "pron_call") }
+            finally { file.delete() }
+        }
+        pronEarly = PronEarlyRead(round.id, i, reference, ms, task)
+    }
+
     /** One learner turn of a pronunciation call. The take is read by Azure
      *  against the sentence on screen and the verdict is code
      *  ([PronunciationJudge]); the voice then says exactly one line for it. */
@@ -2051,15 +2080,25 @@ class TalkViewModel(context: Context) : ViewModel() {
         val audio = _state.value.turns.firstOrNull { it.id == turnId }?.audioURL?.let { java.io.File(it) }
             ?.takeIf { it.exists() }
         val target = cfg.targetLanguage
+        val turnMs = _state.value.turns.firstOrNull { it.id == turnId }?.durationMs ?: -1
+        val early = pronEarly
+        pronEarly = null
+        val reuse = early?.matches(round.id, i, drill ?: line.text, turnMs) == true
+        if (!reuse) early?.task?.cancel()
         viewModelScope.launch {
             var result: PronunciationResult? = null
             var outcome = PronunciationAssessor.Outcome.SKIPPED
             val assessStart = System.currentTimeMillis()
-            if (audio != null) {
+            if (reuse && early != null) {
+                val a = early.task.await()
+                result = a.result; outcome = a.outcome
+            } else if (audio != null) {
                 val a = PronunciationAssessor.assess(appContext, audio, drill ?: line.text, target, "pron_call")
                 result = a.result; outcome = a.outcome
             }
+            // From the turn in hand: with an early read, only what was left.
             pronAssessMs = System.currentTimeMillis() - assessStart
+            pronEarlyUsed = reuse
             var now = _state.value.pronRound ?: return@launch
             if (tutorCallOver || !tutorStillSaid(turnId, said) || now.id != round.id || now.current != i) return@launch
             result?.let { r ->
@@ -2094,7 +2133,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                 "fluency" to (result?.fluency?.toString() ?: ""),
                 "prosody" to (result?.prosody?.toString() ?: ""),
                 "outcome" to outcome.raw, "try" to (line.tries + 1).toString(),
-                "assess_ms" to pronAssessMs.toString()))
+                "assess_ms" to pronAssessMs.toString(), "early" to if (pronEarlyUsed) "1" else "0"))
             val fb = PronunciationJudge.feedback(verdict, result, line, now.topic.phonemes)
             val heard = (verdict as? PronunciationJudge.Verdict.NotYet)?.takeIf { it.heard != null }
             now = now.replacing(i) { l ->
@@ -2223,6 +2262,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                 realtime.state == RealtimeTalkClient.State.SPEAKING) return@launch
             pronWindowOpen = false
             _state.update { it.copy(sendPending = true) }
+            pronStartEarlyRead()
             realtime.sendTurn()
             sendPendingJob?.cancel()
             sendPendingJob = viewModelScope.launch {
@@ -2325,7 +2365,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         }
         com.roro.futurevoice.core.Telemetry.log("pron_word_take", mapOf("topic" to round.topic.id,
             "word" to word, "verdict" to verdict.name, "score" to (result?.soundScore?.toString() ?: ""),
-            "try" to (round.lines[i].drillTries + 1).toString(), "assess_ms" to pronAssessMs.toString()))
+            "try" to (round.lines[i].drillTries + 1).toString(), "assess_ms" to pronAssessMs.toString(), "early" to if (pronEarlyUsed) "1" else "0"))
         var now = round
         // The last miss on this word, to say whether this one came closer.
         val previous = round.lines[i].feedback?.takeIf { round.lines[i].drillTries > 0 && !it.ok }?.score
