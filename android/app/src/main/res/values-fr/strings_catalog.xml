@@ -452,8 +452,8 @@
     <string name="camera">"Caméra"</string>
     <!-- 'Camera access is off. Turn it on in Settings, or practise with the mic only.' -->
     <string name="camera_access_is_off_turn_it_on_in_settings_or_practise_with_527914">"L’accès à la caméra est désactivé. Autorise-le dans Réglages, ou entraîne-toi juste avec le micro."</string>
-    <!-- 'Camera-on takes that score %lld or more go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone.' -->
-    <string name="camera_on_takes_that_score_lld_or_more_go_on_the_board_and_y_15915e">"Les prises faites caméra allumée à partir de %d points entrent au classement, et ton meilleur score reste. Le classement n’affiche que ton nom et ton score : ta vidéo et ta voix restent sur ton téléphone."</string>
+    <!-- 'Camera-on takes go on the board, and your best one stands. The board shows your name and score — your video and voice stay on your phone.' -->
+    <string name="camera_on_takes_go_on_the_board_and_your_best_one_stands_the_eff4f3">"Toutes les prises faites caméra allumée entrent au classement, et ton meilleur score reste. Le classement n’affiche que ton nom et ton score : ta vidéo et ta voix restent sur ton téléphone."</string>
     <string name="can_t_read_files_yet_pdf_images_and_plain_text_work">"Les fichiers .%s ne sont pas encore lus. PDF, images et texte brut fonctionnent."</string>
     <string name="can_t_record_now_no_rush_this_will_wait">"Tu ne peux pas enregistrer maintenant ? Pas de presse, ça t’attend."</string>
     <string name="can_t_talk_now">"Pas maintenant"</string>
@@ -2931,7 +2931,6 @@
     <string name="take_your_time_your_future_self_waits_until_you_press_send">"Prends ton temps. Ton moi fluide attend que tu touches Envoyer."</string>
     <string name="taken_from_the_talk_time_above">"Pris sur le temps ci-dessus"</string>
     <string name="takes">"Prises"</string>
-    <string name="takes_that_score_lld_or_more_go_on_the_board">"À partir de %d points, tu entres au classement."</string>
     <string name="takes_this_week">"prises cette semaine"</string>
     <string name="taking_a_taxi">"Prendre un taxi"</string>
     <string name="talk">"Parler"</string>

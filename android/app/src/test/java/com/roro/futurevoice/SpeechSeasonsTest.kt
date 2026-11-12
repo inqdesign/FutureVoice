@@ -58,13 +58,8 @@ class SpeechSeasonsTest {
         assertEquals(mapOf(1 to 0.4), pauses)
     }
 
-    @Test fun eachSeasonHasItsOwnBar() {
-        assertEquals(80, SpeechChallenges.boardBar(null))
-        assertEquals(80, SpeechChallenges.boardBar(1))
-        assertEquals(83, SpeechChallenges.boardBar(2))
-        assertEquals(Entry.BelowBar, keptOff(overall = 79))
-        assertNull(keptOff(overall = 80))
-        assertEquals(Entry.BelowBar, keptOff(season = 2, scoring = 6, hasReading = true, overall = 82))
-        assertNull(keptOff(season = 2, scoring = 6, hasReading = true, overall = 83))
+    @Test fun noScoreKeepsATakeOffTheBoard() {
+        assertNull(keptOff(overall = 12))
+        assertNull(keptOff(season = 2, scoring = 6, hasReading = true, overall = 12))
     }
 }

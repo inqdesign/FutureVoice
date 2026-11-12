@@ -150,8 +150,6 @@ class SpeechChallenges private constructor(private val context: Context) {
                            val best: Int, val improved: Boolean) : Entry
         /** The camera was off — the board only takes camera takes. */
         data object CameraOff : Entry
-        /** Under [BOARD_BAR]: kept on the phone, never on the board. */
-        data object BelowBar : Entry
         data object Failed : Entry
         /** Scored by Season 2's rules on a board that doesn't take them. */
         data object NewScoring : Entry
@@ -365,7 +363,7 @@ class SpeechChallenges private constructor(private val context: Context) {
                     val overall = com.roro.futurevoice.talk.SpeechAnalyzer.overall(m.accuracy, m.paceScore,
                         m.pauseScore, m.fillerScore, m.steadiness,
                         com.roro.futurevoice.talk.SpeechAnalyzer.coverage(diff.steps), m.pronunciation)
-                    if (overall >= BOARD_BAR && overall > onBoard && overall > (best?.second ?: -1)) best = take to overall
+                    if (overall > onBoard && overall > (best?.second ?: -1)) best = take to overall
                 }
                 best?.let { (take, overall) ->
                     submit(take, challengeId, name, overall)
@@ -585,11 +583,8 @@ class SpeechChallenges private constructor(private val context: Context) {
         private const val PREFS = "speech_challenge"
         private const val NAME_KEY = "speech.challenge.displayName"
         const val MAX_NAME_LENGTH = 24
-        /** The lowest score that goes on a board — iOS `boardBar`. */
-        const val BOARD_BAR = 80
-        /** Season 2's scale runs lower (learners average 63, natives 94). */
-        const val SEASON_TWO_BOARD_BAR = 83
-        fun boardBar(season: Int?): Int = if ((season ?: 1) >= 2) SEASON_TWO_BOARD_BAR else BOARD_BAR
+        // No score bar (2026-11-12, founder: every camera-on take goes up;
+        // a take nobody meant to enter is taken off the board by its owner).
         private const val REMOVED_KEY = "speech.challenge.removedFromBoard"
 
         /** Why a scored take stays off the board, in iOS `enter`'s order; null
@@ -605,7 +600,6 @@ class SpeechChallenges private constructor(private val context: Context) {
             // reading (offline) means no entry.
             if (seasonTwo && (!scoredByReading || !hasReading)) return Entry.Failed
             if (!onCamera) return Entry.CameraOff
-            if (overall < boardBar(season)) return Entry.BelowBar
             return null
         }
         /** The overall board is drawn as soon as one person is on it (iOS
