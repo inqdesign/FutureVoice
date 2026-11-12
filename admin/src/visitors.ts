@@ -1,4 +1,4 @@
-// 방문자 지도: nawana.app/admin/visitors (2026-11-12).
+// 라이브 지도 · 웹: /admin/visitors/data.json (2026-11-12), drawn by the 앱 / 웹 switch on the live map.
 //
 // The web pages' visits on a map, the way the 라이브 지도 shows the app's
 // people: where each visit came from, whether it is on the page right now,
