@@ -91,8 +91,6 @@ final class SpeechChallenges: ObservableObject {
         case entered(rank: Int, previousRank: Int?, entrants: Int, best: Int, improved: Bool)
         /// The camera was off — the board only takes camera takes.
         case cameraOff
-        /// Under `boardBar`: kept on the phone, never on the board.
-        case belowBar
         case failed
         /// Scored by Season 2's rules (`SpeechScoreV4`), which no board
         /// checks yet: kept on the phone.
@@ -341,10 +339,6 @@ final class SpeechChallenges: ObservableObject {
             entries[take.id] = .cameraOff
             return
         }
-        guard take.metrics.overall >= Self.boardBar(season: season(of: challengeId)) else {
-            entries[take.id] = .belowBar
-            return
-        }
         guard let name = Self.displayName else {
             entries[take.id] = .failed
             return
@@ -359,15 +353,9 @@ final class SpeechChallenges: ObservableObject {
         }
     }
 
-    /// The lowest score that goes on a board (2026-10-25, founder: a take
-    /// made by accident went straight up). High enough that nobody's name
-    /// stands beside a score they'd be embarrassed by, low enough that the
-    /// board still fills.
-    static let boardBar = 80
-    /// The same readers as the 60 the founder set on the curved scale
-    /// (2026-11-09): 83 on the plain one, where learners average 81.
-    static let seasonTwoBoardBar = 83
-    static func boardBar(season: Int?) -> Int { (season ?? 1) >= 2 ? seasonTwoBoardBar : boardBar }
+    // No score bar (2026-11-12, founder: every camera-on take goes up).
+    // There was one from 2026-10-25, 80 and then 83 for Season 2; a take
+    // nobody meant to enter is taken off with "off this board".
 
     /// Off this board: the score is deleted on the server. The next take
     /// goes on it again like any other; only filing an EARLIER take is
@@ -528,7 +516,6 @@ final class SpeechChallenges: ObservableObject {
     /// confirmed their name (that IS the consent to be on a board), their
     /// best earlier CAMERA take of each challenge goes up if it beats what
     /// the board has. A camera take is one whose video is still kept.
-    /// Only at `boardBar` or above, like a new take.
     /// A take of an older text under the same id is never entered: its
     /// transcript is re-scored against today's script and must agree with
     /// the accuracy it was given.
@@ -566,7 +553,7 @@ final class SpeechChallenges: ObservableObject {
                                                      filler: m.fillerScore, steadiness: m.steadiness,
                                                      coverage: SpeechAnalyzer.coverage(diff.steps),
                                                      pronunciation: m.pronunciation)
-                if overall >= Self.boardBar, overall > onBoard, overall > (best?.overall ?? -1) { best = (take, overall) }
+                if overall > onBoard, overall > (best?.overall ?? -1) { best = (take, overall) }
             }
             if let best {
                 await submit(take: best.take, overall: best.overall, challengeId: challengeId,
