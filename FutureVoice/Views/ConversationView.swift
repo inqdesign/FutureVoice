@@ -854,6 +854,12 @@ struct ConversationView: View {
     /// is made (both paths), cleared with the session. No longer a billing
     /// gate (see `isBillableMoment`).
     @State private var learnerSpokeThisCall = false
+    /// The fluent self's spoken goodbye after End (`CallGoodbye`): the words,
+    /// whether the voice is still saying them, and the task making them.
+    @State private var goodbye: CallGoodbye.Line?
+    @State private var goodbyePlaying = false
+    @State private var goodbyeTask: Task<Void, Never>?
+    @State private var goodbyeVoice: CallGoodbyeVoice?
     /// The live call died under the learner — socket gone, reply failed
     /// past its retry, mic lost after a route change. Set from the realtime
     /// state observer; presented as the one alert that offers a way BACK.
@@ -876,11 +882,6 @@ struct ConversationView: View {
 
     /// The call is billed from the moment it starts (founder, 2026-10-27):
     /// the opener and the fluent self's first lines count like every other
-    /// The fluent self's spoken goodbye after End (`CallGoodbye`): the words,
-    /// whether the voice is still saying them, and the task making them.
-    @State private var goodbye: CallGoodbye.Line?
-    @State private var goodbyePlaying = false
-    @State private var goodbyeTask: Task<Void, Never>?
     /// line. Until then nothing counted before the learner's first turn
     /// (2026-09-07), with tutor mode the one exception (2026-10-25). Silence
     /// is still free: only seconds where something is happening count.
@@ -5076,6 +5077,9 @@ struct ConversationView: View {
                 group.cancelAll()   // cancels the WAITER, never `pending` itself
             }
         }
+        // The turns are final now (the held corrections have landed), so the
+        // fluent self's goodbye can be written from them while the book builds.
+        startGoodbye()
         // Persist the raw conversation FIRST. The summary call below can fail
         // (network, credits, malformed JSON) and turns live only in memory —
         // without this draft save a failed summary used to lose the whole
@@ -5109,9 +5113,6 @@ struct ConversationView: View {
             // that stays one.
             coached: prior?.coached == true ? true : nil,
             tutorLesson: learnerSpokeThisCall ? (tutorLesson?.record ?? prior?.tutorLesson) : prior?.tutorLesson
-        // The turns are final now (the held corrections have landed), so the
-        // fluent self's goodbye can be written from them while the book builds.
-        startGoodbye()
         )
         if learnerSpokeThisCall, var lesson = tutorLesson, !lesson.sessionIds.contains(sessionId) {
             lesson.sessionIds.append(sessionId)
@@ -5161,6 +5162,99 @@ struct ConversationView: View {
         }
     }
 
+    /// The fluent self's ~12 s of feedback on the call just ended, spoken in
+    /// the learner's voice while the book builds (`CallGoodbye`). Skipped when
+    /// nothing in the call can be honestly praised. Fire and forget: nothing
+    /// in the wrap-up waits on it, and a failure at any step is silence, which
+    /// is what the wrap-up was before.
+    private func startGoodbye() {
+        guard learnerSpokeThisCall, goodbyeTask == nil,
+              let voiceId = appState.speakingVoiceId else { return }
+        let used = goalItems.filter { usedGoalKeys.contains($0.key) }.map(\.text)
+        let target = appState.targetLanguage
+        guard let facts = CallGoodbye.facts(turns: turns, wordsUsed: used, target: target) else {
+            Telemetry.log("call_goodbye", ["outcome": "nothing_to_praise"])
+            return
+        }
+        let started = Date()
+        let id = sessionId
+        let topic = topic
+        let voice = CallGoodbyeVoice(player: player, voiceId: voiceId, sessionId: sessionId)
+        goodbyeVoice = voice
+        goodbyeTask = Task {
+            func log(_ outcome: String, _ extra: [String: String] = [:]) {
+                Telemetry.log("call_goodbye", extra.merging([
+                    "outcome": outcome,
+                    "ms": "\(Int(Date().timeIntervalSince(started) * 1000))",
+                ]) { a, _ in a })
+            }
+            // The voice starts on the FIRST sentence while the rest is still
+            // being written (founder 2026-11-12: the words, then a wait for
+            // the voice). The card goes up with the first sound, never ahead
+            // of it, and grows to the whole line when it is written.
+            var first: String?
+            var firstSpoken: Task<Bool, Never>?
+            var known: CallGoodbye.Line?
+            var spokenChars = 0
+            voice.onStart = {
+                guard !isTornDown else { return }
+                goodbye = known ?? CallGoodbye.Line(spoken: first ?? "", translation: "")
+                goodbyePlaying = true
+                Telemetry.log("call_goodbye_voice", [
+                    "voice_ms": "\(Int(Date().timeIntervalSince(started) * 1000))",
+                    "early": first == nil ? "0" : "1",
+                ])
+            }
+            voice.onFinish = {
+                if goodbyePlaying { log("played", ["chars": "\(spokenChars)"]) }
+                goodbyePlaying = false
+            }
+            let line = await CallGoodbye.write(
+                facts: facts, topic: topic.isEmpty ? nil : topic, target: target,
+                native: appState.nativeLanguage, level: appState.proficiency, sessionId: id,
+                onFirstSentence: { sentence in
+                    guard first == nil, !isTornDown else { return }
+                    first = sentence
+                    spokenChars = sentence.count
+                    firstSpoken = Task { await voice.speak(sentence) }
+                })
+            guard !Task.isCancelled, !isTornDown else { return }
+            guard let line else {
+                // The text broke after the first sentence went to the voice:
+                // let that sentence finish on its own.
+                if let firstSpoken { _ = await firstSpoken.value; voice.finish() }
+                log("no_line"); return
+            }
+            known = line
+            if voice.started { goodbye = line }
+            if let first, let firstSpoken {
+                let firstPlayed = await firstSpoken.value
+                guard !Task.isCancelled, !isTornDown else { return }
+                if firstPlayed {
+                    let rest = CallGoodbye.remainder(of: line.spoken, after: first)
+                    if await voice.speak(rest) { spokenChars += rest.count }
+                } else if await voice.speak(line.spoken) {
+                    spokenChars = line.spoken.count
+                }
+            } else if await voice.speak(line.spoken) {
+                spokenChars = line.spoken.count
+            }
+            voice.finish()
+            if !voice.started, !isTornDown {
+                // The words still go up; only the voice is missing.
+                goodbye = line
+                log("no_audio")
+            }
+        }
+    }
+
+    private func stopGoodbye() {
+        guard goodbyePlaying else { return }
+        goodbyePlaying = false
+        goodbyeVoice?.stop()
+        Telemetry.log("call_goodbye", ["outcome": "stopped"])
+    }
+
     private func refreshDashboard() {
         // Off-main: `PracticeStats.snapshot()` decodes the FULL session
         // archive — on the appear frame it visibly hitches the pill→call
@@ -5194,101 +5288,6 @@ struct ConversationView: View {
                 try? await Task.sleep(nanoseconds: 350_000_000)
                 showingFirstCallCheck = true
             }
-    /// The fluent self's ~12 s of feedback on the call just ended, spoken in
-    /// the learner's voice while the book builds (`CallGoodbye`). Skipped when
-    /// nothing in the call can be honestly praised. Fire and forget: nothing
-    /// in the wrap-up waits on it, and a failure at any step is silence, which
-    /// is what the wrap-up was before.
-    private func startGoodbye() {
-        guard learnerSpokeThisCall, goodbyeTask == nil,
-              let voiceId = appState.speakingVoiceId else { return }
-        let used = goalItems.filter { usedGoalKeys.contains($0.key) }.map(\.text)
-        let target = appState.targetLanguage
-        guard let facts = CallGoodbye.facts(turns: turns, wordsUsed: used, target: target) else {
-            Telemetry.log("call_goodbye", ["outcome": "nothing_to_praise"])
-            return
-        }
-        let started = Date()
-        let id = sessionId
-        let topic = topic
-        goodbyeTask = Task {
-            func log(_ outcome: String, _ extra: [String: String] = [:]) {
-                Telemetry.log("call_goodbye", extra.merging([
-                    "outcome": outcome,
-                    "ms": "\(Int(Date().timeIntervalSince(started) * 1000))",
-                ]) { a, _ in a })
-            }
-            guard let line = await CallGoodbye.write(
-                facts: facts, topic: topic.isEmpty ? nil : topic, target: target,
-                native: appState.nativeLanguage, level: appState.proficiency, sessionId: id) else {
-                log("no_line"); return
-            }
-            guard !Task.isCancelled, !isTornDown else { return }
-            // Streamed, and the card goes up with the FIRST chunk: the whole
-            // file took ~1.7 s upstream before a sound, the first chunk ~0.15 s
-            // (measured 2026-11-12), and the founder heard the words appear
-            // and then wait for the voice. Nothing is shown ahead of the voice,
-            // the same rule the call's correction card follows.
-            let ttsStarted = Date()
-            var streaming = false
-            let finished: () -> Void = {
-                if goodbyePlaying { log("played", ["chars": "\(line.spoken.count)"]) }
-                goodbyePlaying = false
-            }
-            do {
-                let result = try await VoiceClient.shared.synthesizeStreaming(
-                    voiceId: voiceId, text: line.spoken,
-                    idempotencyKey: "goodbye-tts:\(id.uuidString)",
-                    purpose: "goodbye"
-                ) { chunk, sampleRate in
-                    guard !Task.isCancelled, !isTornDown else { return }
-                    if !streaming {
-                        // The call is over: a playback session, like Watch.
-                        guard (try? player.startPCMStream(sampleRate: sampleRate, voiceKey: voiceId,
-                                                          completion: finished)) != nil else { return }
-                        streaming = true
-                        goodbye = line
-                        goodbyePlaying = true
-                        Telemetry.log("call_goodbye_voice", [
-                            "text_ms": "\(Int(ttsStarted.timeIntervalSince(started) * 1000))",
-                            "voice_ms": "\(Int(Date().timeIntervalSince(ttsStarted) * 1000))",
-                        ])
-                    }
-                    player.feedPCMStream(chunk)
-                }
-                guard !Task.isCancelled, !isTornDown else { return }
-                if streaming {
-                    player.finishPCMStream()
-                } else {
-                    // The stream never started playing (an engine refusal, or
-                    // a server that answered with the whole file): play what
-                    // came back in one piece.
-                    let audio: Data
-                    switch result {
-                    case .pcm(let pcm, let rate): audio = AudioLoudness.wavData(fromPCM16: pcm, sampleRate: Int(rate))
-                    case .mp3(let data): audio = data
-                    }
-                    guard !audio.isEmpty else { throw VoiceError.invalidResponse }
-                    goodbye = line
-                    try player.play(audio, source: "call_goodbye", completion: finished)
-                    goodbyePlaying = true
-                }
-            } catch {
-                // The words still go up; only the voice is missing.
-                if !streaming { goodbye = line }
-                goodbyePlaying = false
-                log("no_audio", ["error": (error as NSError).domain + ":\((error as NSError).code)"])
-            }
-        }
-    }
-
-    private func stopGoodbye() {
-        guard goodbyePlaying else { return }
-        goodbyePlaying = false
-        player.stop()
-        Telemetry.log("call_goodbye", ["outcome": "stopped"])
-    }
-
             return
         }
         if let onClose { onClose() } else { dismiss() }
@@ -5346,6 +5345,9 @@ struct ConversationView: View {
         if let stale = live.lastChunkRecordingURL {
             try? FileManager.default.removeItem(at: stale)
         }
+        goodbyeTask?.cancel()
+        goodbyeVoice?.stop()
+        goodbyePlaying = false
         player.stop()
         phase = .idle
     }
@@ -5365,6 +5367,13 @@ struct ConversationView: View {
         tutorCheckTurnIds = []
         learnerSpokeThisCall = false
         didSaveCurrentSession = false
+        // The last call's goodbye ends with it; a new call is a new one.
+        goodbyeTask?.cancel()
+        goodbyeTask = nil
+        goodbyeVoice?.stop()
+        goodbyeVoice = nil
+        goodbye = nil
+        if goodbyePlaying { goodbyePlaying = false; player.stop() }
         phase = .idle
         if !topic.isEmpty {
             phoneCallActive = true   // stay in phone-call mode for continuity
@@ -5379,8 +5388,6 @@ struct ConversationView: View {
             )
             Task { await openConversation() }
         }
-        goodbyeTask?.cancel()
-        goodbyePlaying = false
     }
 
     /// The summary sheet is GONE (its `onDismiss`, Done or swipe) → leave the
@@ -5400,11 +5407,6 @@ struct ConversationView: View {
         // after it — the next tap could not open a call either way.
         if let cached = BillingGate.shared.account, cached.isEntitled || cached.unlimited {
             // Entitlement doesn't lapse mid-call; no round trip on every exit.
-        // The last call's goodbye ends with it; a new call is a new one.
-        goodbyeTask?.cancel()
-        goodbyeTask = nil
-        goodbye = nil
-        if goodbyePlaying { goodbyePlaying = false; player.stop() }
             logPostCallPitch("skipped_entitled")
             endAndCloseAfterPitch()
             return

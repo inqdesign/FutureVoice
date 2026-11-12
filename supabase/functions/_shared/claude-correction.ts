@@ -157,8 +157,113 @@ export function isMovableRequest(name: string | undefined, model: string, stream
                                  body: GeminiBody): boolean {
   if (!name || !(name in CLAUDE_PURPOSE_ADDENDA)) return false
   const measured = KEYED_MOVES.find((m) => m.name === name)?.model ?? "gemini-3.6-flash"
-  if (stream || model !== measured || body.tools) return false
+  if ((stream && !STREAMABLE.has(name)) || model !== measured || body.tools) return false
   return (body.contents ?? []).every((c) => (c.parts ?? []).every((p) => p.inlineData === undefined))
+}
+
+/** Moved purposes that may also be STREAMED from Claude (`claudePurposeStream`).
+ *  "goodbye" (2026-11-12): the voice starts on the first sentence, which Haiku
+ *  writes at ~0.85 s against ~2.0 s for the whole answer (thinking off). */
+const STREAMABLE = new Set(["goodbye"])
+
+/** A listed purpose's request answered by Claude as a stream, re-emitted in
+ *  Gemini's SSE shape (one `candidates[0].content.parts[0].text` delta per
+ *  event, the finish reason on the last) so the app's `sendJSONStream` reads
+ *  it unchanged. Null when Claude refuses before the stream starts: the
+ *  caller falls through to Gemini. A stream that breaks later is the app's
+ *  to handle, as with Gemini's own. */
+export async function claudePurposeStream(apiKey: string, model: string, name: string,
+                                          body: GeminiBody, signal: AbortSignal):
+  Promise<{ body: ReadableStream<Uint8Array>; usage: Promise<Record<string, unknown>> } | null> {
+  const system = (body.system_instruction ?? body.systemInstruction)?.parts
+    ?.map((p) => p.text ?? "").join("") ?? ""
+  const messages: { role: "user" | "assistant"; content: string }[] = []
+  for (const c of body.contents ?? []) {
+    const role = c.role === "model" ? "assistant" : "user"
+    const text = (c.parts ?? []).map((p) => p.text ?? "").join("")
+    const prev = messages[messages.length - 1]
+    if (prev && prev.role === role) prev.content += `\n${text}`
+    else messages.push({ role, content: text })
+  }
+  if (messages.length === 0 || messages[0].role !== "user") return null
+  let resp: Response
+  try {
+    resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({
+        model,
+        max_tokens: body.generationConfig?.maxOutputTokens ?? 2048,
+        system: [{ type: "text", text: system + (CLAUDE_PURPOSE_ADDENDA[name] ?? JSON_ONLY),
+                   cache_control: { type: "ephemeral" } }],
+        messages,
+        stream: true,
+        ...(NO_THINKING.has(name) ? { thinking: { type: "disabled" } } : {}),
+      }),
+      signal: AbortSignal.any([signal, AbortSignal.timeout(CLAUDE_TIMEOUT_MS[name] ?? 12_000)]),
+    })
+  } catch (e) {
+    console.warn(`claude stream ${name} failed: ${String(e).slice(0, 160)}`)
+    return null
+  }
+  if (!resp.ok || !resp.body) {
+    console.warn(`claude stream ${name} ${resp.status}: ${(await resp.text()).slice(0, 200)}`)
+    return null
+  }
+  const upstream = resp.body
+  let settle: (u: Record<string, unknown>) => void = () => {}
+  const usage = new Promise<Record<string, unknown>>((r) => { settle = r })
+  const enc = new TextEncoder()
+  const event = (text: string, finish?: string) => enc.encode(`data: ${JSON.stringify({
+    candidates: [{ content: { role: "model", parts: [{ text }] }, ...(finish ? { finishReason: finish } : {}) }],
+  })}\n\n`)
+  const out = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const reader = upstream.getReader()
+      const dec = new TextDecoder()
+      let buf = "", input = 0, cached = 0, output = 0, finish = "STOP"
+      try {
+        for (;;) {
+          const { value, done } = await reader.read()
+          if (done) break
+          buf += dec.decode(value, { stream: true })
+          let nl: number
+          while ((nl = buf.indexOf("\n")) >= 0) {
+            const line = buf.slice(0, nl).trim()
+            buf = buf.slice(nl + 1)
+            if (!line.startsWith("data:")) continue
+            let ev: { type?: string; message?: { usage?: Record<string, number> };
+                      delta?: { type?: string; text?: string; stop_reason?: string };
+                      usage?: { output_tokens?: number } }
+            try { ev = JSON.parse(line.slice(5)) } catch { continue }
+            if (ev.type === "message_start") {
+              const u = ev.message?.usage ?? {}
+              input = (u.input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0)
+              cached = u.cache_read_input_tokens ?? 0
+            } else if (ev.type === "content_block_delta" && ev.delta?.type === "text_delta" && ev.delta.text) {
+              controller.enqueue(event(ev.delta.text))
+            } else if (ev.type === "message_delta") {
+              output = ev.usage?.output_tokens ?? output
+              if (ev.delta?.stop_reason === "max_tokens") finish = "MAX_TOKENS"
+            }
+          }
+        }
+        controller.enqueue(event("", finish))
+      } catch (e) {
+        console.warn(`claude stream ${name} broke: ${String(e).slice(0, 160)}`)
+      } finally {
+        controller.close()
+        settle({
+          prompt_tokens: input,
+          ...(cached > 0 ? { cached_input_tokens: cached } : {}),
+          output_tokens: output,
+          total_tokens: input + cached + output,
+        })
+      }
+    },
+    cancel() { upstream.cancel().catch(() => {}) },
+  })
+  return { body: out, usage }
 }
 
 export function claudePurpose(apiKey: string, model: string, name: string,

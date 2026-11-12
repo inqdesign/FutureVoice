@@ -21,7 +21,7 @@ import { requireUser, handlePreflight, errorResponse, upstreamErrorResponse, cor
 import { recordFreeUsage, enforceRequestRate, rateLimitedResponse,
          recordProviderUsage, background, geminiUsageFields,
          billingClient, type ChargeableAction } from "../_shared/credits.ts"
-import { claudeCorrection, claudeMoveName, claudePurpose, isCorrectionRequest, isMovableRequest, onForUser }
+import { claudeCorrection, claudeMoveName, claudePurpose, claudePurposeStream, isCorrectionRequest, isMovableRequest, onForUser }
   from "../_shared/claude-correction.ts"
 
 const SOURCE_FN = "gemini"
@@ -216,7 +216,26 @@ Deno.serve(async (req) => {
     return errorResponse(500, "usage record failed", rec.detail)
   }
 
-  if (claudeModel && anthropicKey) {
+  // A moved purpose asked as a stream ("goodbye"): Claude's deltas, in
+  // Gemini's SSE shape. Refused before it starts → Gemini below.
+  if (claudeModel && anthropicKey && isMoved && stream) {
+    const s = await claudePurposeStream(anthropicKey, claudeModel, moveName!, geminiBody, req.signal)
+    if (s) {
+      background(s.usage.then((usage) => recordProviderUsage({ idempotencyKey: idemKey, usage })))
+      return new Response(s.body, {
+        status: 200,
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "X-Gemini-Stream": "sse",
+          ...cors(),
+        },
+      })
+    }
+    background(recordProviderUsage({
+      idempotencyKey: idemKey, usage: { model, claude_fallback: true },
+    }))
+  } else if (claudeModel && anthropicKey) {
     const answer = isCorrection
       ? await claudeCorrection(anthropicKey, claudeModel, geminiBody)
       : await claudePurpose(anthropicKey, claudeModel, moveName!, geminiBody)

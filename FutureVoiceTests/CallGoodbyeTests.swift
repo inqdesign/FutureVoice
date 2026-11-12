@@ -68,4 +68,12 @@ final class CallGoodbyeTests: XCTestCase {
                        "よくできたね。じゃあね。")
         XCTAssertEqual(CallGoodbye.withoutQuestions("Want to go again?"), "")
     }
+
+    /// The voice starts on the first sentence; the rest is what follows it,
+    /// and nothing at all when the finished line no longer starts with it.
+    func testTheRestIsWhatFollowsTheFirstSentence() {
+        XCTAssertEqual(CallGoodbye.remainder(of: "You got it right. One tip: say I'd. Bye!", after: "You got it right."),
+                       "One tip: say I'd. Bye!")
+        XCTAssertEqual(CallGoodbye.remainder(of: "Something else entirely.", after: "You got it right."), "")
+    }
 }

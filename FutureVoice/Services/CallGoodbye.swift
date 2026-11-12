@@ -90,9 +90,16 @@ enum CallGoodbye {
         let translation: String?
     }
 
+    /// Writes the goodbye, STREAMED: `onFirstSentence` gets the opening
+    /// sentence the moment it is written so the voice can start on it while
+    /// the rest is still coming (Haiku writes it at ~0.85 s, the whole answer
+    /// at ~2 s, measured 2026-11-12). A first sentence that asks something or
+    /// isn't in the target script is never handed over; the caller then
+    /// speaks the finished line instead.
     static func write(facts: Facts, topic: String?, target: String, native: String,
-                      level: CEFRLevel, sessionId: UUID) async -> Line? {
-        let payload: Payload? = try? await GeminiClient.background.sendJSON(
+                      level: CEFRLevel, sessionId: UUID,
+                      onFirstSentence: (@MainActor (String) -> Void)? = nil) async -> Line? {
+        let payload: Payload? = try? await GeminiClient.background.sendJSONStream(
             system: system(target: target, native: native, level: level),
             messages: [GeminiClient.Message(role: .user, content: content(facts: facts, topic: topic))],
             model: .flash36,
@@ -100,7 +107,17 @@ enum CallGoodbye {
             maxTokens: 2000,
             purpose: "goodbye",
             idempotencyKey: "goodbye:\(sessionId.uuidString)",
-            requestTimeout: 15)
+            requestTimeout: 15,
+            earlyField: "spoken",
+            onEarlyField: { text, isComplete in
+                guard !isComplete, let onFirstSentence,
+                      !text.contains(where: { $0 == "?" || $0 == "？" }),
+                      TextScript.isInTargetScript(text, language: target) else { return }
+                onFirstSentence(text)
+            },
+            // The stream broke after the first sentence went to the voice:
+            // keep what is being heard rather than nothing.
+            fallbackFromEarly: { Payload(spoken: $0, translation: nil) })
         guard var spoken = payload?.spoken?.trimmingCharacters(in: .whitespacesAndNewlines),
               !spoken.isEmpty else { return nil }
         // A question is the one thing a goodbye may not end on — the line is
@@ -113,6 +130,14 @@ enum CallGoodbye {
         let translation = LanguageCatalog.sameLanguage(target, native) ? ""
             : payload?.translation?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return Line(spoken: spoken, translation: translation)
+    }
+
+    /// What is left to say once `first` has been spoken: the line after it,
+    /// or "" when the finished line doesn't start with it (then the first
+    /// sentence stands alone rather than saying something twice).
+    static func remainder(of spoken: String, after first: String) -> String {
+        guard spoken.hasPrefix(first) else { return "" }
+        return String(spoken.dropFirst(first.count)).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// The text with every sentence that asks something removed.
@@ -188,5 +213,97 @@ enum CallGoodbye {
         case "fr": return "tu"
         default: return "casual"
         }
+    }
+}
+
+/// The goodbye's voice, spoken in pieces on ONE open PCM stream: the first
+/// sentence the moment it is written, the rest once the line is finished.
+/// A piece joins the stream after a short silence (`gap`) — separately
+/// synthesized pieces have almost none at their edges, and two sentences
+/// run together read as one breathless one (the call's 0.42 s, `PacedSpeech`).
+@MainActor
+final class CallGoodbyeVoice {
+    static let gap: Double = 0.42
+
+    private let player: AudioPlayer
+    private let voiceId: String
+    private let sessionId: UUID
+    /// Audio has started (streamed, or the buffered fallback).
+    private(set) var started = false
+    /// The open stream more pieces can join; false after a buffered fallback.
+    private var streaming = false
+    private var rate: Double?
+    private var pieces = 0
+    private var stopped = false
+    var onStart: () -> Void = {}
+    var onFinish: () -> Void = {}
+
+    init(player: AudioPlayer, voiceId: String, sessionId: UUID) {
+        self.player = player
+        self.voiceId = voiceId
+        self.sessionId = sessionId
+    }
+
+    /// Speaks `text` after whatever is already playing. True when it produced
+    /// audio. Only the FIRST piece may fall back to a whole-file play; a later
+    /// one that can't join the open stream is dropped rather than talking
+    /// over the first.
+    @discardableResult
+    func speak(_ text: String) async -> Bool {
+        guard !stopped, !text.isEmpty, !(started && !streaming) else { return false }
+        pieces += 1
+        let isFirst = !started
+        var joined = false
+        do {
+            let result = try await VoiceClient.shared.synthesizeStreaming(
+                voiceId: voiceId, text: text,
+                idempotencyKey: "goodbye-tts:\(sessionId.uuidString):\(pieces)",
+                purpose: "goodbye"
+            ) { [self] chunk, sampleRate in
+                guard !stopped else { return }
+                if !started {
+                    // The call is over: a playback session, like Watch.
+                    guard (try? player.startPCMStream(sampleRate: sampleRate, voiceKey: voiceId,
+                                                      completion: { [weak self] in self?.onFinish() })) != nil
+                    else { return }
+                    started = true
+                    streaming = true
+                    rate = sampleRate
+                    joined = true
+                    onStart()
+                } else if !joined {
+                    guard streaming, sampleRate == rate else { return }
+                    joined = true
+                    player.feedPCMStream(Data(count: Int(sampleRate * Self.gap) * 2))
+                }
+                player.feedPCMStream(chunk)
+            }
+            if joined || stopped { return joined }
+            guard isFirst, !started else { return false }
+            // The stream never opened (an engine refusal, a server that
+            // answered with the whole file): play what came back in one piece.
+            let audio: Data
+            switch result {
+            case .pcm(let pcm, let rate): audio = AudioLoudness.wavData(fromPCM16: pcm, sampleRate: Int(rate))
+            case .mp3(let data): audio = data
+            }
+            guard !audio.isEmpty else { return false }
+            try player.play(audio, source: "call_goodbye") { [weak self] in self?.onFinish() }
+            started = true
+            onStart()
+            return true
+        } catch {
+            return joined
+        }
+    }
+
+    /// No more pieces are coming.
+    func finish() {
+        if streaming, !stopped { player.finishPCMStream() }
+    }
+
+    func stop() {
+        stopped = true
+        player.stop()
     }
 }
