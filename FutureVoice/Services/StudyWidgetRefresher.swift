@@ -67,6 +67,9 @@ enum StudyWidgetRefresher {
     /// exit never loses the snapshot.
     nonisolated static func schedule() {
         LearnerRecordUploader.schedule()
+        // A call ending, a saved speech take and the app coming forward all
+        // land here: a challenger's day checks in from the same three places.
+        ChallengeDays.schedule()
         Task { @MainActor in
             pending?.cancel()
             pending = Task { @MainActor in
