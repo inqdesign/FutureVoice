@@ -103,3 +103,215 @@ enum StudyIcon {
     static let grammar = "checkmark.bubble.fill"
     static let shadowing = "waveform.badge.mic"
 }
+
+/// Today's review, one book at a time (2026-11-11, founder: "one card, and
+/// they finish them one by one; swipe sideways for the next book; a bigger
+/// card with the key things from the talk's summary; a tap opens the book").
+/// The top of the card is the book — where it came from, its title, the
+/// summary's one line, and what it still teaches per chapter — and opens its
+/// page. Under it: how much is left, and the four chapter buttons the feed
+/// always had.
+struct TodayBookCard: View {
+    let book: BookPreview
+    /// A scene's linked person, when it has one.
+    var personaName: String? = nil
+    /// The last mastery event in a talk book; nil before any.
+    var lastStudied: Date? = nil
+    /// The page hands over the room it has left, so the card fills it.
+    var minHeight: CGFloat = TodayBookCard.minHeight
+    let open: () -> Void
+    let study: (BookPreview.Chapter) -> Void
+
+    static let minHeight: CGFloat = 380
+
+    private var left: Int { book.total - book.mastered }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 14) {
+                header
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(title)
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                    if let note {
+                        Text(note)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(3)
+                    }
+                }
+                keyRows
+                Spacer(minLength: 0)
+            }
+            .padding(18)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .contentShape(Rectangle())
+            .onTapGesture(perform: open)
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isButton)
+
+            footer
+        }
+        .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .topLeading)
+        .background(RoundedRectangle(cornerRadius: 24, style: .continuous)
+            .fill(Color(.secondarySystemGroupedBackground)))
+        .tint(book.tint)
+    }
+
+    // MARK: The book
+
+    private var header: some View {
+        HStack(alignment: .center, spacing: 10) {
+            icon
+            meta
+            Spacer(minLength: 8)
+            if case .talk(let s) = book.source,
+               let sc = s.summary?.scorecard, !s.isPractice {
+                Text("\(sc.overall)")
+                    .font(.footnote.weight(.bold).monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .frame(width: 34, height: 34)
+                    .background(Circle().stroke(Color(.separator), lineWidth: 2))
+            }
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+    }
+
+    @ViewBuilder
+    private var icon: some View {
+        switch book.source {
+        case .talk:
+            BookIconDisc {
+                Image(systemName: "bubble.left.and.bubble.right.fill").font(.title3).foregroundStyle(.tint)
+            }
+        case .scenario(let sc):
+            if let personaName {
+                BookIconDisc(photoId: sc.counterpartId) {
+                    Text(Books.initials(personaName)).font(.headline.weight(.bold)).foregroundStyle(.tint)
+                }
+            } else if sc.isPodcastBook {
+                BookIconDisc {
+                    Image(systemName: NewsShow.icon(for: sc.category)).font(.title3).foregroundStyle(.tint)
+                }
+            } else if sc.isTopic == true {
+                BookIconDisc { Image(systemName: "newspaper.fill").font(.title3).foregroundStyle(.tint) }
+            } else {
+                BookIconDisc {
+                    Image(systemName: Books.roleIcon(for: sc.role)).font(.title3).foregroundStyle(.tint)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var meta: some View {
+        switch book.source {
+        case .talk(let s):
+            let last = [lastStudied, s.endedAt, s.startedAt].compactMap { $0 }.max() ?? s.startedAt
+            let when = last.formatted(Date.RelativeFormatStyle(
+                presentation: .named, locale: Locale(identifier: UILanguage.chromeLanguage)))
+            OriginTag(session: s)?.with(when) ?? .detail(when)
+        case .scenario(let sc):
+            let role = sc.role.trimmingCharacters(in: .whitespaces)
+            OriginTag(scenario: sc).with(personaName ?? (role.isEmpty ? nil : role))
+        }
+    }
+
+    private var title: String {
+        switch book.source {
+        case .talk(let s):      return s.displayTitle
+        case .scenario(let sc): return sc.cardTitle
+        }
+    }
+
+    /// The summary's one line: how the talk went, or what the situation is.
+    private var note: String? {
+        let text: String?
+        switch book.source {
+        case .talk(let s):
+            let top = s.summary?.scorecard?.topLine ?? ""
+            text = top.isEmpty ? s.summary?.overallNote : top
+        case .scenario(let sc):
+            text = sc.cardTitle != sc.environment ? sc.environment : sc.brief?.summary
+        }
+        let trimmed = text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    /// What each chapter still teaches, one line a chapter: the open items
+    /// first, so the card shows what finishing this book means.
+    @ViewBuilder
+    private var keyRows: some View {
+        let rows = book.chapters.filter { !$0.items.isEmpty }
+        if !rows.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(rows) { chapter in
+                    let done = chapter.mastered == chapter.items.count
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        Image(systemName: done ? "checkmark.circle.fill" : chapter.icon)
+                            .font(.subheadline)
+                            .foregroundStyle(done ? AnyShapeStyle(.green) : AnyShapeStyle(.secondary))
+                            .frame(width: 22)
+                        Text(preview(chapter))
+                            .font(.subheadline)
+                            .foregroundStyle(done ? .secondary : .primary)
+                            .lineLimit(chapter.kind == .words || chapter.kind == .expressions ? 2 : 4)
+                        Spacer(minLength: 6)
+                        Text("\(chapter.mastered)/\(chapter.items.count)")
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+    }
+
+    private func preview(_ chapter: BookPreview.Chapter) -> String {
+        switch chapter.kind {
+        case .words, .expressions:
+            return chapter.preview.prefix(chapter.kind == .words ? 8 : 4).joined(separator: " · ")
+        case .grammar, .shadow:
+            return chapter.preview.prefix(2).joined(separator: "\n")
+        }
+    }
+
+    // MARK: Finishing it
+
+    @ViewBuilder
+    private var footer: some View {
+        if book.chapters.isEmpty {
+            // A talk whose chapters are still being derived.
+            ProgressView()
+                .frame(maxWidth: .infinity)
+                .padding(.bottom, 24)
+        } else if book.total == 0 {
+            Label("Replay anytime", systemImage: "play.circle")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 18)
+                .padding(.bottom, 18)
+        } else {
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
+                    ProgressView(value: book.progress)
+                        .tint(left == 0 ? .green : book.tint)
+                    HStack {
+                        Text("\(left) left")
+                            .font(.footnote.weight(.semibold).monospacedDigit())
+                        Spacer()
+                        Text("\(book.mastered)/\(book.total) mastered")
+                            .font(.footnote.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .padding(.horizontal, 18)
+            .padding(.bottom, 12)
+            BookChapterButtons(book: book, study: study)
+        }
+    }
+}

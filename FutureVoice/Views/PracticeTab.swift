@@ -73,10 +73,26 @@ struct PracticeTab: View {
     // Shelves — optional because it doubles as the pager's scrollPosition
     // binding (same pattern as Progress).
     @State private var shelf: Shelf? = .studying
+    /// The shelves (Talk · Watch · Listen · Finished, archives included) as a
+    /// pushed page. The tab's own page is today's review: one book at a time
+    /// (2026-11-11, founder).
+    @State private var showingAllBooks = false
+    /// The book showing in today's review — the sideways pager's position.
+    @State private var currentBook: UUID?
+    /// The page's visible height and what sits above the card, so the card
+    /// runs down to the tab bar instead of leaving the page's foot empty.
+    @State private var reviewViewport: CGFloat = 0
+    @State private var reviewAboveCard: CGFloat = 0
+    private var todayCardHeight: CGFloat {
+        guard reviewViewport > 0, reviewAboveCard > 0 else { return TodayBookCard.minHeight }
+        // top inset 10 + top padding 8 + the gap above the card 14 + bottom 16
+        return max(TodayBookCard.minHeight, reviewViewport - reviewAboveCard - 48)
+    }
 
-    /// Default lands on Studying; the capture harness opens a specific shelf.
+    /// Default lands on today's review; the capture harness opens a shelf.
     init(initialShelf: Shelf? = .studying) {
         _shelf = State(initialValue: initialShelf)
+        _showingAllBooks = State(initialValue: initialShelf != .studying && initialShelf != nil)
     }
     @State private var openScenario: Scenario?
     /// Continue widget → a talk book's detail page (watch books use openScenario).
@@ -150,6 +166,9 @@ struct PracticeTab: View {
         // scenes you watched. Each card carries an origin tag (Free talk /
         // News / Scenario) for the orthogonal source.
         case studying, talk, watch, listen, finished
+        /// The pages of "All books" — the chips this tab carried until
+        /// 2026-11-11.
+        static let shelves: [Shelf] = allCases
         var title: String {
             switch self {
             // A `String`, so it must go through explain() or it stays English
@@ -253,36 +272,19 @@ struct PracticeTab: View {
 
     private var shelves: some View {
         NavigationStack {
-            // Same pager as Progress: a native horizontal-paging ScrollView
-            // whose pages are real vertical scroll views, so content slides
-            // under the chip bar's material and the tab bar.
-            ScrollView(.horizontal) {
-                LazyHStack(spacing: 0) {
-                    ForEach(Shelf.allCases, id: \.self) { s in
-                        ScrollView {
-                            content(for: s)
-                                .padding(.horizontal, 18)
-                                .padding(.top, 8)
-                                .padding(.bottom, 36)
-                                .macPagerPage()
-                        }
-                        .containerRelativeFrame(.horizontal)
-                        .id(s)
-                    }
-                }
-                .scrollTargetLayout()
+            // Today's review: one book at a time, the next a swipe away,
+            // the four lists under it (2026-11-11, founder). The shelves are
+            // a page behind the header's books button.
+            ScrollView {
+                studyingPage
+                    .padding(.top, 8)
+                    .padding(.bottom, 16)
             }
-            .scrollTargetBehavior(.paging)
-            .macPager()
-            .scrollPosition(id: $shelf)
-            .scrollIndicators(.hidden)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { reviewViewport = $0 }
+            // The translucent panel behind the title, feathered at its
+            // bottom edge — the chip bar's panel, without the chips.
             .safeAreaInset(edge: .top, spacing: 0) {
-                shelfChips
-                    .padding(.top, 4)
-                    .padding(.bottom, 6)
-                    // One continuous translucent panel from the status bar
-                    // down to the chips, feathered at the bottom — identical
-                    // to Progress's header treatment.
+                Color.clear.frame(height: 10)
                     .background {
                         Rectangle().fill(.bar)
                             .mask {
@@ -319,6 +321,9 @@ struct PracticeTab: View {
             }
             .navigationDestination(isPresented: $showingVocabulary) {
                 VocabularyView()
+            }
+            .navigationDestination(isPresented: $showingAllBooks) {
+                allBooksPage
             }
             .navigationDestination(isPresented: $showingExpressions) {
                 ExpressionsView()
@@ -475,6 +480,61 @@ struct PracticeTab: View {
         }
     }
 
+
+    /// Every book by shelf — Talk · Watch · Listen · Finished, each with its
+    /// archive. The tab's chips until 2026-11-11; now one page behind the
+    /// header's books button.
+    private var allBooksPage: some View {
+            // Same pager as Progress: a native horizontal-paging ScrollView
+            // whose pages are real vertical scroll views, so content slides
+            // under the chip bar's material and the tab bar.
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: 0) {
+                    ForEach(Shelf.shelves, id: \.self) { s in
+                        ScrollView {
+                            content(for: s)
+                                .padding(.horizontal, 18)
+                                .padding(.top, 8)
+                                .padding(.bottom, 36)
+                                .macPagerPage()
+                        }
+                        .containerRelativeFrame(.horizontal)
+                        .id(s)
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .scrollTargetBehavior(.paging)
+            .macPager()
+            .scrollPosition(id: $shelf)
+            .scrollIndicators(.hidden)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                shelfChips
+                    .padding(.top, 4)
+                    .padding(.bottom, 6)
+                    // One continuous translucent panel from the status bar
+                    // down to the chips, feathered at the bottom — identical
+                    // to Progress's header treatment.
+                    .background {
+                        Rectangle().fill(.bar)
+                            .mask {
+                                LinearGradient(stops: [.init(color: .black, location: 0),
+                                                       .init(color: .black, location: 0.82),
+                                                       .init(color: .clear, location: 1)],
+                                               startPoint: .top, endPoint: .bottom)
+                            }
+                            .ignoresSafeArea(edges: [.top, .horizontal])
+                    }
+            }
+            .tabBarScrollFeather()
+            .background(Color(.systemGroupedBackground).ignoresSafeArea())
+            .navigationTitle("All books")
+            .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                if shelf == nil { shelf = .studying }
+            }
+    }
+
     /// Deep link handoff (study widget → vocabulary notebook). The route is
     /// staged in AppState because on a cold launch the URL arrives before
     /// this tab exists — onAppear picks it up; onChange covers warm taps.
@@ -482,6 +542,7 @@ struct PracticeTab: View {
         // Route only pushes the page; the specific item comes via
         // appState.focusWord/focusPhrase (observed by the page even if it's
         // already on screen).
+        if appState.pendingPracticeRoute != nil { showingAllBooks = false }
         switch appState.pendingPracticeRoute {
         case .studying:
             appState.pendingPracticeRoute = nil
@@ -567,7 +628,7 @@ struct PracticeTab: View {
     private func content(for s: Shelf) -> some View {
         switch s {
         case .studying:
-            studyingPage
+            shelfPage { studyingShelf }
         case .talk:
             shelfPage { talksShelf }
         case .watch:
@@ -606,6 +667,24 @@ struct PracticeTab: View {
         }
     }
 
+    /// Every unfinished book, newest first — today's review as a shelf.
+    @ViewBuilder
+    private var studyingShelf: some View {
+        let books = studyingFeed
+        if books.isEmpty {
+            shelfHint(explain("Finish a talk and it lands here as a book — replay it, pick up its words, shadow the smoother versions of your own lines."))
+        } else {
+            LazyVGrid(columns: columns, spacing: 14) {
+                ForEach(books) { book in
+                    switch book.source {
+                    case .talk(let s):      talkCard(s)
+                    case .scenario(let sc): scenarioCard(sc)
+                    }
+                }
+            }
+        }
+    }
+
     private func shelfPage<C: View>(@ViewBuilder _ content: () -> C) -> some View {
         VStack(alignment: .leading, spacing: 12) { content() }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -638,7 +717,7 @@ struct PracticeTab: View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    ForEach(Shelf.allCases, id: \.self) { s in
+                    ForEach(Shelf.shelves, id: \.self) { s in
                         Button { withAnimation { shelf = s } } label: {
                             // Fitness+-style pills, but the active book chip
                             // fills with its category color (white text works
@@ -879,31 +958,113 @@ struct PracticeTab: View {
     /// routine, and its piles are chapters of these books.
     private var studyingPage: some View {
         let books = studyingFeed
-        return LazyVStack(alignment: .leading, spacing: 12) {
-            // The four lists FIRST, each saying how much of it is checked
-            // off (2026-10-03, user decision: an index at the bottom of a
-            // long feed was nowhere).
+        let index = books.firstIndex { $0.id == currentBook } ?? 0
+        return VStack(alignment: .leading, spacing: 14) {
+          VStack(alignment: .leading, spacing: 14) {
+            // The four lists on top, each saying how much of it is checked off.
             libraryList
                 .opacity(books.isEmpty && libraryIsEmpty ? 0.45 : 1)
-                .padding(.bottom, 8)
-            ForEach(books) { book in
-                // The shelf's own card, with its chapter buttons under it on
-                // the same ground.
-                VStack(spacing: 0) {
-                    bookCard(book)
-                    BookChapterButtons(book: book) { chapter in study(chapter, of: book) }
+                .padding(.horizontal, 18)
+                .padding(.bottom, 6)
+            // The section's right side opens everything there is to review:
+            // the shelves, by the chips this tab used to carry.
+            HStack(alignment: .firstTextBaseline) {
+                Text("Today's review")
+                    .font(.title3.weight(.semibold))
+                Spacer()
+                Button { showingAllBooks = true } label: {
+                    HStack(spacing: 4) {
+                        if books.isEmpty {
+                            Text("All books")
+                        } else {
+                            Text("\(index + 1) of \(books.count)")
+                                .monospacedDigit()
+                        }
+                        Image(systemName: "chevron.right")
+                            .font(.footnote.weight(.semibold))
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .contentShape(Rectangle())
                 }
-                .background(RoundedRectangle(cornerRadius: 18)
-                    .fill(Color(.secondarySystemGroupedBackground)))
-                // The whole card, chapters included: the card alone left
-                // the outline cutting across it (2026-11-01).
-                .overlay { openOutline(bookId(book), radius: 18) }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("All books"))
+                .accessibilityIdentifier("practice.allBooks")
             }
+            .padding(.horizontal, 20)
+          }
+          .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { reviewAboveCard = $0 }
             if books.isEmpty {
                 firstBookPlaceholder
+                    .padding(.horizontal, 18)
+            } else {
+                // One book fills the page; the next one's edge shows at the
+                // right, so the row reads as something to swipe.
+                ScrollView(.horizontal) {
+                    LazyHStack(alignment: .top, spacing: 10) {
+                        ForEach(books) { book in
+                            todayCard(book)
+                                .containerRelativeFrame(.horizontal) { width, _ in
+                                    books.count > 1 ? width - 18 : width
+                                }
+                                .id(book.id)
+                        }
+                    }
+                    .scrollTargetLayout()
+                }
+                .contentMargins(.horizontal, 18, for: .scrollContent)
+                .scrollTargetBehavior(.viewAligned)
+                .scrollPosition(id: $currentBook)
+                .scrollIndicators(.hidden)
+                .macCarousel()
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// One book of today's review: the big card, its tap, and the same
+    /// archive / delete menu the shelves' cards carry.
+    private func todayCard(_ book: BookPreview) -> some View {
+        var persona: String?
+        var lastStudied: Date?
+        switch book.source {
+        case .talk(let s):      lastStudied = talkSnapshots[s.id]?.lastStudiedAt
+        case .scenario(let sc): persona = linkedPersonaName(sc)
+        }
+        return TodayBookCard(book: book, personaName: persona, lastStudied: lastStudied,
+                             minHeight: todayCardHeight,
+                             open: {
+                                 switch book.source {
+                                 case .talk(let s):      openBook(s)
+                                 case .scenario(let sc): openBook(sc)
+                                 }
+                             },
+                             study: { chapter in study(chapter, of: book) })
+            .overlay { openOutline(book.id, radius: 24) }
+            .contextMenu {
+                switch book.source {
+                case .talk(let s):
+                    Button { setTalkArchived(s, true) } label: {
+                        Label("Archive", systemImage: "archivebox")
+                    }
+                    Button(role: .destructive) {
+                        appState.deleteSession(id: s.id)
+                        reload()
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                case .scenario(let sc):
+                    Button {
+                        BillingGate.start(orShow: $showingPaywall) { talkLaunch = sc }
+                    } label: { Label("Talk now", systemImage: "mic.fill") }
+                    Button { appState.setScenarioArchived(id: sc.id, true) } label: {
+                        Label("Archive", systemImage: "archivebox")
+                    }
+                    Button(role: .destructive) { appState.deleteScenario(id: sc.id) } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+            }
     }
 
     private var libraryIsEmpty: Bool {
@@ -960,21 +1121,6 @@ struct PracticeTab: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
             .strokeBorder(Color(.separator), style: StrokeStyle(lineWidth: 1.5, dash: [6, 5])))
-    }
-
-    @ViewBuilder
-    private func bookCard(_ book: BookPreview) -> some View {
-        switch book.source {
-        case .talk(let s): talkCard(s, showsProgress: false, outlined: false)
-        case .scenario(let sc): scenarioCard(sc, showsProgress: false, outlined: false)
-        }
-    }
-
-    private func bookId(_ book: BookPreview) -> UUID {
-        switch book.source {
-        case .talk(let s): s.id
-        case .scenario(let sc): sc.id
-        }
     }
 
     private func sectionHeader(_ title: LocalizedStringKey) -> some View {
