@@ -1592,15 +1592,22 @@ of the founder's own calls (samples in `~/Desktop/beta audio/end-of-call-goodbye
   right as tips. A turn whose correction never arrived is neither. Nothing
   to praise = no goodbye (`call_goodbye` outcome `nothing_to_praise`).
 - **Only what exists at hang-up**, never the summary (still being written),
-  so it starts ~2 s after End and nothing waits on it.
+  so nothing waits on it. **The voice starts on the FIRST sentence**: the
+  line is written as a stream, the first sentence goes to a streamed TTS at
+  once, the rest joins the same PCM stream after a 0.42 s breath
+  (`CallGoodbyeVoice`), and the card goes up with the first sound, never
+  ahead of it (founder heard the words appear, then wait for the voice).
+  Measured: Haiku's first sentence ~0.85 s vs ~2 s whole; TTS first chunk
+  ~0.15 s vs ~1.7 s for the whole file. `call_goodbye_voice` logs voice_ms.
 - Material: target language, informal, at the learner's level; the native
   line under it is for the screen. No names (a Korean translation misspelled
   the founder's).
 - Server: `purpose: "goodbye"` on both calls. The text is a Haiku move with
-  thinking off (`CLAUDE_PURPOSE_ADDENDA`, listed in `CLAUDE_PURPOSES` to
-  take effect); the voice is a TALK purpose in `tts` (free under the call's
-  floor). **Deploy `tts` + `gemini` before a build with this ships**: on the
-  old `tts` an unknown purpose is charged per character from the pool.
+  thinking off, and the one purpose Claude may answer as a STREAM
+  (`STREAMABLE`, `claudePurposeStream`: Claude's deltas re-emitted in
+  Gemini's SSE shape; refused before it starts → Gemini). The voice is a
+  TALK purpose in `tts` (free under the call's floor). All deployed
+  2026-11-12 and `goodbye` is in `CLAUDE_PURPOSES`.
 - Telemetry `call_goodbye` (outcome: played · stopped · no_line · no_audio ·
   nothing_to_praise, ms). Android: owed.
 
