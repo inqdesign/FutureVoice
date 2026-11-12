@@ -30,6 +30,7 @@ import shell from "./shell.html";
 import { assemble } from "./assemble";
 import { marketingAction, marketingData, serveMedia } from "./marketing";
 import roroShell from "./roro.html";
+import { visitorsData } from "./visitors";
 import { roroData } from "./roro";
 
 export interface Env {
@@ -985,7 +986,7 @@ export default {
       // data.json is for scripts, and a script gets a 404 rather than a form.
       if (path === "/data.json" || path === "/live.json" || path === "/history.json"
         || path === "/marketing.json" || path.startsWith("/marketing/")
-        || path === "/roro/data.json") return text("Not found", 404);
+        || path === "/roro/data.json" || path === "/visitors/data.json") return text("Not found", 404);
       return html(loginPage(base), 401);
     }
 
@@ -1010,6 +1011,9 @@ export default {
         .replace("__ADMIN_DATA__", () => JSON.stringify(data).replace(/</g, "\\u003c"))
         .replaceAll("__ADMIN_BASE__", base));
     }
+
+    // 라이브 지도 · 웹 (visitors.ts): the web pages' visits from PostHog.
+    if (path === "/visitors/data.json") return visitorsData(env, url);
 
     if (!env.SUPABASE_SERVICE_ROLE_KEY) {
       return text(

@@ -686,6 +686,29 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
     <nav class="appsw" aria-label="앱"><a href="__ADMIN_BASE__/" aria-current="page">나와나</a><a href="__ADMIN_BASE__/roro">Dear RoRo</a></nav>
     <div class="stitle">어드민</div>
     <button type="button" class="menubtn" id="menuBtn" aria-expanded="false" aria-controls="sideNav">목차</button>
+/* 라이브 지도 · 웹 (2026-11-12): the web pages' visits on the same map. */
+.livehead .liveview{margin:0}
+.livehead .liveview button{padding:4px 12px}
+#webList{max-height:520px; overflow-y:auto}
+.wrow{display:grid; grid-template-columns:14px minmax(0,1fr) auto; gap:3px 10px; align-items:start; width:100%; text-align:left;
+  background:none; border:0; border-bottom:1px solid var(--grid); padding:8px 6px; cursor:pointer; font:inherit; color:inherit}
+.wrow:hover{background:var(--chip)}
+.wrow.sel{background:color-mix(in srgb, var(--s1) 10%, transparent)}
+.wrow .wd{width:9px; height:9px; border-radius:50%; margin-top:6px; background:var(--muted)}
+.wrow .wd.live{background:var(--good); box-shadow:0 0 0 4px color-mix(in srgb, var(--good) 20%, transparent)}
+.wrow .wd.recent{background:var(--s2)}
+.wrow .w1{display:flex; gap:8px; flex-wrap:wrap; align-items:baseline; min-width:0}
+.wrow .w1 b{font-size:14px}
+.wrow .w1 .m{color:var(--ink-2); font-size:12.5px}
+.wrow .wt{color:var(--muted); font-size:12px; white-space:nowrap; font-variant-numeric:tabular-nums}
+.wrow .w2{grid-column:2 / 4; display:flex; gap:10px; align-items:center; flex-wrap:wrap; font-size:12.5px; color:var(--ink-2)}
+.wdepth{display:flex; gap:2px}
+.wdepth i{width:12px; height:6px; border-radius:2px; background:var(--grid)}
+.wdepth i.on{background:var(--s1)}
+.wdepth i.form.on{background:var(--s2)}
+.wtag{font-size:11.5px; padding:1px 7px; border-radius:5px; background:var(--chip); color:var(--ink-2)}
+.wtag.hot{background:var(--ink); color:var(--page)}
+.wtag.go{background:color-mix(in srgb, var(--good) 18%, transparent); color:var(--good-text)}
   </div>
   <nav class="snav" id="sideNav" aria-label="어드민 목차"></nav>
   <div class="sctl">
@@ -712,7 +735,8 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
     <span class="livebeat" id="liveBeat"><i></i><span>불러오는 중</span></span>
     <button type="button" id="liveSound" class="soundbtn" aria-pressed="false">🔕 소리 꺼짐</button>
   </div>
-  <p class="sub">서버 요청과 PostHog 앱 이벤트를 합쳐 읽어요. 앱이 열려 있거나 3분 안에 요청이 있으면 <b>지금</b>,
+  <p class="sub" id="webSub" hidden>nawana.app 웹페이지 방문을 PostHog에서 읽어요. 방문 1개 = 페이지를 한 번 연 것이에요(크리에이터 페이지는 쿠키가 없어서 다시 오면 새 방문). 운영자 브라우저는 안 세요. 5분 안에 움직였고 아직 안 나갔으면 <b>지금</b>이에요. 막대는 크리에이터 페이지를 어디까지 내려봤는지예요(주황 칸이 지원서).</p>
+  <p class="sub" id="liveSub">서버 요청과 PostHog 앱 이벤트를 합쳐 읽어요. 앱이 열려 있거나 3분 안에 요청이 있으면 <b>지금</b>,
   30분 안이면 <b>방금</b>이에요. 위치는 PostHog가 IP로 본 도시예요. 어두운 띠는 지금 밤인 곳이에요.
   아래 막대에서 시간을 누르면 지도도 그 시간으로 바뀌고, 지도의 사람을 누르면 그 사람만 보여요.</p>
   <p class="sub warn" id="liveNote" hidden></p>
@@ -720,6 +744,7 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   <div class="livegrid">
     <div id="liveMap"></div>
     <div class="card" id="liveTimeline">
+    <div class="seg liveview" id="liveView" role="group" aria-label="앱 또는 웹"><button type="button" data-v="app" aria-pressed="true">앱</button><button type="button" data-v="web" aria-pressed="false">웹</button></div>
       <div class="tlhead">
         <h3 style="margin:0">지난 24시간, 시간대별</h3>
         <span class="muted" id="tlFilter"></span>
@@ -738,6 +763,14 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   <b id="cancelShape"></b></p>
 </section>
 
+    <div class="card" id="webCard" hidden>
+      <div class="tlhead">
+        <h3 style="margin:0">웹 방문</h3>
+        <div class="seg" id="webPageSeg" role="group" aria-label="페이지" style="margin:0"></div>
+        <div class="seg" id="webRangeSeg" role="group" aria-label="기간" style="margin:0"></div>
+      </div>
+      <div id="webList"></div>
+    </div>
 <div class="dgrid">
 <section id="attentionSec" data-nav="지금 봐야 할 것">
   <h2>지금 봐야 할 것</h2>
@@ -4945,6 +4978,7 @@ function drawPlayFrame(){
     const d = new Date(t);
     const day = new Intl.DateTimeFormat('ko-KR', {timeZone: tzZone(), month:'numeric', day:'numeric', weekday:'short'}).format(d);
     const hm = new Intl.DateTimeFormat('en-GB', {timeZone: tzZone(), hour:'2-digit', minute:'2-digit', hourCycle:'h23'}).format(d);
+  if(liveView === 'web'){ renderWeb(); return; }
     playCtl.querySelector('.pclock').textContent = `${day} ${hm}`;
     playCtl.querySelector('.pcount').textContent = `지금 ${act.size}명 · 누적 ${seen.size}명`;
     setScrub(Math.round((t - c.from) / Math.max(1, c.to - c.from) * 1000));
@@ -5114,6 +5148,156 @@ function renderMkTiles(){
     + tile('올라감 (30일)', num(posted30.length), `전체 ${num(by('posted').length)}`)
     + tile('조회', num(last.views||0), `지난 7일 +${num(Math.max(0,(last.views||0)-(wk.views||0)))}`)
     + tile('저장', num(last.saves||0), `좋아요 ${num(last.likes||0)}`)
+/* ============================================================ 라이브 지도 · 웹
+ * The 앱 / 웹 switch above the map (2026-11-12). 웹 puts nawana.app's page
+ * visits on the same map, from __ADMIN_BASE__/visitors/data.json (PostHog,
+ * visitors.ts): one pin per visit, the creators page's depth as a bar. The
+ * app's arrival alarm keeps running under it (renderLive still runs up to the
+ * alarm and hands over here). */
+let liveView = 'app', webData = null, webAt = 0, webTimer = null, webDays = 1, webPage = 'creators', webSel = null, webFit = false, webAll = false;
+try{ liveView = localStorage.getItem('nawana.admin.liveView') === 'web' ? 'web' : 'app';
+     webPage = localStorage.getItem('nawana.admin.webPage') || 'creators'; }catch(e){}
+const WEB_PAGES = [['creators','크리에이터'], ['pay','결제'], ['home','홈'], ['ko','한국어 홈'], ['community','커뮤니티'], ['all','전체']];
+const WEB_PAGE_NAME = Object.fromEntries(WEB_PAGES);
+// web/creators.html's PARTS, in order; 8 is the form.
+const WEB_PARTS = ['맨 위','약속','샘플','재료','아이디어','성장','방법','FAQ','지원서','파트너','방명록'];
+const WEB_FORM = 8;
+const webFrom = d => !d || d === '$direct' ? '직접' : /threads/.test(d) ? '스레드' : /instagram/.test(d) ? '인스타'
+  : /google/.test(d) ? '구글' : /naver/.test(d) ? '네이버' : d;
+const webDur = s => s == null ? null : s < 60 ? `${s}초` : `${Math.floor(s/60)}분${s%60 ? ' '+s%60+'초' : ''}`;
+const webAgo = ms => ms < 60e3 ? '방금' : ms < 3600e3 ? `${Math.round(ms/60e3)}분 전` : ms < 86400e3 ? `${Math.round(ms/3600e3)}시간 전` : `${Math.round(ms/86400e3)}일 전`;
+const webClock = iso => new Intl.DateTimeFormat('ko-KR', {timeZone: tzZone(), month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit', hourCycle:'h23'}).format(new Date(iso));
+const webDevice = d => d === 'Desktop' ? '컴퓨터' : d === 'Mobile' ? '휴대폰' : d === 'Tablet' ? '태블릿' : (d || '');
+const webPlace = v => v.city || v.cc ? `${flagOf(v.cc)} ${esc(v.city || v.cc)}` : '<span class="muted">위치 모름</span>';
+function webKind(v, now){
+  const since = now - new Date(v.last).getTime();
+  return since <= 5*60e3 && !v.left ? 'live' : since <= 3600e3 ? 'recent' : since <= 86400e3 ? 'today' : 'quiet';
+}
+const webEmoji = v => v.applied ? '✅' : v.started ? '✍️' : v.device === 'Desktop' ? '💻' : '📱';
+function webReached(v){
+  if(v.applied) return '지원 완료';
+  if(v.started) return '지원서 쓰다 멈춤';
+  if(v.deepest == null) return '맨 위만';
+  return `${WEB_PARTS[v.deepest] || v.deepestName || v.deepest}까지`;
+}
+const webDepth = v => v.page !== 'creators' ? '' : `<span class="wdepth" title="${esc(webReached(v))}">${
+  WEB_PARTS.map((n, i) => `<i class="${i <= (v.deepest ?? -1) ? 'on' : ''}${i === WEB_FORM ? ' form' : ''}" title="${esc(n)}"></i>`).join('')}</span>`;
+
+function setLiveView(v){
+  if(v === liveView) return;
+  liveView = v;
+  try{ localStorage.setItem('nawana.admin.liveView', v); }catch(e){}
+  applyLiveView();
+  if(v === 'web'){ if(livePlayT != null) pausePlay(); pollWeb(); }
+  renderLive();
+}
+function applyLiveView(){
+  const web = liveView === 'web';
+  document.querySelectorAll('#liveView button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === liveView)));
+  document.getElementById('liveTimeline').hidden = web;
+  document.getElementById('webCard').hidden = !web;
+  document.getElementById('liveSub').hidden = web;
+  document.getElementById('webSub').hidden = !web;
+  if(playCtl) playCtl.style.display = web ? 'none' : '';
+  clearInterval(webTimer); webTimer = null;
+  if(web) webTimer = setInterval(() => { if(!document.hidden && liveVisible) pollWeb(); }, 20000);
+}
+async function pollWeb(){
+  try{
+    const r = await fetch(`__ADMIN_BASE__/visitors/data.json?days=${webDays}`, {cache:'no-store', credentials:'same-origin'});
+    const j = await r.json().catch(() => ({}));
+    if(!r.ok) throw new Error(j.error || r.status);
+    webData = j; webAt = Date.now();
+  }catch(e){ webData = webData || {visits:[]}; webData.error = e.message || '오류'; }
+  if(liveView === 'web') renderLive();
+}
+function renderWeb(){
+  const now = Date.now();
+  const all = (webData && webData.visits) || [];
+  const note = document.getElementById('liveNote');
+  if(webData && webData.error){ note.hidden = false; note.textContent = `웹 방문을 읽지 못했어요 (${webData.error})`; }
+  else if(!liveData || !liveData.phError) note.hidden = true;
+  document.getElementById('webPageSeg').innerHTML = WEB_PAGES.map(([k, lab]) => {
+    const c = k === 'all' ? all.length : all.filter(v => v.page === k).length;
+    return `<button type="button" data-k="${k}" aria-pressed="${k === webPage}">${lab} <span style="opacity:.6">${c}</span></button>`;
+  }).join('');
+  document.getElementById('webRangeSeg').innerHTML = [[1,'24시간'],[7,'7일']].map(([d, lab]) =>
+    `<button type="button" data-d="${d}" aria-pressed="${d === webDays}">${lab}</button>`).join('');
+  const vs = all.filter(v => webPage === 'all' || v.page === webPage).map(v => ({...v, kind: webKind(v, now)}));
+  const cnt = f => vs.filter(f).length;
+  const pct = (a, b) => b ? `${Math.round(a/b*100)}%` : '';
+  const cr = vs.filter(v => v.page === 'creators');
+  const toForm = cnt(v => v.page === 'creators' && (v.deepest ?? -1) >= WEB_FORM);
+  const tiles = [
+    {k:'지금 보는 중', v:num(cnt(v => v.kind === 'live')), d:'5분 안에 움직임'},
+    {k: webDays === 1 ? '24시간 방문' : '7일 방문', v:num(vs.length), d:`${new Set(vs.map(v => v.cc).filter(Boolean)).size}개 나라`},
+    {k:'스레드에서', v:num(cnt(v => /threads/.test(v.from || ''))), d:pct(cnt(v => /threads/.test(v.from || '')), vs.length)},
+  ];
+  if(cr.length) tiles.push(
+    {k:'지원서까지 내려옴', v:num(toForm), d:pct(toForm, cr.length)},
+    {k:'지원서 쓰기 시작', v:num(cnt(v => v.started)), d:''},
+    {k:'지원 완료', v:num(cnt(v => v.applied)), d:''});
+  document.getElementById('liveTiles').innerHTML = tiles.map(t => `<div class="tile"><div class="k">${t.k}</div><div class="v">${t.v}</div>`
+    + `<div class="d">${t.d}</div></div>`).join('');
+
+  const rows = webAll ? vs : vs.slice(0, 80);
+  document.getElementById('webList').innerHTML = !webData ? '<div class="empty">불러오는 중</div>'
+    : !vs.length ? '<div class="empty">이 기간에 방문이 없어요.</div>'
+    : rows.map(v => `<button type="button" class="wrow${v.id === webSel ? ' sel' : ''}" data-id="${esc(v.id)}">
+      <span class="wd ${v.kind}"></span>
+      <span class="w1"><b>${webPlace(v)}</b><span class="m">${esc(WEB_PAGE_NAME[v.page] || v.page)} · ${esc(webDevice(v.device))} · ${esc(webFrom(v.from))}${v.ref ? ' · ref ' + esc(v.ref) : ''}</span></span>
+      <span class="wt">${v.kind === 'live' ? '<b style="color:var(--good)">지금</b>' : esc(webClock(v.first))}</span>
+      <span class="w2">${webDepth(v)}${v.page === 'creators' ? `<span>${esc(webReached(v))}</span>` : ''}${
+        v.seconds != null ? `<span>${esc(webDur(v.seconds))} 머묾</span>` : ''}${v.samples ? `<span class="wtag">샘플 ${v.samples}</span>` : ''}${
+        v.applied ? '<span class="wtag go">지원 완료</span>' : v.started ? '<span class="wtag hot">지원서 시작</span>' : ''}</span>
+    </button>`).join('') + (vs.length > rows.length ? `<button type="button" class="linkbtn" id="webMore" style="margin-top:8px">${vs.length - rows.length}개 더 보기</button>` : '');
+
+  ensureMap();
+  if(!liveMap) return;
+  if(playCtl) playCtl.style.display = 'none';
+  nightLayer.setLatLngs(nightPolygon(new Date()));
+  const located = spread(vs.filter(v => v.lat != null && v.lon != null).map(v => ({...v, lat:+v.lat, lon:+v.lon})));
+  const markers = syncPins(located.map(v => ({
+    id: 'w:' + v.id, kind: v.kind, lat: v.lat, lon: v.lon, dx: v.dx, dy: v.dy, emoji: webEmoji(v),
+    tag: v.kind === 'live' || v.id === webSel ? (v.city || v.cc || '') : '', sel: v.id === webSel,
+    tip: `<b>${webPlace(v)}</b> · ${esc(WEB_PAGE_NAME[v.page] || v.page)}<br>${esc(webClock(v.first))} 들어옴 · ${esc(webAgo(now - new Date(v.last).getTime()))}`
+      + `<br>${esc(webDevice(v.device))}${v.os ? ' · ' + esc(v.os) : ''} · ${esc(webFrom(v.from))}${v.ref ? ' · ref ' + esc(v.ref) : ''}`
+      + (v.page === 'creators' ? `<br>${esc(webReached(v))}${v.seconds != null ? ' · ' + esc(webDur(v.seconds)) : ''}${v.samples ? ' · 샘플 ' + v.samples + '번' : ''}` : ''),
+    onClick: () => { webSel = webSel === v.id ? null : v.id; renderLive();
+      const el = document.querySelector(`#webList .wrow[data-id="${CSS.escape(v.id)}"]`); el && el.scrollIntoView({block:'nearest', behavior:'smooth'}); },
+  })));
+  if(!webFit && located.length){
+    webFit = true;
+    liveMap.fitBounds(located.map(v => [v.lat, v.lon]), {padding:[60,60], maxZoom:4});
+  }
+  document.querySelectorAll('#webList .wrow').forEach(el => {
+    const mk = markers.get('w:' + el.dataset.id); if(!mk) return;
+    el.addEventListener('mouseenter', () => mk.openTooltip());
+    el.addEventListener('mouseleave', () => mk.closeTooltip());
+  });
+}
+document.getElementById('liveView').addEventListener('click', e => {
+  const b = e.target.closest('button[data-v]'); if(b) setLiveView(b.dataset.v);
+});
+document.getElementById('webPageSeg').addEventListener('click', e => {
+  const b = e.target.closest('button[data-k]'); if(!b) return;
+  webPage = b.dataset.k; webSel = null; webAll = false;
+  try{ localStorage.setItem('nawana.admin.webPage', webPage); }catch(e){}
+  renderLive();
+});
+document.getElementById('webRangeSeg').addEventListener('click', e => {
+  const b = e.target.closest('button[data-d]'); if(!b) return;
+  webDays = +b.dataset.d; webSel = null; webAll = false; pollWeb();
+});
+document.getElementById('webList').addEventListener('click', e => {
+  if(e.target.id === 'webMore'){ webAll = true; renderLive(); return; }
+  const b = e.target.closest('.wrow'); if(!b) return;
+  webSel = webSel === b.dataset.id ? null : b.dataset.id;
+  const v = webData && webData.visits.find(x => x.id === b.dataset.id);
+  if(webSel && v && v.lat != null && liveMap) liveMap.flyTo([+v.lat, +v.lon], Math.max(liveMap.getZoom(), 4), {duration:.6});
+  renderLive();
+});
+
     + (by('failed').length ? tile('실패', num(by('failed').length), '아래 카드에 이유가 있어요', 'alert') : '');
 }
 
@@ -5323,6 +5507,7 @@ function drawMkCharts(){
 function renderMkTotals(){
   const el = document.getElementById('mkTotals');
   const T = (mkData && mkData.totals) || [];
+  applyLiveView(); if(liveView === 'web') pollWeb();
   if(!T.length || !T.some(t => t.views || t.reach || t.likes || t.saves)){
     el.innerHTML = `<div class="empty">올라간 작업의 반응이 쌓이면 여기에 그려져요.</div>`; return;
   }
