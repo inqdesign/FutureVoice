@@ -431,8 +431,13 @@ object TutorNudges {
     // A challenge (iOS `tutorCheck`).
     const val LEAVE = "They asked to leave this lesson. Agree right away in a few words — never \"let's finish this one first\". If they named what they'd like instead, say that's the new lesson and you're setting it up; otherwise ask what they'd like to practice."
     const val LINE_UNCHECKED = "The app couldn't check that line. Ask them, in a few words, to say it once more."
-    fun notYet(what: String, noSlips: Boolean) = "Result: NOT YET. $what First a few words reacting to what they MEANT (not to how they said it). Then say their line back the right way as ONE sentence (their words, only that fixed)${if (noSlips) ", or give them the example fitted to them" else ""}, and ask them to say it again. Not \"great\", nothing that sounds like it's done."
-    const val ONCE_MORE = "Result: ONCE MORE. That was right. Say so in a few words and ask them to say it one more time, so it sticks. Don't move on yet."
+    // Short, the way a coach says it (iOS 2026-11-12, founder: "just 'no s
+    // at the end, again' — the rest is filler").
+    fun notYet(what: String, noSlips: Boolean) = if (!noSlips)
+        "Result: NOT YET. $what In at most 10 words: name only what to fix, the way a coach would (\"Service, no s. Again.\"), and ask them to say it again. No reaction to the content, no whole sentence read back, no \"great\"."
+    else
+        "Result: NOT YET, it doesn't do the challenge yet. $what In at most 15 words: say what's missing and give the example fitted to them, then ask them to say it. No reaction to the content, no \"great\"."
+    const val ONCE_MORE = "Result: ONCE MORE. That was right. In at most 8 words: say it was right and ask for it once more, so it sticks. No reaction to the content. Don't move on yet."
     const val DONE_LAST = "Result: DONE — that was the last challenge. In a few words say that's every part, then ask them to say it all now, in their own words, in one go — no example, no list of the parts, no hints. That is the final check."
     fun doneNext(i: Int, n: Int, task: String, example: String) = "Result: DONE — challenge ${i + 1} is checked off. A short, real \"you got it\" that reacts to what they said, then move the conversation on to challenge ${n + 1} (\"$task\"): a natural question that asks for it, about their life, and how they could say it (\"$example\", fitted to them)."
     /** Not a try (iOS 9952d507): they asked for help, or said it in their
