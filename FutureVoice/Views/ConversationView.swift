@@ -1001,11 +1001,6 @@ struct ConversationView: View {
                 if pronThisCall {
                     PronunciationCard(round: pronRound, topic: pronTopic, planning: pronPlanning,
                                       onSkip: pronSkipSentence, onLeaveWord: pronLeaveWord)
-                        // The call's turn-taking rides on the card, which
-                        // exists exactly as long as this call does.
-                        .onChange(of: realtime.state) { old, new in pronStateChanged(from: old, to: new) }
-                        .onChange(of: realtime.partial) { _, p in pronHeard(p) }
-                        .onChange(of: realtime.sendPending) { _, pending in pronSendSettled(pending) }
                         .transition(.opacity.combined(with: .move(edge: .top)))
                     Divider().opacity(0.15)
                 }
@@ -2017,6 +2012,12 @@ struct ConversationView: View {
                 .foregroundStyle(.secondary)
                 .frame(height: 16)
                 .animation(nil, value: phase)
+                // The pronunciation call's and a tutor lesson's turn-taking
+                // (`appSendsTurns`) rides on the pill's caption, which is
+                // there for the whole call.
+                .onChange(of: realtime.state) { old, new in pronStateChanged(from: old, to: new) }
+                .onChange(of: realtime.partial) { _, p in pronHeard(p) }
+                .onChange(of: realtime.sendPending) { _, pending in pronSendSettled(pending) }
         }
         .padding(.top, 14)
         .padding(.bottom, 20)
@@ -2538,6 +2539,10 @@ struct ConversationView: View {
         guard on != tutorThisCall, !pronThisCall else { return }
         tutorThisCall = on
         if on { tutorWasOn = true }
+        // Its turns are the app's to send now (`appSendsTurns`), or no longer.
+        pronSendTask?.cancel()
+        pronSendTask = nil
+        pronWindowOpen = on && realtime.state == .listening
         // The classic path reads `tutorThisCall` at its next turn.
         guard RealtimeMode.isEnabled, phoneCallActive else { return }
         realtime.setMeterFromStart(on)
@@ -5770,13 +5775,18 @@ struct ConversationView: View {
         }
     }
 
+    /// The tutor lesson takes the same turn-taking (founder, 2026-11-13:
+    /// "the same logic" — Send and reset there, and a turn that still sends
+    /// by itself once they go quiet).
+    private var appSendsTurns: Bool { pronThisCall || tutorThisCall }
+
     /// The pronunciation call's turn-taking (founder, 2026-11-04): the
     /// gateway holds everything (send-to-answer), and the APP sends. What
     /// was heard while the fluent self was speaking — reading along, a
     /// murmur — is thrown away when it stops; from then on is the learner's
     /// turn, sent by itself once they go quiet.
     private func pronStateChanged(from old: RealtimeTalkClient.State, to new: RealtimeTalkClient.State) {
-        guard pronThisCall else { return }
+        guard appSendsTurns else { return }
         if new == .speaking {
             pronWindowOpen = false
             pronSendTask?.cancel()
@@ -5797,14 +5807,14 @@ struct ConversationView: View {
 
     /// A send the gateway had nothing for: it is still their turn.
     private func pronSendSettled(_ pending: Bool) {
-        if pronThisCall, !pending, realtime.state == .listening { pronWindowOpen = true }
+        if appSendsTurns, !pending, realtime.state == .listening { pronWindowOpen = true }
     }
 
     /// Words arriving in the learner's window: send once they stop. Quicker
     /// when the sentence on screen is (nearly) all there — a reader pausing
     /// mid-sentence for a hard word must not be cut off.
     private func pronHeard(_ partial: String) {
-        guard pronThisCall else { return }
+        guard appSendsTurns else { return }
         if partial.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             pronHeardSince = nil
         } else if pronHeardSince == nil {
@@ -5813,12 +5823,16 @@ struct ConversationView: View {
         guard pronWindowOpen, !realtime.sendPending else { return }
         pronSendTask?.cancel()
         guard !partial.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        let sentence = pronRound?.current.map { pronRound!.lines[$0].drillWord ?? pronRound!.lines[$0].text } ?? ""
+        // The line on screen: the sentence or word being read, or in a
+        // tutor lesson the current challenge's example.
+        let sentence = pronThisCall
+            ? (pronRound?.current.map { pronRound!.lines[$0].drillWord ?? pronRound!.lines[$0].text } ?? "")
+            : (tutorLesson?.current.map { tutorLesson!.challenges[$0].example } ?? "")
         let whole = !sentence.isEmpty && PronunciationJudge.overlap(said: partial, line: sentence) >= 0.8
         // A word practiced alone has no middle to pause in, and a word that
         // came out wrong never matches the screen: waiting 2.5 s for it made
         // every missed try the slowest one (2026-11-10).
-        let drilling = pronRound?.current.map { pronRound!.lines[$0].drillWord != nil } ?? false
+        let drilling = pronThisCall && (pronRound?.current.map { pronRound!.lines[$0].drillWord != nil } ?? false)
         pronSendTask = Task { @MainActor in
             try? await Task.sleep(for: .seconds(whole ? 1.0 : (drilling ? 1.2 : 2.5)))
             // Still voicing (the transcript lags the mouth): give it a beat.
