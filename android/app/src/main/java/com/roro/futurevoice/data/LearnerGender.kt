@@ -67,6 +67,7 @@ enum class LearnerGender(val raw: String) {
                 .putString(VALUE_KEY, value.raw)
                 .putString(SOURCE_KEY, source.raw)
                 .apply()
+            com.roro.futurevoice.sync.SyncEngine.noteChanged()
         }
 
         /** The guess a median pitch allows, null in the overlap. */

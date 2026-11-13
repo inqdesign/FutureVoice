@@ -71,7 +71,28 @@ enum class SyncKind(val raw: String, val isLanguageScoped: Boolean, val isBlob: 
  * record from a newer build is applied if it decodes and FROZEN in the index
  * either way — never pushed back, never tombstoned.
  */
-object SyncSchema { const val VERSION = 1 }
+object SyncSchema {
+    const val VERSION = 1
+    /** The newest stamp this build understands (iOS `readable`). Above
+     *  [VERSION] because a single key may be stamped ahead of the rest,
+     *  without touching the others or dropping anyone's change token. */
+    const val READABLE = 2
+
+    /** What a record of this kind is stamped with on push. */
+    fun stamp(kind: SyncKind): Int = VERSION
+
+    /** Per record, for a single key added to a kind older builds already
+     *  sync (iOS `stamp(for:key:)`). An older build reads only the settings it
+     *  knows, so a new key it pulled would be missing from its next read and
+     *  tombstoned for every device. Stamped 2, older builds freeze it
+     *  instead: the learner's gender setting (2026-11-13). */
+    fun stamp(kind: SyncKind, key: String): Int {
+        if (kind == SyncKind.DEFAULTS &&
+            (key == com.roro.futurevoice.data.LearnerGender.VALUE_KEY ||
+                key == com.roro.futurevoice.data.LearnerGender.SOURCE_KEY)) return 2
+        return stamp(kind)
+    }
+}
 
 /** One record as the transport sees it — the only shape a Drive file is
  *  ever mapped to and from, so every rule above it is testable in memory. */

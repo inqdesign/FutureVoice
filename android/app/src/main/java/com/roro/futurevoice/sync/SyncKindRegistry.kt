@@ -494,6 +494,19 @@ class LearningPurposeKind(
     companion object { const val KEY = "state" }
 }
 
+/** The settings [DefaultsKind] carries (iOS `DefaultsKind.keys`' fixed part). */
+internal val SYNCED_DEFAULTS_KEYS = listOf(
+    "futurevoice.nativeLanguage", "futurevoice.targetLanguage", "futurevoice.enrolledLanguages",
+    "futurevoice.proficiency", "futurevoice.dailyGoalMinutes", "futurevoice.goal.sentencesPerDay",
+    "futurevoice.goal.wordsPerDay", "futurevoice.goal.expressionsPerDay", "futurevoice.goal.shadowsPerDay",
+    "futurevoice.vocab.hideKnown",
+    // The gender a learner's French and Spanish sentences take
+    // (`LearnerGender`), stamped 2 so older builds leave it alone
+    // (`SyncSchema.stamp`).
+    com.roro.futurevoice.data.LearnerGender.VALUE_KEY,
+    com.roro.futurevoice.data.LearnerGender.SOURCE_KEY,
+)
+
 /**
  * The `futurevoice.*` preferences that describe HOW the learner practises —
  * languages, levels, goals. Account and per-install keys (the voice, consent,
@@ -503,11 +516,7 @@ class LearningPurposeKind(
 private class DefaultsKind(private val context: Context) : SyncKindHandler {
     override val kind = SyncKind.DEFAULTS
     private val prefs get() = context.getSharedPreferences("futurevoice", 0)
-    private val fixed = listOf(
-        "futurevoice.nativeLanguage", "futurevoice.targetLanguage", "futurevoice.enrolledLanguages",
-        "futurevoice.proficiency", "futurevoice.dailyGoalMinutes", "futurevoice.goal.sentencesPerDay",
-        "futurevoice.goal.wordsPerDay", "futurevoice.goal.expressionsPerDay", "futurevoice.goal.shadowsPerDay",
-        "futurevoice.vocab.hideKnown")
+    private val fixed = SYNCED_DEFAULTS_KEYS
     private fun keys() = fixed + prefs.all.keys.filter { it.startsWith("futurevoice.level.") }
 
     private val enrolledKey = "futurevoice.enrolledLanguages"

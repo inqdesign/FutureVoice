@@ -440,7 +440,7 @@ class SyncEngine(
                     frozen = true, size = record.size))
                 continue
             }
-            val frozen = record.schema > SyncSchema.VERSION
+            val frozen = record.schema > SyncSchema.READABLE
             val result = handler.merge(localSide, remoteSide)
             val matchesServer = if (record.isTombstone) result == null else result == record.payload
             index.put(SyncIndex.Entry(
@@ -550,6 +550,7 @@ class SyncEngine(
                 for (entry in index.entries(handler.kind, lang)) {
                     if (!entry.needsPush || entry.frozen) continue
                     var record = SyncRecord(kind = handler.kind, key = entry.key, lang = entry.lang,
+                        schema = SyncSchema.stamp(handler.kind, entry.key),
                         modifiedAt = entry.observedAt, deletedAt = entry.deletedAt, serverId = entry.serverId)
                     if (!entry.isDeleted) {
                         record = if (handler is BlobKind) {

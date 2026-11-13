@@ -1,6 +1,9 @@
 package com.roro.futurevoice
 
 import com.roro.futurevoice.data.LearnerGender
+import com.roro.futurevoice.sync.SYNCED_DEFAULTS_KEYS
+import com.roro.futurevoice.sync.SyncKind
+import com.roro.futurevoice.sync.SyncSchema
 import com.roro.futurevoice.talk.LanguageLines
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -9,8 +12,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** The learner's gender for French and Spanish sentences (iOS
- *  `LearnerGenderTests`, 2026-11-13). iOS's sync-stamp case is not ported:
- *  Android's settings sync doesn't carry the two keys yet. */
+ *  `LearnerGenderTests`, 2026-11-13). */
 class LearnerGenderTest {
 
     /** Only clearly low or clearly high voices are guessed. */
@@ -57,5 +59,15 @@ class LearnerGenderTest {
     @Test fun freeTalkCarriesItAsAFact() {
         assertTrue(LanguageLines.genderAboutLine("es", LearnerGender.FEMALE)!!.contains("a woman"))
         assertTrue(LanguageLines.genderAboutLine("fr", null)!!.contains("not known"))
+    }
+
+    /** Older builds must freeze the new settings, not tombstone them. */
+    @Test fun theSettingIsStampedAboveOlderBuilds() {
+        assertEquals(2, SyncSchema.stamp(SyncKind.DEFAULTS, LearnerGender.VALUE_KEY))
+        assertEquals(2, SyncSchema.stamp(SyncKind.DEFAULTS, LearnerGender.SOURCE_KEY))
+        assertEquals(1, SyncSchema.stamp(SyncKind.DEFAULTS, "futurevoice.speechSpeed"))
+        assertTrue(LearnerGender.VALUE_KEY in SYNCED_DEFAULTS_KEYS)
+        // This build reads what it stamps.
+        assertTrue(SyncSchema.READABLE >= 2)
     }
 }
