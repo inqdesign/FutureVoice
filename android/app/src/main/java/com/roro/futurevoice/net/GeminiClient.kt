@@ -240,6 +240,10 @@ class GeminiClient(private val auth: AuthRepository) {
         earlyField: String,
         onEarlyField: suspend (String) -> Unit,
         fallbackFromEarly: (String) -> T?,
+        /** The early field's FIRST SENTENCE, the moment it is written, before
+         *  the field closes (iOS `onEarlyField(_, isComplete: false)`). Null:
+         *  only the closed field is reported, as before. */
+        onFirstSentence: (suspend (String) -> Unit)? = null,
     ): T = withContext(Dispatchers.IO) {
         val request = buildRequest(
             system, messages, model, maxTokens, temperature, searchGrounding = false,
@@ -280,6 +284,9 @@ class GeminiClient(private val auth: AuthRepository) {
             val raw = StringBuilder()
             var finishReason: String? = null
             var early: String? = null
+            // The first sentence, handed over before the field closed: if the
+            // stream dies after it, that is what is being heard.
+            var earlyPrefix: String? = null
 
             try {
                 val source = resp.body.source()
@@ -302,11 +309,19 @@ class GeminiClient(private val auth: AuthRepository) {
                         if (value != null) {
                             early = value
                             onEarlyField(value)
+                        } else if (onFirstSentence != null && earlyPrefix == null) {
+                            val field = JsonFieldScanner.streamingStringField(earlyField, raw.toString())
+                            val sentence = field?.takeIf { !it.second }?.first
+                                ?.let { JsonFieldScanner.firstSpeakableSentence(it) }
+                            if (sentence != null) {
+                                earlyPrefix = sentence
+                                onFirstSentence(sentence)
+                            }
                         }
                     }
                 }
             } catch (e: Exception) {
-                val salvaged = early?.let(fallbackFromEarly)
+                val salvaged = (early ?: earlyPrefix)?.let(fallbackFromEarly)
                 if (salvaged != null) return@withContext salvaged
                 throw e
             }
@@ -315,7 +330,7 @@ class GeminiClient(private val auth: AuthRepository) {
             val truncated = finishReason == "MAX_TOKENS"
             val body = Edge.extractJson(trimmed)
             if (body == null) {
-                val salvaged = early?.let(fallbackFromEarly)
+                val salvaged = (early ?: earlyPrefix)?.let(fallbackFromEarly)
                 if (salvaged != null) return@withContext salvaged
                 throw if (truncated) EdgeError.Truncated else EdgeError.JsonNotFound(trimmed)
             }
@@ -324,7 +339,7 @@ class GeminiClient(private val auth: AuthRepository) {
             } catch (e: Exception) {
                 // The reply already shipped; a malformed or cut-off tail must not
                 // undo a turn the user has heard.
-                val salvaged = early?.let(fallbackFromEarly)
+                val salvaged = (early ?: earlyPrefix)?.let(fallbackFromEarly)
                 if (salvaged != null) return@withContext salvaged
                 if (truncated) throw EdgeError.Truncated else throw e
             }

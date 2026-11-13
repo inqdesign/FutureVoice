@@ -25,6 +25,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
+import com.roro.futurevoice.core.Telemetry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -161,6 +162,10 @@ data class TalkUiState(
     val sendPending: Boolean = false,
     /** Set when the call ended with something said — the wrap-up's subject. */
     val endedSessionId: String? = null,
+    /** The fluent self's spoken goodbye after End (iOS `CallGoodbye`): the
+     *  words on the wrap-up board, and whether the voice is still saying them. */
+    val goodbye: CallGoodbye.Line? = null,
+    val goodbyePlaying: Boolean = false,
     /** How many of [turns] came from the resumed talk (iOS `isResuming` +
      *  `didSaveCurrentSession`: a resumed talk starts saved, and only a new
      *  turn makes it something closing would lose). */
@@ -287,6 +292,10 @@ class TalkViewModel(context: Context) : ViewModel() {
     /** Chip row + talk-kept notebook words, in the row's order. */
     private var coachPool: List<com.roro.futurevoice.ui.TalkGoalItem> = emptyList()
     private var usedGoalKeys: Set<String> = emptySet()
+    /** The call's chip row (iOS `goalItems`): the goodbye praises the ones ticked. */
+    private var goalRow: List<com.roro.futurevoice.ui.TalkGoalItem> = emptyList()
+    private var goodbyeJob: Job? = null
+    private var goodbyeVoice: CallGoodbyeVoice? = null
     private var focusJob: Job? = null
     /** Tutor mode as the conversation prompt has it right now (iOS
      *  `tutorThisCall`). It lives in the system prompt, so a flip mid-call
@@ -623,6 +632,97 @@ class TalkViewModel(context: Context) : ViewModel() {
         logCoach()
         _state.update { it.copy(phase = TalkPhase.ENDED, partial = "", coachHint = null, coachReply = null) }
         persist()
+        // The turns are final now, so the fluent self's goodbye can be written
+        // from them while the book builds (iOS 5fdc61f8).
+        if (!discardOnEnd && !pronThisCall) startGoodbye()
+    }
+
+    /**
+     * The fluent self's ~12 s of feedback on the call just ended, spoken in the
+     * learner's voice while the book builds (iOS `startGoodbye`). Skipped when
+     * nothing in the call can be honestly praised. Fire and forget: nothing in
+     * the wrap-up waits on it, and a failure at any step is silence.
+     */
+    private fun startGoodbye() {
+        val cfg = config ?: return
+        if (!learnerSpokeThisCall || goodbyeJob != null) return
+        val used = goalRow.filter { it.key in usedGoalKeys }.map { it.text }
+        val target = cfg.targetLanguage
+        val facts = CallGoodbye.facts(_state.value.turns, used, target)
+        if (facts == null) {
+            Telemetry.log("call_goodbye", mapOf("outcome" to "nothing_to_praise"))
+            return
+        }
+        val started = System.currentTimeMillis()
+        val id = sessionId
+        val voice = CallGoodbyeVoice(voiceClient, cfg.voiceId, id, appContext.cacheDir,
+            com.roro.futurevoice.data.AudioPrefs.talkVoiceVolume(appContext))
+        goodbyeVoice = voice
+        goodbyeJob = viewModelScope.launch {
+            fun log(outcome: String, extra: Map<String, String> = emptyMap()) {
+                Telemetry.log("call_goodbye", extra + mapOf("outcome" to outcome,
+                    "ms" to "${System.currentTimeMillis() - started}"))
+            }
+            // The voice starts on the FIRST sentence while the rest is still
+            // being written. The card goes up with the first sound, never
+            // ahead of it, and grows to the whole line when it is written.
+            var first: String? = null
+            var firstSpoken: kotlinx.coroutines.Deferred<Boolean>? = null
+            var known: CallGoodbye.Line? = null
+            var spokenChars = 0
+            voice.onStart = {
+                _state.update { it.copy(goodbye = known ?: CallGoodbye.Line(first.orEmpty(), ""), goodbyePlaying = true) }
+                Telemetry.log("call_goodbye_voice", mapOf(
+                    "voice_ms" to "${System.currentTimeMillis() - started}",
+                    "early" to if (first == null) "0" else "1"))
+            }
+            voice.onFinish = {
+                if (_state.value.goodbyePlaying) log("played", mapOf("chars" to "$spokenChars"))
+                _state.update { it.copy(goodbyePlaying = false) }
+            }
+            val line = CallGoodbye.write(gemini, facts, cfg.topic.ifEmpty { null }, target, cfg.nativeLanguage,
+                cfg.level, id, onFirstSentence = { sentence ->
+                    if (first == null) {
+                        first = sentence
+                        spokenChars = sentence.length
+                        firstSpoken = viewModelScope.async { voice.speak(sentence) }
+                    }
+                })
+            if (line == null) {
+                // The text broke after the first sentence went to the voice:
+                // let that sentence finish on its own.
+                firstSpoken?.let { it.await(); voice.finish() }
+                log("no_line"); return@launch
+            }
+            known = line
+            if (voice.started) _state.update { it.copy(goodbye = line) }
+            val f = first
+            val fs = firstSpoken
+            if (f != null && fs != null) {
+                if (fs.await()) {
+                    val rest = CallGoodbye.remainder(line.spoken, f)
+                    if (voice.speak(rest)) spokenChars += rest.length
+                } else if (voice.speak(line.spoken)) {
+                    spokenChars = line.spoken.length
+                }
+            } else if (voice.speak(line.spoken)) {
+                spokenChars = line.spoken.length
+            }
+            voice.finish()
+            if (!voice.started) {
+                // The words still go up; only the voice is missing.
+                _state.update { it.copy(goodbye = line) }
+                log("no_audio")
+            }
+        }
+    }
+
+    /** Stop silences the goodbye and leaves the text. */
+    fun stopGoodbye() {
+        if (!_state.value.goodbyePlaying) return
+        _state.update { it.copy(goodbyePlaying = false) }
+        goodbyeVoice?.stop()
+        Telemetry.log("call_goodbye", mapOf("outcome" to "stopped"))
     }
 
     /**
@@ -1631,6 +1731,8 @@ class TalkViewModel(context: Context) : ViewModel() {
     }
 
     override fun onCleared() {
+        goodbyeJob?.cancel()
+        goodbyeVoice?.stop()
         // The screen is gone; so is anything that could answer the notification.
         CallControls.handler = null
         CallForegroundService.stop(appContext)
@@ -3229,6 +3331,9 @@ class TalkViewModel(context: Context) : ViewModel() {
         coachPool = items
         syncCoachSteer()
     }
+
+    /** The chip row itself, for the goodbye's "words used". */
+    fun setGoalRow(items: List<com.roro.futurevoice.ui.TalkGoalItem>) { goalRow = items }
 
     /** The screen's ticks — chips and the hint alike. */
     fun noteUsedGoals(keys: Set<String>) {

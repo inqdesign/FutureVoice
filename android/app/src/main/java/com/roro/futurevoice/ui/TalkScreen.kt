@@ -1,5 +1,9 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.outlined.VolumeUp
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.ui.text.withStyle
 import androidx.compose.runtime.withFrameMillis
@@ -576,6 +580,7 @@ fun TalkScreen(
         // kept on its own, which the row leaves out.
         vm.setCoachPool(goals + TalkGoalPicker.coachExtras(context, targetLanguage,
             goals.map { it.key }.toSet()))
+        vm.setGoalRow(goals)
     }
     // ADDITIVE: every version of a user turn's text is checked, from the
     // recognizer's first line to the audio-grounded rewrite, and a tick is
@@ -1335,6 +1340,13 @@ fun TalkScreen(
                         sessionId = sessionId,
                         userTurns = state.turns.count { it.role == TurnRole.USER },
                         spentPool = state.wall == TalkWall.OUT_OF_MINUTES)
+                    // The fluent self's goodbye, while it plays and after.
+                    androidx.compose.animation.AnimatedVisibility(visible = state.goodbye != null,
+                        enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.slideInVertically { it / 2 }) {
+                        state.goodbye?.let { line ->
+                            CallGoodbyeCard(line, state.goodbyePlaying, onStop = { vm.stopGoodbye() })
+                        }
+                    }
                 }
                 Spacer(Modifier.weight(1.3f))
             }
@@ -1705,6 +1717,33 @@ fun TurnFixRows(fixes: List<com.roro.futurevoice.talk.TurnFix>, modifier: Modifi
                         modifier = Modifier.padding(start = 18.dp))
                 }
             }
+        }
+    }
+}
+
+/** The fluent self's spoken goodbye on the wrap-up board while it plays (iOS
+ *  `CallGoodbyeCard`). The words are what the voice is saying, with the
+ *  native-language line under them; Stop silences it and leaves the text. */
+@Composable
+private fun CallGoodbyeCard(line: com.roro.futurevoice.talk.CallGoodbye.Line, isPlaying: Boolean, onStop: () -> Unit) {
+    Column(Modifier.padding(horizontal = 24.dp).widthIn(max = 420.dp).fillMaxWidth()
+        .background(MaterialTheme.colorScheme.surfaceContainerHigh, RoundedCornerShape(16.dp)).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(if (isPlaying) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Outlined.VolumeUp, null,
+                tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(stringResource(R.string.your_future_self), style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.weight(1f))
+            if (isPlaying) {
+                Text(stringResource(R.string.stop), style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary, modifier = Modifier.clickable(onClick = onStop))
+            }
+        }
+        Text(line.spoken, style = MaterialTheme.typography.bodyLarge)
+        if (line.translation.isNotEmpty()) {
+            Text(line.translation, style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
