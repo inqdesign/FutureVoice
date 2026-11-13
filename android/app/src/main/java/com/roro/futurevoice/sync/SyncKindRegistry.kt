@@ -99,6 +99,10 @@ class SyncKindRegistry(private val context: Context) : SyncRegistry {
             mergeRule = SyncMerge::lww,
             validate = decodes(com.roro.futurevoice.data.UpcomingGoal.serializer()),
             afterWrite = { com.roro.futurevoice.data.UpcomingGoalStore.reload(context); touched(it) }),
+        ArrayKind(SyncKind.GOAL_PLAN, com.roro.futurevoice.talk.GoalPlanStore.FILENAME, paths,
+            mergeRule = SyncMerge::lww,
+            validate = decodes(com.roro.futurevoice.talk.GoalPlanStore.Entry.serializer()),
+            afterWrite = { com.roro.futurevoice.talk.GoalPlanStore.reload(context); touched(it) }),
         ProfileKind(paths, ::touched),
         LearningPurposeKind(
             state = { com.roro.futurevoice.data.LearningPurposeStore.syncState(context) },

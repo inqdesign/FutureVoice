@@ -48,6 +48,10 @@ enum class SyncKind(val raw: String, val isLanguageScoped: Boolean, val isBlob: 
     /** Upcoming goals ([com.roro.futurevoice.data.UpcomingGoalStore], iOS
      *  a9fbef92). An older build can't name this kind and skips the record. */
     UPCOMING_GOAL("upcomingGoal", false),
+    /** Which upcoming goals' plans are in the routine
+     *  ([com.roro.futurevoice.talk.GoalPlanStore], iOS 6aece49b). An older
+     *  build can't name this kind and skips the record. */
+    GOAL_PLAN("goalPlan", false),
     /** Why the learner is learning ([com.roro.futurevoice.data.LearningPurposeStore]):
      *  one record, so onboarding's answer and every later edit reach the other
      *  devices. An older build can't name this kind and skips it. */

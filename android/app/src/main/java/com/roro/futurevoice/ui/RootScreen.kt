@@ -529,6 +529,19 @@ fun RootScreen() {
                 speechChallengeId = route.id
             }
             DeepLinkInbox.WidgetRoute.FreeTalk -> {
+                // The routine's talk, while a goal's plan is in it, practises
+                // that day's piece of the plan (iOS `GoalPlan`, 6aece49b). The
+                // ring stays a free talk.
+                val entry = DeepLinkInbox.freeTalkEntry
+                val planCall = if (entry == com.roro.futurevoice.talk.TalkEntry.ROUTINE ||
+                    entry == com.roro.futurevoice.talk.TalkEntry.TUTOR_BOT)
+                    com.roro.futurevoice.talk.GoalPlan.todaysCall(context, state.targetLanguage) else null
+                if (entry != null && planCall != null) {
+                    DeepLinkInbox.freeTalkEntry = null
+                    com.roro.futurevoice.core.Analytics.capture("goal_plan_talk", mapOf("entry" to entry))
+                    com.roro.futurevoice.talk.TutorBot.goalCall = planCall
+                    return@LaunchedEffect
+                }
                 tab = HomeTab.TALK
                 gate {
                     showMe = false; showDeck = false; library = null; showSentences = false; allBooks = false; deckPushed = false; detailSessionId = null

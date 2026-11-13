@@ -289,6 +289,9 @@ fun ActivityScreen(
                         snapshot = snapshot, day = selected, isPromise = isPromise,
                         onSwipe = { selected = StudyPlan.addDays(selected, it) },
                         onOpen = ::open, onOpenTalk = onOpenTalk,
+                        goalPlan = remember(language, revision, plan) {
+                            com.roro.futurevoice.talk.GoalPlan.active(context, language)
+                        },
                     )
                 }
             } else {
@@ -384,6 +387,9 @@ private fun DayList(
     onSwipe: (Int) -> Unit,
     onOpen: (StudyPlan.Kind) -> Unit,
     onOpenTalk: (String) -> Unit,
+    /** A goal's plan in the routine: a talk line says what it practises
+     *  (iOS 6aece49b). */
+    goalPlan: com.roro.futurevoice.talk.GoalPlan? = null,
 ) {
     val context = LocalContext.current
     val res = context.resources
@@ -447,6 +453,9 @@ private fun DayList(
                         occ.kind == StudyPlan.Kind.REVIEW && (snapshot.reviewLoad[occ.start] ?: 0) > 0 ->
                             stringResource(R.string.routine_about_waiting, snapshot.reviewLoad[occ.start] ?: 0)
                         occ.kind == StudyPlan.Kind.SAY_IT_AGAIN -> stringResource(R.string.routine_pick_a_talk)
+                        occ.kind == StudyPlan.Kind.TALK && goalPlan != null &&
+                            goalPlan.items(occ.start).isNotEmpty() ->
+                            "${goalPlan.goal.title}: " + goalPlan.items(occ.start).joinToString(" · ") { it.label(res) }
                         // A timed talk IS the daily call; with the call off it won't ring.
                         occ.kind == StudyPlan.Kind.TALK && !occ.anytime && !callOn ->
                             stringResource(R.string.routine_no_call)

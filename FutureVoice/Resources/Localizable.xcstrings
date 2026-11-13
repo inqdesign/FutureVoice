@@ -8066,6 +8066,7 @@
         }
       }
     },
+    "In your routine until the day" : {},
     "intonation %lld" : {
       "localizations" : {
         "de" : {
@@ -8530,6 +8531,7 @@
         }
       }
     },
+    "Laid on your routine's talk days. Each talk practises that day's piece; after the day, your routine is as before." : {},
     "Leave a short cheer" : {
       "localizations" : {
         "ko" : {
@@ -9129,6 +9131,8 @@
         }
       }
     },
+    "Mock run" : {},
+    "Mock run: the questions one after another" : {},
     "My future" : {
       "localizations" : {
         "de" : {
@@ -9636,6 +9640,7 @@
       }
     },
     "No sound stood out" : {},
+    "Once more: the ones not ready yet" : {},
     "Only Core members can see this." : {
       "localizations" : {
         "ko" : {
@@ -10465,6 +10470,7 @@
       }
     },
     "Sounds to work on: %@" : {},
+    "Take it out of my routine" : {},
     "Taken from the talk time above" : {
       "localizations" : {
         "de" : {
@@ -10787,6 +10793,7 @@
         }
       }
     },
+    "The day: a short warm-up" : {},
     "The same price whichever way it runs, a long scene or a short one. Watching it again is free." : {
       "localizations" : {
         "de" : {
@@ -11063,6 +11070,7 @@
         }
       }
     },
+    "Use this plan" : {},
     "Vowels" : {
       "localizations" : {
         "de" : {
@@ -11201,6 +11209,7 @@
         }
       }
     },
+    "Warm-up" : {},
     "Watch scenes, %lld min each" : {
       "localizations" : {
         "de" : {
@@ -17218,6 +17227,7 @@
         }
       }
     },
+    "Your plan to %@" : {},
     "Your practice on this device takes about %@. That's roughly the space it needs in Google Drive." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -17403,6 +17413,7 @@
         }
       }
     },
+    "Your routine's talks practise this, at the times you set. Skip a day and the rest moves along." : {},
     "Your talks were too short to make questions from. Your report goes on without it." : {
       "localizations" : {
         "de" : {

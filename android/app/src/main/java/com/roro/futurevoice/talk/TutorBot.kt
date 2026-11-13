@@ -195,10 +195,16 @@ object TutorBot {
         val snap = PlannerSnapshot.make(c, weekStart = day, plan = plan, now = now)
         val progress = snap.progress[day] ?: emptyMap()
         val res = c.resources
+        // A goal's plan in the routine names what today's talk practises (iOS 6aece49b).
+        val goalPlan = GoalPlan.active(c, targetLanguage, now)
         var items = (snap.planned[day] ?: emptyList()).map { occ ->
-            Item(occ.id, occ.kind,
-                title = if (occ.kind == StudyPlan.Kind.REVIEW) RoutineText.label(res, occ.kind)
-                    else RoutineText.titled(res, occ.kind, occ.amount),
+            var title = if (occ.kind == StudyPlan.Kind.REVIEW) RoutineText.label(res, occ.kind)
+                else RoutineText.titled(res, occ.kind, occ.amount)
+            val item = goalPlan?.today
+            if (occ.kind == StudyPlan.Kind.TALK && goalPlan != null && item != null) {
+                title += " · ${goalPlan.goal.title}: ${item.label(res)}"
+            }
+            Item(occ.id, occ.kind, title = title,
                 start = occ.start, anytime = occ.anytime, progress = progress[occ.id] ?: 0.0, end = occ.end)
         }
         val language = LanguageScope.active(c)

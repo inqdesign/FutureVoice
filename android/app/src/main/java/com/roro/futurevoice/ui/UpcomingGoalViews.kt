@@ -25,6 +25,9 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.MicExternalOn
 import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Replay
+import androidx.compose.material.icons.filled.SportsScore
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.CoPresent
 import androidx.compose.material.icons.filled.Flight
@@ -560,6 +563,7 @@ fun UpcomingGoalPage(initial: UpcomingGoal, state: AppState, onDismiss: () -> Un
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp))
         }
         if (days.isEmpty() || tab == 0) {
+            GoalPlanSection(goal, questionsLoaded = questions != null)
             val loaded = questions
             val lessons = remember(loaded) { com.roro.futurevoice.talk.TutorLessonStore.all(context, goal.language) }
             val states = loaded.orEmpty().map { com.roro.futurevoice.talk.GoalPrep.state(it.text, goal, lessons) }
@@ -687,6 +691,113 @@ fun UpcomingGoalPage(initial: UpcomingGoal, state: AppState, onDismiss: () -> Un
                 // Saved or deleted: the page shows a goal that may be gone.
                 if (saved == null) onDismiss()
             })
+    }
+}
+
+/** One line of the plan: a date (or a run of dates) and what it practises. */
+private data class PlanLine(val from: Long, val to: Long, val items: List<com.roro.futurevoice.talk.GoalPlan.Item>)
+
+/** The plan's rows by date, with runs of the same catch-up or mock-run day
+ *  folded into one line (iOS `UpcomingGoalPage.lines`). */
+private fun planLines(plan: com.roro.futurevoice.talk.GoalPlan): List<PlanLine> {
+    val out = ArrayList<PlanLine>()
+    for (row in plan.rows) {
+        val last = out.lastOrNull()
+        if (last != null && StudyPlan.isSameDay(last.to, row.date)) {
+            out[out.size - 1] = last.copy(items = last.items + row.item)
+        } else if (last != null && last.items == listOf(row.item) && !row.item.isQuestion) {
+            out[out.size - 1] = last.copy(to = row.date)
+        } else {
+            out += PlanLine(row.date, row.date, listOf(row.item))
+        }
+    }
+    return out
+}
+
+private fun com.roro.futurevoice.talk.GoalPlan.Item.icon(): ImageVector = when (this) {
+    is com.roro.futurevoice.talk.GoalPlan.Item.Question -> Icons.Filled.School
+    com.roro.futurevoice.talk.GoalPlan.Item.CatchUp -> Icons.Filled.Replay
+    com.roro.futurevoice.talk.GoalPlan.Item.Rehearse -> Icons.Filled.Timer
+    com.roro.futurevoice.talk.GoalPlan.Item.TheDay -> Icons.Filled.SportsScore
+}
+
+/**
+ * The plan to the day (iOS `UpcomingGoalPage.planSection`, 6aece49b): a day
+ * per likely question still open, catch-up days, one or two mock runs, a
+ * warm-up on the day, laid on the routine's talk days. "Use this plan" puts
+ * it in the routine.
+ */
+@Composable
+private fun GoalPlanSection(goal: UpcomingGoal, questionsLoaded: Boolean) {
+    val context = LocalContext.current
+    val res = context.resources
+    val locale = LocalConfiguration.current.locales[0]
+    val revision by com.roro.futurevoice.data.StoreEvents.revision.collectAsState()
+    val routine by com.roro.futurevoice.data.StudyPlanStore.plan.collectAsState()
+    val date = goal.date
+    if (!questionsLoaded || date == null) return
+    val plan = remember(goal, revision, routine, questionsLoaded) {
+        com.roro.futurevoice.talk.GoalPlan.make(context, goal)
+    } ?: return
+    val inRoutine = goal.id in com.roro.futurevoice.talk.GoalPlanStore.adopted(context)
+    fun format(skeleton: String, at: Long): String =
+        java.text.SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(locale, skeleton), locale)
+            .format(java.util.Date(at))
+    val header = stringResource(R.string.your_plan_to, format("MMMd", date))
+    val footer = stringResource(if (inRoutine) R.string.your_routine_s_talks_practise_this_at_the_times_you_set_skip_0e2dac
+        else R.string.laid_on_your_routine_s_talk_days_each_talk_practises_that_da_212f3e)
+    Column(Modifier.fillMaxWidth().padding(top = 20.dp)) {
+        Text(header, style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 16.dp, bottom = 8.dp))
+        FormCard {
+            planLines(plan).forEachIndexed { i, line ->
+                if (i > 0) FormDivider()
+                // The date is a small line above (founder, 2026-11-13): a
+                // date column broke a range over two lines and pushed the
+                // question away from it.
+                Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(if (StudyPlan.isSameDay(line.from, line.to)) format("EEEd", line.from)
+                        else "${format("EEEd", line.from)} – ${format("EEEd", line.to)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    line.items.forEach { item ->
+                        Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Icon(item.icon(), contentDescription = null, tint = goal.kind.color(),
+                                modifier = Modifier.padding(top = 2.dp).size(20.dp))
+                            Text(item.label(res), style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
+                }
+            }
+            if (inRoutine) {
+                FormDivider()
+                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = Color(0xFF34C759),
+                        modifier = Modifier.size(20.dp))
+                    Text(stringResource(R.string.in_your_routine_until_the_day), style = MaterialTheme.typography.bodyLarge,
+                        color = Color(0xFF34C759))
+                }
+                FormDivider()
+                Text(stringResource(R.string.take_it_out_of_my_routine), style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.fillMaxWidth().clickable {
+                        com.roro.futurevoice.talk.GoalPlanStore.set(context, goal.id, adopted = false)
+                        com.roro.futurevoice.core.Analytics.capture("goal_plan_removed", mapOf("kind" to goal.kind.raw))
+                    }.padding(horizontal = 16.dp, vertical = 12.dp))
+            }
+        }
+        if (!inRoutine) {
+            com.roro.futurevoice.ui.brand.IosButton(
+                onClick = { com.roro.futurevoice.talk.GoalPlan.adopt(context, goal) },
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            ) { Text(stringResource(R.string.use_this_plan)) }
+        }
+        Text(footer, style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 7.dp))
     }
 }
 

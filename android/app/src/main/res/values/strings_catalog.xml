@@ -1333,6 +1333,7 @@
     <string name="in_your_life">"In your life"</string>
     <!-- 'In your own words (optional) — e.g. switches to English when excited' -->
     <string name="in_your_own_words_optional_e_g_switches_to_english_when_exci_e08d84">"In your own words (optional) — e.g. switches to English when excited"</string>
+    <string name="in_your_routine_until_the_day">"In your routine until the day"</string>
     <string name="incoming_call">"Incoming call"</string>
     <string name="independent_i_discuss_most_things_with_some_ease">"Independent — I discuss most things with some ease"</string>
     <!-- 'Inline fixes become spaced-repetition drills, tuned to your mistakes.' -->
@@ -1441,6 +1442,8 @@
     <string name="known_for_years">"Known for years"</string>
     <string name="knows_my_life_a_bit">"Knows my life a bit"</string>
     <string name="knows_your_life">"Knows your life"</string>
+    <!-- "Laid on your routine's talk days. Each talk practises that day's piece; after the day, your routine is as before." -->
+    <string name="laid_on_your_routine_s_talk_days_each_talk_practises_that_da_212f3e">"Laid on your routine's talk days. Each talk practises that day's piece; after the day, your routine is as before."</string>
     <string name="landlord_town_hall_doctor_my_kid_s_school">"Landlord, town hall, doctor, my kid's school"</string>
     <string name="language">"Language"</string>
     <string name="language_learning">"language learning"</string>
@@ -1791,6 +1794,8 @@
     <string name="missed_this_month">"Missed this month"</string>
     <string name="mistake_notebook">"Mistake notebook"</string>
     <string name="mistakes">"Mistakes"</string>
+    <string name="mock_run">"Mock run"</string>
+    <string name="mock_run_the_questions_one_after_another">"Mock run: the questions one after another"</string>
     <string name="model_answer">"Model answer"</string>
     <string name="money_and_plans">"Money and plans"</string>
     <string name="mono">"Mono"</string>
@@ -2056,6 +2061,7 @@
     <string name="once_a_week_a_test_made_only_from_that_week_s_own_talks_what_d9930a">"Once a week, a test made only from that week's own talks: what a word means, the missing phrase, rebuilding a corrected sentence, writing down what you hear, saying a line out loud, and the grammar from your weekly report. A dot means it's open."</string>
     <string name="once_a_week_everything_the_week_taught">"Once a week, everything the week taught"</string>
     <string name="once_a_week_let_s_look_back">"Once a week, let's look back"</string>
+    <string name="once_more_the_ones_not_ready_yet">"Once more: the ones not ready yet"</string>
     <string name="once_you_re_in_one_missed_day_a_month_is_forgiven">"Once you're in, one missed day a month is forgiven."</string>
     <!-- "One dialogue for exactly this situation — its words, expressions, and your lines become the checklist. Generated once, then it's your book." -->
     <string name="one_dialogue_for_exactly_this_situation_its_words_expression_8c1495">"One dialogue for exactly this situation — its words, expressions, and your lines become the checklist. Generated once, then it's your book."</string>
@@ -2930,6 +2936,7 @@
     <string name="system">"System"</string>
     <string name="take_a_photo">"Take a photo"</string>
     <string name="take_down">"Take down"</string>
+    <string name="take_it_out_of_my_routine">"Take it out of my routine"</string>
     <string name="take_it_then_see_your_level">"Take it, then see your level."</string>
     <string name="take_lld">"Take %d"</string>
     <string name="take_not_found">"Take not found"</string>
@@ -3131,6 +3138,7 @@
     <string name="the_curriculum_and_its_progress_go_with_it">"The curriculum and its progress go with it."</string>
     <!-- 'The daily call can ring at up to 4 times of day. Move this talk to one of them, or remove another.' -->
     <string name="the_daily_call_can_ring_at_up_to_4_times_of_day_move_this_ta_40a75b">"The daily call can ring at up to 4 times of day. Move this talk to one of them, or remove another."</string>
+    <string name="the_day_a_short_warm_up">"The day: a short warm-up"</string>
     <!-- 'The days you studied add up here. Tap it to see your routine and the days behind you.' -->
     <string name="the_days_you_studied_add_up_here_tap_it_to_see_your_routine_e22534">"The days you studied add up here. Tap it to see your routine and the days behind you."</string>
     <string name="the_episode_s_script_to_read_at_your_own_pace">"The episode's script, to read at your own pace."</string>
@@ -3459,6 +3467,7 @@
     <!-- 'Use them however you like — all in one call today, or spread over the month.' -->
     <string name="use_them_however_you_like_all_in_one_call_today_or_spread_ov_1df811">"Use them however you like — all in one call today, or spread over the month."</string>
     <string name="use_this_in_the_call">"Use this in the call"</string>
+    <string name="use_this_plan">"Use this plan"</string>
     <string name="use_this_topic">"Use this topic"</string>
     <string name="use_this_voice">"Use this voice"</string>
     <!-- 'Use this voice?' -->
@@ -3533,6 +3542,7 @@
     <string name="warm">"Warm"</string>
     <string name="warm_and_chatty">"Warm and chatty"</string>
     <string name="warm_easygoing">"Warm, easygoing"</string>
+    <string name="warm_up">"Warm-up"</string>
     <string name="watch">"Watch"</string>
     <!-- 'Watch a situation once and it plays here, both voices, whenever you like.' -->
     <string name="watch_a_situation_once_and_it_plays_here_both_voices_wheneve_11cd3e">"Watch a situation once and it plays here, both voices, whenever you like."</string>
@@ -4134,6 +4144,7 @@
     <string name="your_plan_starts_on_review_stays_free_until_then">"Your plan starts on %s. Review stays free until then."</string>
     <!-- 'Your plan starts on %@ with %lld minutes of talk a month. Review stays free until then.' -->
     <string name="your_plan_starts_on_with_lld_minutes_of_talk_a_month_review_4d9f2b">"Your plan starts on %1$s with %2$d minutes of talk a month. Review stays free until then."</string>
+    <string name="your_plan_to">"Your plan to %s"</string>
     <string name="your_pool_refills_on">"Your pool refills on %s."</string>
     <!-- 'Your practice data stays on this device. Your voice clone and talk time stay with your account.' -->
     <string name="your_practice_data_stays_on_this_device_your_voice_clone_and_2c4c4e">"Your practice data stays on this device. Your voice clone and talk time stay with your account."</string>
@@ -4161,6 +4172,8 @@
     <string name="your_routine_is_ready">"Your routine is ready"</string>
     <!-- 'Your routine is under Activity on the Talk screen whenever you want one.' -->
     <string name="your_routine_is_under_activity_on_the_talk_screen_whenever_y_ee22a4">"Your routine is under Activity on the Talk screen whenever you want one."</string>
+    <!-- "Your routine's talks practise this, at the times you set. Skip a day and the rest moves along." -->
+    <string name="your_routine_s_talks_practise_this_at_the_times_you_set_skip_0e2dac">"Your routine's talks practise this, at the times you set. Skip a day and the rest moves along."</string>
     <string name="your_routine_today_lld_things_about_lld_minutes">"Your routine today: %1$d to do, about %2$d min."</string>
     <string name="your_scenario">"Your scenario"</string>
     <string name="your_scenarios">"Your scenarios"</string>
