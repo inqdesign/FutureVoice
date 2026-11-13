@@ -2286,6 +2286,9 @@ private struct SpeechScriptListening: View {
                     }
                 }
             }
+            // Both sides as tall as the taller one: the make button beside a
+            // player read as a different, shorter thing (founder).
+            .fixedSize(horizontal: false, vertical: true)
             if voiceId != nil, stored == nil {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Hear this script read the way your future self would, in your own voice.")
@@ -2355,14 +2358,14 @@ private struct SpeechScriptListening: View {
                     Text(verbatim: "\(done)/\(total)").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                 }
                 .padding(10)
-                .frame(maxWidth: .infinity, minHeight: 56)
+                .frame(maxWidth: .infinity, minHeight: 56, maxHeight: .infinity)
                 .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color(.tertiarySystemFill)))
             } else {
                 Button(action: makeFuture) {
                     Label("Future self", systemImage: "person.wave.2")
                         .font(.subheadline.weight(.semibold))
                         .padding(10)
-                        .frame(maxWidth: .infinity, minHeight: 56)
+                        .frame(maxWidth: .infinity, minHeight: 56, maxHeight: .infinity)
                         .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
                             .fill(SpeechReadingScore.Part.pronunciation.color.opacity(0.12)))
                 }
@@ -2440,7 +2443,7 @@ private struct SpeechPlayTile: View {
             .controlSize(.mini)
         }
         .padding(10)
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
             .fill(player.isPlaying ? tint.opacity(0.12) : Color(.tertiarySystemFill)))
     }
