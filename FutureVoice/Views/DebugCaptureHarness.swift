@@ -994,7 +994,7 @@ enum DebugCapture {
             case "speech-season2-all":
                 return AnyView(NavigationStack { SpeechChallengeListView() }.environmentObject(appState))
             case "speech-season2-past":
-                return AnyView(NavigationStack { SpeechChallengeView(script: first) }.environmentObject(appState))
+                return AnyView(NavigationStack { SpeechArenaDetail(script: first) }.environmentObject(appState))
             case "speech-season2-overall":
                 return AnyView(NavigationStack { SpeechOverallBoardView() }.environmentObject(appState))
             default:
@@ -1017,12 +1017,12 @@ enum DebugCapture {
             SpeechChallenges.shared.seedPreview(language: script.language, scripts: SpeechChallenges.shared.scripts,
                                                 standings: standings,
                                                 boards: [script.id: Self.sampleBoard(withMe: false)])
-            return AnyView(NavigationStack { SpeechChallengeView(script: script) }
+            return AnyView(NavigationStack { SpeechArenaDetail(script: script) }
                 .environmentObject(appState))
         case "speech-challenge":
             // One challenge's board: the top ten, a gap, then you.
             let script = seedSpeechChallenges(appState)
-            return AnyView(NavigationStack { SpeechChallengeView(script: script) }
+            return AnyView(NavigationStack { SpeechArenaDetail(script: script) }
                 .environmentObject(appState))
         case "speech-challenge-result":
             // A take that moved up the board.
