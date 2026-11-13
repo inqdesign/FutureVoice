@@ -6229,7 +6229,8 @@ struct ConversationView: View {
     /// replaces the lesson in progress, which stays saved, unfinished.
     private func startTutorLesson(request: String, askedWith: String? = nil,
                                   picked: Bool, fromTopic: Bool = false,
-                                  nextRoundOf: TutorLesson? = nil, topicId: String? = nil) {
+                                  nextRoundOf: TutorLesson? = nil, topicId: String? = nil,
+                                  afterOwnReply: Bool = false) {
         guard tutorThisCall, !tutorPlanning else { return }
         let topicId = topicId ?? nextRoundOf?.topicId
         // A topic from the map with its lesson still open (often just its
@@ -6327,7 +6328,15 @@ struct ConversationView: View {
             Telemetry.log("tutor_lesson_started", ["challenges": String(lesson.challenges.count),
                                                    "picked": picked ? "1" : "0"])
             sendTutorSystem()
-            if nextRoundOf != nil {
+            if afterOwnReply {
+                // The tutor answered the request itself (self-judged turn,
+                // not held) before the app read it as a change of topic, so
+                // that line may already have reassured and taught. The plain
+                // ready note made it do both again, two lines in a row with
+                // no learner turn between ("Pas de souci…" twice, device
+                // 2026-11-13).
+                tutorNudge("Today's lesson is ready (see TUTOR MODE). Your last line already answered their request and they haven't spoken since, so this line follows straight on from it: no second \"no problem\", no reassurance, don't open the way that line opened, don't announce the topic. If it asked them to say something that already does challenge 1, that stays the one thing on the table: ask for it once more, short. If it asked for something else, or for nothing, replace it in one breath with challenge 1 (\"Let's start with this one: …\"), so only one request is left. Bring challenge 1 in: a natural question that asks for it and how they could say it (its example line, fitted to them). At most two short sentences.", waitKind: "ready_after_self")
+            } else if nextRoundOf != nil {
                 tutorNudge("The next round is ready (see TUTOR MODE): new challenges, a step further than the last round. Say so in a few words — don't go over the last round again — then bring challenge 1 into the conversation: a natural question that asks for it, about their life, and how they could say it (its example line, fitted to them).")
             } else {
                 // A call that opened on its own topic has said nothing yet;
@@ -6378,8 +6387,9 @@ struct ConversationView: View {
             guard !isTornDown, tutorStillSaid(turnId, said), tutorLesson?.id == lesson.id,
                   tutorLesson?.current == i else { return }
             if verdict?.wantsOtherTopic == true, selfJudged {
-                // The tutor already agreed (its TUTOR MODE block says so).
-                dropTutorLesson(said: said)
+                // The tutor already answered this turn itself, whatever it
+                // made of it; the ready note follows on from that line.
+                dropTutorLesson(said: said, answeredBySelf: true)
                 return
             }
             if verdict?.wantsOtherTopic == true {
@@ -6626,7 +6636,7 @@ struct ConversationView: View {
     /// Leave the lesson: by voice (`said`, judged by `TutorJudge`) or from
     /// the strip's menu. It is never offered again; a topic named in the
     /// same breath ("let's do ordering instead") starts the next one.
-    private func dropTutorLesson(said: String?) {
+    private func dropTutorLesson(said: String?, answeredBySelf: Bool = false) {
         guard var lesson = tutorLesson else { return }
         if lesson.isFinished, said == nil {
             // A finished lesson isn't dropped: it becomes its book, and the
@@ -6651,7 +6661,8 @@ struct ConversationView: View {
             // The tutor already agreed in its reply (the block's rule); the
             // words may also name the next topic.
             let asked = turns.last(where: { $0.role == .fluentSelf })?.transcript ?? ""
-            startTutorLesson(request: said, askedWith: asked, picked: false, fromTopic: false)
+            startTutorLesson(request: said, askedWith: asked, picked: false, fromTopic: false,
+                             afterOwnReply: answeredBySelf)
         } else {
             realtime.nudge("The learner tapped to choose another topic, and the app dropped today's lesson. Say sure in a few words and ask what they want to practice instead — they can also pick a topic from the button on their screen.")
         }
