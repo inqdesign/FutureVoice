@@ -1143,8 +1143,19 @@ struct SpeechOverallBoardView: View {
                     .listRowInsets(EdgeInsets())
                 }
             }
+            #if SPEECH_APP
+            // The top three as standing mics (2026-11-13, founder: moved here
+            // from the challenge page).
+            if let rows = shownRows, !rows.isEmpty {
+                Section {
+                    ArenaPodium(rows: rows.filter { $0.rank <= 3 })
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets())
+                }
+            }
+            #endif
             Section {
-                if let rows = rows ?? (pickedSeason == nil ? challenges.overall : nil) {
+                if let rows = shownRows {
                     if rows.isEmpty {
                         Text("Nobody's on this board yet. Be the first.")
                             .foregroundStyle(.secondary)
@@ -1152,7 +1163,11 @@ struct SpeechOverallBoardView: View {
                     ForEach(items(rows), id: \.id) { item in
                         switch item {
                         case .row(let row):
+                            #if SPEECH_APP
+                            if row.rank > 3 { SpeechOverallRow(row: row) }
+                            #else
                             if row.rank <= 3 { SpeechPodiumRow(row: row) } else { SpeechOverallRow(row: row) }
+                            #endif
                         case .gap:
                             Text("…").foregroundStyle(.secondary).frame(maxWidth: .infinity)
                         }
@@ -1177,7 +1192,18 @@ struct SpeechOverallBoardView: View {
         .task(id: season) { await load() }
     }
 
+    private var shownRows: [SpeechChallenges.BoardRow]? {
+        rows ?? (pickedSeason == nil ? challenges.overall : nil)
+    }
+
     private func load() async {
+        // Opened before the challenge list has loaded (the speech app's
+        // Ranking tab can be the first page): without the seasons the board
+        // would fall back to Season 1's.
+        if season == nil, challenges.seasons.isEmpty {
+            await challenges.refresh(language: appState.targetLanguage)
+            if season != nil { return }  // the change of season reloads
+        }
         if pickedSeason != nil { rows = nil }
         if let fresh = await challenges.overallBoard(language: appState.targetLanguage, season: season, limit: 50) {
             rows = fresh

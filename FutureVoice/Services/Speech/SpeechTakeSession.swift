@@ -493,7 +493,9 @@ final class SpeechTakeSession: ObservableObject {
                               videoFilename: nil, transcript: transcript,
                               metrics: metrics, coaching: nil,
                               pronunciationWords: pronunciation?.weakWords,
-                              assessments: prons.isEmpty ? nil : prons)
+                              assessments: prons.isEmpty ? nil : prons,
+                              assessmentStartsMs: assessed.count == prons.count && !prons.isEmpty
+                                  ? assessed.map(\.startMs) : nil)
         SpeechStore.shared.save(take)
         PronunciationLedger.shared.record(prons, id: id, surface: "speech", language: script.language)
         SyncEngine.noteChanged(.blobSpeechAudio)
@@ -740,7 +742,19 @@ final class SpeechTakeSession: ObservableObject {
             reference: SpeechReading.timeline(words: ref, script: tokens),
             script: tokens, stops: scriptTokens.map(\.stop), slips: metrics.slips, scriptTokens: metrics.scriptTokens,
             missed: metrics.missed, soundAccuracy: delivery.soundAccuracy, weakest: delivery.weakest,
-            coverage: metrics.coverage ?? 1, gender: gender)
+            coverage: metrics.coverage ?? 1, gender: gender, weakSounds: weakSounds(in: pieces))
+    }
+
+    /// Every sound Azure scored under the price list's bar, over the judged
+    /// words of every piece (scoring 8). nil when nothing was assessed.
+    nonisolated static func weakSounds(in pieces: [SpeechDelivery.Piece]) -> Int? {
+        guard !pieces.isEmpty else { return nil }
+        let bar = SpeechReadingScore.Price.weakSoundBelow
+        return pieces.reduce(0) { total, piece in
+            total + piece.result.words.filter(\.isJudged).reduce(0) { n, word in
+                n + word.phonemes.filter { ($0.accuracy ?? 100) < bar }.count
+            }
+        }
     }
 
     /// The value, or nil if it takes longer than `seconds`.

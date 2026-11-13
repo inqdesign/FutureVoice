@@ -1,0 +1,128 @@
+import SwiftUI
+
+/// My days as one endless row (2026-11-12, founder: no frame, no header,
+/// scroll back as far as you like). The app puts out one challenge a day, so
+/// each slot is that day's challenge: my best on it as a medal, a "+" for one
+/// still to read, an empty slot for a day without one. It opens on this week
+/// and scrolls back through every day before. The medals and the streak sit
+/// under it, small.
+struct ArenaMedalCalendar: View {
+    @EnvironmentObject private var appState: AppState
+    @Environment(\.locale) private var locale
+    /// Challenges by the day they came out.
+    let byDay: [Date: SpeechScript]
+    let best: (SpeechScript) -> Int?
+    let rank: Int?
+    let medals: Int
+    let streak: Int
+
+    private var calendar: Calendar {
+        var c = Calendar.current
+        c.locale = locale
+        return c
+    }
+
+    /// From a year back (or the first challenge, if older) to the end of this
+    /// week, oldest first.
+    private var days: [Date] {
+        let end = calendar.dateInterval(of: .weekOfYear, for: Date())!.end
+        let earliest = byDay.keys.min() ?? Date()
+        let yearBack = calendar.date(byAdding: .day, value: -364, to: Date())!
+        let first = calendar.dateInterval(of: .weekOfYear, for: min(earliest, yearBack))!.start
+        var out: [Date] = []
+        var day = first
+        while day < end {
+            out.append(day)
+            day = calendar.date(byAdding: .day, value: 1, to: day)!
+        }
+        return out
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            GeometryReader { geo in
+                let slot = (geo.size.width) / 7
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 0) {
+                        ForEach(days, id: \.self) { day in
+                            self.slot(day).frame(width: slot)
+                        }
+                    }
+                    .scrollTargetLayout()
+                }
+                .scrollTargetBehavior(.viewAligned)
+                .defaultScrollAnchor(.trailing)
+            }
+            .frame(height: 96)
+            .padding(.horizontal, -16)
+            .padding(.horizontal, 4)
+
+            HStack(spacing: 12) {
+                if let rank { Text("#\(rank)") }
+                Text("\(medals) medals")
+                HStack(spacing: 3) {
+                    Image(systemName: "flame.fill")
+                        .foregroundStyle(streak > 0 ? Arena.accent : Arena.dim)
+                    Text("\(streak)-day streak")
+                }
+            }
+            .font(.footnote)
+            .foregroundStyle(Arena.dim)
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    @ViewBuilder
+    private func slot(_ day: Date) -> some View {
+        let today = calendar.isDateInToday(day)
+        let start = calendar.startOfDay(for: day)
+        let future = start > calendar.startOfDay(for: Date())
+        let script = byDay[start]
+        let letter = calendar.veryShortStandaloneWeekdaySymbols[calendar.component(.weekday, from: day) - 1]
+        let dayNumber = calendar.component(.day, from: day)
+        let content = VStack(spacing: 6) {
+            Text(letter)
+                .font(.subheadline.weight(today ? .bold : .regular))
+                .foregroundStyle(today ? Color.white : Arena.dim.opacity(future ? 0.45 : 1))
+            ZStack {
+                sphere(lit: today)
+                if let script {
+                    let score = best(script)
+                    if let score, let tier = MedalTier(score: score) {
+                        MedalBadge(tier: tier, label: "\(score)", size: 42)
+                    } else if let score {
+                        Text(verbatim: "\(score)")
+                            .font(.subheadline.weight(.semibold).monospacedDigit())
+                    } else if !future {
+                        Image(systemName: "plus")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundStyle(.white.opacity(today ? 0.95 : 0.6))
+                    }
+                }
+            }
+            .frame(width: 44, height: 44)
+            // The month shows on its first day, so a long scroll back
+            // still says where it is.
+            Text(dayNumber == 1 ? day.formatted(.dateTime.month(.abbreviated)) : "\(dayNumber)")
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(Arena.dim.opacity(future ? 0.45 : 0.8))
+        }
+        if let script, !future {
+            NavigationLink {
+                SpeechArenaDetail(script: script).environmentObject(appState)
+            } label: { content }
+            .buttonStyle(.plain)
+        } else {
+            content
+        }
+    }
+
+    /// The round slot: a dark glassy bead, lit from above.
+    private func sphere(lit: Bool) -> some View {
+        Circle()
+            .fill(RadialGradient(colors: [Color(white: lit ? 0.32 : 0.22), Color(white: 0.06)],
+                                 center: UnitPoint(x: 0.35, y: 0.25), startRadius: 1, endRadius: 30))
+            .overlay(Circle().stroke(Color.white.opacity(lit ? 0.45 : 0.12), lineWidth: lit ? 1.2 : 0.8))
+            .shadow(color: .black.opacity(0.6), radius: 3, y: 2)
+    }
+}

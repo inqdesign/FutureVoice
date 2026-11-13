@@ -1813,6 +1813,226 @@
         }
       }
     },
+    "My medals" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 메달"
+          }
+        }
+      }
+    },
+    "90 gold · 85 silver · 80 bronze" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "90점 금 · 85점 은 · 80점 동"
+          }
+        }
+      }
+    },
+    "Be the first on the board" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "첫 번째로 순위에 올라봐요"
+          }
+        }
+      }
+    },
+    "Not ranked yet" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 순위 없음"
+          }
+        }
+      }
+    },
+    "%lld medals" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "메달 %lld개"
+          }
+        }
+      }
+    },
+    "Today's challenge" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘의 챌린지"
+          }
+        }
+      }
+    },
+    "Gold at 90" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "90점이면 금메달"
+          }
+        }
+      }
+    },
+    "Gold won · best %lld" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "금메달 · 최고 %lld점"
+          }
+        }
+      }
+    },
+    "Best %lld · %lld to gold" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "최고 %1$lld점 · 금메달까지 %2$lld점"
+          }
+        }
+      }
+    },
+    "Take it on" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "도전하기"
+          }
+        }
+      }
+    },
+    "Who's on top?" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "누가 짱?"
+          }
+        }
+      }
+    },
+    "%lld to pass %@" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$@까지 %1$lld점"
+          }
+        }
+      }
+    },
+    "You're on top" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지금 1등이에요"
+          }
+        }
+      }
+    },
+    "Not tried yet" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 안 해봤어요"
+          }
+        }
+      }
+    },
+    "Best %lld" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "최고 %lld점"
+          }
+        }
+      }
+    },
+    "of %lld" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld명 중"
+          }
+        }
+      }
+    },
+    "%lld to bronze" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "동메달까지 %lld점"
+          }
+        }
+      }
+    },
+    "%lld to silver" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "은메달까지 %lld점"
+          }
+        }
+      }
+    },
+    "%lld to gold" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "금메달까지 %lld점"
+          }
+        }
+      }
+    },
+    "Gold won" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "금메달 땄어요"
+          }
+        }
+      }
+    },
+    "Previous month" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이전 달"
+          }
+        }
+      }
+    },
+    "Next month" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음 달"
+          }
+        }
+      }
+    },
     "Leading now" : {
       "localizations" : {
         "ko" : {
@@ -132179,6 +132399,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在找你說過的話…"
+          }
+        }
+      }
+    },
+    "Season %lld: %lld · #%lld of %lld" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "시즌 %1$lld 기록: %2$lld점 · %4$lld명 중 %3$lld위"
           }
         }
       }

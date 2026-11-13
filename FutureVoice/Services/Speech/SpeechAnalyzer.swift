@@ -44,7 +44,7 @@ enum SpeechAnalyzer {
         let diff = ShadowEngine.analyze(target: script, learner: spoken, language: language)
         let accuracy = Self.accuracy(diff)
         let missed = missedRuns(diff.steps, script: script, language: language)
-        let slips = Self.slips(diff.steps, language: language)
+        let slips = Self.slips(diff.steps, language: language, names: Self.properNames(script))
 
         // Pace.
         let band = SpeechLibrary.rateBand(language)
@@ -174,14 +174,37 @@ enum SpeechAnalyzer {
     /// coverage's, so a run of deletions at the end isn't slips.
     /// Season 2's accuracy is built on it (`SpeechScoreV4`): narrators read
     /// 92-96% of pieces with none.
-    static func slips(_ steps: [ShadowEngine.DiffStep], language: String) -> Int {
+    /// Names in the script (a capital letter not at a sentence's start), in
+    /// the diff's lower case. A transcriber spells a name its own way
+    /// (Wylder / Wilder) and the reader said it right, so a name read
+    /// "differently" is never a slip (2026-11-13: in the calibration, most of
+    /// the natives' slips were names and spellings). Unspaced scripts have
+    /// no capitals and get none.
+    static func properNames(_ script: String) -> Set<String> {
+        var out: Set<String> = []
+        var sentenceStart = true
+        for raw in script.split(whereSeparator: { $0.isWhitespace }) {
+            let token = String(raw)
+            let core = token.trimmingCharacters(in: .punctuationCharacters.union(.symbols))
+            if !sentenceStart, let first = core.first, first.isUppercase, core != "I", !core.hasPrefix("I'"), !core.hasPrefix("I’") {
+                for part in core.lowercased().split(whereSeparator: { !($0.isLetter || $0.isNumber || $0 == "'") }) {
+                    out.insert(String(part))
+                }
+            }
+            let tail = token.trimmingCharacters(in: CharacterSet(charactersIn: "\"'”’)]»"))
+            sentenceStart = tail.last.map { ".!?…:".contains($0) } ?? false
+        }
+        return out
+    }
+
+    static func slips(_ steps: [ShadowEngine.DiffStep], language: String, names: Set<String> = []) -> Int {
         guard let first = steps.firstIndex(where: { $0.op == .match }),
               let last = steps.lastIndex(where: { $0.op == .match }), first < last else { return 0 }
         let fillerWords = Set(SpeechLibrary.fillers(language).map { $0.lowercased() })
         return steps[first...last].filter { step in
             switch step.op {
             case .match: return false
-            case .sub, .del: return true
+            case .sub, .del: return !names.contains((step.target ?? "").lowercased())
             case .ins: return !fillerWords.contains((step.learner ?? "").lowercased())
             }
         }.count

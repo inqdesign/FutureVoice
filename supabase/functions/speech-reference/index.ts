@@ -46,7 +46,7 @@ async function sha256(s: string): Promise<string> {
   return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, "0")).join("")
 }
 
-async function synthesize(text: string, voice: string, language: string): Promise<Int16Array> {
+async function synthesize(text: string, voice: string, language: string, rate = RATE): Promise<Int16Array> {
   const r = await fetch("https://api.cartesia.ai/tts/bytes", {
     method: "POST",
     headers: {
@@ -56,7 +56,7 @@ async function synthesize(text: string, voice: string, language: string): Promis
     },
     body: JSON.stringify({
       model_id: CARTESIA_MODEL, transcript: text, voice: { mode: "id", id: voice }, language,
-      output_format: { container: "raw", encoding: "pcm_s16le", sample_rate: RATE },
+      output_format: { container: "raw", encoding: "pcm_s16le", sample_rate: rate },
     }),
   })
   if (!r.ok) throw new Error(`tts ${r.status} ${(await r.text()).slice(0, 200)}`)
@@ -135,6 +135,100 @@ async function timeWords(pcm: Int16Array, text: string, locale: string): Promise
   return parts.flat()
 }
 
+// MARK: The listening audio (2026-11-13)
+//
+// One fluent reading per challenge that a learner LISTENS to: the challenge
+// page opens on it, the script page plays it with the words lighting up. A
+// take of its own, in the one voice the challenge was published with
+// (`speech_challenges.reference_voice`, null = female), synthesized at 24 kHz
+// so it sounds like a voice and not a phone line, timed exactly like the
+// scoring references (Azure on a 16 kHz copy), and kept in R2. The scoring
+// references above are untouched, so nothing on a board moves.
+
+const LISTEN_VERSION = 1
+const LISTEN_RATE = 24_000
+const R2_PUBLIC_DEFAULT = "https://pub-83c97a52f2e549718b126bf60f710f1a.r2.dev"
+
+/** 24 kHz → 16 kHz for Azure: a [1 2 1]/4 low-pass, then linear
+ *  interpolation at 1.5 input samples per output sample. Timing only — the
+ *  learner hears the 24 kHz original. */
+function to16k(pcm: Int16Array): Int16Array {
+  const n = pcm.length
+  const smooth = new Float32Array(n)
+  for (let i = 0; i < n; i++) {
+    const a = pcm[Math.max(0, i - 1)], b = pcm[i], c = pcm[Math.min(n - 1, i + 1)]
+    smooth[i] = (a + 2 * b + c) / 4
+  }
+  const out = new Int16Array(Math.floor(n * 2 / 3))
+  for (let i = 0; i < out.length; i++) {
+    const p = i * 1.5, k = Math.floor(p), f = p - k
+    const v = smooth[k] * (1 - f) + smooth[Math.min(n - 1, k + 1)] * f
+    out[i] = Math.max(-32768, Math.min(32767, Math.round(v)))
+  }
+  return out
+}
+
+async function putR2(key: string, bytes: Uint8Array): Promise<string> {
+  const account = Deno.env.get("R2_ACCOUNT_ID")!
+  const bucket = Deno.env.get("R2_BUCKET") ?? "nawana-shows"
+  const { AwsClient } = await import("npm:aws4fetch@1.0.20")
+  const aws = new AwsClient({
+    accessKeyId: Deno.env.get("R2_ACCESS_KEY_ID")!,
+    secretAccessKey: Deno.env.get("R2_SECRET_ACCESS_KEY")!,
+    service: "s3", region: "auto",
+  })
+  const r = await aws.fetch(`https://${account}.r2.cloudflarestorage.com/${bucket}/${key}`, {
+    method: "PUT",
+    body: bytes,
+    headers: { "Content-Type": "audio/wav", "Cache-Control": "public, max-age=31536000, immutable" },
+  })
+  if (!r.ok) throw new Error(`r2 ${r.status} ${(await r.text()).slice(0, 200)}`)
+  const base = (Deno.env.get("R2_PUBLIC_BASE") ?? R2_PUBLIC_DEFAULT).replace(/\/$/, "")
+  return `${base}/${key}`
+}
+
+// deno-lint-ignore no-explicit-any
+async function listen(text: string, language: string, challenge: string | undefined,
+                      voices: Record<"male" | "female", string>, admin: any, userId: string,
+                      // deno-lint-ignore no-explicit-any
+                      supabase: any, req: Request): Promise<Response> {
+  const json = (o: unknown) => new Response(JSON.stringify(o), { headers: { "Content-Type": "application/json", ...cors() } })
+  let gender: "male" | "female" = "female"
+  if (challenge) {
+    const { data } = await admin.from("speech_challenges").select("reference_voice").eq("id", challenge).maybeSingle()
+    if (data?.reference_voice === "male") gender = "male"
+  }
+  const voice = voices[gender]
+  const key = await sha256(`listen|${LISTEN_VERSION}|${language}|${gender}|${voice}|${CARTESIA_MODEL}|${LISTEN_RATE}|${text}`)
+  const { data: hit } = await admin.from("speech_listen_audio").select("url, words").eq("key", key).maybeSingle()
+  if (hit) return json({ version: LISTEN_VERSION, gender, url: hit.url, words: hit.words })
+
+  if (!Deno.env.get("R2_ACCOUNT_ID") || !Deno.env.get("R2_ACCESS_KEY_ID") || !Deno.env.get("R2_SECRET_ACCESS_KEY")) {
+    return errorResponse(503, "not_configured")
+  }
+  const rec = await recordFreeUsage({
+    supabase, userId, action: "speech_reference", purpose: SOURCE_FN, dailyCap: DAILY_CAP,
+    sourceFn: SOURCE_FN, idempotencyKey: req.headers.get("X-Idempotency-Key") ?? crypto.randomUUID(),
+    metadata: { language, chars: text.length, listen: true, gender },
+  })
+  if (!rec.ok) {
+    if (rec.reason === "rate_limited") return rateLimitedResponse(cors())
+    return errorResponse(500, "usage record failed", rec.detail)
+  }
+  try {
+    const pcm = await synthesize(text, voice, language, LISTEN_RATE)
+    const words = await timeWords(to16k(pcm), text, "en-US")
+    const bytes = new Uint8Array(pcm.buffer, pcm.byteOffset, pcm.byteLength)
+    const url = await putR2(`speech/${language}/${key}.wav`, wavBytes(bytes, LISTEN_RATE))
+    await admin.from("speech_listen_audio").upsert({
+      key, version: LISTEN_VERSION, language, gender, voice_id: voice, url, words,
+    })
+    return json({ version: LISTEN_VERSION, gender, url, words })
+  } catch (e) {
+    return errorResponse(502, "listen audio failed", String(e).slice(0, 300))
+  }
+}
+
 Deno.serve(async (req) => {
   const pre = handlePreflight(req)
   if (pre) return pre
@@ -146,7 +240,7 @@ Deno.serve(async (req) => {
     return errorResponse(503, "not_configured")
   }
 
-  let body: { text?: string; language?: string }
+  let body: { text?: string; language?: string; listen?: boolean; challenge?: string }
   try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
   const text = (body.text ?? "").trim()
   const language = (body.language ?? "").trim().toLowerCase()
@@ -156,6 +250,9 @@ Deno.serve(async (req) => {
   if (!voices) return errorResponse(400, "unsupported language")
 
   const admin = serviceRoleClient()
+
+  if (body.listen) return await listen(text, language, body.challenge, voices, admin, user.id, supabase, req)
+
   const keys = {
     male: await sha256(`${VERSION}|${language}|male|${voices.male}|${CARTESIA_MODEL}|${text}`),
     female: await sha256(`${VERSION}|${language}|female|${voices.female}|${CARTESIA_MODEL}|${text}`),

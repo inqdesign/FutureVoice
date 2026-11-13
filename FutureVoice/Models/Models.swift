@@ -2349,6 +2349,11 @@ struct SpeechTake: Codable, Identifiable, Hashable {
     /// detail sheet can show every word and sound of the take. nil on takes
     /// made before it or not assessed.
     var assessments: [PronunciationResult]? = nil
+    /// Where each of `assessments` begins in the take's audio, in ms
+    /// (2026-11-13): their words are timed from the piece's own start, and
+    /// the phrase drill plays the learner's own phrase back. nil on takes
+    /// made before it (the drill then plays only the fluent reading).
+    var assessmentStartsMs: [Int]? = nil
     /// How the script moved during the take (2026-11-08). Set: `videoFilename`
     /// is the camera alone and the script is drawn when it is wanted. nil on
     /// earlier takes, whose video has the script burned into it.

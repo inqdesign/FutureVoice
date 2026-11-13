@@ -54,6 +54,8 @@ struct SpeechResultView: View {
     @State private var scriptMarks: (takeId: UUID, marks: [[SpeechAnalyzer.ScriptMark]]?)?
     /// The assessment sheet — every word and sound of the take.
     @State private var showingPronunciation = false
+    /// The mark whose phrase is being practised (2026-11-13).
+    @State private var drillMark: SpeechPhraseMark?
 
     private var take: SpeechTake? {
         let stored = store.takes.first { $0.id == takeId }
@@ -389,9 +391,13 @@ struct SpeechResultView: View {
                 let timing = m.reading.map { SpeechMarkedScript.timing($0, marks: marks) }
                 Section {
                     SpeechMarkedScript(paragraphs: marks, language: script.language,
-                                       held: timing?.held ?? [:], pauses: timing?.pauses ?? [:])
+                                       held: timing?.held ?? [:], pauses: timing?.pauses ?? [:],
+                                       onMark: SpeechListenService.available(for: script) ? { drillMark = $0 } : nil)
                         .padding(.vertical, 4)
                         .id("script")
+                        .sheet(item: $drillMark) { mark in
+                            SpeechPhraseDrillSheet(script: script, take: take, mark: mark)
+                        }
                 } header: {
                     Text("Script")
                 } footer: {
@@ -714,16 +720,33 @@ struct SpeechResultView: View {
                 Label("A narrator's read. Nothing left to fix.", systemImage: "checkmark.seal.fill")
                     .foregroundStyle(.green)
             }
-            ForEach(SpeechReadingScore.Part.allCases, id: \.self) { part in
-                let score = r.parts.all.first { $0.0 == part }?.1 ?? 0
-                partDetailRow(title: readingTitle(part), icon: readingIcon(part),
-                              detail: readingDetail(part, r), atBar: score >= SpeechReadingScore.bar)
+            if r.version >= 8 {
+                // The receipt (scoring 8): every line what it counted and
+                // what it cost.
+                ForEach(r.deductions, id: \.part) { d in
+                    receiptRow(d, r)
+                }
+                HStack {
+                    Text("Total").font(.headline)
+                    Spacer()
+                    Text(verbatim: "100 − \(Self.points(r.lost)) = \(r.total)")
+                        .font(.headline.monospacedDigit())
+                }
+            } else {
+                ForEach(SpeechReadingScore.Part.allCases, id: \.self) { part in
+                    let score = r.parts.all.first { $0.0 == part }?.1 ?? 0
+                    partDetailRow(title: readingTitle(part), icon: readingIcon(part),
+                                  detail: readingDetail(part, r), atBar: score >= SpeechReadingScore.bar)
+                }
             }
             levelBands(r)
         } header: {
             Text("Compared with a native reading")
         } footer: {
             VStack(alignment: .leading, spacing: 6) {
+                if r.version >= 8 {
+                    Text("Every mistake costs points: −1 a stop mid-sentence, −1 a word, −0.5 a sound, −0.5 for each point of rhythm under 90, −1 for each point of pace under 85%.")
+                }
                 Text("The names are just for fun.")
                 Text("Native speakers average \(SpeechReading.nativeAverage) · 100 is an announcer's read")
                 Text("Like a karaoke score: how close this reading came to the reference. It doesn't grade your English.")
@@ -836,6 +859,53 @@ struct SpeechResultView: View {
 
     /// What one part measured. Its number is in the strip at the top of the
     /// sheet, which stays on screen above this list.
+    /// "6.5", "4": points without a needless ".0".
+    static func points(_ value: Double) -> String {
+        value == value.rounded() ? String(Int(value)) : String(format: "%.1f", value)
+    }
+
+    /// One line of the receipt: the part, what it counted, what it cost.
+    private func receiptRow(_ d: SpeechReadingScore.Deduction, _ r: SpeechReadingScore) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack {
+                Label(readingTitle(d.part), systemImage: readingIcon(d.part))
+                Spacer()
+                Text(verbatim: d.points == 0 ? "0" : "−" + Self.points(d.points))
+                    .font(.body.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(d.points == 0 ? Color.green : Color.orange)
+            }
+            Text(receiptDetail(d, r))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func receiptDetail(_ d: SpeechReadingScore.Deduction, _ r: SpeechReadingScore) -> String {
+        switch d.part {
+        case .pauses:
+            return d.count == 0 ? explain("No stops where the native reading runs on")
+                                : explain("\(d.count) stops mid-sentence: \(extraPauseList(r.extraPauses))")
+        case .accuracy:
+            if d.count == 0 { return explain("Every word as written") }
+            let unread = r.unreadWords
+            let changed = d.count - unread
+            var parts: [String] = []
+            if changed > 0 { parts.append(explain("\(changed) changed, missed or added")) }
+            if unread > 0 { parts.append(explain("\(unread) not reached")) }
+            if !r.missed.isEmpty { parts.append(quoted(r.missed)) }
+            return parts.joined(separator: " · ")
+        case .pronunciation:
+            guard r.weakSounds != nil else { return explain("Sounds weren't checked on this take") }
+            return d.count == 0 ? explain("No clearly wrong sounds")
+                                : explain("\(d.count) sounds wrong") + (r.weakest.isEmpty ? "" : " · " + soundsList(r.weakest))
+        case .rhythm:
+            return explain("Rhythm \(String(format: "%.2f", r.rhythm)) (native readers about 0.93)")
+                + (r.held.isEmpty ? "" : " · " + explain("held: \(heldList(r.held))"))
+        case .speed:
+            return explain("\(r.speedPoint)% of the native reading's pace")
+        }
+    }
+
     private func partDetailRow(title: LocalizedStringKey, icon: String, detail: String, atBar: Bool) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack {
@@ -858,6 +928,10 @@ struct SpeechResultView: View {
     /// (founder, 2026-11-09). A take from before either scoring has no parts
     /// of its own, so it shows the sub-scores its old total was made of.
     private func scoreTiles(_ m: SpeechMetrics) -> [(title: LocalizedStringKey, score: Int)] {
+        if let r = m.reading, r.version >= 8 {
+            // The receipt: what each part cost, in points (shown as −N).
+            return r.deductions.map { (readingTitle($0.part), -Int(($0.points * 10).rounded())) }
+        }
         if let r = m.reading {
             return SpeechReadingScore.Part.allCases.map { part in
                 (readingTitle(part), r.parts.all.first { $0.0 == part }?.1 ?? 0)
@@ -877,15 +951,25 @@ struct SpeechResultView: View {
         let tiles = scoreTiles(m)
         return HStack(alignment: .top, spacing: 2) {
             ForEach(tiles.indices, id: \.self) { index in
+                let receipt = (m.reading?.version ?? 0) >= 8
                 VStack(spacing: 3) {
-                    Text(verbatim: "\(tiles[index].score)")
-                        .font(.title.weight(.bold).monospacedDigit())
-                        .foregroundStyle(SpeechScoreColor.color(tiles[index].score))
-                        .contentTransition(.numericText(value: Double(tiles[index].score)))
-                    ProgressView(value: Double(min(100, max(0, tiles[index].score))), total: 100)
-                        .tint(SpeechScoreColor.color(tiles[index].score))
-                        .padding(.horizontal, 10)
-                        .accessibilityHidden(true)
+                    if receipt {
+                        // Points lost (tenths, so −6.5 survives): 0 is green.
+                        let lost = -Double(tiles[index].score) / 10
+                        Text(verbatim: lost == 0 ? "0" : "−" + Self.points(lost))
+                            .font(.title.weight(.bold).monospacedDigit())
+                            .foregroundStyle(lost == 0 ? Color.green : Color.orange)
+                            .contentTransition(.numericText(value: lost))
+                    } else {
+                        Text(verbatim: "\(tiles[index].score)")
+                            .font(.title.weight(.bold).monospacedDigit())
+                            .foregroundStyle(SpeechScoreColor.color(tiles[index].score))
+                            .contentTransition(.numericText(value: Double(tiles[index].score)))
+                        ProgressView(value: Double(min(100, max(0, tiles[index].score))), total: 100)
+                            .tint(SpeechScoreColor.color(tiles[index].score))
+                            .padding(.horizontal, 10)
+                            .accessibilityHidden(true)
+                    }
                     Text(tiles[index].title)
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -1312,6 +1396,9 @@ private struct SpeechMarkedScript: View {
     /// (where the native reading has none). Season 2 takes only.
     var held: [Int: Double] = [:]
     var pauses: [Int: Double] = [:]
+    /// A tap on a held word or a stop opens the phrase drill (2026-11-13).
+    /// nil: the marks are only drawn.
+    var onMark: ((SpeechPhraseMark) -> Void)? = nil
 
     /// Season 2's per-token findings laid onto the script's words: a word
     /// owns as many scoring tokens as `SpeechDelivery.referenceTokens` makes
@@ -1340,6 +1427,17 @@ private struct SpeechMarkedScript: View {
                 }
             }
         }
+        // The marks are links only to open the drill: they keep their orange.
+        .tint(.orange)
+        .environment(\.openURL, OpenURLAction { url in
+            guard url.scheme == "fvmark", let index = Int(url.lastPathComponent) else { return .systemAction }
+            if url.host == "held", let s = held[index] {
+                onMark?(SpeechPhraseMark(word: index, kind: .held, seconds: s))
+            } else if url.host == "stop", let s = pauses[index] {
+                onMark?(SpeechPhraseMark(word: index, kind: .stop, seconds: s))
+            }
+            return .handled
+        })
     }
 
     private func note(_ text: String, _ color: Color) -> AttributedString {
@@ -1358,6 +1456,7 @@ private struct SpeechMarkedScript: View {
             var word = AttributedString(mark.word)
             if let s = held[first + i] {
                 word.backgroundColor = .orange.opacity(0.25)
+                if onMark != nil { word.link = URL(string: "fvmark://held/\(first + i)") }
                 word += note(" " + explain("\(String(format: "%.1f", s))s"), .orange)
             }
             switch mark.op {
@@ -1382,7 +1481,9 @@ private struct SpeechMarkedScript: View {
                 out += note(" +" + extra, .red)
             }
             if let s = pauses[first + i] {
-                out += note(" ⏸︎" + explain("\(String(format: "%.1f", s))s"), .orange)
+                var stop = note(" ⏸︎" + explain("\(String(format: "%.1f", s))s"), .orange)
+                if onMark != nil { stop.link = URL(string: "fvmark://stop/\(first + i)") }
+                out += stop
             }
         }
         return out

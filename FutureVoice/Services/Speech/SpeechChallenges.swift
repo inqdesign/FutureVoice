@@ -60,6 +60,17 @@ final class SpeechChallenges: ObservableObject {
         let ended: Bool
     }
 
+    /// My score on a challenge as a past season froze it (English Season 1's
+    /// challenges went live again in Season 2 on 2026-11-13, their old
+    /// results kept apart so Season 1's standings never move).
+    struct SeasonRecord: Decodable, Hashable {
+        let challenge_id: UUID
+        let season: Int
+        let score: Int
+        let rank: Int
+        let entrants: Int
+    }
+
     static func intro(_ standing: Standing?, native: String) -> String? {
         guard let intro = standing?.intro else { return nil }
         let text = intro[native] ?? intro[String(native.prefix(2))] ?? intro["en"]
@@ -109,6 +120,8 @@ final class SpeechChallenges: ObservableObject {
     @Published private(set) var overallSeason: Int?
     /// The loaded language's seasons; empty from a server without them.
     @Published private(set) var seasons: [SeasonStatus] = []
+    /// By challenge id: my frozen score from an earlier season of it.
+    @Published private(set) var seasonRecords: [UUID: SeasonRecord] = [:]
     /// By take id. In memory: the page that matters is the one the take
     /// opens on; later visits read the standing instead.
     @Published private(set) var entries: [UUID: Entry] = [:]
@@ -165,6 +178,7 @@ final class SpeechChallenges: ObservableObject {
         overall = nil
         overallSeason = nil
         seasons = []
+        seasonRecords = [:]
         let cache = (try? Data(contentsOf: cacheURL(language)))
             .flatMap { try? decoder.decode(Cache.self, from: $0) }
         scripts = cache?.scripts ?? []
@@ -205,6 +219,14 @@ final class SpeechChallenges: ObservableObject {
             .value) ?? []
     }
 
+    private func mySeasonRecords(language: String) async -> [SeasonRecord] {
+        struct Params: Encodable { let p_language: String }
+        return (try? await SupabaseProvider.shared
+            .rpc("my_speech_season_records", params: Params(p_language: language))
+            .execute()
+            .value) ?? []
+    }
+
     /// The list that knows seasons, or the old one from a server without it.
     private func listRows(language: String) async throws -> [ListRow] {
         struct Params: Encodable { let p_language: String; let p_scoring: Int }
@@ -227,6 +249,7 @@ final class SpeechChallenges: ObservableObject {
         #endif
         loadCache(language: language)
         async let status = seasonStatus(language: language)
+        async let records = mySeasonRecords(language: language)
         let rows: [ListRow]
         do {
             rows = try await listRows(language: language)
@@ -234,8 +257,10 @@ final class SpeechChallenges: ObservableObject {
             return
         }
         let statuses = await status
+        let frozen = await records
         guard loadedLanguage == language else { return }
         seasons = statuses
+        seasonRecords = Dictionary(frozen.map { ($0.challenge_id, $0) }, uniquingKeysWith: { a, b in a.season > b.season ? a : b })
         if !statuses.isEmpty {
             SpeechReading.setSeasonOpen(statuses.contains { $0.is_open && $0.min_scoring >= SpeechScoreV4.version },
                                         language: language)
@@ -253,8 +278,9 @@ final class SpeechChallenges: ObservableObject {
             Task {
                 #if SPEECH_APP
                 await adoptBoardIdentity()
-                #endif
+                #else
                 await importLocalBests()
+                #endif
             }
         }
         standings = Dictionary(uniqueKeysWithValues: rows.map { row in
@@ -448,6 +474,26 @@ final class SpeechChallenges: ObservableObject {
         }
     }
 
+    /// Scoring 8's call: the old parameters plus the price list's counts.
+    private struct PriceListParams: Encodable {
+        let base: Encodable
+        let p_stops: Int
+        let p_words: Int
+        let p_sounds: Int
+        let p_rhythm_point: Int
+        let p_speed_point: Int
+        enum Keys: String, CodingKey { case p_stops, p_words, p_sounds, p_rhythm_point, p_speed_point }
+        func encode(to encoder: Encoder) throws {
+            try base.encode(to: encoder)
+            var c = encoder.container(keyedBy: Keys.self)
+            try c.encode(p_stops, forKey: .p_stops)
+            try c.encode(p_words, forKey: .p_words)
+            try c.encode(p_sounds, forKey: .p_sounds)
+            try c.encode(p_rhythm_point, forKey: .p_rhythm_point)
+            try c.encode(p_speed_point, forKey: .p_speed_point)
+        }
+    }
+
     /// Season 2: the server rechecks the total from these parts.
     private func submitReading(take: SpeechTake, challengeId: UUID, name: String) async {
         guard let r = take.metrics.reading else { entries[take.id] = .failed; return }
@@ -472,10 +518,24 @@ final class SpeechChallenges: ObservableObject {
                             p_seconds: max(1, Int(take.durationSeconds.rounded())),
                             p_scoring: take.metrics.scoring ?? SpeechReading.version)
         do {
-            let rows: [SubmitRow] = try await SupabaseProvider.shared
-                .rpc("submit_speech_reading_take", params: params)
-                .execute()
-                .value
+            let rows: [SubmitRow]
+            if r.version >= 8 {
+                // The price list (scoring 8): the server recomputes the total
+                // from the same counts (`submit_speech_reading_take_v8`).
+                let counts = Dictionary(uniqueKeysWithValues: r.deductions.map { ($0.part, $0.count) })
+                rows = try await SupabaseProvider.shared
+                    .rpc("submit_speech_reading_take_v8", params: PriceListParams(
+                        base: params, p_stops: counts[.pauses] ?? 0, p_words: counts[.accuracy] ?? 0,
+                        p_sounds: counts[.pronunciation] ?? 0,
+                        p_rhythm_point: r.rhythmPoint, p_speed_point: r.speedPoint))
+                    .execute()
+                    .value
+            } else {
+                rows = try await SupabaseProvider.shared
+                    .rpc("submit_speech_reading_take", params: params)
+                    .execute()
+                    .value
+            }
             await apply(rows, take: take, challengeId: challengeId, overall: r.total)
         } catch {
             entries[take.id] = .failed
@@ -621,10 +681,15 @@ final class SpeechChallenges: ObservableObject {
     /// is rewritten by every take: without this the speech app asks for a
     /// name again and its first take clears the photo on every board.
     private func adoptBoardIdentity() async {
-        guard Self.displayName == nil,
-              let entered = standings.first(where: { $0.value.myBest != nil })?.key,
-              let rows = await board(entered),
-              let me = rows.first(where: { $0.is_me }) else { return }
+        guard Self.displayName == nil else { return }
+        // The profile itself, not a board row: a learner who has never
+        // entered a challenge can still have a name and face from nawana.
+        struct Row: Decodable { let display_name: String; let avatar: String? }
+        guard let rows: [Row] = try? await SupabaseProvider.shared
+            .rpc("my_speech_challenge_profile")
+            .execute()
+            .value,
+              let me = rows.first else { return }
         Self.displayName = me.display_name
         UserDefaults.standard.set(me.avatar, forKey: Self.adoptedAvatarKey)
     }

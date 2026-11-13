@@ -36,7 +36,7 @@ import Foundation
 /// learners' clips join separate recordings (gaps of 1.3-1.5 s every time),
 /// and natives and narrators hold only 21 sentence ends between them.
 enum SpeechReading {
-    static let version = 7
+    static let version = 8
 
     static let pauseSeconds = 0.15
     /// A take's median pitch above this is read against the female reference.
@@ -95,7 +95,7 @@ enum SpeechReading {
     static func score(take: [Int: Timed], reference: [Int: Timed], script: [String],
                       stops: [SpeechDelivery.Stop], slips: Int?, scriptTokens: Int?, missed: [String],
                       soundAccuracy: Int?, weakest: [SpeechDelivery.Sound],
-                      coverage: Double, gender: String) -> SpeechReadingScore? {
+                      coverage: Double, gender: String, weakSounds: Int? = nil) -> SpeechReadingScore? {
         let both = take.keys.filter { reference[$0] != nil }.sorted()
         guard both.count >= 20 else { return nil }
         let refSum = both.reduce(0.0) { $0 + reference[$1]!.duration }
@@ -146,7 +146,8 @@ enum SpeechReading {
             // All of them: the script on the result page marks every one.
             extraPauses: extra.sorted { $0.seconds > $1.seconds },
             held: held, missed: Array(missed.prefix(5)),
-            weakest: parts.pronunciation < 100 ? Array(weakest.filter { $0.score < 80 }.prefix(3)) : [])
+            weakest: parts.pronunciation < 100 ? Array(weakest.filter { $0.score < 80 }.prefix(3)) : [],
+            weakSounds: weakSounds, scriptWords: scriptTokens)
     }
 
     /// The five parts from the five measures — what the calibration fixture
@@ -198,6 +199,11 @@ struct SpeechReadingScore: Codable, Hashable {
     var held: [Held]
     var missed: [String]
     var weakest: [SpeechDelivery.Sound]
+    /// Sounds Azure scored under `Price.weakSoundBelow` (scoring 8). nil on
+    /// earlier takes, or when nothing was assessed.
+    var weakSounds: Int? = nil
+    /// The script's words, for the words left unread (scoring 8).
+    var scriptWords: Int? = nil
 
     struct Parts: Codable, Hashable {
         var speed: Int
@@ -227,10 +233,72 @@ struct SpeechReadingScore: Codable, Hashable {
     /// A narrator's level, part by part.
     static let bar = 95
 
-    var isPerfect: Bool { parts.all.allSatisfy { $0.1 == 100 } && coverage >= 0.999 }
+    // MARK: The price list (scoring 8, 2026-11-13)
+    //
+    // Founder: "start at 100, and every mistake counts". A speech is a
+    // competition read in front of people, so nothing is averaged away and
+    // nothing is forgiven for a poor microphone. The RELATIVE prices come
+    // from 138 human readings (narrators, ordinary natives, rated learners;
+    // a stop and a changed word hurt about equally, rhythm and pace matter,
+    // a sound weighs about a third of a word); the overall level is the
+    // founder's, chosen on his own takes. `submit_speech_reading_take_v8`
+    // (and the speech app's) recomputes the same total from the same counts:
+    // change a price here and there together.
+    enum Price {
+        static let stop = 1.0             // a stop inside a sentence the native reading doesn't make
+        static let word = 1.0             // a word changed, missed or added, or left unread at the end
+        static let sound = 0.5            // a sound Azure scores under `weakSoundBelow`
+        static let weakSoundBelow = 40
+        static let rhythmPerPoint = 0.5   // per 0.01 of rhythm below `rhythmBar`
+        static let rhythmBar = 90         // r × 100: natives sit around 93
+        static let speedPerPoint = 1.0    // per point of pace below `speedBar`
+        static let speedBar = 85          // % of the native reading's pace: natives median 91
+    }
+
+    struct Deduction: Hashable {
+        let part: Part
+        /// How many (stops, words, sounds) or how far below the bar
+        /// (rhythm, pace).
+        let count: Int
+        let points: Double
+    }
+
+    /// The rhythm and pace as the price list reads them: whole points.
+    var rhythmPoint: Int { Int((rhythm * 100).rounded()) }
+    var speedPoint: Int { speed > 0 ? Int((100 * min(speed, 1 / speed)).rounded()) : 0 }
+    /// Words the reading never reached (it stopped early).
+    var unreadWords: Int {
+        guard let w = scriptWords else { return 0 }
+        return max(0, Int(((1 - min(1, coverage)) * Double(w)).rounded()))
+    }
+
+    /// Every line of the receipt, in the order the page lists them. Empty
+    /// before scoring 8.
+    var deductions: [Deduction] {
+        guard version >= 8 else { return [] }
+        let words = slips + unreadWords
+        let sounds = weakSounds ?? 0
+        let r = max(0, Price.rhythmBar - rhythmPoint)
+        let s = max(0, Price.speedBar - speedPoint)
+        return [
+            Deduction(part: .pauses, count: extraPauses.count, points: Double(extraPauses.count) * Price.stop),
+            Deduction(part: .accuracy, count: words, points: Double(words) * Price.word),
+            Deduction(part: .pronunciation, count: sounds, points: Double(sounds) * Price.sound),
+            Deduction(part: .rhythm, count: r, points: Double(r) * Price.rhythmPerPoint),
+            Deduction(part: .speed, count: s, points: Double(s) * Price.speedPerPoint),
+        ]
+    }
+
+    var lost: Double { deductions.reduce(0) { $0 + $1.points } }
+
+    var isPerfect: Bool {
+        if version >= 8 { return lost == 0 }
+        return parts.all.allSatisfy { $0.1 == 100 } && coverage >= 0.999
+    }
 
     var total: Int {
         if isPerfect { return 100 }
+        if version >= 8 { return min(99, max(0, Int((100 - lost).rounded()))) }
         let mean = Double(parts.all.reduce(0) { $0 + $1.1 }) / 5
         // Stopping early scales everything but accuracy (which already
         // counts the words left out) — as the older scoring did.
@@ -241,6 +309,7 @@ struct SpeechReadingScore: Codable, Hashable {
     /// The part that cost the most, to work on next; nil on a perfect take.
     var focus: Part? {
         guard !isPerfect else { return nil }
+        if version >= 8 { return deductions.max { $0.points < $1.points }?.part }
         return parts.all.min { $0.1 < $1.1 }?.0
     }
 

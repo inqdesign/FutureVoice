@@ -338,14 +338,25 @@ struct SpeechTab: View {
                     .pickerStyle(.segmented)
                     #endif
                     switch shownPage {
-                    case .challenges: challengesPage
+                    case .challenges:
+                        #if SPEECH_APP
+                        SpeechArenaHome(openRanking: { openRanking?() })
+                        #else
+                        challengesPage
+                        #endif
                     case .mine: minePage
                     }
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 24)
             }
+            #if SPEECH_APP
+            .noBarShade(.top)
+            .tabBarBand()
+            .background { if fixedPage == .challenges { Arena.background } else { Color(.systemGroupedBackground).ignoresSafeArea() } }
+            #else
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
+            #endif
             #if SPEECH_APP
             // Challenges has no title: whose board it is stands in for one.
             .navigationTitle(fixedPage == .challenges ? Text(verbatim: "") : Text(title))
@@ -395,6 +406,9 @@ struct SpeechTab: View {
                 }
             }
         }
+        #if SPEECH_APP
+        .arenaScheme(fixedPage == .challenges)
+        #endif
         .onAppear {
             store.reloadIfLanguageChanged()
             if store.scripts.isEmpty { store.reload() }
@@ -653,6 +667,9 @@ struct SpeechScriptSheet: View {
     /// scrolled off screen disappears (and may be rebuilt), which stopped
     /// the playback the moment the learner scrolled the script to follow it.
     @StateObject private var voiceoverPlayer = AudioPlayer()
+    /// A challenge's fluent reading (2026-11-13): played here with the words
+    /// lighting up, and its breaths and run-together words marked.
+    @StateObject private var listen = SpeechListenModel()
     /// A script that arrives with its study already made (a nawana Podcast
     /// episode): nothing is edited, voiced or studied on this phone — the
     /// study was written once for everybody when the episode was published.
@@ -684,6 +701,12 @@ struct SpeechScriptSheet: View {
     var body: some View {
         NavigationStack {
             List {
+                if SpeechListenService.available(for: script), listen.phase != .unavailable {
+                    Section {
+                        SpeechListenRow(model: listen)
+                    }
+                }
+
                 // Its own row, not the toolbar (founder, 2026-10-14): a switch
                 // beside the title and Done crowded the header, and in longer
                 // languages the label had nowhere to go.
@@ -728,6 +751,8 @@ struct SpeechScriptSheet: View {
                                                     lookedUp = LookedUpWord(word: word)
                                                     lookedUpWords = ScriptLookups.add(word, body: script.body)
                                                 })
+                            } else if listen.phase == .ready, let reading = listen.text {
+                                SpeechListenTextView(text: reading, player: listen.player)
                             } else {
                                 Text(script.body)
                                     .font(.body)
@@ -741,6 +766,8 @@ struct SpeechScriptSheet: View {
                 } header: {
                     if studying, let study {
                         ScriptStudyLegend(study: study)
+                    } else if !studying, listen.phase == .ready {
+                        SpeechListenLegend()
                     }
                 } footer: {
                     HStack(spacing: 6) {
@@ -838,7 +865,13 @@ struct SpeechScriptSheet: View {
                 lookedUpWords = ScriptLookups.words(body: script.body)
                 await loadStudy()
             }
-            .onDisappear { voiceoverPlayer.stop() }
+            .task {
+                if SpeechListenService.available(for: script) { await listen.load(script) }
+            }
+            .onDisappear {
+                voiceoverPlayer.stop()
+                listen.stop()
+            }
         }
     }
 

@@ -315,6 +315,12 @@ final class AudioPlayer: NSObject, ObservableObject {
 
     func setLoopEnabled(_ on: Bool) { loopEnabled = on }
 
+    /// Ramp the volume of what is playing (the speech challenge's intro fades
+    /// in and out). 0…1.
+    func fadeVolume(to volume: Float, over seconds: TimeInterval) {
+        player?.setVolume(volume, fadeDuration: seconds)
+    }
+
     /// Playback speed (0.5–2.0). Applies live and persists across segment
     /// replays — slowing down is the point for shadowing hard phrases.
     func setRate(_ r: Float) {

@@ -1,14 +1,10 @@
 import SwiftUI
 
-/// Languages, account, legal. Opened from the Speech tab's leading button.
+/// Plan, account, legal. Opened from the Speech tab's leading button.
 struct SpeechSettingsView: View {
-    @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var auth: AuthService
     @Environment(\.dismiss) private var dismiss
 
-    @State private var target = "en"
-    @State private var native = "en"
-    @State private var level: CEFRLevel = .b1
     @State private var confirmingDelete = false
     @State private var deleteError: String?
     @ObservedObject private var gate = BillingGate.shared
@@ -28,7 +24,20 @@ struct SpeechSettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                SpeechLanguageFields(target: $target, native: $native, level: $level)
+                if let account = gate.account {
+                    Section {
+                        LabeledContent("Plan", value: account.planLabel)
+                        if account.isEntitled && !account.unlimited {
+                            Link("Manage subscription", destination: AccountStatus.manageSubscriptionsURL)
+                        }
+                    } footer: {
+                        if account.isEntitled || account.unlimited {
+                            Text("The same plan works in nawana and here.")
+                        } else {
+                            Text("Subscribed on nawana? Sign in with the account you use there.")
+                        }
+                    }
+                }
 
                 Section("Account") {
                     if let email = auth.session?.user.email {
@@ -62,12 +71,7 @@ struct SpeechSettingsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        if !LanguageCatalog.sameLanguage(target, native) {
-                            SpeechSetup.apply(target: target, native: native, level: level, to: appState)
-                        }
-                        dismiss()
-                    }
+                    Button("Done") { dismiss() }
                 }
             }
             .confirmationDialog(
@@ -89,9 +93,6 @@ struct SpeechSettingsView: View {
         }
         .onAppear {
             BillingGate.shared.warm()
-            target = appState.targetLanguage
-            native = appState.nativeLanguage
-            level = appState.proficiency
         }
     }
 }
