@@ -7,7 +7,6 @@ import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.data.CoreVocabulary
 import com.roro.futurevoice.data.LevelBands
 import com.roro.futurevoice.data.VocabLemmas
-import com.roro.futurevoice.data.JapaneseMorph
 import com.roro.futurevoice.data.WordSplitter
 import com.roro.futurevoice.data.LearnedExpression
 import com.roro.futurevoice.data.RepeatedMistake
@@ -289,8 +288,7 @@ object WeeklyReportEngine {
             // the noun from 行き + ました (iOS `vocabProfileLine`).
             val tokens = if (WordSplitter.spaced(language))
                 line.lowercase().split(Regex("[^\\p{L}\\p{N}]+"))
-            else JapaneseMorph.headwords(line, CoreVocabulary.set(language),
-                CoreVocabulary.forms(language)).map { it.first }.distinct()
+            else WordSplitter.headwords(line, language).map { it.first }.distinct()
             for (token in tokens) {
                 if (token.isEmpty() || !seen.add(token)) continue
                 CoreVocabulary.levelOfSurface(token, language)?.let {

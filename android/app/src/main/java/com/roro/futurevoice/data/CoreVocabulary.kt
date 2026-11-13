@@ -27,6 +27,11 @@ object CoreVocabulary {
         // Tatoeba under a hand-written A1/A2 core — FLELex, the one CEFR
         // list, is CC BY-NC-SA. See scripts/build-fr-wordlist.py.
         "fr" to "cefr_words_fr",
+        // Simplified Chinese wordlist (iOS 2026-11-13): HSK 3.0 (MIT dataset,
+        // pinyin from CC-CEDICT) mapped 1→A1 … 7–9→C1, see
+        // scripts/build-zh-wordlist.py. Speech reaches it through
+        // `ChineseMorph` (no spaces, no inflection, Traditional folded).
+        "zh" to "cefr_words_zh",
     )
 
     private class Pool(
@@ -123,6 +128,9 @@ object CoreVocabulary {
      * off-list word simply shows no reading.
      */
     fun reading(headword: String, language: String): String? {
+        // Pinyin under a Chinese headword, for the same reason (iOS
+        // `ChineseMorph.reading(ofHeadword:)`).
+        if (language.substringBefore('-') == "zh") return ChineseMorph.readingOfHeadword(headword)
         listedReading(headword, language)?.let { return it }
         if (language.substringBefore('-') != "ja") return null
         if (headword.none { it.code in 0x4E00..0x9FFF || it.code == 0x3005 }) return null
@@ -137,8 +145,9 @@ object CoreVocabulary {
 
     /**
      * Other spellings of a headword — わかる → 分かる, 判る → 分かる, 朝御飯 →
-     * 朝ご飯. Only Japanese has one; every other language returns empty, which
-     * is what the morphology expects.
+     * 朝ご飯. Japanese, English and Chinese (一点 → 一点儿, the erhua-less
+     * spelling) have one; every other language returns empty, which is what
+     * the morphology expects.
      */
     fun forms(language: String): Map<String, String> = synchronized(formsCache) {
         formsCache.getOrPut(language) {
@@ -146,7 +155,8 @@ object CoreVocabulary {
             // form → headword (`en_forms.tsv`, `scripts/android/gen-forms.swift`
             // — decided by NLTagger, the lemmatizer iOS runs on device).
             val file = when (language.substringBefore('-')) {
-                "ja" -> "ja_forms.tsv"; "en" -> "en_forms.tsv"; else -> return@getOrPut emptyMap()
+                "ja" -> "ja_forms.tsv"; "en" -> "en_forms.tsv"; "zh" -> "zh_forms.tsv"
+                else -> return@getOrPut emptyMap()
             }
             val ctx = appContext ?: return@getOrPut emptyMap()
             val out = HashMap<String, String>()
@@ -182,6 +192,10 @@ object CoreVocabulary {
         // French: Apple's French lemma is wrong in context, Android has none —
         // the bundled table.
         if (language.substringBefore('-') == "fr") return level(FrenchMorph.lemma(token), "fr")
+        if (language.substringBefore('-') == "zh") {
+            val head = ChineseMorph.headwords(token, set("zh")).firstOrNull()?.first ?: return null
+            return level(head, "zh")
+        }
         if (language.substringBefore('-') != "ja") return level(token, language)
         val head = JapaneseMorph.headwords(token, set(language), forms(language))
             .firstOrNull()?.first ?: return null
@@ -353,6 +367,7 @@ object VocabLemmas {
         if (lang == "ja") return japaneseLemmas(texts)
         if (lang == "es") return spanishLemmas(texts)
         if (lang == "fr") return frenchLemmas(texts)
+        if (lang == "zh") return chineseLemmas(texts)
         val forms = if (lang == "en") CoreVocabulary.forms("en") else emptyMap()
         val out = HashSet<String>()
         for (text in texts) {
@@ -398,8 +413,21 @@ object VocabLemmas {
                 else JapaneseMorph.headwords(w, lexicon, CoreVocabulary.forms("ja"))
                     .firstOrNull()?.first ?: w
             }
+            // A Chinese word is its own dictionary form; only the script
+            // (說 → 说) and the erhua (一点 → 一点儿) can differ.
+            "zh" -> ChineseMorph.headword(t, CoreVocabulary.set("zh")) ?: ChineseMorph.simplified(t)
             else -> t
         }
+    }
+
+    /** Chinese: lexicon hits only, like Japanese and Korean (iOS `lemmas`). */
+    private fun chineseLemmas(texts: List<String>): Set<String> {
+        val lexicon = CoreVocabulary.set("zh")
+        val out = HashSet<String>()
+        for (text in texts) {
+            for (hit in ChineseMorph.headwords(text, lexicon)) out.add(hit.first)
+        }
+        return out
     }
 
     /**

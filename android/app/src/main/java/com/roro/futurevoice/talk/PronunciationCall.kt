@@ -100,6 +100,7 @@ object PronunciationCourse {
         val consonants = R.string.consonants
         val vowels = R.string.vowels
         val flow = R.string.endings_and_flow
+        val tones = R.string.tones
         return when (language.substringBefore('-')) {
             "en" -> listOf(
                 Chapter("en.cons", "mouth", consonants, listOf(
@@ -204,6 +205,33 @@ object PronunciationCourse {
                     t("fr.r", "r", "rouge · Paris · très · rentrer", emptyList(), "the French 'r' (rouge, très): made at the back of the throat, a light scrape, never rolled or English"),
                     t("fr.liaison", "liaison", "les amis · vous avez · un enfant", emptyList(), "liaison: a silent final consonant joins the next vowel (les amis → lé-za-mi, vous avez → vou-za-vé)"),
                     t("fr.silent", "lettres muettes", "petit · beaucoup · ils parlent", emptyList(), "silent endings: the final t, p, s, x and -ent of verbs are not said (petit, beaucoup, ils parlent)"),
+                )),
+            )
+            // zh-CN scores a syllable WITH its tone ("mai 3"), and a wrong
+            // tone only pulls it to the 60s–90s (measured 2026-11-13 with
+            // macOS voices), so tones are judged on the focus words' bar.
+            "zh" -> listOf(
+                Chapter("zh.tone", "waveform.path", tones, listOf(
+                    t("zh.t1", "ā", "妈妈 · 喝 · 书 · 星期天", emptyList(), "the first tone (mā, shū): high and level, held flat like a note — it does not fall at the end"),
+                    t("zh.t2", "á", "来 · 学 · 茶 · 中国", emptyList(), "the second tone (lái, xué): rising from the middle to the top, like a surprised 'what?'"),
+                    t("zh.t3", "ǎ", "我 · 买 · 好 · 喜欢", emptyList(), "the third tone (wǒ, mǎi): low; in speech it mostly stays low and does not rise again unless it ends a phrase"),
+                    t("zh.t4", "à", "去 · 是 · 再见 · 谢谢", emptyList(), "the fourth tone (qù, shì): falling sharply from the top, short and firm"),
+                    t("zh.sandhi", "ǎ → á", "你好 · 可以 · 很好 · 洗澡", emptyList(), "two third tones in a row (nǐ hǎo): the first becomes a rising second tone, ní hǎo"),
+                    t("zh.yibu", "一 · 不", "一起 · 一样 · 不是 · 不对", emptyList(), "一 and 不 change tone: 不 is bú before a fourth tone (bú shì), 一 is yí before a fourth tone (yíyàng) and yì before the others (yìqǐ)"),
+                    t("zh.neutral", "ma", "妈妈 · 朋友 · 东西 · 你们", emptyList(), "the neutral tone (māma, péngyou): the second syllable short and light, with no tone of its own"),
+                )),
+                Chapter("zh.cons", "mouth", consonants, listOf(
+                    t("zh.retro", "zh ch sh", "知道 · 吃 · 是 · 老师", emptyList(), "zh, ch, sh (zhīdào, chī, shì): tongue tip curled back toward the roof of the mouth — not z, c, s"),
+                    t("zh.flat", "z c s", "在 · 菜 · 四 · 自己", emptyList(), "z, c, s (zài, cài, sì): tongue tip flat behind the bottom teeth; c is 'ts' with a puff of air"),
+                    t("zh.jqx", "j q x", "家 · 去 · 谢谢 · 学校", emptyList(), "j, q, x (jiā, qù, xièxie): tongue flat against the front of the palate, lips spread — not English j/ch/sh"),
+                    t("zh.r", "r", "人 · 热 · 日本 · 认识", emptyList(), "the Chinese r (rén, rè): like sh with voice, the tongue curled back — not an English r and not l"),
+                    t("zh.asp", "p t k", "朋友 · 他 · 可以 · 怕", emptyList(), "aspirated p, t, k, q, ch, c (péngyou, tā, kěyǐ): a strong puff of air; b, d, g have none (bù vs pù)"),
+                )),
+                Chapter("zh.vow", "waveform", vowels, listOf(
+                    t("zh.u", "ü", "绿 · 去 · 鱼 · 女", emptyList(), "ü (lǜ, nǚ, and the u in qù, yú): say 'ee' with the lips rounded tight"),
+                    t("zh.e", "e", "饿 · 喝 · 哥哥 · 车", emptyList(), "e (è, hē): from the back of the mouth, lips not rounded — between 'uh' and 'o'"),
+                    t("zh.i", "-i", "是 · 四 · 吃 · 字", emptyList(), "the i after zh/ch/sh/r and z/c/s (shì, sì): a buzzing continuation of the consonant, never 'ee'"),
+                    t("zh.n", "-n · -ng", "人 · 能 · 看 · 忙", emptyList(), "-n vs -ng (rén/néng, kàn/máng): -n ends at the teeth, -ng at the back of the mouth"),
                 )),
             )
             else -> emptyList()

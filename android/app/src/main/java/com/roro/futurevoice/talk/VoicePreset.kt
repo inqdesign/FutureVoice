@@ -73,8 +73,17 @@ object VoicePreset {
             EMMA to "6c64b57a-bc65-48e4-bff4-12dbe85606cd",   // Eloise (F)
             JAMES to "adff5dcb-249f-463f-aa89-d98d8ca05e88",  // Leo (M)
         )
+        // Chinese (2026-11-13): the four Mandarin voices Find people already
+        // casts for zh-Hans profiles (`ProfileVoice`), slot for slot by
+        // gender. Not yet listened to as scene partners.
+        val chinese = mapOf(
+            PAIGE to "6eb8965c-e295-47bd-a9e4-3eeebb3abcff",  // Jing (F)
+            MARK to "16212f18-4955-4be9-a6cd-2196ce2c11d1",   // Hao (M)
+            EMMA to "bf32f849-7bc9-4b91-8c62-954588efcc30",   // Lan (F)
+            JAMES to "653b9445-ae0c-4312-a3ce-375504cff31e",  // Liu (M)
+        )
         mapOf("en" to english, "de" to german, "ko" to korean, "ja" to japanese, "es" to spanish,
-            "fr" to french)
+            "fr" to french, "zh" to chinese)
     }
 
     /**
@@ -89,6 +98,7 @@ object VoicePreset {
         "ja" to mapOf(PAIGE to "美咲", MARK to "翔太", EMMA to "陽菜", JAMES to "健太"),
         "es" to mapOf(PAIGE to "Carolina", MARK to "Jorge", EMMA to "Carmen", JAMES to "Javier"),
         "fr" to mapOf(PAIGE to "Emmanuelle", MARK to "Erwan", EMMA to "Éloïse", JAMES to "Léo"),
+        "zh" to mapOf(PAIGE to "李静", MARK to "张浩", EMMA to "林兰", JAMES to "刘洋"),
     )
 
     /**

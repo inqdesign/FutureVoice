@@ -376,7 +376,7 @@ private fun pieceKeys(text: String, language: String): List<String> =
             if (bare.isEmpty()) "" else VocabLemmas.lemma(bare, language)
         }
     } else {
-        JapaneseMorph.pieceKeys(text, CoreVocabulary.set(language), CoreVocabulary.forms(language))
+        WordSplitter.pieceKeys(text, language)
     }
 
 /** The line cut where words are — a spaced language's tokens (punctuation
@@ -384,7 +384,7 @@ private fun pieceKeys(text: String, language: String): List<String> =
 private fun displayPieces(text: String, language: String): List<JapaneseMorph.Piece> =
     if (WordSplitter.spaced(language)) {
         text.split(" ").filter { it.isNotEmpty() }.map { JapaneseMorph.Piece(it, true) }
-    } else JapaneseMorph.displayPieces(text)
+    } else WordSplitter.displayPieces(text, language)
 
 /**
  * One transcript line — the shared [DialogueLine] chrome, with this page's

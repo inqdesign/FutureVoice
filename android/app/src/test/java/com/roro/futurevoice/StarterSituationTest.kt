@@ -62,12 +62,12 @@ class StarterSituationTest {
         assertNull(StarterSituation.of(Scenario(environment = "mine")))
     }
 
-    @Test fun everyStarterHasSixLanguagesOfAWayIn() {
+    @Test fun everyStarterHasSevenLanguagesOfAWayIn() {
         assertEquals(10, StarterSituation.all.size)
         assertEquals(StarterSituation.all.size, StarterSituation.all.map { it.id }.toSet().size)
         for (st in StarterSituation.all) {
             val lines = st.learnerFirst ?: st.openers.mapValues { it.value.first() }
-            assertEquals(st.id, setOf("en", "ko", "ja", "de", "es", "fr"), lines.keys)
+            assertEquals(st.id, setOf("en", "ko", "ja", "de", "es", "fr", "zh"), lines.keys)
         }
     }
 

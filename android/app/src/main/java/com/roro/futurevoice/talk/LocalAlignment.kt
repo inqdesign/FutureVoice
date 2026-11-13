@@ -89,19 +89,20 @@ object LocalAlignment {
         heard: List<Triple<String, Double, Double>>,
         durationMs: Int,
         minRatio: Double = MIN_MATCH_RATIO,
+        language: String? = null,
     ): List<WordTiming> {
         val expectedChars = ArrayList<String>()
         val charRange = ArrayList<IntRange>()
         for (word in expected) {
             val start = expectedChars.size
-            expectedChars += letters(word)
+            expectedChars += letters(word, language)
             charRange += start until expectedChars.size
         }
         val heardChars = ArrayList<String>()
         val spans = ArrayList<Span>()
         val opensSegment = ArrayList<Boolean>()
         for ((text, start, end) in heard) {
-            val sounds = letters(text)
+            val sounds = letters(text, language)
             if (sounds.isEmpty()) continue
             val share = maxOf(0.0, end - start) / sounds.size
             sounds.forEachIndexed { k, letter ->
@@ -135,9 +136,14 @@ object LocalAlignment {
         return out
     }
 
-    /** Letters compared by SOUND (nawana / ナワナ / なわな are one word). */
-    private fun letters(text: String): List<String> =
-        JapaneseMorph.soundSpelling(normalized(text)).map { it.toString() }
+    /** Letters compared by SOUND (nawana / ナワナ / なわな are one word);
+     *  Chinese by character, folded to Simplified (說 meets 说). */
+    private fun letters(text: String, language: String?): List<String> {
+        if (language != null && com.roro.futurevoice.data.WordSplitter.isChinese(language)) {
+            return com.roro.futurevoice.data.ChineseMorph.simplified(normalized(text)).map { it.toString() }
+        }
+        return JapaneseMorph.soundSpelling(normalized(text)).map { it.toString() }
+    }
 
     /**
      * Edit-distance alignment: for each expected item, the index of the heard

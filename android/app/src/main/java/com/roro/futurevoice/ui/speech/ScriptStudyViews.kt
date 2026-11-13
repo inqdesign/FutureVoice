@@ -68,6 +68,7 @@ import com.roro.futurevoice.data.ScriptVoiceoverStore
 import com.roro.futurevoice.data.SpeechScript
 import com.roro.futurevoice.data.VocabLemmas
 import com.roro.futurevoice.data.CoreVocabulary
+import com.roro.futurevoice.data.ChineseMorph
 import com.roro.futurevoice.data.JapaneseMorph
 import java.text.BreakIterator
 import java.util.Locale
@@ -228,6 +229,10 @@ internal fun studyWords(text: String, language: String): List<Triple<Int, Int, S
     val lang = language.substringBefore('-')
     if (lang == "ja") {
         return JapaneseMorph.headwords(text, CoreVocabulary.set("ja"), CoreVocabulary.forms("ja"))
+            .map { Triple(it.second, it.third, it.first) }
+    }
+    if (lang == "zh") {
+        return ChineseMorph.headwords(text, CoreVocabulary.set("zh"))
             .map { Triple(it.second, it.third, it.first) }
     }
     val words = BreakIterator.getWordInstance(Locale.forLanguageTag(language))

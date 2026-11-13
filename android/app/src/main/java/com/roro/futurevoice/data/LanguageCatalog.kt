@@ -31,7 +31,9 @@ object LanguageCatalog {
     private val englishNames = mapOf(
         "en" to "English", "es" to "Spanish", "de" to "German", "fr" to "French",
         "it" to "Italian", "pt" to "Portuguese", "ja" to "Japanese",
-        "ko" to "Korean", "zh" to "Chinese", "vi" to "Vietnamese",
+        // The Chinese TARGET is a bare "zh" and is taught in Simplified; a
+        // prompt told only "Chinese" may write either script.
+        "ko" to "Korean", "zh" to "Simplified Chinese", "vi" to "Vietnamese",
         // Spelled out so a prompt told "Chinese" can't quietly write the
         // other script.
         "zh-Hant" to "Traditional Chinese", "zh-Hans" to "Simplified Chinese",
@@ -47,9 +49,8 @@ object LanguageCatalog {
     fun tokenStyle(code: String): TokenStyle = language(code).tokenStyle
 
     /** False for the languages that write no spaces between words — the one
-     *  question [WordSplitter] asks. Chinese is here too, though it is not a
-     *  selectable target: it must never be cut with the JAPANESE segmenter,
-     *  so give `zh` its own before it gets a wordlist. */
+     *  question [WordSplitter] asks. Chinese is cut by [ChineseMorph],
+     *  Japanese by [JapaneseMorph]; [WordSplitter] picks which. */
     fun writesSpaces(code: String): Boolean = code.substringBefore('-') !in setOf("ja", "zh")
 
     fun englishName(code: String): String =
@@ -57,7 +58,7 @@ object LanguageCatalog {
 
     /** Targets offered in setup — everything with a graded word list. */
     val selectableTargets: List<Language>
-        get() = targets.filter { it.code in setOf("en", "es", "de", "fr", "ko", "ja") }
+        get() = targets.filter { it.code in setOf("en", "es", "de", "fr", "ko", "ja", "zh") }
 
     /**
      * Languages a learner may name as NATIVE (`LanguageCatalog.swift`,
@@ -201,12 +202,19 @@ object LanguageCatalog {
     private val jlptByCefr = mapOf(CefrLevel.A1 to 5, CefrLevel.A2 to 4, CefrLevel.B1 to 3,
         CefrLevel.B2 to 2, CefrLevel.C1 to 1)
 
-    /** CEFR everywhere internally; Korean thinks in TOPIK, Japanese in JLPT. */
+    /** HSK 3.0 equivalents — the inverse of scripts/build-zh-wordlist.py's
+     *  mapping (1 → A1, 2–3 → A2, 4 → B1, 5–6 → B2, 7–9 → C1). */
+    private val hskByCefr = mapOf(CefrLevel.A1 to "1", CefrLevel.A2 to "2–3", CefrLevel.B1 to "4",
+        CefrLevel.B2 to "5–6", CefrLevel.C1 to "7–9")
+
+    /** CEFR everywhere internally; Korean thinks in TOPIK, Japanese in JLPT,
+     *  Chinese in HSK. */
     fun levelLabel(level: CefrLevel, target: String): String {
         val cefr = level.code.uppercase()
         return when (target) {
             "ko" -> topikByCefr[level]?.let { "$cefr · TOPIK $it" } ?: cefr
             "ja" -> jlptByCefr[level]?.let { "$cefr · JLPT N$it" } ?: cefr
+            "zh" -> hskByCefr[level]?.let { "$cefr · HSK $it" } ?: cefr
             else -> cefr
         }
     }

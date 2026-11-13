@@ -347,22 +347,28 @@ object CarryoverDetector {
      */
     private fun tokens(text: String, language: String?): List<String> =
         if (spaced(language)) normalized(text).split(' ').filter { it.isNotEmpty() }
-        else segmenter(text).map(::normalized).filter { it.isNotEmpty() }
+        else segmenter.let { seg ->
+            // A non-null language here: a null one reads as spaced.
+            if (seg === PLATFORM_SEGMENTER) WordSplitter.segments(text, language!!) else seg(text)
+        }.map(::normalized).filter { it.isNotEmpty() }
 
     /**
-     * The Japanese segmenter. `BreakIterator` is the platform's (`android.icu`)
-     * and does not exist on a JVM, so a unit test feeds the tokens the Swift
-     * side cuts instead — the same arrangement as `JapaneseMorphVectorTest`.
+     * The unspaced segmenter — [WordSplitter]'s, which picks Japanese or
+     * Chinese by the language. `BreakIterator` is the platform's
+     * (`android.icu`) and does not exist on a JVM, so a unit test feeds the
+     * tokens the Swift side cuts instead — the same arrangement as
+     * `JapaneseMorphVectorTest`.
      */
-    @Volatile internal var segmenter: (String) -> List<String> = { JapaneseMorph.segments(it) }
+    private val PLATFORM_SEGMENTER: (String) -> List<String> = { JapaneseMorph.segments(it) }
+    @Volatile internal var segmenter: (String) -> List<String> = PLATFORM_SEGMENTER
 
     private fun contentTokens(text: String, language: String?): List<String> =
         tokens(text, language).filter { !isFiller(it, language) }
 
-    /** Japanese has its own list — the particles and auxiliaries
-     *  [JapaneseMorph] already knows (iOS `isFiller`). */
+    /** Japanese and Chinese have their own lists — the particles and
+     *  auxiliaries their segmenter already knows (iOS `isFiller`). */
     private fun isFiller(token: String, language: String?): Boolean =
-        if (spaced(language)) token in FILLER else JapaneseMorph.isFunctionToken(token)
+        if (spaced(language)) token in FILLER else WordSplitter.isFunctionToken(token, language!!)
 
     /** English-only by design — for other spaced targets nothing is dropped. */
     private val FILLER = setOf(

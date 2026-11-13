@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.GraphicEq
@@ -73,9 +74,11 @@ private val PronGreen = Color(0xFF34C759)
 private val PronOrange = Color(0xFFFF9500)
 private val PronRed = Color(0xFFFF3B30)
 
-/** The course's chapter icons (iOS SF Symbols mouth.fill · waveform · text.word.spacing). */
+/** The course's chapter icons (iOS SF Symbols mouth.fill · waveform ·
+ *  text.word.spacing · waveform.path, Chinese tones). */
 internal fun pronChapterIcon(name: String): ImageVector = when (name) {
     "waveform" -> Icons.Filled.GraphicEq
+    "waveform.path" -> Icons.AutoMirrored.Filled.ShowChart
     "spacing" -> Icons.Filled.SpaceBar
     else -> Icons.Filled.RecordVoiceOver
 }

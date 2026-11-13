@@ -40,9 +40,7 @@ object ShadowScore {
         // (ナワナ / なわな / nawana are the same three morae), so a token is
         // keyed in hiragana — the steps still carry what each side wrote.
         // Without this the app's own name scored as a miss on every take.
-        val key: (String) -> String =
-            if (language.startsWith("ja")) com.roro.futurevoice.data.JapaneseMorph::soundSpelling
-            else { t -> t }
+        val key: (String) -> String = soundKey(language)
         val (matches, steps) = align(targetTokens, learnerTokens, key)
         val denom = maxOf(targetTokens.size, learnerTokens.size)
         val raw = if (style == LanguageCatalog.TokenStyle.SYLLABLE)
@@ -66,8 +64,7 @@ object ShadowScore {
         val style = LanguageCatalog.tokenStyle(language)
         val t = tokenize(expandForDiff(target, language), LanguageCatalog.TokenStyle.WORD)
         val h = heardTokens(heard, target, t, language, LanguageCatalog.TokenStyle.WORD)
-        val key: (String) -> String =
-            if (language.startsWith("ja")) com.roro.futurevoice.data.JapaneseMorph::soundSpelling else { x -> x }
+        val key: (String) -> String = soundKey(language)
         return when (style) {
             LanguageCatalog.TokenStyle.WORD -> {
                 if (t.size < 2 || h.size < 2) return false
@@ -84,6 +81,15 @@ object ShadowScore {
         }
     }
 
+    /** How two tokens are compared: Japanese by sound (the transcriber picks
+     *  the script, ナワナ / なわな, so kana is keyed in hiragana), Chinese by
+     *  Simplified character, everything else as written (iOS `soundKey`). */
+    private fun soundKey(language: String): (String) -> String = when {
+        language.startsWith("ja") -> com.roro.futurevoice.data.JapaneseMorph::soundSpelling
+        language.startsWith("zh") -> com.roro.futurevoice.data.ChineseMorph::simplified
+        else -> { t -> t }
+    }
+
     /** Ops in TARGET order (`ins` skipped) — indexes align with [tokenSpans]. */
     fun targetOps(steps: List<DiffStep>): List<DiffOp> =
         steps.filter { it.op != DiffOp.INS }.map { it.op }
@@ -94,13 +100,14 @@ object ShadowScore {
      * every character in it matched — by character a wrong particle read 96
      * (iOS ShadowEngine.wordCreditRatio). Extra speech converts to words at the
      * line's own characters per word, so the denominator is max(target,
-     * learner). Chinese has no segmenter here and stays character-scored.
+     * learner). Chinese words come from [com.roro.futurevoice.data.ChineseMorph].
      */
     private fun wordCreditRatio(target: String, language: String, steps: List<DiffStep>,
                                 targetSyllables: Int, learnerSyllables: Int): Double {
         val words = when {
             language.startsWith("ko") -> target.split(Regex("\\s+")).filter { it.isNotEmpty() }
             language.startsWith("ja") -> com.roro.futurevoice.data.JapaneseMorph.segments(target)
+            language.startsWith("zh") -> com.roro.futurevoice.data.ChineseMorph.segments(target)
             else -> emptyList()
         }
         val spans = tokenSpans(words, language).filter { !it.isEmpty() }
@@ -370,6 +377,13 @@ object ShadowScore {
                 "${m.groupValues[1]} $point " + m.groupValues[2].map { it.toString() }.joinToString(" ")
             }
         }
+        if (code == "zh" && hasDigit) {
+            // Mandarin readers and recognizers write numbers either way (3年 /
+            // 三年); spell both sides out so the character diff lines up.
+            out = ZH_DIGITS.replace(out) { m ->
+                m.value.toIntOrNull()?.let { com.roro.futurevoice.data.ChineseMorph.spellOut(it) } ?: m.value
+            }
+        }
         if (code != "en") return out
 
         if (hasDigit) {
@@ -398,6 +412,7 @@ object ShadowScore {
         return out
     }
 
+    private val ZH_DIGITS = Regex("\\d{1,9}")
     private val GROUP_COMMA = Regex("(?<=\\d),(?=\\d{3}(?!\\d))")
     private val GROUP_DOT = Regex("(?<=\\d)\\.(?=\\d{3}(?!\\d))")
     private val MONEY = Regex("([$€£₩¥])(\\d+(?:[.,]\\d+)?)")
@@ -421,11 +436,13 @@ object ShadowScore {
             "₩" to ("원" to "원"), "¥" to ("엔" to "엔")),
         "ja" to mapOf("$" to ("ドル" to "ドル"), "€" to ("ユーロ" to "ユーロ"), "£" to ("ポンド" to "ポンド"),
             "₩" to ("ウォン" to "ウォン"), "¥" to ("円" to "円")),
+        "zh" to mapOf("$" to ("美元" to "美元"), "€" to ("欧元" to "欧元"), "£" to ("英镑" to "英镑"),
+            "₩" to ("韩元" to "韩元"), "¥" to ("元" to "元")),
     )
     private val PERCENT_WORD = mapOf("en" to "percent", "de" to "prozent", "es" to "por ciento", "fr" to "pour cent",
         "ko" to "퍼센트", "ja" to "パーセント")
     private val DECIMAL_WORD = mapOf("en" to "point", "de" to "komma", "es" to "coma", "fr" to "virgule",
-        "ko" to "점", "ja" to "点")
+        "ko" to "점", "ja" to "点", "zh" to "点")
     private val ORDINAL_WORD = mapOf("one" to "first", "two" to "second", "three" to "third", "five" to "fifth",
         "eight" to "eighth", "nine" to "ninth", "twelve" to "twelfth")
 
@@ -445,6 +462,9 @@ object ShadowScore {
         if (language.startsWith("ja")) {
             return com.roro.futurevoice.data.JapaneseMorph.katakanaFromLatinIn(out)
         }
+        // Chinese: one script on both sides — the recognizer may write 說
+        // where the line has 说, which is not a word the learner got wrong.
+        if (language.startsWith("zh")) return com.roro.futurevoice.data.ChineseMorph.simplified(out)
         if (!language.startsWith("en")) return out
         for ((from, to) in IRREGULAR) {
             out = Regex("(?<![a-z])${Regex.escape(from)}(?![a-z])").replace(out, to)

@@ -92,9 +92,18 @@ def guard_chunks(name: str):
 
 
 spacing, _ = guard_chunks("spacingGuard")
-script, _ = guard_chunks("scriptGuard")
+script_common, script_extra = guard_chunks("scriptGuard")
+# Japanese only until iOS 0197dcbc, then one block each for Japanese and
+# Chinese (the ASR CHARACTER GUARD) and nothing shared.
+if script_extra:
+    script_langs = script_extra
+    if script_common or set(script_extra) != {"ja", "zh"}:
+        sys.exit("scriptGuard's shape changed — ja + zh blocks expected")
+else:
+    script_langs = {"ja": script_common}
+script_cases = "".join(f'\n            "{lang}" -> "{text}"' for lang, text in script_langs.items())
 register, register_extra = guard_chunks("registerGuard")
-if not spacing or not script or not register or set(register_extra) != {"ko", "ja"}:
+if not spacing or not script_langs.get("ja") or not register or set(register_extra) != {"ko", "ja"}:
     sys.exit("a guard's shape changed — spacing/script/register(ko, ja) expected")
 register_ko = register_extra['ko']
 
@@ -126,9 +135,12 @@ import com.roro.futurevoice.data.LanguageCatalog
  */
 object CorrectionOnlyPrompt {{
 
-    /** Japanese only: the recognizer, not the learner, decides kanji or kana. */
+    /** Japanese and Chinese: the recognizer, not the learner, decides the
+     *  script (kanji or kana; Simplified, Traditional or a homophone). */
     internal fun scriptGuard(targetLanguage: String): String =
-        if (targetLanguage.substringBefore('-') != "ja") "" else "{script}"
+        when (targetLanguage.substringBefore('-')) {{{script_cases}
+            else -> ""
+        }}
 
     /** Korean only: word spacing is the recognizer's (띄어쓰기). */
     internal fun spacingGuard(targetLanguage: String): String =

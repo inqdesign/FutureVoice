@@ -340,7 +340,7 @@ object PronunciationAssessor {
     }
 
     /** Every target language the app ships has a GA Azure locale. */
-    fun supports(language: String): Boolean = code(language) in setOf("en", "de", "ja", "ko", "es", "fr")
+    fun supports(language: String): Boolean = code(language) in setOf("en", "de", "ja", "ko", "es", "fr", "zh")
 
     // MARK: - Placing the verdict on a target line
 

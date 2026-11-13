@@ -225,6 +225,9 @@ object SpeechLibrary {
     fun rateBand(language: String): IntRange = when (base(language)) {
         "ko" -> 263..307
         "ja" -> 280..320
+        // Mandarin, characters a minute: a clear presentation pace, below a
+        // news anchor's ~280.
+        "zh" -> 230..260
         "de" -> 114..131
         "fr", "es", "it", "pt" -> 140..160
         else -> 130..150
@@ -257,6 +260,8 @@ object SpeechLibrary {
         "de" -> listOf("äh", "ähm", "öh", "hm", "hmm")
         "fr" -> listOf("euh", "heu", "bah")
         "es" -> listOf("eh", "em", "este")
+        // 那个 / 就是 are fillers in speech and words in a script; left out.
+        "zh" -> listOf("嗯", "呃", "额", "唔")
         else -> listOf("um", "uh", "er", "erm", "uhm", "hmm", "mm")
     }
 
@@ -281,6 +286,9 @@ object SpeechLibrary {
             "de" -> "000000000004"
             "es" -> "000000000009"
             "fr" -> "0000000f0001"
+            // iOS writes it "…00b" and keeps it as a UUID, whose string is
+            // upper case — the id a take on either platform points at.
+            "zh" -> "00000000000B"
             else -> "000000000001"
         }
         return "5BEEC000-0000-4000-8000-$suffix"
@@ -295,6 +303,7 @@ object SpeechLibrary {
         "de" to "Sprecht es laut aus",
         "es" to "¿Por qué practicar en voz alta?",
         "fr" to "Pourquoi s’entraîner à voix haute ?",
+        "zh" to "为什么要大声练？",
     )
 
     private val builtInBodies = mapOf(
@@ -363,6 +372,17 @@ Dire les choses à voix haute aide aussi à les retenir. Des études suggèrent 
 Et si vous vous enregistrez, vous remarquerez des choses qui vous échappent autrement : à quelle vitesse vous parlez vraiment, combien de fois vous dites « euh », et si votre voix baisse à la fin des phrases.
 
 Une présentation, un entretien, même une première conversation avec quelqu’un de nouveau : tout devient plus facile avec de l’entraînement. Et la minute que vous venez de passer à lire ce texte à voix haute ? C’était votre premier entraînement.
+""".trim(),
+        "zh" to """
+你有没有过这样的经历？一句话在脑子里明明想得好好的，一说出口就乱了。
+
+说话是一种技能，不只是知识。单词和语法你都懂，可是如果你的嘴从来没有真正把这句话说过一遍，到了关键时刻，它就会卡住。所以，练习一定要出声。
+
+大声说出来，也更容易记住。有研究发现，我们对自己说过的话，比只看过的内容记得更牢。
+
+再给自己录个音听听，你会发现很多平时注意不到的东西：自己说话到底有多快，“嗯”“呃”说了多少次，一句话说到最后，声音是不是越来越小。
+
+做报告、参加面试，哪怕是第一次跟陌生人聊天，练得越多就越轻松。你刚才大声读完这段话的这一分钟，就是你的第一次练习。
 """.trim(),
     )
 

@@ -108,10 +108,12 @@ class VocabStore private constructor(context: Context) {
          *  - the graded pool doesn't already carry it.
          *
          * Empty for Korean and Japanese by construction: a dictionary form the
-         * wordlist can't confirm is a guess, not a word to track.
+         * wordlist can't confirm is a guess, not a word to track. Chinese is
+         * held to the same line for now: a segment off the HSK list is as
+         * likely a mis-cut as a word.
          */
         fun offListContentWords(texts: List<String>, language: String): Map<String, Int> {
-            if (language == "ko" || language == "ja") return emptyMap()
+            if (language == "ko" || language == "ja" || language == "zh") return emptyMap()
             if (language == "es") return spanishOffListContentWords(texts)
             if (language == "fr") return frenchOffListContentWords(texts)
             val pool = CoreVocabulary.set(language)

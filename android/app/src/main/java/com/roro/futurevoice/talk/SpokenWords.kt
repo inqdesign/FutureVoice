@@ -38,6 +38,12 @@ object SpokenWords {
             val left = read(a)
             return left.isNotEmpty() && left == read(b)
         }
+        if (language.substringBefore('-') == "zh") {
+            // Same reason: the transcriber picks the characters (說 / 说,
+            // 在 / 再 for the same zài). Compared by pinyin with tones.
+            val left = com.roro.futurevoice.data.ChineseMorph.reading(a)
+            return left.isNotEmpty() && left == com.roro.futurevoice.data.ChineseMorph.reading(b)
+        }
         // Digits spelled out (the recognizer writes "3" for "three") and, in
         // Korean, word spacing folded away: 띄어쓰기 is the transcriber's
         // (한번 / 한 번), so a rewrite that only re-spaces changes nothing.

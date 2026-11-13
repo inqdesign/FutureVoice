@@ -4,7 +4,6 @@ import android.content.Context
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.data.CoreVocabulary
-import com.roro.futurevoice.data.JapaneseMorph
 import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.data.WeekRecap
 import com.roro.futurevoice.data.WeekRecapBuilder
@@ -164,8 +163,7 @@ object WeekRecapCoach {
                 for (line in lines) {
                     val tokens = if (WordSplitter.spaced(language))
                         line.lowercase().split(Regex("[^\\p{L}]+"))
-                    else JapaneseMorph.headwords(line, CoreVocabulary.set(language), CoreVocabulary.forms(language))
-                        .map { it.first }.distinct()
+                    else WordSplitter.headwords(line, language).map { it.first }.distinct()
                     for (token in tokens) if (token.length >= 2) counts[token] = (counts[token] ?: 0) + 1
                 }
                 return counts.mapNotNull { (word, n) ->

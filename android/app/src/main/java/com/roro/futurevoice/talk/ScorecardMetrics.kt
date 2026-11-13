@@ -1,7 +1,6 @@
 package com.roro.futurevoice.talk
 
 import com.roro.futurevoice.data.CoreVocabulary
-import com.roro.futurevoice.data.JapaneseMorph
 import com.roro.futurevoice.data.VocabLemmas
 import com.roro.futurevoice.data.WordSplitter
 import kotlinx.serialization.json.JsonObject
@@ -116,7 +115,7 @@ data class ScorecardMetrics(
          *  "words per minute" can mean without spaces); everything else
          *  splits on non-letters (Swift: `CharacterSet.alphanumerics.inverted`). */
         private fun tokens(text: String, language: String?): List<String> {
-            if (language != null && !WordSplitter.spaced(language)) return JapaneseMorph.segments(text)
+            if (language != null && !WordSplitter.spaced(language)) return WordSplitter.segments(text, language)
             return text.split(Regex("[^\\p{L}\\p{N}]+")).filter { it.isNotEmpty() }
         }
 

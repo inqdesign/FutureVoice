@@ -295,7 +295,8 @@ enum class ExamKind(val raw: String, val examName: String) {
     TOEIC_SPEAKING("toeicSpeaking", "TOEIC Speaking"), GOETHE("goethe", "Goethe-Zertifikat"),
     TELC("telc", "telc"), TOPIK("topik", "TOPIK"), BJT("bjt", "BJT"),
     DELE("dele", "DELE"), SIELE("siele", "SIELE"),
-    DELF("delf", "DELF / DALF"), TCF("tcf", "TCF"), TEF("tef", "TEF");
+    DELF("delf", "DELF / DALF"), TCF("tcf", "TCF"), TEF("tef", "TEF"),
+    HSKK("hskk", "HSKK"), TSC("tsc", "TSC");
 
     companion object {
         fun options(language: String): List<ExamKind> = when (LearningPurposeStore.base(language)) {
@@ -306,6 +307,9 @@ enum class ExamKind(val raw: String, val examName: String) {
             "es" -> listOf(DELE, SIELE, OPIC)
             // TCF and TEF are what Canadian immigration and French universities ask for.
             "fr" -> listOf(DELF, TCF, TEF, OPIC)
+            // HSKK is HSK's speaking test; TSC (Test of Spoken Chinese) is the
+            // one Korean companies ask for.
+            "zh" -> listOf(HSKK, TSC, OPIC)
             else -> listOf(OPIC)
         }
     }
@@ -363,6 +367,13 @@ object ExamTopics {
                 ExamTopic("週末によくすること", "Survey"),
                 ExamTopic("よく行くカフェについて", "Survey"),
                 ExamTopic("予約が取れなかったときの対応", "Role-play"),
+            )
+            "zh" -> listOf(
+                ExamTopic("介绍一下你住的房子", "Survey"),
+                ExamTopic("你最近一次旅行", "Survey"),
+                ExamTopic("你周末一般做什么？", "Survey"),
+                ExamTopic("你常去的一家咖啡店", "Survey"),
+                ExamTopic("网上买的东西坏了，打电话给商店", "Role-play"),
             )
             "es" -> listOf(
                 ExamTopic("Describa su casa", "Survey"),
@@ -465,6 +476,23 @@ object ExamTopics {
             ExamTopic("Vous appelez au sujet d'une chambre à louer : renseignez-vous", "Section A"),
             ExamTopic("Convainquez un ami de faire du bénévolat avec vous", "Section B"),
             ExamTopic("Convainquez un ami de partir en vacances en train plutôt qu'en avion", "Section B"),
+        )
+        ExamKind.HSKK -> listOf(
+            ExamTopic("你喜欢做什么运动？为什么？", "回答问题"),
+            ExamTopic("说说你最好的朋友", "回答问题",
+                listOf("他是谁", "你们怎么认识的", "你们常常一起做什么")),
+            ExamTopic("你觉得网上购物好不好？", "回答问题",
+                listOf("好处", "坏处", "你自己的看法")),
+            ExamTopic("说说你去过的一个城市", "回答问题"),
+            ExamTopic("你觉得孩子应该从小学外语吗？", "回答问题",
+                listOf("你的看法", "理由", "例子")),
+        )
+        ExamKind.TSC -> listOf(
+            ExamTopic("请介绍一下你自己", "第1部分"),
+            ExamTopic("你平时怎么去公司或学校？", "第3部分"),
+            ExamTopic("你最近看的一部电影怎么样？", "第4部分"),
+            ExamTopic("你觉得在家工作好还是在公司工作好？", "第5部分"),
+            ExamTopic("朋友约你周末见面，可是你有事，请你给他打电话说明情况", "第6部分"),
         )
     }
 }

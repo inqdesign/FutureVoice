@@ -25,3 +25,6 @@ gen-tutor-agent-prompts.py c8b22752
 gen-shadow-coach-prompt.py 0971c05d
 # The conversation, correction, coach and tutor generators follow the shared
 # IOS_REF again since iOS 5a462332 (lines for one target language each).
+# Simplified Chinese as a target: the ASR CHARACTER GUARD in scriptGuard
+# (iOS 0197dcbc, the Chinese target on feat/voice-onboarding-and-audio).
+gen-correction-prompt.py 0197dcbc

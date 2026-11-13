@@ -7,8 +7,10 @@ package com.roro.futurevoice.data
  * Every split on a space used to assume the language writes them. Japanese
  * doesn't, so a whole sentence was one "word": nothing could be highlighted,
  * no phrase could be matched and a talk counted as one word a minute. This is
- * the one place that knows which languages need a segmenter and which just
- * split.
+ * the one place that knows which languages need a segmenter ([JapaneseMorph],
+ * [ChineseMorph]) and which just split — and, for an unspaced one, WHICH
+ * segmenter: every caller that cuts unspaced text asks here rather than
+ * naming one.
  *
  * Only for text in the TARGET language — never for chrome or coaching.
  */
@@ -21,7 +23,39 @@ object WordSplitter {
      *  spaced one keeps it attached, as it always has). */
     fun words(text: String, language: String): List<String> =
         if (spaced(language)) text.split(Regex("\\s+")).filter { it.isNotEmpty() }
-        else JapaneseMorph.segments(text)
+        else segments(text, language)
+
+    // ── Unspaced languages ──
+
+    /** Chinese rather than Japanese — the two unspaced targets. */
+    fun isChinese(language: String): Boolean = language.substringBefore('-') == "zh"
+
+    /** The segmenter's words of unspaced text, punctuation dropped. */
+    fun segments(text: String, language: String): List<String> =
+        if (isChinese(language)) ChineseMorph.segments(text) else JapaneseMorph.segments(text)
+
+    /** Each segment with where it sits in [text]: (surface, start, end). */
+    fun segmentRanges(text: String, language: String): List<Triple<String, Int, Int>> =
+        if (isChinese(language)) ChineseMorph.words(text).map { Triple(it.surface, it.start, it.end) }
+        else JapaneseMorph.words(text).map { Triple(it.surface, it.start, it.end) }
+
+    /** Words and the punctuation between them; concatenated, the text back. */
+    fun displayPieces(text: String, language: String): List<JapaneseMorph.Piece> =
+        if (isChinese(language)) ChineseMorph.displayPieces(text) else JapaneseMorph.displayPieces(text)
+
+    /** Every wordlist headword said in [text], with its span. */
+    fun headwords(text: String, language: String): List<Triple<String, Int, Int>> =
+        if (isChinese(language)) ChineseMorph.headwords(text, CoreVocabulary.set(language))
+        else JapaneseMorph.headwords(text, CoreVocabulary.set(language), CoreVocabulary.forms(language))
+
+    /** The notebook key of every [displayPieces] piece ("" for none). */
+    fun pieceKeys(text: String, language: String): List<String> =
+        if (isChinese(language)) ChineseMorph.pieceKeys(text, CoreVocabulary.set(language))
+        else JapaneseMorph.pieceKeys(text, CoreVocabulary.set(language), CoreVocabulary.forms(language))
+
+    /** A particle or filler — grammar, never a word to hint, study or credit. */
+    fun isFunctionToken(token: String, language: String): Boolean =
+        if (isChinese(language)) ChineseMorph.isFunctionToken(token) else JapaneseMorph.isFunctionToken(token)
 
     fun count(text: String, language: String): Int = words(text, language).size
 
@@ -38,7 +72,7 @@ object WordSplitter {
         }
         val out = ArrayList<String>()
         var leading = ""
-        for (piece in JapaneseMorph.displayPieces(text)) {
+        for (piece in displayPieces(text, language)) {
             val t = piece.text.filterNot { it.isWhitespace() }
             if (t.isEmpty()) continue
             if (piece.isWord) {
@@ -63,7 +97,7 @@ object WordSplitter {
     /** One notebook entry or several? A spaced language can hold a two-word
      *  chunk the learner tapped; an unspaced one keys by segment. */
     fun isSingleWord(text: String, language: String): Boolean =
-        if (spaced(language)) !text.contains(" ") else JapaneseMorph.segments(text).size <= 1
+        if (spaced(language)) !text.contains(" ") else segments(text, language).size <= 1
 
     /** Leading snippet for a title — the first few words, or the first few
      *  characters where words aren't delimited. */
