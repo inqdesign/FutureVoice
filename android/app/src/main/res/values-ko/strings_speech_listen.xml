@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Listening reading, phrase drill, players, fluent pace (iOS 01529ba7, cddddcc0). Values are iOS Localizable.xcstrings'. -->
+<resources>
+    <string name="speech_listen_fluent_reading">원어민 낭독</string>
+    <string name="speech_listen_breathe">%1$s 숨 쉬기</string>
+    <string name="speech_listen_run_together">%1$s 이어 읽기</string>
+    <string name="speech_drill_title">이 구절 다시 읽기</string>
+    <string name="speech_drill_a_stop">멈춘 곳</string>
+    <string name="speech_drill_a_held_word">길게 끈 단어</string>
+    <string name="speech_drill_lengths">단어마다 걸린 시간</string>
+    <string name="speech_drill_lengths_footer">%1$s 원어민 낭독 · %2$s 내 낭독</string>
+    <string name="speech_drill_fluent">원어민</string>
+    <string name="speech_drill_yours">내 낭독</string>
+    <string name="speech_drill_both">번갈아 듣기</string>
+    <string name="speech_drill_stopped">“%2$s” 뒤에서 %1$s초 멈췄어요. 원어민 낭독은 그대로 이어 읽어요.</string>
+    <string name="speech_drill_held">“%1$s” 한 단어에 %2$s초를 썼어요. 원어민 낭독보다 훨씬 길어요.</string>
+    <string name="speech_drill_say_then_stop">구절을 말한 다음 정지를 누르세요.</string>
+    <string name="speech_drill_listening">듣는 중…</string>
+    <string name="speech_drill_failed">이번 건 확인하지 못했어요. 다시 해 보세요.</string>
+    <string name="speech_drill_hear_first">원어민 낭독을 듣고 따라 말해 보세요.</string>
+    <string name="speech_drill_holds">자연스럽게 이어졌어요.</string>
+    <string name="speech_drill_missing">들리지 않은 단어가 있어요. 구절을 처음부터 끝까지 말해 보세요.</string>
+    <string name="speech_drill_still_stop">“%1$s” 뒤에서 아직 멈춰요.</string>
+    <string name="speech_drill_still_long">“%1$s” 아직 길어요.</string>
+    <string name="speech_drill_closer">좋아지고 있어요. 작은 단어는 더 빨리 넘겨 보세요.</string>
+    <string name="speech_drill_stop_row">멈춤</string>
+    <string name="speech_drill_say_again">다시 말하기</string>
+    <string name="speech_drill_stop_button">정지</string>
+    <string name="speech_listen_my_reading">내 낭독</string>
+    <string name="speech_listen_future_self">미래의 나</string>
+    <string name="speech_listen_future_pitch">미래의 내가 이 원고를 어떻게 읽는지, 내 목소리로 들어 보세요.</string>
+    <string name="speech_fluent_pace">원어민 속도</string>
+    <string name="speech_fluent_pace_flash">원어민 속도: 노란 표시를 따라 읽어요</string>
+    <string name="speech_fluent_pace_a11y">원어민 속도로 넘어가요</string>
+</resources>

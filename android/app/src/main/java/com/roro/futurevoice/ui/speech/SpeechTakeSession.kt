@@ -134,6 +134,19 @@ class SpeechTakeSession(
         else null
 
     init {
+        // Fluent pace: the listening reading's word times laid onto the
+        // prompter's words, once the reading has loaded — only when it lines
+        // up word for word with the prompter.
+        fluentTask?.let { task ->
+            scope.launch {
+                val reading = task.await() ?: return@launch
+                val starts = com.roro.futurevoice.talk.SpeechListenText.display(script.body, reading.words)
+                    .map { it.time?.first }
+                if (starts.size != _track.value.words.size || starts.none { it != null }) return@launch
+                guideStarts = starts
+                _fluentPaceAvailable.value = true
+            }
+        }
         camera.frameHandler = { bmp, rotation, width -> composer.append(bmp, rotation, width) }
         camera.wantsFrames = { recordingVideo }
     }
@@ -147,6 +160,24 @@ class SpeechTakeSession(
     }
 
     fun setFollowVoice(on: Boolean) { _followVoice.value = on }
+
+    /** Karaoke (iOS cddddcc0, founder): the prompter moves at the FLUENT
+     *  reading's tempo from the reader's first word, and [guide] is the word
+     *  they should be saying now. Off by default (a beginner reads at their own
+     *  pace); per visit, like [followVoice]. The score is the same either way. */
+    private val _fluentPace = MutableStateFlow(false)
+    val fluentPace: StateFlow<Boolean> = _fluentPace
+    fun setFluentPace(on: Boolean) { _fluentPace.value = on }
+    /** The word the fluent reading is on, while [fluentPace] runs. */
+    private val _guide = MutableStateFlow<Int?>(null)
+    val guide: StateFlow<Int?> = _guide
+    /** The fluent reading has been laid onto the prompter's words. */
+    private val _fluentPaceAvailable = MutableStateFlow(false)
+    val fluentPaceAvailable: StateFlow<Boolean> = _fluentPaceAvailable
+    /** Each prompter word's start in the fluent reading, seconds. */
+    private var guideStarts: List<Double?> = emptyList()
+    /** The take's clock minus the fluent reading's, set at the first word. */
+    private var guideOrigin: Double? = null
 
     fun setSpeed(value: Float) {
         _speed.value = value
@@ -226,6 +257,8 @@ class SpeechTakeSession(
         recordingVideo = _cameraOn.value && camera.running.value && prompterBase != null
         if (recordingVideo) composer.begin(context.cacheDir)
         startedAtMs = System.currentTimeMillis()
+        _guide.value = null
+        guideOrigin = null
         _phase.value = Phase.Recording
         runTicker()
     }
@@ -245,6 +278,14 @@ class SpeechTakeSession(
         partials++
         val t = _track.value
         val next = t.advance(_cursor.value, text)
+        // The fluent clock starts at the reader's first word: lined up on the
+        // word they reached, so it never begins behind them.
+        if (_fluentPace.value && guideOrigin == null && next > 0 && guideStarts.isNotEmpty()) {
+            val reached = minOf(next, guideStarts.size) - 1
+            guideStarts.subList(0, reached + 1).lastOrNull { it != null }?.let { at ->
+                guideOrigin = (System.currentTimeMillis() - startedAtMs) / 1000.0 - at
+            }
+        }
         if (com.roro.futurevoice.BuildConfig.DEBUG) android.util.Log.d("SpeechTake", "heard#$partials cursor=${_cursor.value}->$next \"${text.takeLast(60)}\"")
         if (next != _cursor.value) {
             follows++
@@ -270,6 +311,13 @@ class SpeechTakeSession(
         if (whole != _elapsed.value) _elapsed.value = whole
         val t = _track.value
         val language = _script.value.language
+        // Karaoke: the word the fluent reading is on at this moment.
+        val origin = guideOrigin
+        if (_fluentPace.value && origin != null) {
+            val now = clock - origin
+            val at = guideStarts.indexOfLast { (it ?: Double.POSITIVE_INFINITY) <= now }.takeIf { it >= 0 }
+            if (at != _guide.value) _guide.value = at
+        }
         if (!_followVoice.value && !holding) {
             position += t.wordsPerSecond(language) * _speed.value * 0.1
             _cursor.value = minOf(t.words.size, position.toInt())

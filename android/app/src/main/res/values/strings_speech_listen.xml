@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Listening reading, phrase drill, players, fluent pace (iOS 01529ba7, cddddcc0). Values are iOS Localizable.xcstrings'. -->
+<resources>
+    <string name="speech_listen_fluent_reading">Fluent reading</string>
+    <string name="speech_listen_breathe">%1$s breathe</string>
+    <string name="speech_listen_run_together">%1$s run together</string>
+    <string name="speech_drill_title">Fix this phrase</string>
+    <string name="speech_drill_a_stop">A stop</string>
+    <string name="speech_drill_a_held_word">A held word</string>
+    <string name="speech_drill_lengths">How long each word lasts</string>
+    <string name="speech_drill_lengths_footer">%1$s the fluent reading · %2$s yours</string>
+    <string name="speech_drill_fluent">Fluent</string>
+    <string name="speech_drill_yours">Yours</string>
+    <string name="speech_drill_both">One after the other</string>
+    <string name="speech_drill_stopped">You stopped %1$ss after “%2$s”. The fluent reading runs straight on.</string>
+    <string name="speech_drill_held">You held “%1$s” for %2$ss, far longer than the fluent reading.</string>
+    <string name="speech_drill_say_then_stop">Say the phrase, then tap stop.</string>
+    <string name="speech_drill_listening">Listening…</string>
+    <string name="speech_drill_failed">Couldn\'t check that one. Try again.</string>
+    <string name="speech_drill_hear_first">Hear the fluent reading, then say it again.</string>
+    <string name="speech_drill_holds">That holds together.</string>
+    <string name="speech_drill_missing">Some words didn\'t come through. Say the whole phrase.</string>
+    <string name="speech_drill_still_stop">Still a stop after “%1$s”.</string>
+    <string name="speech_drill_still_long">“%1$s” is still long.</string>
+    <string name="speech_drill_closer">Closer. Let the small words go faster.</string>
+    <string name="speech_drill_stop_row">stop</string>
+    <string name="speech_drill_say_again">Say it again</string>
+    <string name="speech_drill_stop_button">Stop</string>
+    <string name="speech_listen_my_reading">My reading</string>
+    <string name="speech_listen_future_self">Future self</string>
+    <string name="speech_listen_future_pitch">Hear this script read the way your future self would, in your own voice.</string>
+    <string name="speech_fluent_pace">Fluent pace</string>
+    <string name="speech_fluent_pace_flash">Fluent pace: keep up with the highlight</string>
+    <string name="speech_fluent_pace_a11y">Scrolling at the fluent pace</string>
+</resources>

@@ -734,6 +734,12 @@ internal fun SpeechOverallScreen(language: String, onBack: () -> Unit) {
     val boardSeasons = challenges.boardSeasons(seasons)
     val scope = rememberCoroutineScope()
     suspend fun load() {
+        // Opened before the challenge list has loaded: without the seasons the
+        // board would fall back to Season 1's (iOS 01529ba7).
+        if (season == null && challenges.seasons.value.isEmpty()) {
+            challenges.refresh(language)
+            if (challenges.overallSeason.value != null) return  // the change of season reloads
+        }
         if (pickedSeason != null) rows = null
         challenges.overallBoard(language, season, limit = 50)?.let { rows = it }
     }

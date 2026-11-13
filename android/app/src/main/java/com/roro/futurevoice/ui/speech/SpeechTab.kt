@@ -59,6 +59,7 @@ import com.roro.futurevoice.ui.ModalBottomSheet
 import com.roro.futurevoice.ui.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -992,6 +993,12 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
             studyFailed = true; null
         }
     }
+    // A challenge's fluent reading (iOS 01529ba7): played here with the words
+    // lighting up, and its breaths and run-together words marked.
+    val listen = remember { SpeechListenModel() }
+    val listenable = remember(shown.id) { com.roro.futurevoice.talk.SpeechListenService.available(shown) }
+    LaunchedEffect(shown.id) { if (listenable) listen.load(context, shown) }
+    DisposableEffect(Unit) { onDispose { listen.stop() } }
     SpeechSheet(onDismiss) {
         SheetHeader(stringResource(R.string.script),
             // Edit on the left, Done alone on the right (founder, 2026-10-14).
@@ -1003,6 +1010,10 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
                 IosGlassTextButton(stringResource(R.string.done), onClick = onDismiss, bold = true)
             })
         val shownStudy = study
+        if (listenable && listen.phase != SpeechListenModel.Phase.UNAVAILABLE) {
+            FormCard { SpeechListenRow(listen) }
+            Spacer(Modifier.padding(top = 20.dp))
+        }
         // Its own row under the header, not in it (iOS 18f1fbf7): a switch
         // beside the title and Done crowded the header, and in longer
         // languages the label had nowhere to go.
@@ -1039,6 +1050,8 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
                     ScriptStudyStatus(studyFailed) { studyAttempt += 1 }
                 }
             }
+        } else if (listen.phase == SpeechListenModel.Phase.READY) {
+            SpeechListenLegend(Modifier.padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 8.dp))
         } else {
             Spacer(Modifier.padding(top = 22.dp))
         }
@@ -1057,6 +1070,8 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
                                 lookedUpWords = lookedUpWords + w
                                 prefs.edit().putStringSet(lookupsKey, lookedUpWords).apply()
                             }) { card = it }
+                    } else if (listen.phase == SpeechListenModel.Phase.READY && listen.text != null) {
+                        SpeechListenTextView(listen.text!!, listen.player)
                     } else {
                         SelectionContainer {
                             Text(shown.body, style = MaterialTheme.typography.bodyLarge.copy(

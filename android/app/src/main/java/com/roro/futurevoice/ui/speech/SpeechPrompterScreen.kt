@@ -41,6 +41,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.GraphicEq
@@ -176,6 +177,16 @@ private fun SpeechTakeLayout(
     val elapsed by session.elapsed.collectAsStateWithLifecycle()
     val cameraOn by session.cameraOn.collectAsStateWithLifecycle()
     val follow by session.followVoice.collectAsStateWithLifecycle()
+    val fluent by session.fluentPace.collectAsStateWithLifecycle()
+    val fluentAvailable by session.fluentPaceAvailable.collectAsStateWithLifecycle()
+    val guide by session.guide.collectAsStateWithLifecycle()
+    // How the prompter scrolls: with the voice, at the fluent reading's tempo
+    // (karaoke, iOS cddddcc0), or at a steady speed.
+    val scrollMode = if (fluent) ScrollMode.FLUENT else if (follow) ScrollMode.VOICE else ScrollMode.STEADY
+    fun setScrollMode(mode: ScrollMode) {
+        session.setFluentPace(mode == ScrollMode.FLUENT)
+        session.setFollowVoice(mode != ScrollMode.STEADY)
+    }
     val speed by session.speed.collectAsStateWithLifecycle()
     val cameraRunning by session.camera.running.collectAsStateWithLifecycle()
     val takes by SpeechStore.shared(context).takes.collectAsStateWithLifecycle()
@@ -265,7 +276,7 @@ private fun SpeechTakeLayout(
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             Box(Modifier.weight(1f).fillMaxWidth()
                 .onGloballyPositioned { prompterWidthPx = it.size.width.toFloat() }) {
-                Teleprompter(session, track, cursor, script.language, textSize, recording, follow, speed, holding)
+                Teleprompter(session, if (fluent) guide else null, track, cursor, script.language, textSize, recording, follow, speed, holding)
                 if (holding) {
                     Row(Modifier.align(Alignment.TopCenter).padding(top = 4.dp).background(Color.Black.copy(alpha = 0.6f), CircleShape)
                         .padding(horizontal = 12.dp, vertical = 6.dp),
@@ -334,8 +345,8 @@ private fun SpeechTakeLayout(
                         Box {
                             ChromeButton(Icons.Filled.TextFields, stringResource(R.string.prompter_settings),
                                 onCamera, size = 36.dp) { settings = true }
-                            PrompterSettingsMenu(settings, { settings = false }, follow, speed, textSize,
-                                onFollow = { session.setFollowVoice(it) }, onSpeed = { session.setSpeed(it) },
+                            PrompterSettingsMenu(settings, { settings = false }, scrollMode, fluentAvailable, speed, textSize,
+                                onMode = { setScrollMode(it) }, onSpeed = { session.setSpeed(it) },
                                 onTextSize = onTextSize)
                         }
                     }
@@ -370,14 +381,25 @@ private fun SpeechTakeLayout(
                                 .padding(horizontal = 14.dp, vertical = 8.dp))
                     }
                     Controls(
-                        recording = recording, onCamera = onCamera, cameraOn = cameraOn, follow = follow,
+                        recording = recording, onCamera = onCamera, cameraOn = cameraOn, mode = scrollMode,
                         onCameraToggle = { session.setCameraOn(!cameraOn) },
                         onCancel = { session.cancelTake() },
                         onRecord = { if (recording) scope.launch { session.stop() } else record() },
                         onRestart = { session.restartTake() },
                         onFollowToggle = {
-                            session.setFollowVoice(!follow)
-                            flash(context.getString(if (!follow) R.string.follows_your_voice else R.string.steady_speed))
+                            // Voice → fluent pace (when there's a fluent reading)
+                            // → steady speed → voice.
+                            val next = when (scrollMode) {
+                                ScrollMode.VOICE -> if (fluentAvailable) ScrollMode.FLUENT else ScrollMode.STEADY
+                                ScrollMode.FLUENT -> ScrollMode.STEADY
+                                ScrollMode.STEADY -> ScrollMode.VOICE
+                            }
+                            setScrollMode(next)
+                            flash(context.getString(when (next) {
+                                ScrollMode.VOICE -> R.string.follows_your_voice
+                                ScrollMode.FLUENT -> R.string.speech_fluent_pace_flash
+                                ScrollMode.STEADY -> R.string.steady_speed
+                            }))
                         },
                     )
                 }
@@ -422,6 +444,9 @@ private fun SpeechTakeLayout(
 @Composable
 private fun Teleprompter(
     session: SpeechTakeSession,
+    /** Fluent pace: the word the fluent reading is on. The scroll follows it
+     *  instead of the reader, and it is drawn behind a yellow highlighter. */
+    guide: Int?,
     track: com.roro.futurevoice.talk.SpeechPrompterTrack,
     cursor: Int,
     language: String,
@@ -451,9 +476,10 @@ private fun Teleprompter(
         }
         // The voice gives the motion a target; a change under a pixel is
         // not movement (iOS: an endless re-rounding loop).
-        LaunchedEffect(column, cursor) {
-            val (y, top, advance) = column.target(cursor) ?: return@LaunchedEffect
-            val snap = cursor == 0
+        LaunchedEffect(column, cursor, guide) {
+            val at = guide ?: cursor
+            val (y, top, advance) = column.target(at) ?: return@LaunchedEffect
+            val snap = at == 0
             if (kotlin.math.abs(y - motion.target) >= 1f || (snap && kotlin.math.abs(y - motion.position) >= 1f)) {
                 motion.setTarget(y, top, advance)
                 if (snap) { motion.snap(); position = motion.position }
@@ -462,14 +488,15 @@ private fun Teleprompter(
         LaunchedEffect(recording) {
             if (!recording && cursor == 0) { motion.snap(); position = motion.position }
         }
-        LaunchedEffect(column, recording, follow, speed, held) {
+        LaunchedEffect(column, recording, follow, speed, held, guide) {
             var last = 0L
             while (true) {
                 withFrameNanos { now ->
                     if (last != 0L) {
                         val dt = ((now - last) / 1e9f).coerceAtMost(0.05f)
                         motion.step(dt, com.roro.futurevoice.talk.PrompterMotion.Input(
-                            recording, follow, speed, session.voiceActive(), held))
+                            // Karaoke keeps moving on the fluent clock, spoken or not.
+                            recording, follow, speed, (guide != null) || session.voiceActive(), held))
                         if (kotlin.math.abs(motion.position - position) > 0.01f) position = motion.position
                         // The video scrolls with the prompter the reader saw.
                         session.composer.offset = motion.position - readingLine
@@ -492,6 +519,13 @@ private fun Teleprompter(
                 save()
                 clipRect(0f, 0f, size.width, size.height)
                 translate(0f, -top)
+                // Fluent pace only, chosen by the reader: the word they should
+                // be saying now (karaoke).
+                guide?.let { g -> column.placed.firstOrNull { it.word == g } }?.let { p ->
+                    val pad = 3 * density.density
+                    drawRoundRect(p.x - pad, p.top - pad, p.x + p.width + pad, p.top + p.height + pad,
+                        6 * density.density, 6 * density.density, guidePaint)
+                }
                 column.draw(this, top - column.lineHeight, top + size.height + column.lineHeight)
                 restore()
             }
@@ -499,16 +533,26 @@ private fun Teleprompter(
     }
 }
 
+/** How the prompter scrolls (iOS `SpeechPrompterView.ScrollMode`). */
+internal enum class ScrollMode { VOICE, FLUENT, STEADY }
+
+private val guidePaint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+    color = android.graphics.Color.argb((0.4f * 255).toInt(), 255, 204, 0)
+}
+
 @Composable
 private fun PrompterSettingsMenu(
-    expanded: Boolean, onDismiss: () -> Unit, follow: Boolean, speed: Float, textSize: Float,
-    onFollow: (Boolean) -> Unit, onSpeed: (Float) -> Unit, onTextSize: (Float) -> Unit,
+    expanded: Boolean, onDismiss: () -> Unit, mode: ScrollMode, fluentAvailable: Boolean, speed: Float, textSize: Float,
+    onMode: (ScrollMode) -> Unit, onSpeed: (Float) -> Unit, onTextSize: (Float) -> Unit,
 ) {
     com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         MenuHeader(stringResource(R.string.scrolling))
-        CheckItem(stringResource(R.string.follow_my_voice), follow) { onFollow(true) }
-        CheckItem(stringResource(R.string.steady_speed), !follow) { onFollow(false) }
-        if (!follow) {
+        CheckItem(stringResource(R.string.follow_my_voice), mode == ScrollMode.VOICE) { onMode(ScrollMode.VOICE) }
+        if (fluentAvailable) {
+            CheckItem(stringResource(R.string.speech_fluent_pace), mode == ScrollMode.FLUENT) { onMode(ScrollMode.FLUENT) }
+        }
+        CheckItem(stringResource(R.string.steady_speed), mode == ScrollMode.STEADY) { onMode(ScrollMode.STEADY) }
+        if (mode == ScrollMode.STEADY) {
             com.roro.futurevoice.ui.brand.IosMenuDivider()
             MenuHeader(stringResource(R.string.speed))
             CheckItem(stringResource(R.string.slower), speed == 0.8f) { onSpeed(0.8f) }
@@ -535,7 +579,7 @@ private fun CheckItem(text: String, checked: Boolean, onClick: () -> Unit) {
 
 @Composable
 private fun Controls(
-    recording: Boolean, onCamera: Boolean, cameraOn: Boolean, follow: Boolean,
+    recording: Boolean, onCamera: Boolean, cameraOn: Boolean, mode: ScrollMode,
     onCameraToggle: () -> Unit, onCancel: () -> Unit, onRecord: () -> Unit,
     onRestart: () -> Unit, onFollowToggle: () -> Unit,
 ) {
@@ -565,8 +609,16 @@ private fun Controls(
             // Start over: this take is dropped and a new one counts in.
             ChromeButton(Icons.Filled.Refresh, stringResource(R.string.record_again), onCamera, onClick = onRestart)
         } else {
-            ChromeButton(if (follow) Icons.Filled.GraphicEq else Icons.Filled.Speed,
-                stringResource(if (follow) R.string.scrolling_follows_your_voice else R.string.scrolling_at_a_steady_speed),
+            ChromeButton(when (mode) {
+                    ScrollMode.FLUENT -> Icons.Filled.MusicNote
+                    ScrollMode.VOICE -> Icons.Filled.GraphicEq
+                    ScrollMode.STEADY -> Icons.Filled.Speed
+                },
+                stringResource(when (mode) {
+                    ScrollMode.FLUENT -> R.string.speech_fluent_pace_a11y
+                    ScrollMode.VOICE -> R.string.scrolling_follows_your_voice
+                    ScrollMode.STEADY -> R.string.scrolling_at_a_steady_speed
+                }),
                 onCamera, onClick = onFollowToggle)
         }
     }

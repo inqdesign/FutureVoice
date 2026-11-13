@@ -569,6 +569,13 @@ private fun Details(take: SpeechTake, script: SpeechScript, r: SpeechReadingScor
         fluentWords = spareFluentSounds(context, take, script)
     }
     var soundFocus by remember(take.id) { mutableStateOf<Int?>(null) }
+    /** The mark whose phrase is being practised. */
+    var drillMark by remember(take.id) { mutableStateOf<com.roro.futurevoice.talk.SpeechPhraseMark?>(null) }
+    /** The word being heard while one of the two players plays. */
+    var hearing by remember(take.id) { mutableStateOf<Int?>(null) }
+    val scriptAudio = remember(take.id) { SpeechAudioPlayer("speech_take_script") }
+    val futureAudio = remember(take.id) { SpeechAudioPlayer("speech_voiceover") }
+    DisposableEffect(take.id) { onDispose { scriptAudio.stop(); futureAudio.stop() } }
 
     var marks by remember(take.id) { mutableStateOf<Pair<Boolean, List<List<SpeechAnalyzer.ScriptMark>>?>>(false to null) }
     LaunchedEffect(take.id) {
@@ -585,8 +592,15 @@ private fun Details(take: SpeechTake, script: SpeechScript, r: SpeechReadingScor
                 if (r.version >= 8) soundsByWord(take, script.body, paragraphs, fluentWords) else emptyMap()
             }
             FormSection(stringResource(R.string.script)) {
+                // The take's own voice and the future self's under the marked
+                // script, the word being heard highlighted (iOS cddddcc0).
+                SpeechScriptListening(take, script, scriptAudio, futureAudio, onCurrent = { hearing = it })
                 MarkedScript(paragraphs, script.language, held, pauses,
-                    sounds = sounds, onSound = { soundFocus = it })
+                    onMark = if (com.roro.futurevoice.talk.SpeechListenService.available(script)) ({ drillMark = it }) else null,
+                    sounds = sounds, onSound = { soundFocus = it }, current = hearing)
+            }
+            drillMark?.let { mark ->
+                SpeechPhraseDrillSheet(script, take, mark, onDismiss = { drillMark = null })
             }
             if (r.version >= 8) PriceListLegend() else Legend()
             soundFocus?.let { focus ->
@@ -595,7 +609,8 @@ private fun Details(take: SpeechTake, script: SpeechScript, r: SpeechReadingScor
         } else {
             FormSection(stringResource(R.string.script),
                 footer = if (take.metrics.missed.isNotEmpty()) stringResource(R.string.red_skipped_or_read_differently_the_small_red_words_are_what_c3dcaa) else null) {
-                MarkedScript(paragraphs, script.language)
+                SpeechScriptListening(take, script, scriptAudio, futureAudio, onCurrent = { hearing = it })
+                MarkedScript(paragraphs, script.language, current = hearing)
             }
         }
     } else if (ready && take.metrics.missed.isNotEmpty()) {

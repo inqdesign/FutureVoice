@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Listening reading, phrase drill, players, fluent pace (iOS 01529ba7, cddddcc0). Values are iOS Localizable.xcstrings'. -->
+<resources>
+    <string name="speech_drill_listening">Escuchando…</string>
+    <string name="speech_drill_say_again">Volver a decirlo</string>
+    <string name="speech_drill_stop_button">Detener</string>
+    <string name="speech_listen_future_self">Tu yo del futuro</string>
+</resources>
