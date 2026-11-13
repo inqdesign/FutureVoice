@@ -5,6 +5,7 @@ import com.roro.futurevoice.sync.SYNCED_DEFAULTS_KEYS
 import com.roro.futurevoice.sync.SyncKind
 import com.roro.futurevoice.sync.SyncSchema
 import com.roro.futurevoice.talk.LanguageLines
+import com.roro.futurevoice.talk.TutorPrompts
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -73,5 +74,20 @@ class LearnerGenderTest {
         // …and still freezes everything else stamped 2, an iOS speech take first.
         assertTrue(2 > SyncSchema.readable(SyncKind.SPEECH_TAKE, "take-1"))
         assertTrue(2 > SyncSchema.readable(SyncKind.DEFAULTS, "futurevoice.speechSpeed"))
+    }
+
+    /** The lesson planner's examples are lines they say about themselves. */
+    @Test fun thePlannerExamplesAgreeWithThem() {
+        assertEquals("", TutorPrompts.exampleLines("en", LearnerGender.FEMALE))
+        assertEquals("", TutorPrompts.exampleLines("de", LearnerGender.MALE))
+        assertTrue(TutorPrompts.exampleLines("fr", LearnerGender.FEMALE).contains("takes the feminine"))
+        assertTrue(TutorPrompts.exampleLines("fr", LearnerGender.MALE).contains("takes the masculine"))
+        assertTrue(TutorPrompts.exampleLines("fr", null).contains("je viens de Corée"))
+        assertTrue(TutorPrompts.exampleLines("fr", LearnerGender.UNSAID).contains("never j'suis"))
+        assertTrue(TutorPrompts.exampleLines("es", LearnerGender.UNSAID).contains("soy de Corea"))
+        assertFalse(TutorPrompts.exampleLines("es", LearnerGender.FEMALE).contains("j'suis"))
+        // English: the planner prompt is unchanged around the example rule.
+        assertTrue(TutorPrompts.plannerSystem("English", "Korean", com.roro.futurevoice.data.CefrLevel.A2, "", "en")
+            .contains("practicing it wrong.\n"))
     }
 }

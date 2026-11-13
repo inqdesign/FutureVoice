@@ -28,3 +28,8 @@ gen-shadow-coach-prompt.py 0971c05d
 # Simplified Chinese as a target: the ASR CHARACTER GUARD in scriptGuard
 # (iOS 0197dcbc, the Chinese target on feat/voice-onboarding-and-audio).
 gen-correction-prompt.py 0197dcbc
+# French and Spanish lesson examples agree with the learner's gender
+# (TutorPlanner.exampleLines, iOS a6b8c504); the real-goal judge generated too.
+gen-tutor-prompts.py a6b8c504
+# French accents, Parisian and Canadian (iOS ea09ee2a; a6b8c504 contains it).
+gen-voice-accents.py a6b8c504

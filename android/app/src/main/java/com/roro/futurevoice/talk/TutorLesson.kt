@@ -190,7 +190,7 @@ object TutorPlanner {
                      miss: ((String) -> Unit)? = null): TutorLesson? {
         val system = TutorPrompts.plannerSystem(
             LanguageCatalog.englishName(targetLanguage), LanguageCatalog.englishName(nativeLanguage),
-            level, about(persona)) + LearnerWeakPoints.plannerBlock(weakPoints)
+            level, about(persona), targetLanguage) + LearnerWeakPoints.plannerBlock(weakPoints)
         val content = content(request, askedWith)
         // One retry: now and then the reply is the challenge list alone
         // instead of the object, which decodes to nothing.
