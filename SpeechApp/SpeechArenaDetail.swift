@@ -191,7 +191,12 @@ struct SpeechArenaDetail: View {
             guard SpeechListenService.available(for: script) else { return }
             try? await Task.sleep(for: .milliseconds(600))
             await intro.load(script)
-            if !practicing, !showingScript, !showingTakes { intro.playIntro() }
+            // Only the first time this challenge is opened (2026-11-13,
+            // founder); after that the reading is the Script button's.
+            if !practicing, !showingScript, !showingTakes, intro.phase == .ready,
+               IntroMemory.firstOpening(of: script.id) {
+                intro.playIntro()
+            }
         }
         .onAppear { shown = true }
         .onDisappear { intro.fadeOut() }
@@ -550,6 +555,21 @@ struct SpeechArenaDetail: View {
             groupBoard = await groups.board(group: group.id, script: script.id)
         }
         if let rows = await rows { board = rows }
+    }
+}
+
+/// Which challenges have played their intro on this phone: it plays on the
+/// first opening only.
+private enum IntroMemory {
+    private static let key = "speech.introHeard"
+
+    /// True once per challenge: the first call records it.
+    static func firstOpening(of id: UUID) -> Bool {
+        let d = UserDefaults.standard
+        var heard = Set(d.stringArray(forKey: key) ?? [])
+        guard heard.insert(id.uuidString).inserted else { return false }
+        d.set(Array(heard), forKey: key)
+        return true
     }
 }
 
