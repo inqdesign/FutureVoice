@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -443,9 +444,33 @@ private fun TodayTop(
             Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
                 maxLines = 2, overflow = TextOverflow.Ellipsis)
             note?.let {
-                Text(it, style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = noteLines, overflow = TextOverflow.Ellipsis)
+                // The summary's one line, marked over like a highlighter pen
+                // in the book's colour: a band a little taller and wider than
+                // each line (iOS `markerHighlight`, 2026-11-13, founder).
+                var layout by androidx.compose.runtime.remember {
+                    androidx.compose.runtime.mutableStateOf<androidx.compose.ui.text.TextLayoutResult?>(null)
+                }
+                val band = book.tint.copy(alpha = 0.22f)
+                Text(it, style = MaterialTheme.typography.bodyMedium.copy(
+                        lineHeight = MaterialTheme.typography.bodyMedium.fontSize * 1.6f),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = noteLines, overflow = TextOverflow.Ellipsis,
+                    onTextLayout = { r -> layout = r },
+                    modifier = Modifier.drawBehind {
+                        val r = layout ?: return@drawBehind
+                        val dx = 4.dp.toPx(); val dy = 1.dp.toPx()
+                        for (i in 0 until r.lineCount) {
+                            val left = r.getLineLeft(i); val right = r.getLineRight(i)
+                            if (right <= left) continue
+                            // The glyphs' own height, centred in the taller line.
+                            val mid = (r.getLineTop(i) + r.getLineBottom(i)) / 2f
+                            val h = r.layoutInput.style.fontSize.toPx() * 1.25f / 2f + dy
+                            drawRoundRect(band,
+                                topLeft = androidx.compose.ui.geometry.Offset(left - dx, mid - h),
+                                size = androidx.compose.ui.geometry.Size(right - left + 2 * dx, 2 * h),
+                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx()))
+                        }
+                    })
             }
         }
         // What each chapter still teaches, one line a chapter: the open
