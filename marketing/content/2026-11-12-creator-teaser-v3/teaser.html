@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>nawana creator program · teaser v3</title>
+<!-- A 9:16 motion-graphics teaser led by the brand itself. The mark is five pieces (three bars, the corner square,
+     two eyes) and every scene is just a new arrangement of them: the mark assembles, opens into a frame around the
+     words, becomes the window the clips play in (its top bar the day counter), closes back into the mark, and ends
+     on the lockup. Transitions light the background grid's own cells. One timeline, driven by t.
+       /opt/homebrew/opt/node@22/bin/node scripts/marketing/record.mjs \
+         marketing/content/2026-11-12-creator-teaser-v3/teaser.html --size 1080x1920 --seconds 16.8 --warmup 0.2 \
+         --out …  (choppy on this page; use the line below)
+     Exact, frame by frame: node22 scripts/marketing/step-record.mjs "marketing/content/2026-11-12-creator-teaser-v3/teaser.html?manual" --size 1080x1920 --seconds 16.8 --fps 30 --out marketing/content/2026-11-12-creator-teaser-v3/teaser.mp4
+     ?t=<seconds> freezes the timeline there (for stills; clips then show their poster frames). -->
+<style>
+@font-face{font-family:"Geist Pixel";src:url(/web/GeistPixel.ttf) format("truetype")}
+@font-face{font-family:"Galmuri14";src:url(/web/Galmuri14.woff2) format("woff2")}
+:root{--bg:#F7F8FA;--ink:#1C2133;--blue:#0A5CF5;--hi:#FFE23C}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden}
+body{position:relative;background:var(--bg);font-family:"Galmuri14","Geist Pixel",sans-serif;-webkit-font-smoothing:antialiased;color:var(--ink);word-break:keep-all}
+#ground{position:absolute;inset:0;background-color:var(--bg);background-image:linear-gradient(rgba(10,40,90,.05) 2px,transparent 2px),linear-gradient(90deg,rgba(10,40,90,.05) 2px,transparent 2px);background-size:54px 54px;background-position:-1px -1px}
+#ground.blue{background-color:var(--blue);background-image:linear-gradient(rgba(255,255,255,.07) 2px,transparent 2px),linear-gradient(90deg,rgba(255,255,255,.07) 2px,transparent 2px)}
+.layer{position:absolute;inset:0}
+#wipe{position:absolute;inset:0;z-index:20;pointer-events:none}
+#mark{position:absolute;inset:0;z-index:30;pointer-events:none}
+#mark .p{position:absolute;overflow:visible;display:block}
+#mark .eye{position:absolute;border-radius:999px;background:currentColor}
+.grain{position:absolute;inset:-120px;z-index:50;pointer-events:none;opacity:.16;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .52 2.4 0 0 0 -.95'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23g)'/%3E%3C/svg%3E")}
+.line{position:absolute;left:0;right:0;text-align:center;white-space:nowrap;line-height:1;will-change:transform,opacity}
+#s1 .word{font-family:"Geist Pixel";font-size:120px;letter-spacing:.02em}
+#s1 .word i{font-style:normal}
+#s1 .word .cur{display:inline-block;width:.5em;height:.82em;background:var(--blue);vertical-align:-.04em;margin-left:.06em}
+#s3 .line,#s6 .line{color:#fff}
+#win{position:absolute;overflow:hidden;background:#0C0F14}
+#win video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;visibility:hidden}
+#win video.on{visibility:visible}
+#win .shade{position:absolute;inset:0;background:linear-gradient(transparent 70%,rgba(0,0,0,.35))}
+#counter{position:absolute;z-index:31;font-family:"Geist Pixel";color:#fff;font-size:92px;line-height:1;text-align:center;white-space:nowrap;letter-spacing:.04em}
+#counter small{font-size:.62em;margin-right:.35em;letter-spacing:.06em;opacity:.85}
+#feed{position:absolute;left:0;right:0;top:720px;bottom:300px;overflow:hidden;-webkit-mask-image:linear-gradient(transparent,#000 90px,#000 calc(100% - 140px),transparent);mask-image:linear-gradient(transparent,#000 90px,#000 calc(100% - 140px),transparent)}
+.tile{position:absolute;width:270px;height:480px;border-radius:30px;background:#ddd center/cover no-repeat;box-shadow:0 0 0 5px var(--ink),0 30px 50px -24px rgba(20,25,45,.5)}
+.tile b{position:absolute;left:18px;top:18px;padding:8px 14px 9px;border-radius:12px;background:var(--blue);color:#fff;font-family:"Geist Pixel";font-weight:400;font-size:34px;line-height:1;letter-spacing:.03em}
+.mark-hi{position:absolute;left:0;right:0;margin:auto;background:var(--hi);transform-origin:left center}
+#s6 .free{color:var(--ink)}
+#s7 .pix{font-family:"Geist Pixel";font-size:176px;letter-spacing:.01em}
+#s7 .pix i{display:inline-block;font-style:normal}
+.brush{display:flex;justify-content:center;align-items:flex-end;gap:8px;height:200px}
+.brush svg{height:196px;width:auto;overflow:visible;fill:none;stroke:currentColor;stroke-width:15;stroke-linecap:round;stroke-linejoin:round;filter:url(#marker)}
+.chip{display:inline-flex;align-items:center;gap:20px;padding:22px 40px 24px 34px;border-radius:999px;background:var(--blue);color:#fff;font-size:58px}
+.chip i{width:20px;height:20px;border-radius:50%;background:#fff}
+#url{font-family:"Geist Pixel";font-size:66px;letter-spacing:.01em}
+#url .cur{display:inline-block;width:.5em;height:.8em;background:var(--blue);vertical-align:-.05em;margin-left:.08em}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="boil-1" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="1" seed="6"/><feDisplacementMap in="SourceGraphic" scale="9"/></filter>
+  <filter id="boil-2" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="1" seed="27"/><feDisplacementMap in="SourceGraphic" scale="9"/></filter>
+  <filter id="boil-3" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="1" seed="52"/><feDisplacementMap in="SourceGraphic" scale="9"/></filter>
+  <filter id="marker" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="2" seed="8"/><feDisplacementMap in="SourceGraphic" scale="3.2"/></filter>
+</svg>
+
+<div id="ground"></div>
+
+<!-- 1 · the mark assembles, the wordmark types -->
+<div class="layer" id="s1"><div class="line word" style="top:1250px"><span id="typed"></span><span class="cur"></span></div></div>
+
+<!-- 3 · on blue, framed by the mark -->
+<div class="layer" id="s3">
+  <div class="line" data-at="3.10" style="top:640px;font-size:210px">100일</div>
+  <div class="line" data-at="3.55" style="top:880px;font-size:120px">동안</div>
+  <div class="line" data-at="3.95" data-shake="1" style="top:1040px;font-size:160px">미친듯이</div>
+  <div class="line" data-at="4.45" style="top:1240px;font-size:160px">공부하고,</div>
+</div>
+
+<!-- 4 · the mark is the window the days play in -->
+<div class="layer" id="s4"><div id="win"><div class="shade"></div></div></div>
+<div id="counter"><small>DAY</small><span id="num">001</span></div>
+
+<!-- 5 · the proof, posted -->
+<div class="layer" id="s5">
+  <div class="line" data-at="9.30" style="top:470px;font-size:108px">그 증거를</div>
+  <div class="line" data-at="9.52" style="top:600px;font-size:108px">올려주세요.</div>
+  <div id="feed"></div>
+</div>
+
+<!-- 6 · on blue -->
+<div class="layer" id="s6">
+  <div class="line" data-at="11.05" style="top:650px;font-size:168px">나와나는</div>
+  <div class="mark-hi" id="hi" style="top:868px;width:690px;height:226px"></div>
+  <div class="line free" data-at="11.35" style="top:880px;font-size:216px">무료로</div>
+  <div class="line" data-at="11.75" style="top:1140px;font-size:168px">드릴게요.</div>
+</div>
+
+<!-- 7 · the lockup -->
+<div class="layer" id="s7">
+  <div class="line pix" id="w-nawana" style="top:590px"></div>
+  <div class="line" style="top:770px"><div class="brush" id="creator"></div></div>
+  <div class="line pix" id="w-program" style="top:1030px"></div>
+  <div class="line" data-at="14.15" style="top:1300px"><span class="chip"><i></i>1기 모집 · 11월 19일까지</span></div>
+  <div class="line" style="top:1460px"><span id="url"><span id="urlt"></span><span class="cur"></span></span></div>
+</div>
+
+<canvas id="wipe" width="1080" height="1920"></canvas>
+<div id="mark"></div>
+<div class="grain"></div>
+
+<script>
+/* ───────────── helpers ───────────── */
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const eo = (p) => 1 - Math.pow(1 - p, 3);
+const eox = (p) => (p >= 1 ? 1 : 1 - Math.pow(2, -10 * p));
+const eio = (p) => (p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+const eob = (p, s = 1.9) => 1 + (s + 1) * Math.pow(p - 1, 3) + s * Math.pow(p - 1, 2);
+const mixHex = (a, b, p) => { const A = parseInt(a.slice(1), 16), B = parseInt(b.slice(1), 16);
+  const c = (sh) => Math.round(lerp((A >> sh) & 255, (B >> sh) & 255, p)); return `rgb(${c(16)},${c(8)},${c(0)})`; };
+const INK = "#1C2133", BLUE = "#0A5CF5", WHITE = "#FFFFFF", BG = "#F7F8FA";
+
+/* ───────────── the mark, as five pieces ───────────── */
+// The hand-drawn paths of the real mark, each in its own box so it can be stretched into a frame.
+const PIECES = {
+  top:    ["M287 240Q498 228 704 236Q699 290 703 341Q497 346 289 336Q295 288 287 240Z", [287, 234, 417, 109]],
+  left:   ["M190 334Q242 341 293 336Q284 512 290 688Q239 680 184 687Q195 510 190 334Z", [184, 334, 109, 354]],
+  bottom: ["M293 682Q497 692 700 687Q706 737 698 788Q495 779 288 786Q286 734 293 682Z", [288, 682, 414, 106]],
+  corner: ["M747 688Q796 682 845 687Q839 737 842 787Q793 781 743 784Q751 736 747 688Z", [743, 684, 102, 103]],
+};
+const mk = document.getElementById("mark"), el = {};
+const eyesBox = document.createElement("div"); eyesBox.style.cssText = "position:absolute;inset:0"; mk.appendChild(eyesBox);
+el.e1 = Object.assign(document.createElement("i"), { className: "eye" }); el.e2 = Object.assign(document.createElement("i"), { className: "eye" });
+eyesBox.append(el.e1, el.e2);
+for (const [k, [d, [x, y, w, h]]] of Object.entries(PIECES)) {
+  const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  s.setAttribute("class", "p"); s.setAttribute("viewBox", `${x} ${y} ${w} ${h}`); s.setAttribute("preserveAspectRatio", "none");
+  s.innerHTML = `<path d="${d}" fill="currentColor"/>`; mk.appendChild(s); el[k] = s;
+}
+// A frame: the window (wx, wy, ww, wh) wrapped the way the mark wraps its own face, bars k thick, the top bar kt.
+// eyes: left x of the right eye, its top, the eye's size, and the gap between the two eyes' left edges.
+const frame = (wx, wy, ww, wh, k, kt, eyes) => ({
+  top: [wx - .06 * k, wy - kt, ww + .06 * k, kt],
+  left: [wx - k, wy - .07 * k, k, wh + .13 * k],
+  bottom: [wx - .05 * k, wy + wh, ww + .03 * k, k],
+  corner: [wx + ww + .37 * k, wy + wh + .02 * k, .96 * k, .97 * k],
+  e2: eyes[0], e1: eyes[1],
+});
+// The mark itself at centre (cx, cy), width w — the frame with the mark's own proportions.
+const markAt = (cx, cy, w) => { const s = w / 661, X = (u) => cx + (u - 514.5) * s, Y = (u) => cy + (u - 508) * s;
+  return frame(X(293), Y(341), 411 * s, 341 * s, 106 * s, 106 * s, [[X(629), Y(440), 78 * s, 124 * s], [X(469), Y(444), 78 * s, 124 * s]]); };
+const mix = (A, B, p) => { const o = {}; for (const k in A) o[k] = A[k].map((v, i) => lerp(v, B[k][i], p)); return o; };
+const place = (n, [x, y, w, h]) => { const s = el[n].style; s.left = x + "px"; s.top = y + "px"; s.width = Math.max(0, w) + "px"; s.height = Math.max(0, h) + "px"; };
+
+// The arrangements, scene by scene.
+const M1 = markAt(540, 860, 600);                                   // 1 · the mark
+const F3 = frame(110, 560, 860, 900, 62, 62, [[880, 428, 50, 80], [810, 432, 50, 80]]);          // 3 · frame round the words, eyes peeking over
+const W4 = { x: 250, y: 478, w: 580, h: 1031 };                      // 4 · a 9:16 window
+const F4 = frame(W4.x, W4.y, W4.w, W4.h, 62, 138, [[742, 266, 54, 86], [666, 270, 54, 86]]);
+const M4 = markAt(540, 900, 640);                                   // 4 → the window closes into the mark
+const M5 = markAt(540, 330, 230);                                   // 5–6 · small, on top
+const M7 = markAt(540, 380, 250);                                   // 7 · the lockup's mark
+
+/* ───────────── the grid's own cells, lighting up ───────────── */
+const cv = document.getElementById("wipe"), cx2 = cv.getContext("2d"), CELL = 54, COLS = 21, ROWS = 37;
+const rnd = (i) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+const ORDER = {
+  radialMark: (c, r) => Math.hypot(c * CELL - 540, r * CELL - 860) / 1240,
+  diag: (c, r) => (c + r * .9) / (COLS + ROWS * .9),
+  up: (c, r) => 1 - r / ROWS,
+  radialMid: (c, r) => Math.hypot(c * CELL - 540, r * CELL - 960) / 1110,
+};
+const WIPES = [ // [start, end, colour, order]
+  [2.30, 3.00, BLUE, "radialMark"],
+  [5.90, 6.45, BG, "diag"],
+  [10.40, 10.98, BLUE, "up"],
+  [12.55, 13.10, BG, "radialMid"],
+];
+const drawWipe = (t) => {
+  cx2.clearRect(0, 0, 1080, 1920);
+  for (const [a, b, col, ord] of WIPES) {
+    if (t < a || t >= b) continue;
+    const p = (t - a) / (b - a); cx2.fillStyle = col;
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      const o = clamp(ORDER[ord](c, r) * .78 + rnd(r * COLS + c) * .14);
+      const q = eo(clamp((p - o * .72) / .28)); if (q <= 0) continue;
+      const s = CELL * q, x = c * CELL - 1 + (CELL - s) / 2, y = r * CELL - 1 + (CELL - s) / 2;
+      cx2.fillRect(x, y, s + .6, s + .6);
+    }
+  }
+};
+// Before the mark, a few cells blink on and off: the grid waking up.
+const drawBoot = (t) => {
+  if (t > .55) return; cx2.fillStyle = BLUE;
+  for (let i = 0; i < 26; i++) { const on = rnd(i * 7) * .45; if (t < on || t > on + .09) continue;
+    const c = Math.floor(rnd(i) * COLS), r = 9 + Math.floor(rnd(i + 99) * 18); cx2.fillRect(c * CELL - 1, r * CELL - 1, CELL, CELL); }
+};
+
+/* ───────────── content ───────────── */
+const S = (id) => document.getElementById(id);
+const ground = S("ground");
+const scenes = { s1: [0, 3.0], s3: [3.0, 6.45], s4: [6.45, 9.2], s5: [9.0, 10.98], s6: [10.98, 13.1], s7: [13.1, 99] };
+// A line slams in: big and blurred-fast to its size, with the frame jolting on impact.
+const slams = [...document.querySelectorAll(".line[data-at]")].map((n) => ({ n, at: parseFloat(n.dataset.at), shake: !!n.dataset.shake }));
+const jolt = (t) => { let x = 0, y = 0;
+  for (const { at } of slams) { const d = t - at - .16; if (d < 0 || d > .45) continue; const a = 14 * Math.exp(-d * 9);
+    x += a * Math.sin(d * 70); y += a * .6 * Math.cos(d * 55); }
+  return [x, y]; };
+
+// Clips that play inside the window; one is on top at a time.
+const CLIPS = ["speech-script", "korean-call", "workbook", "spanish-call", "pronunciation", "podcast", "japanese-call", "speech", "app-intro", "hand-held"];
+const win = S("win"), vids = CLIPS.map((n) => { const v = document.createElement("video");
+  Object.assign(v, { src: `/web/creators/samples/${n}.mp4`, poster: `/web/creators/samples/${n}.jpg`, muted: true, loop: true, playsInline: true, preload: "auto" });
+  win.insertBefore(v, win.firstChild); return v; });
+
+// The feed: the days, posted.
+const FEEDIMG = ["speech-script", "korean-call", "workbook", "spanish-call", "pronunciation", "podcast", "japanese-call", "speech", "app-intro", "hand-held", "speech-app", "korean-call", "workbook", "podcast", "speech"];
+const feed = S("feed"), tiles = FEEDIMG.map((n, i) => { const d = document.createElement("div"); d.className = "tile";
+  d.style.backgroundImage = `url(/web/creators/samples/${n}.jpg)`; d.innerHTML = `<b>DAY ${i + 1}</b>`; feed.appendChild(d); return d; });
+
+// The lockup words.
+const pix = (id, w) => { const n = S(id); n.innerHTML = [...w].map((c) => `<i>${c}</i>`).join(""); return [...n.children]; };
+const nawanaL = pix("w-nawana", "nawana"), programL = pix("w-program", "program");
+// "Creator" in one marker, capital and small strokes mixed, each letter its own ink (the poster's).
+const GLYPH = [
+  [[64, "M54 28C42 10 12 16 10 52C8 84 40 92 56 74"], [46, "M38 56C28 44 10 50 10 70C10 90 30 92 40 80"]],
+  [[56, "M12 88L12 16C40 10 50 28 40 42C32 52 20 52 12 50M24 52L48 88"], [42, "M12 50L12 90M12 64C16 52 28 46 36 54"]],
+  [[54, "M46 16L12 17L12 88L46 87M12 52L40 51"], [50, "M10 68L40 66C42 48 14 42 10 68C8 92 34 92 42 80"]],
+  [[62, "M8 88L30 14L52 88M17 62L44 61"], [52, "M40 56C30 42 10 50 10 70C10 90 32 92 40 74M40 50L40 82C40 88 44 90 49 87"]],
+  [[58, "M6 18L52 16M29 18L29 88"], [42, "M18 22L18 78C18 90 28 92 36 86M6 47L34 45"]],
+  [[66, "M32 14C10 14 8 50 10 62C14 92 50 94 54 60C58 26 46 14 32 14Z"], [48, "M24 48C8 48 6 88 24 90C42 90 42 50 24 48Z"]],
+  [[56, "M12 88L12 16C40 10 50 28 40 42C32 52 20 52 12 50M24 52L48 88"], [42, "M12 50L12 90M12 64C16 52 28 46 36 54"]],
+];
+const INKS = ["#0A5CF5", "#F0442E", "#FF8A00", "#E9AE00", "#12B76A", "#FF3D8B", "#7A4DFF"], TILT = [-4, 3, -2, 4, -3, 2, -4];
+const creator = S("creator"); creator.innerHTML = GLYPH.map(() => "<svg><path/></svg>").join("");
+const cells = [...creator.children];
+const drawLetter = (k, small, ink) => { const [w, d] = GLYPH[k][small], box = Math.max(GLYPH[k][0][0], GLYPH[k][1][0]), p = cells[k].firstChild;
+  cells[k].setAttribute("viewBox", `0 0 ${box} 100`); p.setAttribute("d", d); p.setAttribute("transform", `translate(${(box - w) / 2} 0)`);
+  cells[k].style.color = INKS[ink % INKS.length]; cells[k].style.rotate = TILT[k] * (small ? .6 : 1) + "deg"; };
+const CASE0 = [0, 1, 1, 0, 1, 1, 0];
+// stroke length per letter, so each one can be drawn on
+const lens = () => cells.map((c) => c.firstChild.getTotalLength());
+
+/* ───────────── the frame ───────────── */
+let t0 = 0, frozen = null, lastBoil = -1, LEN = [];
+const render = (t) => {
+  // ground + which scenes are live
+  ground.className = (t >= 2.82 && t < 6.2) || (t >= 10.8 && t < 12.95) ? "blue" : "";
+  for (const [id, [a, b]] of Object.entries(scenes)) S(id).style.visibility = t >= a && t < b ? "visible" : "hidden";
+  const [jx, jy] = jolt(t);
+  for (const id of ["s3", "s5", "s6"]) S(id).style.translate = `${jx}px ${jy}px`;
+
+  /* the mark: arrangement, colour, eyes */
+  let A, col = INK;
+  if (t < 2.45) {
+    // assembling: the corner drops in, then the bars fly in from three sides
+    const m = M1, o = {};
+    const fly = (k, a, dx, dy) => { const p = eob(seg(t, a, a + .42)); const r = m[k]; o[k] = [r[0] + dx * (1 - p), r[1] + dy * (1 - p), r[2], r[3]]; return p; };
+    const pc = eob(seg(t, .55, .85), 2.6), rc = m.corner; o.corner = [rc[0] + rc[2] / 2 * (1 - pc), rc[1] + rc[3] / 2 * (1 - pc), rc[2] * pc, rc[3] * pc];
+    fly("left", .72, -900, 0); fly("top", .84, 0, -1200); fly("bottom", .94, 0, 1200);
+    o.e1 = m.e1; o.e2 = m.e2; A = o;
+  } else if (t < 3.1) A = mix(M1, F3, eio(seg(t, 2.45, 3.05)));
+  else if (t < 6.0) A = F3;
+  else if (t < 6.65) A = mix(F3, F4, eio(seg(t, 6.0, 6.6)));
+  else if (t < 8.55) A = F4;
+  else if (t < 9.15) A = mix(F4, M4, eio(seg(t, 8.55, 9.1)));
+  else if (t < 9.6) A = mix(M4, M5, eio(seg(t, 9.15, 9.55)));
+  else if (t < 12.7) A = M5;
+  else A = mix(M5, M7, eio(seg(t, 12.7, 13.2)));
+  if (t > 2.5 && t < 6.3) col = mixHex(INK, WHITE, seg(t, 2.38, 2.5)); // ink → white over blue
+  if (t >= 6.0 && t < 6.3) col = mixHex(WHITE, INK, seg(t, 6.0, 6.3));
+  if (t > 10.55 && t < 12.95) col = mixHex(INK, WHITE, seg(t, 10.6, 10.85));
+  if (t >= 12.6 && t < 12.95) col = mixHex(WHITE, INK, seg(t, 12.6, 12.9));
+  mk.style.color = col;
+  // the counter's bar flashes blue when it reaches 100
+  el.top.style.color = t > 8.2 && t < 8.75 ? BLUE : "";
+  for (const k of ["top", "left", "bottom", "corner"]) place(k, A[k]);
+  // eyes: open (pop), blink, look, peek; behind the bars while peeking
+  const pop = t < 1.6 ? eob(seg(t, 1.18, 1.42), 2.2) : 1;
+  const BLINKS = [1.75, 3.0, 4.9, 7.4, 9.75, 11.0, 13.4, 15.15, 16.25], WINK = 12.15;
+  const shut = (at) => { const d = t - at; return d > 0 && d < .2 ? Math.sin(d / .2 * Math.PI) * .88 : 0; };
+  const closed = Math.max(...BLINKS.map(shut)), wink = shut(WINK) * 1.05;
+  // where they look: [time, x, y] in eye-widths
+  const LOOK = [[0, 0, 0], [1.95, .55, 0], [2.2, -.5, 0], [2.4, 0, 0], [3.2, -.4, .5], [3.6, -.3, .7], [4.0, -.35, .9], [4.5, -.3, 1.1], [5.3, 0, .3],
+    [6.7, -.45, .35], [7.6, .4, .35], [8.4, 0, 0], [9.7, 0, .7], [10.3, .45, .7], [11.2, 0, .55], [12.4, 0, 0], [13.6, .55, 0], [14.3, -.5, .15], [15.0, 0, 0], [15.7, .55, 0], [16.4, 0, 0]];
+  let lx = 0, ly = 0; for (let i = 0; i < LOOK.length; i++) { const [a, x, y] = LOOK[i], nx = LOOK[i + 1]; if (t < a) break;
+    if (!nx || t < nx[0]) { const q = nx ? eo(seg(t, a, a + .22)) : 1, [, px, py] = LOOK[Math.max(0, i - 1)]; lx = lerp(px, x, i ? q : 1); ly = lerp(py, y, i ? q : 1); break; } }
+  for (const [k, sh] of [["e1", closed], ["e2", Math.max(closed, wink)]]) {
+    const [x, y, w, h] = A[k], hh = h * (1 - sh) * pop, s = el[k].style;
+    s.left = x + lx * w * .7 + "px"; s.top = y + ly * w * .5 + (h - hh) / 2 + "px"; s.width = w * pop + "px"; s.height = Math.max(0, hh) + "px";
+  }
+  eyesBox.style.zIndex = 0; // eyes are first in the box, so the bars cover them when they peek
+  // the hand-drawn boil, 12 times a second
+  const b = Math.floor(t * 12) % 3; if (b !== lastBoil) { mk.style.filter = `url(#boil-${b + 1})`; lastBoil = b; }
+
+  /* 1 · the wordmark types itself under the mark */
+  const typed = Math.floor(clamp((t - 1.35) / .07, 0, 6));
+  S("typed").textContent = "nawana".slice(0, typed);
+  S("s1").querySelector(".cur").style.opacity = Math.floor(t * 4) % 2 || typed < 6 ? 1 : 0;
+  S("s1").style.opacity = 1 - seg(t, 2.2, 2.45);
+
+  /* the boot cells, then the wipes */
+  drawWipe(t); drawBoot(t);
+
+  /* slams */
+  for (const { n, at, shake } of slams) { const p = seg(t, at, at + .26), q = eox(p);
+    n.style.opacity = p > 0 ? 1 : 0; n.style.scale = lerp(2.3, 1, q); n.style.filter = p < 1 ? `blur(${(1 - q) * 14}px)` : "";
+    if (shake && p >= 1) { const k = Math.floor(t * 14); n.style.translate = `${(rnd(k) - .5) * 14}px ${(rnd(k + 9) - .5) * 10}px`; n.style.rotate = (rnd(k + 3) - .5) * 3 + "deg"; } }
+
+  /* 4 · the window, the clips, the counter */
+  const wr = t < 8.55 ? [W4.x, W4.y, W4.w, W4.h] : (() => { const q = eio(seg(t, 8.55, 9.1)), s = 640 / 661;
+    return [lerp(W4.x, 540 + (293 - 514.5) * s, q), lerp(W4.y, 900 + (341 - 508) * s, q), lerp(W4.w, 411 * s, q), lerp(W4.h, 341 * s, q)]; })();
+  Object.assign(win.style, { left: wr[0] + "px", top: wr[1] + "px", width: wr[2] + "px", height: wr[3] + "px" });
+  win.style.opacity = seg(t, 6.45, 6.6) * (1 - seg(t, 8.5, 8.72));
+  const ci = t < 8.3 ? Math.floor(Math.max(0, t - 6.5) / .23) % vids.length : 0;
+  vids.forEach((v, i) => v.classList.toggle("on", i === ci));
+  const n = Math.round(1 + 99 * eio(seg(t, 6.55, 8.25)));
+  S("num").textContent = String(n).padStart(3, "0");
+  const ctr = S("counter"), [tx, ty, tw, th] = A.top;
+  Object.assign(ctr.style, { left: tx + "px", top: ty + th / 2 - 44 + "px", width: tw + "px", opacity: seg(t, 6.45, 6.62) * (1 - seg(t, 8.6, 8.75)) });
+  ctr.style.scale = t > 8.2 && t < 8.6 ? 1 + .12 * Math.sin(seg(t, 8.22, 8.5) * Math.PI) : 1;
+
+  /* 5 · the feed scrolls up */
+  const fp = eo(seg(t, 9.15, 9.75)), scroll = 210 * Math.max(0, t - 9.2) + (1 - fp) * -700;
+  tiles.forEach((d, i) => { const c = i % 3, r = Math.floor(i / 3), at = 9.25 + i * .045, p = eob(seg(t, at, at + .35), 1.6);
+    d.style.left = 51 + c * 294 + "px"; d.style.top = 70 + r * 510 - scroll + (c === 1 ? 120 : 0) + "px";
+    d.style.scale = lerp(.6, 1, p); d.style.opacity = clamp(p * 2); d.style.rotate = [-2, 1.5, -1][c] + (r % 2 ? 1.2 : 0) + "deg"; });
+
+  /* 6 · the highlighter under 무료로 */
+  const h = S("hi"); h.style.scale = `${eo(seg(t, 11.5, 11.78))} 1`; h.style.rotate = "-1.5deg";
+  h.style.translate = `${jx}px ${jy}px`;
+
+  /* 7 · the lockup */
+  nawanaL.forEach((c, i) => { const p = eob(seg(t, 13.2 + i * .05, 13.55 + i * .05), 2); c.style.translate = `0 ${(1 - p) * -260}px`; c.style.opacity = clamp(p * 3); });
+  programL.forEach((c, i) => { const p = eob(seg(t, 13.55 + i * .045, 13.9 + i * .045), 2); c.style.translate = `0 ${(1 - p) * 260}px`; c.style.opacity = clamp(p * 3); });
+  // Creator: drawn on stroke by stroke, then the letters keep changing case and ink in a wave
+  cells.forEach((c, k) => {
+    const wave = t < 14.6 ? 0 : Math.floor((t - 14.6) / .13) - k, cyc = wave >= 0 ? Math.floor(wave / 9) + 1 + (wave % 9 >= 0 ? 0 : 0) : 0;
+    const flips = wave >= 0 ? Math.floor((wave + 9) / 9) : 0, small = (CASE0[k] + flips) % 2;
+    drawLetter(k, small, k + flips * 3);
+    const L = c.firstChild.getTotalLength(), p = eo(seg(t, 13.45 + k * .07, 13.85 + k * .07));
+    c.firstChild.style.strokeDasharray = L; c.firstChild.style.strokeDashoffset = L * (1 - p);
+  });
+  const ut = Math.floor(clamp((t - 14.45) / .045, 0, 19)); S("urlt").textContent = "nawana.app/creators".slice(0, ut);
+  S("url").style.opacity = t > 14.4 ? 1 : 0; S("url").querySelector(".cur").style.opacity = ut < 19 || Math.floor(t * 3) % 2 ? 1 : 0;
+};
+
+/* ───────────── run ───────────── */
+const q = new URLSearchParams(location.search);
+if (q.has("t")) frozen = parseFloat(q.get("t"));
+// Frame-by-frame mode (scripts/marketing/step-record.mjs): the recorder calls renderAt(t) for every frame, and the
+// clip on screen is seeked to the same moment, so the film is exact at any frame rate however slow the machine.
+const manual = q.has("manual");
+if (manual) frozen = 0;
+window.renderAt = async (t) => {
+  render(t);
+  const on = vids.find((v) => v.classList.contains("on"));
+  if (on && win.style.opacity > 0) {
+    const want = t % (on.duration || 10);
+    if (Math.abs(on.currentTime - want) > .001) await new Promise((r) => { on.addEventListener("seeked", r, { once: true }); on.currentTime = want; setTimeout(r, 1500); });
+  }
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+};
+const loop = () => { render(frozen ?? (performance.now() - t0) / 1000); if (frozen == null) requestAnimationFrame(loop); };
+Promise.all([
+  document.fonts.load('40px "Geist Pixel"', "nawana DAY 100"), document.fonts.load('40px "Galmuri14"', "증거무료"),
+  ...vids.map((v) => new Promise((r) => { if (v.readyState >= 2) r(); else { v.addEventListener("loadeddata", r, { once: true }); setTimeout(r, 5000); } })),
+]).then(() => {
+  if (frozen == null && !manual) {
+    // the clips are already running underneath when the window opens
+    vids.forEach((v) => v.play().catch(() => {}));
+  }
+  requestAnimationFrame(() => { t0 = performance.now(); document.documentElement.dataset.scene = "1"; loop(); });
+});
+</script>
+</body>
+</html>

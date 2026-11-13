@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>nawana creator program · poster 2 · the deal</title>
+<!-- Poster #2 of the creator series: the deal, two hand-drawn tickets facing each other.
+     드려요 (blue) carries 100일, 약속 (ink) carries the days you set, checked off one by one.
+     Same frame as poster #1 (../2026-11-11-creator-poster/poster.html): grid ground, the mark on top, the title
+     with "Creator" changing hands, the foot line. Recorded in real time:
+       /opt/homebrew/opt/node@22/bin/node scripts/marketing/record.mjs \
+         marketing/content/2026-11-12-creator-series/poster-02-deal.html --size 1080x1350 --seconds 10 \
+         --wait-for "document.documentElement.dataset.scene" --out marketing/content/2026-11-12-creator-series/poster-02-deal.mp4
+     Still: the same path with ?still, --out poster-02-deal.png -->
+<style>
+@font-face{font-family:"Geist";font-weight:100 900;src:url(/web/creators/fonts/geist.woff2) format("woff2")}
+@font-face{font-family:"Geist Pixel";src:url(/web/GeistPixel.ttf) format("truetype")}
+@font-face{font-family:"Galmuri14";src:url(/web/Galmuri14.woff2) format("woff2")}
+:root{--ink:#1C2133;--accent:#0A5CF5;--bg:#F7F8FA;--hi:rgba(255,226,60,.78)}
+*{box-sizing:border-box;margin:0}
+html,body{width:1080px;height:1350px;overflow:hidden}
+body{position:relative;color:var(--ink);font-family:"Geist","Apple SD Gothic Neo",sans-serif;-webkit-font-smoothing:antialiased;
+  background:#F7F8FA;background-image:linear-gradient(rgba(10,40,90,.045) 2px,transparent 2px),linear-gradient(90deg,rgba(10,40,90,.045) 2px,transparent 2px);background-size:54px 54px;background-position:-1px -1px}
+@keyframes boil-m{0%{filter:url(#boil-m1)}33%{filter:url(#boil-m2)}66%{filter:url(#boil-m3)}}
+@keyframes boil-s{0%{filter:url(#boil-s)}33%{filter:url(#boil-s2)}66%{filter:url(#boil-s3)}}
+@keyframes mk{0%{filter:url(#marker)}33%{filter:url(#marker2)}66%{filter:url(#marker3)}}
+
+/* the mark, the title, the foot: poster #1's */
+.top{position:absolute;left:0;right:0;top:64px;display:flex;justify-content:center;z-index:3}
+.top .mk{display:block;flex:none;width:98px;height:84px}
+.top .mk svg{display:block;width:98px;height:84px;overflow:visible;animation:boil-m .5s steps(1) infinite}
+.top .mk rect{transition:translate .35s cubic-bezier(.3,.7,.2,1)}
+.title{position:absolute;left:0;right:0;top:196px;text-align:center;z-index:3}
+h1{font-weight:600;font-size:68px;line-height:1.04;letter-spacing:-.045em;white-space:nowrap}
+.brush{display:inline-flex;align-items:flex-end;gap:.035em;height:1em;margin:0 .16em 0 .14em;vertical-align:-.12em;animation:mk .5s steps(1) infinite}
+.brush svg{height:1.1em;width:auto;overflow:visible;fill:none;stroke:currentColor;stroke-width:15;stroke-linecap:round;stroke-linejoin:round}
+.url{position:absolute;left:0;right:0;bottom:56px;text-align:center;font-size:30px;font-weight:600;letter-spacing:-.01em;z-index:3}
+
+/* the two tickets */
+.card{position:absolute;top:356px;width:448px;height:748px;z-index:2}
+.card.give{left:56px;--c:var(--accent);rotate:2deg}
+.card.keep{left:576px;--c:var(--ink);rotate:-2deg}
+.card .cast{position:absolute;inset:6px;border-radius:44px;opacity:.85}
+.card .paper{position:absolute;inset:6px;border-radius:44px;background:#fff}
+.card .sketch{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;animation:boil-s .6s steps(1) infinite}
+.card .sketch path{fill:none;stroke:var(--c);stroke-linecap:round;stroke-linejoin:round}
+.tag{position:absolute;left:50%;top:-34px;translate:-50% 0;padding:15px 34px 13px;background:var(--c);color:#fff;font-family:"Galmuri14";font-size:38px;line-height:1;white-space:nowrap;
+  border-radius:14px 22px 12px 20px/20px 12px 22px 15px;rotate:-2deg}
+.keep .tag{rotate:2deg}
+.face{position:absolute;left:0;right:0;top:70px;height:430px;display:flex;align-items:center;justify-content:center;color:var(--c)}
+.stub{position:absolute;left:30px;right:30px;top:520px;bottom:30px;display:flex;align-items:center;justify-content:center;text-align:center;
+  font-size:42px;font-weight:700;line-height:1.36;letter-spacing:-.03em;color:var(--ink)}
+.stub mark{position:relative;background:none;color:inherit;padding:0 4px}
+.stub mark::before{content:"";position:absolute;left:-2px;right:-2px;top:46%;bottom:2px;background:var(--hi);z-index:-1;transform-origin:left;scale:0 1;border-radius:3px 6px 4px 2px;
+  animation:sweep .55s cubic-bezier(.3,.7,.2,1) forwards;animation-delay:3s}
+@keyframes sweep{to{scale:1 1}}
+.stub span{position:relative;z-index:0;display:inline-block}
+
+/* 100일 */
+.days{display:flex;align-items:baseline;gap:10px;white-space:nowrap}
+.days b{font-family:"Geist Pixel";font-weight:400;font-size:158px;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.days i{font-family:"Galmuri14";font-style:normal;font-size:78px;line-height:1}
+
+/* the week: the days you set, checked off */
+.week{display:grid;grid-template-columns:repeat(4,80px);gap:30px 18px;justify-content:center}
+.week .r2{grid-column:1/-1;display:flex;justify-content:center;gap:18px}
+.day{position:relative;width:80px;display:flex;flex-direction:column;align-items:center;gap:10px;font-family:"Galmuri14";font-size:32px;line-height:1;color:var(--ink)}
+.day svg{display:block;width:80px;height:80px;overflow:visible;animation:mk .5s steps(1) infinite}
+.day .box{fill:none;stroke:var(--ink);stroke-width:6;stroke-linecap:round;stroke-linejoin:round}
+.day.off{color:rgba(28,33,51,.28)}
+.day.off .box{stroke:rgba(28,33,51,.2);stroke-width:4;stroke-dasharray:2 11}
+.day .chk{fill:none;stroke:var(--accent);stroke-width:11;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:var(--len);stroke-dashoffset:var(--len)}
+
+/* ⇄ between them */
+.swap{position:absolute;left:470px;top:588px;width:140px;height:120px;z-index:4;overflow:visible;animation:mk .5s steps(1) infinite}
+.swap path{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.swap .halo{stroke:var(--bg);stroke-width:22}
+.swap .ln{stroke:var(--ink);stroke-width:8;stroke-dasharray:var(--len);stroke-dashoffset:var(--len);animation:draw .45s ease-out forwards;animation-delay:calc(var(--d)*1s)}
+.swap .halo{stroke-dasharray:var(--len);stroke-dashoffset:var(--len);animation:draw .45s ease-out forwards;animation-delay:calc(var(--d)*1s)}
+@keyframes draw{to{stroke-dashoffset:0}}
+
+/* arriving */
+.in{opacity:0;translate:0 34px;animation:rise .8s cubic-bezier(.2,.7,.2,1) forwards;animation-delay:calc(var(--d)*1s)}
+@keyframes rise{to{opacity:1;translate:0 0}}
+.card{opacity:0;animation:card 1s cubic-bezier(.2,.75,.2,1) forwards;animation-delay:calc(var(--d)*1s)}
+@keyframes card{from{opacity:0;translate:0 120px}to{opacity:1;translate:0 0}}
+
+html.still *{animation:none!important}
+html.still .in,html.still .card{opacity:1;translate:none}
+html.still .card .sketch{filter:url(#boil-s)}
+html.still .top .mk svg{filter:url(#boil-m1)}
+html.still .brush,html.still .swap,html.still .day svg{filter:url(#marker)}
+html.still .stub mark::before{scale:1 1}
+html.still .swap .ln,html.still .swap .halo{stroke-dashoffset:0}
+html:not([data-scene]) *{animation-play-state:paused!important}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="boil-s" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="1" seed="5"/><feDisplacementMap in="SourceGraphic" scale="2.6"/></filter>
+  <filter id="boil-s2" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="1" seed="23"/><feDisplacementMap in="SourceGraphic" scale="2.6"/></filter>
+  <filter id="boil-s3" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="1" seed="61"/><feDisplacementMap in="SourceGraphic" scale="2.6"/></filter>
+  <filter id="marker" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="2" seed="8"/><feDisplacementMap in="SourceGraphic" scale="3.2"/></filter>
+  <filter id="marker2" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="2" seed="31"/><feDisplacementMap in="SourceGraphic" scale="3.2"/></filter>
+  <filter id="marker3" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="2" seed="57"/><feDisplacementMap in="SourceGraphic" scale="3.2"/></filter>
+  <filter id="boil-m1" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="6"/><feDisplacementMap in="SourceGraphic" scale="14"/></filter>
+  <filter id="boil-m2" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="27"/><feDisplacementMap in="SourceGraphic" scale="14"/></filter>
+  <filter id="boil-m3" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="52"/><feDisplacementMap in="SourceGraphic" scale="14"/></filter>
+</svg>
+
+<div class="top">
+  <span class="mk in" style="--d:.1"><svg viewBox="130 180 770 660" fill="currentColor"><path d="M287 240Q498 228 704 236Q699 290 703 341Q497 346 289 336Q295 288 287 240Z"/><path d="M190 334Q242 341 293 336Q284 512 290 688Q239 680 184 687Q195 510 190 334Z"/><path d="M293 682Q497 692 700 687Q706 737 698 788Q495 779 288 786Q286 734 293 682Z"/><rect id="e1" x="469" y="444" width="78" height="124" rx="39"/><rect id="e2" x="629" y="440" width="78" height="124" rx="39"/><path d="M747 688Q796 682 845 687Q839 737 842 787Q793 781 743 784Q751 736 747 688Z"/></svg></span>
+</div>
+
+<div class="title">
+  <h1 class="in" style="--d:.3">nawana <span id="creator-word">Creator</span> program</h1>
+</div>
+
+<div class="card give" style="--d:.55">
+  <div class="cast"></div><div class="paper"></div>
+  <svg class="sketch" aria-hidden="true"></svg>
+  <span class="tag">드려요</span>
+  <div class="face"><div class="days"><b id="n">100</b><i>일</i></div></div>
+  <p class="stub"><span>100일 동안<br>나와나 <mark>무료</mark></span></p>
+</div>
+
+<div class="card keep" style="--d:.8">
+  <div class="cast"></div><div class="paper"></div>
+  <svg class="sketch" aria-hidden="true"></svg>
+  <span class="tag">약속</span>
+  <div class="face"><div class="week" id="week"></div></div>
+  <p class="stub"><span>정한 날마다<br>공부한 증거를 올려요</span></p>
+</div>
+
+<svg class="swap" viewBox="0 0 140 120" aria-hidden="true">
+  <path class="halo" style="--d:1.5;--len:150" d="M14 40Q70 34 124 38M102 18Q114 30 125 38Q113 46 101 58"/>
+  <path class="ln"   style="--d:1.5;--len:150" d="M14 40Q70 34 124 38M102 18Q114 30 125 38Q113 46 101 58"/>
+  <path class="halo" style="--d:1.85;--len:150" d="M126 82Q70 88 16 84M38 64Q26 74 15 84Q27 92 39 104"/>
+  <path class="ln"   style="--d:1.85;--len:150" d="M126 82Q70 88 16 84M38 64Q26 74 15 84Q27 92 39 104"/>
+</svg>
+
+<p class="url in" style="--d:.9">1기 모집 · nawana.app/creators</p>
+
+<script>
+const Q = new URLSearchParams(location.search), STILL = Q.has("still");
+
+// The long 45° cast shadow, the carousel's, a little shorter for a card.
+document.querySelectorAll(".card .cast").forEach((el) => {
+  const reach = 150, peak = .42, step = 3, n = Math.round(reach / step), parts = [];
+  const A = (d) => peak * Math.pow(Math.max(0, 1 - d / reach), 1.7);
+  for (let i = 1; i <= n; i++) { const d = i * step, a = (A(d) - A(d + step)) / (1 - A(d + step)); parts.push(`${d}px ${d}px ${Math.round(3 + d * .16)}px rgba(13,17,23,${a.toFixed(4)})`); }
+  el.style.boxShadow = parts.join(",");
+});
+
+// Each ticket's outline drawn by hand in one pass (poster #1's phone line): sides that wander a hair, true-arc
+// corners, and a dashed perforation above the stub.
+document.querySelectorAll(".card").forEach((card, ci) => {
+  const svg = card.querySelector(".sketch"), W = card.offsetWidth, H = card.offsetHeight;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  let seed = 11 + ci * 7; const j = () => ((seed = (seed * 16807) % 2147483647) / 2147483647 - .5) * 3;
+  const SW = 9, i = 6, r = 44, x0 = i, y0 = i, x1 = W - i, y1 = H - i;
+  const side = (ax, ay, bx, by) => `Q${(ax + bx) / 2 + j()} ${(ay + by) / 2 + j()} ${bx} ${by}`;
+  const d = `M${x0 + r} ${y0} ${side(x0 + r, y0, x1 - r, y0)} A${r} ${r} 0 0 1 ${x1} ${y0 + r} ${side(x1, y0 + r, x1, y1 - r)} A${r} ${r} 0 0 1 ${x1 - r} ${y1} ` +
+            `${side(x1 - r, y1, x0 + r, y1)} A${r} ${r} 0 0 1 ${x0} ${y1 - r} ${side(x0, y1 - r, x0, y0 + r)} A${r} ${r} 0 0 1 ${x0 + r} ${y0}Z`;
+  let dash = ""; const py = 512;
+  for (let x = 40; x < W - 50; x += 30) dash += `M${x} ${py + j() * .5}L${x + 14} ${py + j() * .5}`;
+  svg.innerHTML = `<path d="${d}" stroke-width="${SW}"/><path d="${dash}" stroke-width="5" opacity=".45"/>`;
+});
+
+// The week: the days you set are boxed, the rest are faint; the boxed ones get checked off in turn.
+const DAYS = ["월", "화", "수", "목", "금", "토", "일"], SET = [0, 2, 4, 6];
+(function () {
+  const wk = document.getElementById("week");
+  let seed = 5; const j = () => ((seed = (seed * 16807) % 2147483647) / 2147483647 - .5) * 4;
+  const cell = (k) => {
+    const on = SET.includes(k);
+    const box = `M14 ${12 + j()}Q48 ${9 + j()} 83 ${13 + j()}Q${86 + j()} 48 ${82 + j()} 84Q48 ${87 + j()} 13 ${83 + j()}Q${10 + j()} 48 14 ${12 + j()}Z`;
+    const chk = on ? `<path class="chk" d="M28 50Q37 59 44 70Q60 40 82 18"/>` : "";
+    return `<div class="day ${on ? "" : "off"}" data-k="${k}">${DAYS[k]}<svg viewBox="8 6 84 84"><path class="box" d="${box}"/>${chk}</svg></div>`;
+  };
+  wk.innerHTML = [0, 1, 2, 3].map(cell).join("") + `<div class="r2">${[4, 5, 6].map(cell).join("")}</div>`;
+  wk.querySelectorAll(".chk").forEach((p) => { const L = Math.ceil(p.getTotalLength()) + 2; p.style.setProperty("--len", L); if (STILL) p.style.strokeDashoffset = 0; });
+})();
+const checks = [...document.querySelectorAll(".chk")];
+const drawCheck = (p) => p.animate([{ strokeDashoffset: p.style.getPropertyValue("--len") }, { strokeDashoffset: 0 }], { duration: 380, easing: "cubic-bezier(.4,.1,.3,1)", fill: "forwards" });
+const weekLoop = () => {
+  checks.forEach((p, n) => setTimeout(() => drawCheck(p), n * 600));
+  // hold the full week, then lift the ticks together and start over
+  setTimeout(() => checks.forEach((p) => p.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: "forwards" })
+    .finished.then(() => { p.getAnimations().forEach((a) => a.cancel()); })), 3600);
+};
+
+// "Creator": poster #1's marker glyphs, one letter at a time changing case and colour.
+const INKS = ["#0A5CF5", "#F0442E", "#FF8A00", "#E9AE00", "#12B76A", "#FF3D8B", "#7A4DFF", "#00AFC2", "#D9368B", "#2E9E3F"];
+const GLYPH = [ // [capital, small], each [width, path] in a 100-high box, baseline at 90
+  [[64, "M54 28C42 10 12 16 10 52C8 84 40 92 56 74"], [46, "M38 56C28 44 10 50 10 70C10 90 30 92 40 80"]],
+  [[56, "M12 88L12 16C40 10 50 28 40 42C32 52 20 52 12 50M24 52L48 88"], [42, "M12 50L12 90M12 64C16 52 28 46 36 54"]],
+  [[54, "M46 16L12 17L12 88L46 87M12 52L40 51"], [50, "M10 68L40 66C42 48 14 42 10 68C8 92 34 92 42 80"]],
+  [[62, "M8 88L30 14L52 88M17 62L44 61"], [52, "M40 56C30 42 10 50 10 70C10 90 32 92 40 74M40 50L40 82C40 88 44 90 49 87"]],
+  [[58, "M6 18L52 16M29 18L29 88"], [42, "M18 22L18 78C18 90 28 92 36 86M6 47L34 45"]],
+  [[66, "M32 14C10 14 8 50 10 62C14 92 50 94 54 60C58 26 46 14 32 14Z"], [48, "M24 48C8 48 6 88 24 90C42 90 42 50 24 48Z"]],
+  [[56, "M12 88L12 16C40 10 50 28 40 42C32 52 20 52 12 50M24 52L48 88"], [42, "M12 50L12 90M12 64C16 52 28 46 36 54"]],
+];
+const TILT = [-4, 3, -2, 4, -3, 2, -4];
+
+Promise.all([
+  document.fonts.load('600 40px "Geist"').catch(() => {}),
+  document.fonts.load('40px "Geist Pixel"', "100").catch(() => {}),
+  document.fonts.load('40px "Galmuri14"', "드려요약속일월화수목금토").catch(() => {}),
+]).then(() => {
+  const word = document.getElementById("creator-word");
+  const cs = (Q.get("case") || "UllUllU").split("").map((c) => (c === "U" ? 0 : 1));
+  const inked = [0, 1, 2, 3, 4, 5, 6];
+  word.className = "brush";
+  word.innerHTML = GLYPH.map(() => "<svg><path/></svg>").join("");
+  const cells = [...word.querySelectorAll("svg")];
+  const draw1 = (k) => { const [w, d] = GLYPH[k][cs[k]], box = Math.max(GLYPH[k][0][0], GLYPH[k][1][0]); cells[k].setAttribute("viewBox", `0 0 ${box} 100`); cells[k].firstChild.setAttribute("d", d); cells[k].firstChild.setAttribute("transform", `translate(${(box - w) / 2} 0)`); cells[k].style.color = INKS[inked[k] % INKS.length]; cells[k].style.rotate = TILT[k] * (cs[k] ? .6 : 1) + "deg"; };
+  cells.forEach((_, k) => draw1(k));
+  if (STILL) { document.documentElement.classList.add("still"); document.documentElement.dataset.scene = "1"; return; }
+
+  const unusedInk = () => { const free = INKS.map((_, i) => i).filter((i) => !inked.includes(i)); return free[Math.floor(Math.random() * free.length)]; };
+  let k = 0;
+  const tick = () => { cs[k] = 1 - cs[k]; inked[k] = unusedInk(); draw1(k); k = (k + 1) % cells.length; setTimeout(tick, k === 0 ? 900 : 130); };
+  setTimeout(tick, 2600);
+
+  // the mark blinks and looks around (poster #1's)
+  const eyes = [[document.getElementById("e1"), 444], [document.getElementById("e2"), 440]];
+  const blink = () => {
+    const t0 = performance.now();
+    const f = (now) => { const p = Math.min(1, (now - t0) / 220), b = Math.sin(p * Math.PI), h = 124 * (1 - .86 * b);
+      for (const [e, y] of eyes) { e.setAttribute("height", h); e.setAttribute("y", y + (124 - h) / 2); e.setAttribute("rx", Math.min(39, h / 2)); }
+      if (p < 1) requestAnimationFrame(f); };
+    requestAnimationFrame(f);
+  };
+  [900, 2600, 2900, 4700, 6300, 8200, 8500, 10400, 11600].forEach((t) => setTimeout(blink, t));
+  const look = (x) => eyes.forEach(([e]) => { e.style.translate = x + "px 0"; });
+  [[1500, -40], [2300, 0], [3600, 46], [4300, 0], [5400, -40], [5900, 46], [6800, 0], [9200, -40], [10000, 0]].forEach(([t, x]) => setTimeout(() => look(x), t));
+
+  // 100 ticks up from 1, once, just after the recorder's 1.2 s warmup so the film opens on it
+  const n = document.getElementById("n");
+  n.style.display = "inline-block"; n.style.textAlign = "right"; n.style.width = n.getBoundingClientRect().width + "px"; // the odometer keeps 100's width
+  n.textContent = "1";
+  setTimeout(() => {
+    const t0 = performance.now(), dur = 1500;
+    const f = (now) => { const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3); n.textContent = String(Math.max(1, Math.round(1 + 99 * e))); if (p < 1) requestAnimationFrame(f); };
+    requestAnimationFrame(f);
+  }, 1400);
+
+  // the week, checked off in turn, on a loop
+  setTimeout(() => { weekLoop(); setInterval(weekLoop, 4200); }, 3000);
+
+  document.documentElement.dataset.scene = "1";
+});
+</script>
+</body>
+</html>

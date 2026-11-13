@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>nawana creator & challenger program · type cut</title>
+<!-- THE TYPE CUT (2026-11-13). Founder: one page, pure text, the logo big, no videos, the text moving on the beat.
+     The creator beat cut's clock, intro, marker glyphs and track; nothing else. Recorded frame by frame:
+       node22 scripts/marketing/step-record.mjs "marketing/content/2026-11-13-program-type/type.html?manual" \
+         --size 1080x1350 --seconds 22.6 --fps 30 --out marketing/content/2026-11-13-program-type/_silent.mp4
+     then the founder's track (Downloads/copy_F74C69A9….MOV) muxed under it. -->
+<style>
+@font-face{font-family:"Geist";font-weight:100 900;src:url(/web/creators/fonts/geist.woff2) format("woff2")}
+:root{--ink:#1C2133;--accent:#0A5CF5;--hi:rgba(255,226,60,.78)}
+*{box-sizing:border-box;margin:0}
+html,body{width:1080px;height:1350px;overflow:hidden}
+body{position:relative;color:var(--ink);font-family:"Geist",-apple-system,sans-serif;-webkit-font-smoothing:antialiased;
+  background:#F7F8FA;background-image:linear-gradient(rgba(10,40,90,.045) 2px,transparent 2px),linear-gradient(90deg,rgba(10,40,90,.045) 2px,transparent 2px);background-size:54px 54px;background-position:-1px -1px}
+.grain{position:absolute;inset:-120px;z-index:9;pointer-events:none;opacity:.22;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .52 2.4 0 0 0 -.95'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23g)'/%3E%3C/svg%3E")}
+.sheet{position:absolute;inset:0;z-index:7;background:#F7F8FA}
+.flymark{position:absolute;z-index:8;display:block;overflow:visible;color:var(--ink)}
+.line{position:absolute;left:0;right:0;text-align:center;z-index:3;white-space:nowrap;line-height:1}
+.geist{font-weight:600;letter-spacing:-.045em}
+.brush{display:inline-flex;align-items:flex-end;gap:.035em;height:1em}
+.brush svg{height:1.1em;width:auto;overflow:visible;fill:none;stroke:currentColor;stroke-width:15;stroke-linecap:round;stroke-linejoin:round;transform-origin:50% 70%}
+.brush .gap{display:inline-block;width:.28em}
+#l1{top:468px;font-size:100px}
+#w1{top:600px;font-size:118px}
+#amp{top:756px;font-size:62px;font-weight:500;letter-spacing:0}
+#w2{top:842px;font-size:118px}
+#l3{top:1000px;font-size:100px}
+#join{top:520px;font-size:190px}
+#dayline{top:808px;font-size:128px;font-weight:700;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+#dayline small{font-size:.42em;font-weight:600;letter-spacing:.06em;vertical-align:.62em;margin-right:.22em}
+.url{top:1206px;font-size:32px;font-weight:600;letter-spacing:-.01em}
+.url mark{background:linear-gradient(transparent 46%,var(--hi) 46%) no-repeat;background-size:0% 100%;color:inherit;padding:0 4px;margin:0 -4px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="boil-1" x="-10%" y="-20%" width="120%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="7"/></filter>
+  <filter id="boil-2" x="-10%" y="-20%" width="120%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="17"/><feDisplacementMap in="SourceGraphic" scale="7"/></filter>
+  <filter id="boil-3" x="-10%" y="-20%" width="120%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="41"/><feDisplacementMap in="SourceGraphic" scale="7"/></filter>
+  <filter id="boil-s" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="1" seed="5"/><feDisplacementMap in="SourceGraphic" scale="2.2"/></filter>
+  <filter id="boil-s2" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="1" seed="23"/><feDisplacementMap in="SourceGraphic" scale="2.2"/></filter>
+  <filter id="boil-s3" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="1" seed="61"/><feDisplacementMap in="SourceGraphic" scale="2.2"/></filter>
+  <!-- crayon: the stroke's edge roughened, and paper showing through it in flecks -->
+  <filter id="crayon" x="-5%" y="-10%" width="110%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="4" result="w"/>
+    <feDisplacementMap in="SourceGraphic" in2="w" scale="5" result="d"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="9" result="n"/>
+    <feColorMatrix in="n" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -3.2 2.05" result="holes"/>
+    <feComposite in="d" in2="holes" operator="in"/>
+  </filter>
+  <!-- marker: the stroke's edge a little uneven, as felt drags on paper -->
+  <filter id="marker" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="2" seed="8"/><feDisplacementMap in="SourceGraphic" scale="3.2"/></filter>
+  <filter id="marker2" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="2" seed="31"/><feDisplacementMap in="SourceGraphic" scale="3.2"/></filter>
+  <filter id="marker3" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="2" seed="57"/><feDisplacementMap in="SourceGraphic" scale="3.2"/></filter>
+  <filter id="boil-m1" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="6"/><feDisplacementMap in="SourceGraphic" scale="14"/></filter>
+  <filter id="boil-m2" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="27"/><feDisplacementMap in="SourceGraphic" scale="14"/></filter>
+  <filter id="boil-m3" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="52"/><feDisplacementMap in="SourceGraphic" scale="14"/></filter>
+  <symbol id="mark" viewBox="130 180 770 660"><path d="M287 240Q498 228 704 236Q699 290 703 341Q497 346 289 336Q295 288 287 240Z"/><path d="M190 334Q242 341 293 336Q284 512 290 688Q239 680 184 687Q195 510 190 334Z"/><path d="M293 682Q497 692 700 687Q706 737 698 788Q495 779 288 786Q286 734 293 682Z"/><rect class="eye" x="469" y="444" width="78" height="124" rx="39"/><rect class="eye" x="629" y="440" width="78" height="124" rx="39"/><path d="M747 688Q796 682 845 687Q839 737 842 787Q793 781 743 784Q751 736 747 688Z"/></symbol>
+</svg>
+
+<div class="sheet" id="sheet"></div>
+<svg class="flymark" id="fly" viewBox="130 180 830 660" fill="currentColor" aria-hidden="true">
+  <path d="M287 240Q498 228 704 236Q699 290 703 341Q497 346 289 336Q295 288 287 240Z"/>
+  <path d="M190 334Q242 341 293 336Q284 512 290 688Q239 680 184 687Q195 510 190 334Z"/>
+  <path d="M293 682Q497 692 700 687Q706 737 698 788Q495 779 288 786Q286 734 293 682Z"/>
+  <rect id="e1" x="701" y="338" width="104" height="174"/><rect id="e2" x="701" y="511" width="104" height="174"/>
+  <path id="tail" d="M807 688Q856 682 905 687Q899 737 902 787Q853 781 803 784Q811 736 807 688Z"/>
+</svg>
+
+<p class="line geist" id="l1">nawana</p>
+<p class="line" id="w1"><span class="brush"></span></p>
+<p class="line geist" id="amp">&amp;</p>
+<p class="line" id="w2"><span class="brush"></span></p>
+<p class="line geist" id="l3">program</p>
+<p class="line" id="join"><span class="brush"></span></p>
+<p class="line" id="dayline"><small>DAY</small><span id="dayn">1</span></p>
+<p class="line url" id="url">nawana.app/<mark id="hl">creators</mark></p>
+<div class="grain" id="grain" aria-hidden="true"></div>
+
+<script>
+/* the clock: the track's grid, fitted from its onsets (first beat 0.030 s, 0.6185 s a beat) */
+const T0 = 0.0297, BEAT = 0.61852, E = BEAT / 2, TOTAL = 22.6;
+const B = (k) => T0 + k * BEAT;
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a), 0, 1);
+const eo3 = (x) => 1 - Math.pow(1 - x, 3), eo4 = (x) => 1 - Math.pow(1 - x, 4);
+const eio = (x) => (x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const $ = (id) => document.getElementById(id);
+
+/* the marker glyphs (the creator poster's, plus Challenger's and Join us's): [capital, small], 100-high box, baseline 90 */
+const G = [
+  [[64, "M54 28C42 10 12 16 10 52C8 84 40 92 56 74"], [46, "M38 56C28 44 10 50 10 70C10 90 30 92 40 80"]],
+  [[56, "M12 88L12 16C40 10 50 28 40 42C32 52 20 52 12 50M24 52L48 88"], [42, "M12 50L12 90M12 64C16 52 28 46 36 54"]],
+  [[54, "M46 16L12 17L12 88L46 87M12 52L40 51"], [50, "M10 68L40 66C42 48 14 42 10 68C8 92 34 92 42 80"]],
+  [[62, "M8 88L30 14L52 88M17 62L44 61"], [52, "M40 56C30 42 10 50 10 70C10 90 32 92 40 74M40 50L40 82C40 88 44 90 49 87"]],
+  [[58, "M6 18L52 16M29 18L29 88"], [42, "M18 22L18 78C18 90 28 92 36 86M6 47L34 45"]],
+  [[66, "M32 14C10 14 8 50 10 62C14 92 50 94 54 60C58 26 46 14 32 14Z"], [48, "M24 48C8 48 6 88 24 90C42 90 42 50 24 48Z"]],
+];
+const C = G[0], R = G[1], Ee = G[2], A = G[3], T = G[4], O = G[5];
+const H = [[58, "M10 14L10 88M48 14L48 88M10 51L48 50"], [44, "M10 14L10 90M10 62C14 50 34 46 36 62L36 90"]];
+const L = [[46, "M12 14L12 88L42 87"], [24, "M12 14L12 80C12 88 15 91 20 89"]];
+const GG = [[64, "M54 28C42 10 12 16 10 52C8 84 40 92 56 74L56 56L36 56"], [44, "M36 56C28 44 10 48 10 66C10 84 30 86 36 72M36 50L36 96C36 110 14 110 8 100"]];
+const N = [[60, "M10 88L10 16L50 88L50 15"], [46, "M10 50L10 90M10 64C14 50 36 46 38 62L38 90"]];
+const J = [[50, "M16 16L46 16M34 16L34 68C34 88 14 92 8 76"], [34, "M24 50L24 94C24 106 12 108 6 99M24 32L24 34"]];
+const I = [[36, "M8 16L30 15M19 16L19 88M8 88L30 87"], [22, "M11 50L11 88M11 32L11 34"]];
+const U = [[58, "M10 16L10 62C10 92 48 94 48 62L48 15"], [46, "M10 50L10 76C10 94 36 94 38 74M38 50L38 90"]];
+const S = [[52, "M44 24C36 12 10 14 10 32C10 50 44 48 44 68C44 90 14 92 6 78"], [40, "M34 54C28 46 10 46 10 58C10 68 34 66 34 78C34 92 12 92 6 84"]];
+const INKS = ["#0A5CF5", "#F0442E", "#FF8A00", "#E9AE00", "#12B76A", "#FF3D8B", "#7A4DFF", "#00AFC2", "#D9368B", "#2E9E3F"];
+const MK = ["marker", "marker2", "marker3"];
+
+/* one marker word: its letters land on 32nds when it is born, then trade case and colour one per eighth,
+   and the whole word flips with a bigger pop on each bar it is given */
+function brushWord(host, glyphs, o) {
+  const el = host.querySelector(".brush");
+  el.innerHTML = glyphs.map((g) => (g ? "<svg><path/></svg>" : '<i class="gap"></i>')).join("");
+  const cells = [...el.children], letters = glyphs.map((g, k) => (g ? k : -1)).filter((k) => k >= 0);
+  return { el, host, glyphs, cells, letters, ...o };
+}
+function drawBrush(w, t, n8all) {
+  w.el.style.filter = `url(#${MK[n8all % 3]})`;
+  const n8 = t >= w.flipFrom ? Math.floor((t - w.flipFrom) / E) + 1 : 0;
+  w.cells.forEach((c, k) => {
+    const g = w.glyphs[k]; if (!g) return;
+    const born = w.born + w.letters.indexOf(k) * E / 4;
+    let flips = 0, last = born, big = false;
+    for (let j = 0; j < n8; j++) if (w.letters[(j + w.phase) % w.letters.length] === k) { flips++; last = w.flipFrom + j * E; big = false; }
+    for (const b of w.bars) if (t >= b) { flips++; if (b >= last) { last = b; big = true; } }
+    const cs = (w.case0[k] + flips) % 2, [wd, d] = g[cs], box = Math.max(g[0][0], g[1][0]);
+    c.setAttribute("viewBox", `0 0 ${box} 100`);
+    c.firstChild.setAttribute("d", d);
+    c.firstChild.setAttribute("transform", `translate(${(box - wd) / 2} 0)`);
+    c.style.color = INKS[(w.ink0[k] + flips * 3 + (flips ? k : 0)) % INKS.length];
+    const inP = seg(t, born, born + .22), p = seg(t, last, last + (big ? .3 : .2));
+    const sc = t < born ? 0 : flips === 0 ? (1.35 - .35 * eo3(inP)) * eo3(Math.min(1, inP * 3)) : 1 + (big ? .34 : .2) * Math.pow(1 - p, 2);
+    c.style.transform = `rotate(${w.tilt[k % w.tilt.length] * (cs ? .6 : 1)}deg) scale(${sc})`;
+  });
+}
+const TILT = [-4, 3, -2, 4, -3, 2, -4, 3, -2, 4];
+// "Creator" on beat 5, "Challenger" on beat 7; both start trading letters on beat 9, whole words on the bars
+const creator = brushWord($("w1"), [C, R, Ee, A, T, O, R], { born: B(5), flipFrom: B(9), phase: 0, bars: [B(12), B(16)],
+  case0: [0, 1, 1, 0, 1, 1, 0], ink0: [0, 1, 2, 3, 4, 5, 6], tilt: TILT });
+const challenger = brushWord($("w2"), [C, H, A, L, L, Ee, N, GG, Ee, R], { born: B(7), flipFrom: B(9) + E / 2, phase: 3, bars: [B(12), B(16)],
+  case0: [0, 1, 1, 0, 1, 1, 0, 1, 0, 1], ink0: [5, 6, 7, 8, 9, 0, 1, 2, 3, 4], tilt: TILT.slice().reverse() });
+// "Join us" on beat 21½, trading from 22, whole word on 24, 28 and the track's return (33)
+const join = brushWord($("join"), [J, O, I, N, null, U, S], { born: B(21.5), flipFrom: B(22.5), phase: 0, bars: [B(24), B(28), B(33)],
+  case0: [0, 1, 0, 1, 0, 0, 1], ink0: [7, 2, 5, 0, 0, 4, 1], tilt: [-3, 3, -2, 4, 0, -4, 2] });
+
+/* the mark: the website's opening (the bar splits into two eyes, the tail slides in, a blink), then it rises and
+   stays big over the words; it looks on every beat, blinks at the end of each bar and bounces on each bar */
+const e1 = $("e1"), e2 = $("e2"), tail = $("tail"), fly = $("fly");
+const EA = [[701, 338, 104, 174, 0], [701, 511, 104, 174, 0]], EB = [[469, 444, 78, 124, 39], [629, 440, 78, 124, 39]];
+const LOOK = [46, 0, -40, 0];
+function setEye(r, a, b, m, blink, dx) {
+  const v = a.map((n, i) => n + (b[i] - n) * m), h = v[3] * (1 - .86 * blink);
+  r.setAttribute("x", v[0]); r.setAttribute("y", v[1] + (v[3] - h) / 2);
+  r.setAttribute("width", v[2]); r.setAttribute("height", h); r.setAttribute("rx", Math.min(v[4], h / 2));
+  r.style.translate = dx + "px 0";
+}
+const blinkAt = (t, at) => (t > at && t < at + .22 ? Math.sin((t - at) / .22 * Math.PI) : 0);
+function drawMark(t) {
+  const m = eio(seg(t, B(1), B(2)));
+  let blink = blinkAt(t, B(3));
+  for (let b = 7; b <= 35; b += 4) blink = Math.max(blink, blinkAt(t, B(b)));
+  let dx = 0;
+  if (t >= B(5)) { const k = Math.floor((t - B(5)) / BEAT), p = eo3(seg(t, B(5 + k), B(5 + k) + .16)); dx = LOOK[(k + 3) % 4] + (LOOK[k % 4] - LOOK[(k + 3) % 4]) * p; }
+  setEye(e1, EA[0], EB[0], m, blink, dx); setEye(e2, EA[1], EB[1], Math.min(1, m * 1.08), blink, dx);
+  tail.style.translate = (-60 * m) + "px 0";
+  // centre of the sheet → big at the top, over the words
+  const f = eio(seg(t, B(4) - .05, B(4) + .45));
+  const W0 = 330, W1 = 300, top0 = 675 - W0 * 660 / 830 / 2, top1 = 150;
+  const w = W0 + (W1 - W0) * f;
+  fly.style.width = w + "px"; fly.style.left = (540 - w / 2 + 12 * w / 330) + "px"; fly.style.top = (top0 + (top1 - top0) * f) + "px";
+  let pump = 0;
+  for (const b of [4, 8, 12, 16, 20, 24, 28, 33]) { const s = b === 4 ? B(4) + .45 : B(b); if (t >= s) pump = (b === 33 ? .16 : .09) * Math.pow(1 - seg(t, s, s + .28), 2); }
+  fly.style.scale = 1 + pump;
+}
+
+/* the hundred days under "Join us": Day 1 on beat 22, faster and faster, Day 100 on the track's return */
+const DAYS = (() => {
+  const t0 = B(22), t1 = B(33) - .45, floor = 1 / 45;
+  const total = (q) => { let s = 0; for (let k = 0; k < 98; k++) s += Math.max(floor, E * Math.pow(q, k)); return s; };
+  let lo = .3, hi = .99; for (let i = 0; i < 50; i++) { const mid = (lo + hi) / 2; if (total(mid) > t1 - t0) hi = mid; else lo = mid; }
+  const out = [t0]; for (let k = 0; k < 98; k++) out.push(out[k] + Math.max(floor, E * Math.pow(lo, k)));
+  out.push(B(33)); return out;                          // Day n shows from DAYS[n-1]
+})();
+
+function rise(el, t, at, dist = 34, dur = .5) { const p = eo3(seg(t, at, at + dur)); el.style.opacity = p; el.style.translate = `0 ${dist * (1 - p)}px`; }
+const GR = [[0, 0], [-38, 22], [24, -46], [-58, -18], [42, 36], [-14, 58]], FX = ["boil-m1", "boil-m2", "boil-m3"];
+function render(t) {
+  const n8 = Math.max(0, Math.floor((t - T0) / E)), n16 = Math.max(0, Math.floor((t - T0) / (E / 2)));
+  fly.style.filter = `url(#${FX[n8 % 3]})`;
+  $("grain").style.translate = GR[n16 % 6].map((v) => v + "px").join(" ");
+  $("sheet").style.opacity = 1 - seg(t, B(4), B(4) + .55);
+  drawMark(t);
+  // the title, one line per beat: nawana · Creator · & · Challenger · program (on the bar)
+  rise($("l1"), t, B(4), 40);
+  drawBrush(creator, t, n8);
+  rise($("amp"), t, B(6), 30);
+  drawBrush(challenger, t, n8);
+  rise($("l3"), t, B(8), 40);
+  // the address from beat 9, marked on the last bar
+  rise($("url"), t, B(9), 20);
+  $("hl").style.backgroundSize = (eo3(Math.max(seg(t, B(16), B(16) + .35) * (t < B(20) ? 1 : 0), seg(t, B(33.5), B(33.5) + .35))) * 100) + "% 100%";
+  // bar 6: the title lifts away line by line, on 32nds; the mark stays
+  if (t >= B(20) - .05) {
+    ["l1", "w1", "amp", "w2", "l3"].forEach((id, i) => {
+      const p = eo3(seg(t, B(20) + i * E / 4, B(20) + i * E / 4 + .3));
+      $(id).style.opacity = 1 - p; $(id).style.translate = `0 ${-60 * p}px`;
+    });
+  }
+  // the outro: Join us, and the hundred days counting under it
+  $("join").style.visibility = t >= B(21.5) ? "visible" : "hidden";
+  drawBrush(join, t, n8);
+  const dl = $("dayline");
+  if (t < B(22) - .2) { dl.style.opacity = 0; }
+  else {
+    rise(dl, t, B(22) - .2, 24, .3);
+    let n = 1; while (n < 100 && t >= DAYS[n]) n++;
+    $("dayn").textContent = n;
+    const at = DAYS[n - 1], p = seg(t, at, at + (n === 100 ? .32 : .1));
+    dl.style.scale = 1 + (n === 100 ? .3 : .05) * Math.pow(1 - p, 2);
+    dl.style.color = n === 100 ? "var(--accent)" : "var(--ink)";
+  }
+}
+
+/* run: ?manual for the frame-by-frame recorder, ?t=N for a still, nothing for real time */
+const q = new URLSearchParams(location.search);
+const manual = q.has("manual"), still = q.has("t") ? parseFloat(q.get("t")) : null;
+window.renderAt = async (t) => { render(t); await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))); };
+document.fonts.load('600 40px "Geist"').catch(() => {}).then(async () => {
+  if (manual) { render(0); document.documentElement.dataset.scene = "1"; return; }
+  if (still != null) { await window.renderAt(still); document.documentElement.dataset.scene = "1"; return; }
+  const t0 = performance.now();
+  const loop = () => { render(((performance.now() - t0) / 1000) % TOTAL); requestAnimationFrame(loop); };
+  document.documentElement.dataset.scene = "1"; loop();
+});
+</script>
+</body>
+</html>

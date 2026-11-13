@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>nawana creator program · poster 3 · 형식은 뭐든 괜찮아요</title>
+<!-- Poster #3 of the creator series, on poster #1's frame: the mark on top, the title, a loose wall of the
+     founder's sample clips (bare, playing), the foot line. Recorded in real time:
+       /opt/homebrew/opt/node@22/bin/node scripts/marketing/record.mjs \
+         marketing/content/2026-11-12-creator-series/poster-03-any-format.html --size 1080x1350 --seconds 10 \
+         --wait-for "document.documentElement.dataset.scene" --out marketing/content/2026-11-12-creator-series/poster-03-any-format.mp4
+     Still: add ?still (every clip played to ~1.2 s and stopped there). ?font=pixel sets the title in Galmuri14. -->
+<style>
+@font-face{font-family:"Geist";font-weight:100 900;src:url(/web/creators/fonts/geist.woff2) format("woff2")}
+@font-face{font-family:"Galmuri14";src:url(/web/Galmuri14.woff2) format("woff2")}
+:root{--ink:#1C2133;--accent:#0A5CF5;--bg:#F7F8FA}
+*{box-sizing:border-box;margin:0}
+html,body{width:1080px;height:1350px;overflow:hidden}
+body{position:relative;color:var(--ink);font-family:"Geist","Apple SD Gothic Neo",sans-serif;-webkit-font-smoothing:antialiased;
+  background:#F7F8FA;background-image:linear-gradient(rgba(10,40,90,.045) 2px,transparent 2px),linear-gradient(90deg,rgba(10,40,90,.045) 2px,transparent 2px);background-size:54px 54px;background-position:-1px -1px}
+
+/* the mark, poster #1's */
+.top{position:absolute;left:0;right:0;top:64px;display:flex;justify-content:center;z-index:30}
+.top .mk{display:block;width:98px;height:84px}
+.top .mk svg{display:block;width:98px;height:84px;overflow:visible;animation:boil-m .5s steps(1) infinite}
+@keyframes boil-m{0%{filter:url(#boil-m1)}33%{filter:url(#boil-m2)}66%{filter:url(#boil-m3)}}
+.top .mk rect{transition:translate .35s cubic-bezier(.3,.7,.2,1)}
+
+/* the title: the founder's line, alone */
+.title{position:absolute;left:0;right:0;top:192px;text-align:center;z-index:30}
+h1{font-family:"Geist","Apple SD Gothic Neo",sans-serif;font-weight:700;font-size:76px;line-height:1.04;letter-spacing:-.035em;white-space:nowrap}
+html.pixel h1{font-family:"Galmuri14";font-weight:400;font-size:74px;letter-spacing:-.02em}
+
+/* the wall: hand-placed 9:16 tiles, each a cut-out with a marker outline on a long 45° cast */
+.wall{position:absolute;inset:0;z-index:10}
+.tile{position:absolute;aspect-ratio:9/16;rotate:var(--r)}
+.drop,.breathe{position:absolute;inset:0}
+.cast{position:absolute;inset:0;will-change:transform;border-radius:var(--ro);background:#F7F8FA}
+.clip{position:absolute;will-change:transform;inset:var(--pad);border-radius:var(--rc);overflow:hidden;background:#D9DDE4}
+.clip video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.sketch{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;will-change:transform;animation:boil-s .6s steps(1) infinite}
+.sketch path{fill:none;stroke:var(--ink);stroke-linecap:round;stroke-linejoin:round}
+@keyframes boil-s{0%{filter:url(#boil-s)}33%{filter:url(#boil-s2)}66%{filter:url(#boil-s3)}}
+
+/* arriving: each tile dropped onto the table, one after another, a small overshoot; then a slow breath */
+.drop{opacity:0;animation:drop .9s cubic-bezier(.25,.8,.3,1) forwards;animation-delay:calc(1.6s + var(--i) * .24s)}
+@keyframes drop{0%{opacity:0;translate:0 -80px;scale:1.14}55%{opacity:1;translate:0 7px;scale:.982}78%{translate:0 -2px;scale:1.006}100%{opacity:1;translate:0 0;scale:1}}
+.breathe{animation:breathe var(--bt) ease-in-out infinite;animation-delay:calc(2.6s + var(--i) * .24s)}
+@keyframes breathe{0%,100%{scale:1;rotate:0deg}50%{scale:1.014;rotate:var(--b)}}
+.in{opacity:0;translate:0 34px;animation:rise .8s cubic-bezier(.2,.7,.2,1) forwards;animation-delay:calc(var(--d)*1s)}
+@keyframes rise{to{opacity:1;translate:0 0}}
+
+/* foot, poster #1's */
+.url{position:absolute;left:0;right:0;bottom:56px;text-align:center;font-size:30px;font-weight:600;letter-spacing:-.01em;z-index:30}
+
+html.still *{animation:none!important}
+html.still .sketch{filter:url(#boil-s)}
+html.still .top .mk svg{filter:url(#boil-m1)}
+html.still .in,html.still .drop{opacity:1;translate:none}
+html:not([data-scene]) *{animation-play-state:paused!important}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="boil-s" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="1" seed="5"/><feDisplacementMap in="SourceGraphic" scale="2.2"/></filter>
+  <filter id="boil-s2" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="1" seed="23"/><feDisplacementMap in="SourceGraphic" scale="2.2"/></filter>
+  <filter id="boil-s3" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="1" seed="61"/><feDisplacementMap in="SourceGraphic" scale="2.2"/></filter>
+  <filter id="boil-m1" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="6"/><feDisplacementMap in="SourceGraphic" scale="14"/></filter>
+  <filter id="boil-m2" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="27"/><feDisplacementMap in="SourceGraphic" scale="14"/></filter>
+  <filter id="boil-m3" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="52"/><feDisplacementMap in="SourceGraphic" scale="14"/></filter>
+</svg>
+
+<div class="top">
+  <span class="mk in" style="--d:.1"><svg viewBox="130 180 770 660" fill="currentColor"><path d="M287 240Q498 228 704 236Q699 290 703 341Q497 346 289 336Q295 288 287 240Z"/><path d="M190 334Q242 341 293 336Q284 512 290 688Q239 680 184 687Q195 510 190 334Z"/><path d="M293 682Q497 692 700 687Q706 737 698 788Q495 779 288 786Q286 734 293 682Z"/><rect id="e1" x="469" y="444" width="78" height="124" rx="39"/><rect id="e2" x="629" y="440" width="78" height="124" rx="39"/><path d="M747 688Q796 682 845 687Q839 737 842 787Q793 781 743 784Q751 736 747 688Z"/></svg></span>
+</div>
+
+<div class="title"><h1 class="in" style="--d:.25">형식은 뭐든 괜찮아요</h1></div>
+
+<div class="wall" id="wall"></div>
+
+<p class="url in" style="--d:.9">1기 모집 · nawana.app/creators</p>
+
+<script>
+// The wall, placed by hand: [clip, left, top, width, rotation, breath tilt]. Stacking follows the drop order.
+const TILES = [
+  ["hand-held",     52, 326, 268, -3,   .5],
+  ["speech-script", 748, 340, 262,  2.5, -.4],
+  ["korean-call",   380, 310, 300,  1.2, .35],
+  ["spanish-call",  86, 800, 228,  2.2, -.45],
+  ["workbook",      774, 810, 222, -2.4, .4],
+  ["app-intro",     306, 688, 212, -1.6, -.3],
+  ["speech-app",    540, 824, 224,  3,   .45],
+];
+const wall = document.getElementById("wall"), videos = [];
+TILES.forEach(([name, x, y, w, r, b], i) => {
+  const pad = 11, rc = Math.round(w * .085), t = document.createElement("div");
+  t.className = "tile";
+  t.style.cssText = `left:${x}px;top:${y}px;width:${w}px;--r:${r}deg;--b:${b}deg;--i:${i};--bt:${7 + (i % 3) * 1.3}s;--pad:${pad}px;--rc:${rc}px;--ro:${rc + pad}px;z-index:${i + 1}`;
+  t.innerHTML = `<div class="drop"><div class="breathe"><div class="cast"></div><div class="clip"><video src="/web/creators/samples/${name}.mp4" muted loop playsinline preload="auto"></video></div><svg class="sketch" aria-hidden="true"></svg></div></div>`;
+  wall.appendChild(t);
+  videos.push(t.querySelector("video"));
+  // the long cast shadow, the carousel's, at this tile's size
+  const reach = Math.round(w * .46), peak = .5, step = 4, n = Math.round(reach / step), parts = [];
+  const A = (d) => peak * Math.pow(Math.max(0, 1 - d / reach), 1.7);
+  for (let k = 1; k <= n; k++) { const d = k * step, a = (A(d) - A(d + step)) / (1 - A(d + step)); parts.push(`${d}px ${d}px ${Math.round(3 + d * .16)}px rgba(13,17,23,${a.toFixed(4)})`); }
+  t.querySelector(".cast").style.boxShadow = parts.join(",");
+  // the outline, by hand: sides that wander a hair, corners concentric with the clip's
+  const svg = t.querySelector(".sketch"), W = w, H = w * 16 / 9, SW = 7, g = pad - SW / 2 - 2.5, ii = pad - g, rr = rc + g;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  let seed = 7 + i * 13; const j = () => ((seed = (seed * 16807) % 2147483647) / 2147483647 - .5) * 2.2;
+  const x0 = ii, y0 = ii, x1 = W - ii, y1 = H - ii, side = (ax, ay, bx, by) => `Q${(ax + bx) / 2 + j()} ${(ay + by) / 2 + j()} ${bx} ${by}`;
+  svg.innerHTML = `<path stroke-width="${SW}" d="M${x0 + rr} ${y0} ${side(x0 + rr, y0, x1 - rr, y0)} A${rr} ${rr} 0 0 1 ${x1} ${y0 + rr} ${side(x1, y0 + rr, x1, y1 - rr)} A${rr} ${rr} 0 0 1 ${x1 - rr} ${y1} ${side(x1 - rr, y1, x0 + rr, y1)} A${rr} ${rr} 0 0 1 ${x0} ${y1 - rr} ${side(x0, y1 - rr, x0, y0 + rr)} A${rr} ${rr} 0 0 1 ${x0 + rr} ${y0}Z"/>`;
+});
+
+const q = new URLSearchParams(location.search);
+if (q.get("font") === "pixel") document.documentElement.classList.add("pixel");
+const canplay = (v) => new Promise((r) => { if (v.readyState >= 3) r(); else { v.addEventListener("canplay", r, { once: true }); setTimeout(r, 6000); } });
+Promise.all([
+  document.fonts.load('700 76px "Apple SD Gothic Neo"', "형식은").catch(() => {}),
+  document.fonts.load('600 30px "Geist"').catch(() => {}),
+  document.fonts.load('74px "Galmuri14"', "형식은 뭐든 괜찮아요").catch(() => {}),
+  ...videos.map(canplay),
+]).then(() => {
+  if (q.has("still")) {
+    document.documentElement.classList.add("still");
+    // Every clip played up to ~1.2 s and stopped there (the recorder's file server can't seek).
+    const at = parseFloat(q.get("still")) || 1.2;
+    const stop = (v) => new Promise((r) => { const w = () => { if (v.currentTime >= at) { v.pause(); r(); } else requestAnimationFrame(w); }; v.play().then(w).catch(r); setTimeout(r, 5000); });
+    Promise.all(videos.map(stop)).then(() => requestAnimationFrame(() => requestAnimationFrame(() => { document.documentElement.dataset.scene = "1"; })));
+    return;
+  }
+  document.documentElement.dataset.scene = "1";
+  // the clips sit still as they land, then the whole wall starts playing at once
+  videos.forEach((v, i) => setTimeout(() => v.play().catch(() => {}), 1600 + (TILES.length - 1) * 240 + 700));
+  // the mark blinks now and then, and looks around the wall
+  const eyes = [[document.getElementById("e1"), 444], [document.getElementById("e2"), 440]];
+  const blink = () => {
+    const t0 = performance.now();
+    const f = (now) => { const p = Math.min(1, (now - t0) / 220), b = Math.sin(p * Math.PI), h = 124 * (1 - .86 * b);
+      for (const [e, y] of eyes) { e.setAttribute("height", h); e.setAttribute("y", y + (124 - h) / 2); e.setAttribute("rx", Math.min(39, h / 2)); }
+      if (p < 1) requestAnimationFrame(f); };
+    requestAnimationFrame(f);
+  };
+  [900, 2600, 2900, 4700, 6300, 8200, 8500, 10400, 11600].forEach((t) => setTimeout(blink, t));
+  const look = (x, y = 0) => eyes.forEach(([e]) => { e.style.translate = `${x}px ${y}px`; });
+  [[1500, -40, 20], [2300, 0], [3600, 46, 20], [4300, 0], [5400, -40], [5900, 46], [6800, 0], [9200, -40, 20], [10000, 0]].forEach(([t, x, y]) => setTimeout(() => look(x, y), t));
+});
+</script>
+</body>
+</html>

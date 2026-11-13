@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>nawana challenger program · beat cut</title>
+<!-- THE CHALLENGER CUT (2026-11-13): the creator beat cut (../2026-11-12-creator-beat/beat.html) for the challenger
+     side. Same track, intro and outro; the title says Challenger, the phone is a plain video card (challengers post
+     nothing, so no Instagram chrome), and three sticky notes land on the bars with the rules (program/RULES.md).
+     THE BEAT CUT (2026-11-12): poster 1 set to the founder's track (Downloads/copy_8600510C….MOV, 97 BPM), the
+     website's opening first, then one reel per beat. Every move is a function of one clock (render(t)); recorded
+     frame by frame and the track laid under it:
+       node22 scripts/marketing/step-record.mjs "marketing/content/2026-11-12-creator-beat/beat.html?manual" \
+         --size 1080x1350 --seconds 12 --fps 30 --out marketing/content/2026-11-12-creator-beat/_silent.mp4
+       ffmpeg -i _silent.mp4 -i <the .MOV> -map 0:v -map 1:a -c:v copy -c:a aac -b:a 192k -shortest beat.mp4
+     The CSS below is poster 1's, unchanged. -->
+<!-- (poster 1's note:) A 4:5 moving poster for the creator program: the creator mark, the title with "Creator" changing hands,
+     and a phone playing a sample with Instagram's Reels chrome over it. Recorded in real time:
+       /opt/homebrew/opt/node@22/bin/node scripts/marketing/record.mjs \
+         marketing/content/2026-11-11-creator-poster/poster.html --size 1080x1350 --seconds 10 \
+         --wait-for "document.documentElement.dataset.scene" --out marketing/content/2026-11-11-creator-poster/poster.mp4 -->
+<style>
+@font-face{font-family:"Geist";font-weight:100 900;src:url(/web/creators/fonts/geist.woff2) format("woff2")}
+@font-face{font-family:"Nanum Pen Script";src:url(/web/creators/fonts/nanum-pen-script.woff2) format("woff2")}
+@font-face{font-family:"Guestbook Pen";src:url(/web/creators/fonts/guestbook-pen.woff2) format("woff2")}
+@font-face{font-family:"Caveat";font-weight:700;src:url(/web/creators/fonts/caveat.woff2) format("woff2")}
+@font-face{font-family:"Dancing Script";font-weight:700;src:url(/web/creators/fonts/dancing-script.woff2) format("woff2")}
+@font-face{font-family:"Pacifico";src:url(/web/creators/fonts/pacifico.woff2) format("woff2")}
+@font-face{font-family:"Permanent Marker";src:url(/web/creators/fonts/permanent-marker.woff2) format("woff2")}
+@font-face{font-family:"Rock Salt";src:url(/web/creators/fonts/rock-salt.woff2) format("woff2")}
+@font-face{font-family:"Homemade Apple";src:url(/web/creators/fonts/homemade-apple.woff2) format("woff2")}
+@font-face{font-family:"Kaushan Script";src:url(/web/creators/fonts/kaushan-script.woff2) format("woff2")}
+@font-face{font-family:"Reenie Beanie";src:url(/web/creators/fonts/reenie-beanie.woff2) format("woff2")}
+@font-face{font-family:"Yellowtail";src:url(/web/creators/fonts/yellowtail.woff2) format("woff2")}
+@font-face{font-family:"Gloria Hallelujah";src:url(/web/creators/fonts/gloria-hallelujah.woff2) format("woff2")}
+@font-face{font-family:"Satisfy";src:url(/web/creators/fonts/satisfy.woff2) format("woff2")}
+:root{--ink:#1C2133;--accent:#0A5CF5;--bg:#F7F8FA;--hi:rgba(255,226,60,.78)}
+*{box-sizing:border-box;margin:0}
+html,body{width:1080px;height:1350px;overflow:hidden}
+body{position:relative;background:var(--bg);color:var(--ink);font-family:"Geist","Apple SD Gothic Neo",sans-serif;-webkit-font-smoothing:antialiased;}
+/* film grain, the page's own */
+.grain{position:absolute;inset:-120px;z-index:9;pointer-events:none;opacity:.24;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .52 2.4 0 0 0 -.95'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23g)'/%3E%3C/svg%3E");
+  animation:grain .9s steps(1) infinite}
+@keyframes grain{0%{translate:0 0}17%{translate:-38px 22px}33%{translate:24px -46px}50%{translate:-58px -18px}67%{translate:42px 36px}83%{translate:-14px 58px}}
+@keyframes boil{0%{filter:url(#boil-1)}33%{filter:url(#boil-2)}66%{filter:url(#boil-3)}}
+/* the marker frame */
+.frame{position:absolute;inset:0;z-index:8;pointer-events:none;box-shadow:inset 0 0 0 20px var(--ink);animation:boil .5s steps(1) infinite}
+
+/* top row: the mark and its word, the cohort tag */
+.top{position:absolute;left:64px;right:64px;top:58px;display:flex;align-items:center;gap:16px;z-index:3}
+.top .mk{display:block;width:78px;flex:none}
+.top .mk svg{display:block;overflow:visible;animation:boil-m .5s steps(1) infinite}
+@keyframes boil-m{0%{filter:url(#boil-m1)}33%{filter:url(#boil-m2)}66%{filter:url(#boil-m3)}}
+.top .mk rect{transition:translate .35s cubic-bezier(.3,.7,.2,1)}
+.top .word{font-family:"Nanum Pen Script";font-size:62px;line-height:1;padding-bottom:6px}
+.gen{margin-left:auto;display:flex;align-items:center;gap:12px;padding:12px 24px 12px 20px;background:var(--accent);color:#fff;font-weight:700;font-size:30px;border-radius:14px 22px 12px 20px/20px 12px 22px 15px;rotate:-2deg}
+.gen i{width:14px;height:14px;border-radius:50%;background:#fff}
+
+/* the title */
+.title{position:absolute;left:64px;top:176px;z-index:3}
+.hot{font-family:"Nanum Pen Script";font-size:66px;line-height:1}
+h1{margin-top:14px;font-weight:600;font-size:132px;line-height:1.02;letter-spacing:-.045em}
+.flip{display:inline-block;white-space:nowrap;animation:boil .44s steps(1) infinite}
+.flip i{display:inline-block;font-style:normal;text-align:center;line-height:0;letter-spacing:0;font-synthesis:none}
+.flip b{font-weight:inherit}
+.sub{margin-top:30px;font-size:38px;font-weight:600;line-height:1.42;letter-spacing:-.02em}
+.sub mark{background:linear-gradient(transparent 46%,var(--hi) 46%);color:inherit;padding:0 4px}
+
+/* the phone: a sample playing, Instagram's Reels chrome over it */
+.phone{position:absolute;right:62px;top:360px;width:420px;aspect-ratio:9/19.3;padding:13px;border-radius:68px;background:#0B0C10;box-shadow:0 0 0 3px #2A2D36,0 50px 90px -30px rgba(20,25,45,.55),0 18px 34px -12px rgba(20,25,45,.35);rotate:5deg;z-index:2}
+.screen{position:relative;width:100%;height:100%;border-radius:56px;overflow:hidden;background:#000}
+.screen video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.island{position:absolute;left:50%;top:16px;translate:-50% 0;width:120px;height:34px;border-radius:20px;background:#000;z-index:3}
+.reels{--u:1.7px;position:absolute;inset:0;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5);z-index:2}
+.reels::after{content:"";position:absolute;left:0;right:0;bottom:0;height:34%;background:linear-gradient(transparent,rgba(0,0,0,.62))}
+.reels::before{content:"";position:absolute;left:0;right:0;top:0;height:18%;background:linear-gradient(rgba(0,0,0,.4),transparent)}
+.reels > *{position:absolute;z-index:1}
+.rtop{left:calc(var(--u)*16);right:calc(var(--u)*16);top:calc(var(--u)*34);display:flex;justify-content:space-between;align-items:center;font-size:calc(var(--u)*15);font-weight:700;line-height:1}
+.rrail{right:calc(var(--u)*9);bottom:calc(var(--u)*50);display:flex;flex-direction:column;gap:calc(var(--u)*13);align-items:center;font-size:calc(var(--u)*8.5);font-weight:600}
+.rrail span{display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*4);line-height:1}
+.reels svg{display:block;width:calc(var(--u)*21);height:calc(var(--u)*21);fill:none;stroke:#fff;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 1px 1px rgba(0,0,0,.45))}
+.rrail svg.like{fill:#FF3040;stroke:#FF3040;animation:like 5s ease-in-out infinite}
+@keyframes like{0%,36%{fill:none;stroke:#fff;scale:1}40%{scale:1.35}44%,100%{fill:#FF3040;stroke:#FF3040;scale:1}}
+.rinfo{left:calc(var(--u)*11);right:calc(var(--u)*44);bottom:calc(var(--u)*48);font-size:calc(var(--u)*12);line-height:1.35}
+.rwho{display:flex;align-items:center;gap:calc(var(--u)*6);font-weight:700;font-size:calc(var(--u)*12.5);white-space:nowrap}
+.rwho .av{display:grid;place-items:center;width:calc(var(--u)*26);height:calc(var(--u)*26);border-radius:50%;background:#fff;color:var(--ink)}
+.rwho .av svg{width:calc(var(--u)*17);height:calc(var(--u)*14.6);stroke:none;fill:currentColor;filter:none}
+.rwho em{font-style:normal;font-weight:600;font-size:calc(var(--u)*11);border:1px solid rgba(255,255,255,.75);border-radius:calc(var(--u)*6);padding:calc(var(--u)*1) calc(var(--u)*6);text-shadow:none}
+.rcap{margin-top:calc(var(--u)*6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rsong{margin-top:calc(var(--u)*3);font-size:calc(var(--u)*11);opacity:.9}
+.rbar{left:0;right:0;bottom:0;height:calc(var(--u)*40);display:flex;align-items:flex-start;justify-content:space-around;padding:calc(var(--u)*8) calc(var(--u)*10) 0;background:#000}
+.rbar svg{width:calc(var(--u)*20);height:calc(var(--u)*20);filter:none}
+.rbar .me{width:calc(var(--u)*20);height:calc(var(--u)*20);border-radius:50%;background:#fff;display:grid;place-items:center;color:var(--ink)}
+.rbar .me svg{width:calc(var(--u)*13);height:calc(var(--u)*11.2);stroke:none;fill:currentColor}
+.rprog{left:0;right:0;bottom:calc(var(--u)*40);height:calc(var(--u)*1.6);background:rgba(255,255,255,.3)}
+.rprog i{display:block;height:100%;width:0;background:#fff;animation:prog 10s linear infinite}
+@keyframes prog{to{width:100%}}
+
+/* foot: where to go */
+.foot{position:absolute;left:64px;bottom:66px;z-index:3}
+.foot .cta{display:inline-block;padding:20px 34px;background:var(--ink);color:#fff;font-size:36px;font-weight:700;border-radius:999px}
+.foot .url{margin-top:18px;font-size:30px;font-weight:600;letter-spacing:-.01em;opacity:.7}
+.note{position:absolute;left:70px;top:770px;z-index:3;font-family:"Nanum Pen Script";font-size:54px;line-height:1.1;rotate:-4deg;color:var(--accent)}
+.note svg{display:block;width:150px;margin:6px 0 0 150px;fill:none;stroke:var(--accent);stroke-width:5;stroke-linecap:round;stroke-linejoin:round;animation:boil .5s steps(1) infinite}
+
+/* arriving */
+.in{opacity:0;translate:0 34px;animation:rise .8s cubic-bezier(.2,.7,.2,1) forwards;animation-delay:calc(var(--d)*1s)}
+@keyframes rise{to{opacity:1;translate:0 0}}
+.phone{opacity:0;animation:phone 1.1s cubic-bezier(.2,.75,.2,1) .5s forwards}
+@keyframes phone{from{opacity:0;translate:0 140px;rotate:11deg}to{opacity:1;translate:0 0;rotate:5deg}}
+
+/* the quiet version: mark, title, phone, one line */
+.top{left:0;right:0;top:64px;justify-content:center}
+.top .mk{flex:none;width:98px;height:84px}
+.top .mk svg{width:98px;height:84px}
+.title{left:0;right:0;top:196px;text-align:center}
+h1{margin-top:0;font-size:68px;line-height:1.04;white-space:nowrap}
+h1 > span{display:inline!important}
+.phone{left:50%;right:auto;top:340px;width:392px;margin-left:-196px;rotate:0deg}
+@keyframes phone{from{opacity:0;translate:0 120px}to{opacity:1;translate:0 0}}
+.url{position:absolute;left:0;right:0;bottom:56px;text-align:center;font-size:30px;font-weight:600;letter-spacing:-.01em;z-index:3}
+.reels{--u:1.6px}
+
+/* Instagram's Reels screen, as it is: the film is 9:16 above the tab bar */
+.phone{aspect-ratio:392/741}
+.screen video{inset:0 0 auto 0;height:calc(100% - var(--tab));object-fit:cover}
+.screen{--tab:64px}
+.reels::after{bottom:var(--tab)}
+.rtop{top:calc(var(--u)*36);font-size:calc(var(--u)*17)}
+.rtop .rt{display:flex;align-items:center;gap:calc(var(--u)*2)}
+.rtop .rt svg{width:calc(var(--u)*15);height:calc(var(--u)*15);stroke-width:2.4}
+.rrail{bottom:calc(var(--tab) + var(--u)*10);gap:calc(var(--u)*15);font-size:calc(var(--u)*8.6)}
+.rrail .aud{width:calc(var(--u)*20);height:calc(var(--u)*20);border-radius:calc(var(--u)*5);border:calc(var(--u)*1.4) solid #fff;background:#fff;color:var(--ink);display:grid;place-items:center;margin-top:calc(var(--u)*2)}
+.rrail .aud svg{width:calc(var(--u)*13);height:calc(var(--u)*11.2);stroke:none;fill:currentColor;filter:none}
+.rinfo{bottom:calc(var(--tab) + var(--u)*10)}
+.rcap i{font-style:normal;opacity:.75}
+.rsong span{display:inline-block;padding:calc(var(--u)*2) calc(var(--u)*7);border-radius:999px;background:rgba(255,255,255,.2);text-shadow:none}
+.rsong{margin-top:calc(var(--u)*6);white-space:nowrap}
+.rsong span{max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:top}
+.rinfo{right:calc(var(--u)*36)}
+.rbar{height:var(--tab)}
+.rprog{bottom:var(--tab)}
+
+/* the phone at its full height again, and drawn by hand: a marker outline instead of a body */
+.phone{aspect-ratio:392/840;padding:15px;background:none;box-shadow:none;border-radius:0}
+.screen{--tab:64px;--bar:46px;border-radius:54px}
+.screen video{inset:var(--bar) 0 auto 0;height:calc(100% - var(--tab) - var(--bar))}
+.reels::before{top:var(--bar)}
+.rtop{top:calc(var(--bar) + var(--u)*10)}
+.island{top:10px;width:104px;height:28px}
+.status{position:absolute;left:0;right:0;top:0;height:var(--bar);z-index:3;display:flex;align-items:center;justify-content:space-between;padding:4px 30px 0 34px;color:#fff;font-size:17px;font-weight:600}
+.status span{display:flex;align-items:center;gap:6px}
+.status svg{height:13px;width:auto;fill:#fff}
+.sketch{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:4;animation:boil-s .6s steps(1) infinite}
+@keyframes boil-s{0%{filter:url(#boil-s)}33%{filter:url(#boil-s2)}66%{filter:url(#boil-s3)}}
+.sketch path{fill:none;stroke:var(--ink);stroke-linecap:round;stroke-linejoin:round}
+
+/* ── Instagram, from the capture: every size is the capture's (1185 px wide) brought to this screen ── */
+.phone{width:408px;margin-left:-204px;aspect-ratio:71.5/147.6} /* an iPhone's own proportions: 71.5 x 147.6 mm */
+.screen{--tab:78px;--bar:0px;--u:calc(100cqw/1185);container-type:inline-size;background:#0C0F14}
+.reels{--u:calc(100cqw/1185)}
+.screen video{inset:0 0 auto 0;height:calc(100% - var(--tab));object-fit:cover}
+.status{height:auto;top:calc(var(--u)*66);padding:0 calc(var(--u)*105) 0 calc(var(--u)*122);font-size:calc(var(--u)*45);font-weight:600;letter-spacing:-.01em;text-shadow:0 1px 3px rgba(0,0,0,.35)}
+.status span{gap:calc(var(--u)*18)}
+.status svg{height:calc(var(--u)*34)}
+.island{display:none}
+.reels::before{top:0;height:22%;background:linear-gradient(rgba(0,0,0,.34),transparent)}
+.reels::after{bottom:var(--tab);height:30%;background:linear-gradient(transparent,rgba(0,0,0,.5))}
+.reels svg{width:calc(var(--u)*106);height:calc(var(--u)*106);stroke-width:1.8}
+.rtop{left:calc(var(--u)*58);right:calc(var(--u)*46);top:calc(var(--u)*206)}
+.rtop svg:first-child{width:calc(var(--u)*92);height:calc(var(--u)*92)}
+.rtop{align-items:center}
+.rrail{right:calc(var(--u)*34);bottom:calc(var(--tab) + var(--u)*58);gap:calc(var(--u)*50);font-size:calc(var(--u)*36);font-weight:600}
+.rrail span{gap:calc(var(--u)*8)}
+.rrail .aud{width:calc(var(--u)*92);height:calc(var(--u)*92);border-radius:calc(var(--u)*22);border:calc(var(--u)*5) solid #fff;margin-top:calc(var(--u)*-6)}
+.rrail .aud svg{width:calc(var(--u)*56);height:calc(var(--u)*48)}
+.rinfo{left:calc(var(--u)*47);right:calc(var(--u)*200);bottom:calc(var(--tab) + var(--u)*58);font-size:calc(var(--u)*38);line-height:1.3}
+.rwho{gap:calc(var(--u)*30);font-size:calc(var(--u)*40);align-items:center}
+.rwho .av{position:relative;width:calc(var(--u)*104);height:calc(var(--u)*104);flex:none}
+.rwho .av::before{content:"";position:absolute;inset:calc(var(--u)*-12);border-radius:50%;padding:calc(var(--u)*6);background:conic-gradient(from 200deg,#FEDA75,#FA7E1E,#D62976,#962FBF,#FEDA75);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.rwho .av svg{width:calc(var(--u)*66);height:calc(var(--u)*57)}
+.rwho .nm{display:flex;flex-direction:column;gap:calc(var(--u)*6);min-width:0}
+.rwho .nm b{font-weight:700}
+.rwho .nm small{font-size:calc(var(--u)*35);font-weight:500;opacity:.78;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rcap{margin-top:calc(var(--u)*34);font-weight:500}
+.rprog{bottom:var(--tab);height:calc(var(--u)*4)}
+.rbar{height:var(--tab);display:block;padding:calc(var(--u)*26) calc(var(--u)*47) 0;background:#0C0F14}
+.rbar span{display:flex;align-items:center;height:calc(var(--u)*138);padding:0 calc(var(--u)*60);border-radius:999px;background:#1A1E26;color:#F2F3F5;font-size:calc(var(--u)*46);text-shadow:none}
+html.still .rrail svg.like{fill:none!important;stroke:#fff!important}
+html.crayon .flip{animation:none;filter:url(#crayon)}
+.brush{display:inline-flex;align-items:flex-end;gap:.035em;height:1em;margin:0 .16em 0 .14em;vertical-align:-.12em;animation:mk .5s steps(1) infinite}
+.brush svg{height:1.1em;width:auto;overflow:visible;fill:none;stroke:currentColor;stroke-width:15;stroke-linecap:round;stroke-linejoin:round}
+@keyframes mk{0%{filter:url(#marker)}33%{filter:url(#marker2)}66%{filter:url(#marker3)}}
+html.still .brush{filter:url(#marker)}
+
+/* the carousel's ground and light (marketing/templates/carousel.html): the faint 54px grid, and the phone on a long 45° cast shadow */
+body{background:#F7F8FA;background-image:linear-gradient(rgba(10,40,90,.045) 2px,transparent 2px),linear-gradient(90deg,rgba(10,40,90,.045) 2px,transparent 2px);background-size:54px 54px;background-position:-1px -1px}
+.castlayer{position:absolute;inset:0;z-index:1;pointer-events:none;-webkit-mask-image:linear-gradient(#000 calc(100% - 72px),transparent);mask-image:linear-gradient(#000 calc(100% - 72px),transparent)}
+.shadow{position:absolute;left:50%;top:343px;width:402px;margin-left:-201px;aspect-ratio:402/836.200;border-radius:66px;opacity:0;animation:phone 1.1s cubic-bezier(.2,.75,.2,1) .5s forwards}
+html.still .shadow{opacity:1;translate:none}
+.phone .screen{box-shadow:0 0 0 3px #F7F8FA}
+html.still *{animation:none!important}
+html.still .sketch{filter:url(#boil-s)}
+html.still .in,html.still .phone{opacity:1;translate:none}
+html.still .rrail svg.like{fill:#FF3040;stroke:#FF3040}
+html.still .rprog i{width:8%}
+html:not([data-scene]) *{animation-play-state:paused!important}
+
+/* ── the beat cut (2026-11-12): poster 1, driven by one clock locked to the founder's track (97 BPM) ── */
+html.manual *{animation:none!important;transition:none!important}
+/* the website's opening sheet */
+.sheet{position:absolute;inset:0;z-index:7;background:#F7F8FA}
+.flymark{position:absolute;z-index:8;display:block;overflow:visible;color:var(--ink)}
+/* the title, word by word */
+h1 .w{display:inline-block}
+h1 #creator-word{display:inline-flex}
+.brush svg{transform-origin:50% 70%}
+/* the reel feed inside the phone: each reel a page of its own, scrolled like Instagram */
+.feed{position:absolute;left:0;right:0;top:0;height:calc(100% - var(--tab));overflow:hidden;z-index:1;background:#0C0F14}
+.track{position:absolute;inset:0}
+.reel{position:absolute;left:0;right:0;height:100%;inset:auto 0 auto 0}
+.reel video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-1}
+.reel.reels::after{bottom:0}
+.reel .rrail{bottom:calc(var(--u)*58)}
+.reel .rinfo{bottom:calc(var(--u)*58)}
+.reel .rprog{bottom:0}
+.reel .rprog i{width:0}
+.chrome{z-index:2}
+.chrome::before,.chrome::after{display:none}
+/* the address, marked with the highlighter on the last bar */
+.url mark{background:linear-gradient(transparent 46%,var(--hi) 46%) no-repeat;background-size:0% 100%;color:inherit;padding:0 4px}
+/* ── the outro: the website's 100-day pad (web/creators.html .pile), on the beat; Geist, never the pixel face ── */
+.pilecv{position:absolute;inset:0;width:1080px;height:1350px;z-index:2;pointer-events:none}
+.outro{position:absolute;left:0;right:0;top:196px;z-index:3;text-align:center}
+.outro .l1{font-family:"Nanum Pen Script",cursive;font-size:68px;margin-top:0;line-height:1;opacity:0}
+.outro .l2{margin-top:10px;font-size:68px;line-height:1;height:1.25em}
+.outro .l2 .brush{margin:0}
+.outro .l2 .gap{display:inline-block;width:.28em}
+/* ── the challenger cut: a plain video card, a pen line under the title, three sticky notes ── */
+.phone{top:372px;aspect-ratio:9/16}
+.shadow{top:375px;aspect-ratio:9/16;border-radius:40px}
+.screen{--tab:0px;border-radius:34px}
+.lede{position:absolute;left:0;right:0;top:282px;z-index:3;text-align:center;font-family:"Guestbook Pen",cursive;font-size:50px;line-height:1;opacity:0}
+.sticky{position:absolute;z-index:5;width:292px;padding:26px 26px 30px;background:#FFEF9A;color:var(--ink);font-family:"Guestbook Pen",cursive;font-size:52px;line-height:1.08;
+  box-shadow:0 1px 2px rgba(28,33,51,.12),0 16px 20px -12px rgba(28,33,51,.32);border-radius:3px 4px 22px 3px/3px 4px 14px 3px;opacity:0}
+.sticky::before{content:"";position:absolute;left:50%;top:-14px;width:96px;height:30px;margin-left:-48px;background:rgba(255,255,255,.55);box-shadow:0 1px 2px rgba(28,33,51,.08);rotate:-3deg}
+.sticky mark{background:linear-gradient(transparent 52%,rgba(255,138,0,.55) 52%) no-repeat;background-size:0% 100%;color:inherit;padding:0 3px}
+#n1{left:38px;top:452px} #n2{right:38px;top:690px} #n3{left:38px;top:928px}
+/* ── v2 (founder: no phone, text and drawings only, cheering them on): one scene per bar ── */
+.phone,.castlayer,.sticky{display:none!important}
+.scene{position:absolute;left:0;right:0;top:418px;z-index:3;text-align:center;opacity:0}
+.scene svg{display:block;width:620px;height:465px;margin:0 auto;overflow:visible}
+.scene svg path{fill:none;stroke:var(--ink);stroke-width:8;stroke-linecap:round;stroke-linejoin:round}
+.scene svg path.blob{fill:#FFEF9A;stroke:none}
+.scene svg path.ac{stroke:var(--accent)}
+.scene svg path.ok{stroke:#12B76A;stroke-width:13}
+.scene .p{margin-top:40px;font-family:"Guestbook Pen",cursive;font-size:72px;line-height:1;opacity:0}
+.scene .big{margin-top:22px;font-weight:800;font-size:112px;line-height:1.05;letter-spacing:-.045em;white-space:nowrap}
+.scene .big span{display:inline-block;opacity:0}
+.scene .big mark{background:linear-gradient(transparent 56%,var(--hi) 56%) no-repeat;background-size:0% 100%;color:inherit;padding:0 6px}
+.url2{position:absolute;left:0;right:0;top:666px;z-index:3;text-align:center;font-size:30px;font-weight:600;letter-spacing:-.01em;opacity:0}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="boil-1" x="-10%" y="-20%" width="120%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="7"/></filter>
+  <filter id="boil-2" x="-10%" y="-20%" width="120%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="17"/><feDisplacementMap in="SourceGraphic" scale="7"/></filter>
+  <filter id="boil-3" x="-10%" y="-20%" width="120%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="41"/><feDisplacementMap in="SourceGraphic" scale="7"/></filter>
+  <filter id="boil-s" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="1" seed="5"/><feDisplacementMap in="SourceGraphic" scale="2.2"/></filter>
+  <filter id="boil-s2" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="1" seed="23"/><feDisplacementMap in="SourceGraphic" scale="2.2"/></filter>
+  <filter id="boil-s3" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="1" seed="61"/><feDisplacementMap in="SourceGraphic" scale="2.2"/></filter>
+  <!-- crayon: the stroke's edge roughened, and paper showing through it in flecks -->
+  <filter id="crayon" x="-5%" y="-10%" width="110%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="4" result="w"/>
+    <feDisplacementMap in="SourceGraphic" in2="w" scale="5" result="d"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="9" result="n"/>
+    <feColorMatrix in="n" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -3.2 2.05" result="holes"/>
+    <feComposite in="d" in2="holes" operator="in"/>
+  </filter>
+  <!-- marker: the stroke's edge a little uneven, as felt drags on paper -->
+  <filter id="marker" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="2" seed="8"/><feDisplacementMap in="SourceGraphic" scale="3.2"/></filter>
+  <filter id="marker2" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="2" seed="31"/><feDisplacementMap in="SourceGraphic" scale="3.2"/></filter>
+  <filter id="marker3" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="2" seed="57"/><feDisplacementMap in="SourceGraphic" scale="3.2"/></filter>
+  <filter id="boil-m1" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="6"/><feDisplacementMap in="SourceGraphic" scale="14"/></filter>
+  <filter id="boil-m2" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="27"/><feDisplacementMap in="SourceGraphic" scale="14"/></filter>
+  <filter id="boil-m3" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="52"/><feDisplacementMap in="SourceGraphic" scale="14"/></filter>
+  <symbol id="mark" viewBox="130 180 770 660"><path d="M287 240Q498 228 704 236Q699 290 703 341Q497 346 289 336Q295 288 287 240Z"/><path d="M190 334Q242 341 293 336Q284 512 290 688Q239 680 184 687Q195 510 190 334Z"/><path d="M293 682Q497 692 700 687Q706 737 698 788Q495 779 288 786Q286 734 293 682Z"/><rect class="eye" x="469" y="444" width="78" height="124" rx="39"/><rect class="eye" x="629" y="440" width="78" height="124" rx="39"/><path d="M747 688Q796 682 845 687Q839 737 842 787Q793 781 743 784Q751 736 747 688Z"/></symbol>
+</svg>
+
+
+<div class="sheet" id="sheet"></div>
+<!-- The website's opening, kept as it is (web/creators.html .intro): the nawana mark's right bar splits into two eyes,
+     the tail slides in, a blink. Here it then flies up into the poster's own mark. -->
+<svg class="flymark" id="fly" viewBox="130 180 830 660" fill="currentColor" aria-hidden="true">
+  <path d="M287 240Q498 228 704 236Q699 290 703 341Q497 346 289 336Q295 288 287 240Z"/>
+  <path d="M190 334Q242 341 293 336Q284 512 290 688Q239 680 184 687Q195 510 190 334Z"/>
+  <path d="M293 682Q497 692 700 687Q706 737 698 788Q495 779 288 786Q286 734 293 682Z"/>
+  <rect id="e1" x="701" y="338" width="104" height="174"/><rect id="e2" x="701" y="511" width="104" height="174"/>
+  <path id="tail" d="M807 688Q856 682 905 687Q899 737 902 787Q853 781 803 784Q811 736 807 688Z"/>
+</svg>
+
+<div class="title">
+  <h1><span class="w" id="w1">nawana</span> <span id="creator-word">Challenger</span> <span class="w" id="w3">program</span></h1>
+</div>
+
+<p class="lede" id="lede">SNS 없이, 100일 동안 공부만</p>
+
+<div class="castlayer"><div class="shadow" id="cast"></div></div>
+<div class="phone" id="phone">
+  <div class="screen">
+    <div class="feed" id="feed"><div class="track" id="track"></div></div>
+  </div>
+  <svg class="sketch" id="sketch" aria-hidden="true"></svg>
+</div>
+
+<div class="sticky" id="n1">매일<br><mark>통화 4분</mark><br>+ 스피치 1개</div>
+<div class="sticky" id="n2">한 달에<br><mark>하루는</mark><br>쉬어도 돼요</div>
+<div class="sticky" id="n3">3개월 내고<br>지킨 달만큼<br>이어서 <mark>무료</mark></div>
+
+<canvas class="pilecv" id="pilecv" width="1080" height="1350"></canvas>
+<div class="outro" id="outro"><p class="l1" id="o1">우리의 가장 뜨거울 100일,</p><p class="l2" id="o2"><span id="joinus"></span></p></div>
+<p class="url2" id="url2">챌린저 1기 모집 · nawana.app/creators</p>
+<p class="url" id="url">챌린저 1기 모집 · <mark id="hl">nawana.app/creators</mark></p>
+<div class="grain" id="grain" aria-hidden="true"></div>
+
+<script src="/web/creators/vendor/matter-0.20.0.min.js"></script>
+<script>
+/* ── the clock: every move lands on the track's grid (fitted from its onsets: first beat 0.030 s, 0.6185 s a beat) ── */
+const T0 = 0.0297, BEAT = 0.61852, E = BEAT / 2;
+const B = (k) => T0 + k * BEAT;
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a), 0, 1);
+const eo3 = (x) => 1 - Math.pow(1 - x, 3), eo4 = (x) => 1 - Math.pow(1 - x, 4);
+const eio = (x) => (x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const $ = (id) => document.getElementById(id);
+
+/* ── the feed: one reel per beat from bar 3, the founder's own clips (web/creators/samples), never captioned by us ── */
+const REELS = []; // v2: no phone
+const SWIPE = .2; // a reel lands ON the beat: the scroll starts this much before it
+const track = $("track");
+const reelEls = REELS.map(([, clip], i) => {
+  const r = document.createElement("div");
+  r.className = "reel"; r.style.top = (i * 100) + "%";
+  r.innerHTML = `<video src="/web/creators/samples/${clip}.mp4" muted playsinline preload="auto"></video>`;
+  track.appendChild(r);
+  return r;
+});
+const vids = reelEls.map((r) => r.querySelector("video"));
+
+/* ── v2: four scenes, one per bar. A drawing draws itself, the pen line, then the big line word by word, the mark ── */
+const SCENES = [
+  { at: 5, pen: "오늘도 딱", big: ["<mark>4분</mark>만", "말해요"], art:
+    `<path class="blob" d="M70 170C60 80 160 40 240 60C330 80 380 150 340 230C300 300 150 310 100 260C80 240 72 205 70 170Z"/>
+     <path d="M80 70Q80 40 112 40L268 40Q300 40 300 72L300 160Q300 192 268 192L150 192L104 236L114 192L112 192Q80 192 80 160Z"/>
+     <path class="ac" d="M120 92L258 92"/><path class="ac" d="M120 124L236 124"/><path class="ac" d="M120 156L196 156"/>
+     <path d="M330 86Q352 116 330 146"/><path d="M352 66Q390 116 352 166"/>` },
+  { at: 8, pen: "스피치 하나까지 하면", big: ["오늘", "<mark>끝!</mark>"], art:
+    `<path class="blob" d="M90 160C80 70 190 40 260 70C340 100 360 190 300 250C240 300 120 290 100 230C94 210 92 185 90 160Z"/>
+     <path d="M170 40Q170 16 200 16Q230 16 230 40L230 126Q230 150 200 150Q170 150 170 126Z"/>
+     <path class="ac" d="M182 62L218 62M182 86L218 86M182 110L218 110"/>
+     <path d="M146 104Q146 186 200 186Q254 186 254 104"/><path d="M200 186L200 238"/><path d="M156 246L244 246"/>
+     <path class="ok" d="M286 168L314 200L370 120"/>` },
+  { at: 12, pen: "한 달에 하루는", big: ["쉬어도", "<mark>괜찮아요</mark>"], art:
+    `<path class="blob" d="M80 170C70 90 170 50 250 66C330 82 370 160 330 236C292 300 150 306 104 256C86 236 82 204 80 170Z"/>
+     <path d="M120 120L132 236Q134 252 152 252L232 252Q250 252 252 236L264 120Z"/>
+     <path d="M264 142Q304 142 300 178Q296 210 256 204"/>
+     <path class="ac" d="M160 98Q144 76 160 54Q176 32 160 10"/><path class="ac" d="M206 98Q190 76 206 54Q222 32 206 10"/>
+     <path d="M96 268Q192 286 288 268"/>` },
+  { at: 16, pen: "3개월 먼저 내고, 끝까지 가면", big: ["지킨", "달만큼", "<mark>무료</mark>"], art:
+    `<path class="blob" d="M70 180C60 100 170 60 250 74C340 90 380 170 336 244C300 304 150 310 100 262C80 242 72 214 70 180Z"/>
+     <path d="M40 270L164 96L216 168L250 126L360 270"/>
+     <path d="M164 96L164 14"/><path class="ac" d="M166 18L238 38L166 60"/>
+     <path class="ac" d="M300 40L300 76M282 58L318 58"/><path class="ac" d="M70 60L70 88M56 74L84 74"/>` },
+];
+const sceneEls = SCENES.map((sc) => {
+  const el = document.createElement("div"); el.className = "scene";
+  el.innerHTML = `<svg viewBox="0 0 400 300">${sc.art}</svg><p class="p">${sc.pen}</p><p class="big">${sc.big.map((w) => `<span>${w}</span>`).join(" ")}</p>`;
+  document.body.insertBefore(el, $("pilecv"));
+  el.querySelectorAll("path:not(.blob)").forEach((p) => p.setAttribute("pathLength", "1"));
+  return el;
+});
+function drawScenes(t, n8) {
+  SCENES.forEach((sc, i) => {
+    const el = sceneEls[i], s0 = B(sc.at), end = i + 1 < SCENES.length ? B(SCENES[i + 1].at) : B(20);
+    if (t < s0 - .05 || t >= end) { el.style.opacity = 0; return; }
+    const inP = eo3(seg(t, s0 - .05, s0 + .3)), outP = seg(t, end - .2, end);
+    el.style.opacity = inP * (1 - outP);
+    el.style.translate = `0 ${40 * (1 - inP) - 70 * outP * outP}px`;
+    const svg = el.querySelector("svg");
+    svg.style.filter = `url(#${["marker", "marker2", "marker3"][n8 % 3]})`;
+    // the doodle: the yellow blob pops, then every line draws itself in order over a beat and a half; the green tick last
+    const blob = svg.querySelector(".blob"), bp = seg(t, s0, s0 + .25);
+    blob.style.transformOrigin = "50% 55%"; blob.style.transformBox = "fill-box"; blob.style.transform = `scale(${eo3(bp) * (1 + .15 * Math.pow(1 - bp, 2))})`;
+    const lines = [...svg.querySelectorAll("path:not(.blob)")], late = lines.filter((p) => p.classList.contains("ok")), early = lines.filter((p) => !p.classList.contains("ok"));
+    early.forEach((p, k) => { const a = s0 + .05 + k * (BEAT * 1.4 / early.length); p.style.strokeDasharray = "1"; p.style.strokeDashoffset = 1 - eo3(seg(t, a, a + BEAT * .5)); });
+    late.forEach((p) => { p.style.strokeDasharray = "1"; p.style.strokeDashoffset = 1 - eo3(seg(t, s0 + 2 * BEAT, s0 + 2 * BEAT + .25)); });
+    // a nod on every beat
+    const k = Math.floor((t - s0) / BEAT), nod = t >= s0 + BEAT ? .045 * Math.pow(1 - seg(t, s0 + k * BEAT, s0 + k * BEAT + .25), 2) : 0;
+    svg.style.scale = 1 + nod;
+    rise(el.querySelector(".p"), t, s0 + E, 22, .4);
+    el.querySelectorAll(".big span").forEach((w, j) => {
+      const at = s0 + BEAT + j * E, p = seg(t, at, at + .25);
+      w.style.opacity = t >= at ? 1 : 0; w.style.transform = `scale(${t >= at ? 1 + .3 * Math.pow(1 - eo3(p), 2) : 1})`;
+    });
+    const m = el.querySelector("mark"); if (m) m.style.backgroundSize = (eo3(seg(t, s0 + 2 * BEAT, s0 + 2 * BEAT + .35)) * 100) + "% 100%";
+  });
+}
+
+/* ── the phone's outline and cast shadow, as on the poster ── */
+(function () {
+  const reach = 195, peak = .58, step = 3, n = Math.round(reach / step), parts = [];
+  const A = (d) => peak * Math.pow(Math.max(0, 1 - d / reach), 1.7);
+  for (let i = 1; i <= n; i++) { const d = i * step, a = (A(d) - A(d + step)) / (1 - A(d + step)); parts.push(`${d}px ${d}px ${Math.round(3 + d * .16)}px rgba(13,17,23,${a.toFixed(4)})`); }
+  $("cast").style.boxShadow = parts.join(",");
+  const svg = $("sketch"), ph = svg.parentElement, sc = ph.querySelector(".screen");
+  const W = ph.offsetWidth, H = ph.offsetHeight, pad = sc.offsetLeft, rs = parseFloat(getComputedStyle(sc).borderTopLeftRadius);
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const SW = 10, g = pad - SW / 2 - 3, i = pad - g, r = rs + g;
+  let seed = 11; const j = () => ((seed = (seed * 16807) % 2147483647) / 2147483647 - .5) * 2.4;
+  const x0 = i, y0 = i, x1 = W - i, y1 = H - i;
+  const side = (ax, ay, bx, by) => `Q${(ax + bx) / 2 + j()} ${(ay + by) / 2 + j()} ${bx} ${by}`;
+  const d = `M${x0 + r} ${y0} ${side(x0 + r, y0, x1 - r, y0)} A${r} ${r} 0 0 1 ${x1} ${y0 + r} ${side(x1, y0 + r, x1, y1 - r)} A${r} ${r} 0 0 1 ${x1 - r} ${y1} ` +
+            `${side(x1 - r, y1, x0 + r, y1)} A${r} ${r} 0 0 1 ${x0} ${y1 - r} ${side(x0, y1 - r, x0, y0 + r)} A${r} ${r} 0 0 1 ${x0 + r} ${y0}Z`;
+  const o = i - SW / 2 - 2;
+  svg.innerHTML = `<path d="${d}" stroke-width="${SW}"/>`;
+})();
+
+/* ── "Creator" in one marker, the poster's glyphs: one letter changes on every eighth, the whole word on each bar ── */
+const GLYPH = [
+  [[64, "M54 28C42 10 12 16 10 52C8 84 40 92 56 74"], [46, "M38 56C28 44 10 50 10 70C10 90 30 92 40 80"]],
+  [[56, "M12 88L12 16C40 10 50 28 40 42C32 52 20 52 12 50M24 52L48 88"], [42, "M12 50L12 90M12 64C16 52 28 46 36 54"]],
+  [[54, "M46 16L12 17L12 88L46 87M12 52L40 51"], [50, "M10 68L40 66C42 48 14 42 10 68C8 92 34 92 42 80"]],
+  [[62, "M8 88L30 14L52 88M17 62L44 61"], [52, "M40 56C30 42 10 50 10 70C10 90 32 92 40 74M40 50L40 82C40 88 44 90 49 87"]],
+  [[58, "M6 18L52 16M29 18L29 88"], [42, "M18 22L18 78C18 90 28 92 36 86M6 47L34 45"]],
+  [[66, "M32 14C10 14 8 50 10 62C14 92 50 94 54 60C58 26 46 14 32 14Z"], [48, "M24 48C8 48 6 88 24 90C42 90 42 50 24 48Z"]],
+  [[56, "M12 88L12 16C40 10 50 28 40 42C32 52 20 52 12 50M24 52L48 88"], [42, "M12 50L12 90M12 64C16 52 28 46 36 54"]],
+];
+// "Challenger": Creator's C a e r, Join us's n, and h l g drawn the same way
+const GO = GLYPH[5]; // Join us borrows Creator's o, kept before the list becomes Challenger
+const GH = [[58, "M10 14L10 88M48 14L48 88M10 51L48 50"], [44, "M10 14L10 90M10 62C14 50 34 46 36 62L36 90"]];
+const GL = [[46, "M12 14L12 88L42 87"], [24, "M12 14L12 80C12 88 15 91 20 89"]];
+const GG = [[64, "M54 28C42 10 12 16 10 52C8 84 40 92 56 74L56 56L36 56"], [44, "M36 56C28 44 10 48 10 66C10 84 30 86 36 72M36 50L36 96C36 110 14 110 8 100"]];
+const GN = [[60, "M10 88L10 16L50 88L50 15"], [46, "M10 50L10 90M10 64C14 50 36 46 38 62L38 90"]];
+GLYPH.splice(0, GLYPH.length, GLYPH[0], GH, GLYPH[3], GL, GL, GLYPH[2], GN, GG, GLYPH[2], GLYPH[1]);
+const TILT = [-4, 3, -2, 4, -3, 2, -4, 3, -2, 4];
+const INKS = ["#0A5CF5", "#F0442E", "#FF8A00", "#E9AE00", "#12B76A", "#FF3D8B", "#7A4DFF", "#00AFC2", "#D9368B", "#2E9E3F"];
+const CASE0 = [0, 1, 1, 0, 1, 1, 0, 1, 0, 1], INK0 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+const word = $("creator-word");
+word.className = "brush";
+word.innerHTML = GLYPH.map(() => "<svg><path/></svg>").join("");
+const cells = [...word.querySelectorAll("svg")];
+const FLIP_FROM = 6, BARS = [8, 12, 16];         // letters start trading on beat 6; the whole word flips on each bar
+function drawWord(t) {
+  const n8 = t >= B(FLIP_FROM) ? Math.floor((t - B(FLIP_FROM)) / E) + 1 : 0;
+  cells.forEach((c, k) => {
+    let flips = 0, last = -9, big = false;
+    for (let j = 0; j < n8; j++) if (j % cells.length === k) { flips++; last = B(FLIP_FROM) + j * E; }
+    for (const b of BARS) if (t >= B(b)) { flips++; if (B(b) >= last) { last = B(b); big = true; } }
+    const cs = (CASE0[k] + flips) % 2, [w, d] = GLYPH[k][cs], box = Math.max(GLYPH[k][0][0], GLYPH[k][1][0]);
+    c.setAttribute("viewBox", `0 0 ${box} 100`);
+    c.firstChild.setAttribute("d", d);
+    c.firstChild.setAttribute("transform", `translate(${(box - w) / 2} 0)`);
+    c.style.color = INKS[(INK0[k] + flips * 3 + (flips ? k : 0)) % INKS.length];
+    const p = seg(t, last, last + (big ? .3 : .2)), pop = (big ? .32 : .2) * Math.pow(1 - p, 2) * (t >= last ? 1 : 0);
+    c.style.transform = `rotate(${TILT[k] * (cs ? .6 : 1)}deg) scale(${1 + pop})`;
+  });
+}
+
+/* ── the mark: the website's opening, then a look on every beat and a blink at the end of each bar ── */
+const e1 = $("e1"), e2 = $("e2"), tail = $("tail"), fly = $("fly");
+const EA = [[701, 338, 104, 174, 0], [701, 511, 104, 174, 0]], EB = [[469, 444, 78, 124, 39], [629, 440, 78, 124, 39]];
+const LOOK = [46, 0, -40, 0];
+function setEye(r, a, b, m, blink, dx) {
+  const v = a.map((n, i) => n + (b[i] - n) * m), h = v[3] * (1 - .86 * blink);
+  r.setAttribute("x", v[0]); r.setAttribute("y", v[1] + (v[3] - h) / 2);
+  r.setAttribute("width", v[2]); r.setAttribute("height", h); r.setAttribute("rx", Math.min(v[4], h / 2));
+  r.style.translate = dx + "px 0";
+}
+function blinkAt(t, at) { return t > at && t < at + .22 ? Math.sin((t - at) / .22 * Math.PI) : 0; }
+function drawMark(t) {
+  const m = eio(seg(t, B(1), B(2)));                       // the bar opens into two eyes over one beat (the site: 0.7 s)
+  let blink = blinkAt(t, B(3));
+  for (let b = 7; b <= 35; b += 4) blink = Math.max(blink, blinkAt(t, B(b)));
+  let dx = 0;
+  if (t >= B(5)) { const k = Math.floor((t - B(5)) / BEAT), p = eo3(seg(t, B(5 + k), B(5 + k) + .16)); dx = LOOK[(k + 3) % 4] + (LOOK[k % 4] - LOOK[(k + 3) % 4]) * p; }
+  setEye(e1, EA[0], EB[0], m, blink, dx); setEye(e2, EA[1], EB[1], Math.min(1, m * 1.08), blink, dx);
+  tail.style.translate = (-60 * m) + "px 0";
+  // centre of the sheet → the poster's top mark (98 px for the 770-unit mark, centred, 64 px down)
+  const f = eio(seg(t, B(4) - .05, B(4) + .45));
+  const W0 = 330, W1 = 98 * 830 / 770, L0 = 540 - W0 / 2 + 12, Tp0 = 675 - W0 * 660 / 830 / 2, L1 = 491, Tp1 = 64;
+  const w = W0 + (W1 - W0) * f;
+  fly.style.width = w + "px"; fly.style.left = (L0 + (L1 - L0) * f) + "px"; fly.style.top = (Tp0 + (Tp1 - Tp0) * f) + "px";
+  // a small bounce on the downbeat when it lands, and on each bar after
+  let pump = 0; for (const b of [4, 8, 12, 16, 20, 24, 28, 33]) if (t >= B(b) + (b === 4 ? .45 : 0)) { const s = b === 4 ? B(4) + .45 : B(b); pump = .1 * Math.pow(1 - seg(t, s, s + .25), 2); }
+  fly.style.scale = 1 + pump;
+}
+
+/* ── the frame ── */
+const FX = ["boil-m1", "boil-m2", "boil-m3"], FS = ["boil-s", "boil-s2", "boil-s3"], FK = ["marker", "marker2", "marker3"];
+const GR = [[0, 0], [-38, 22], [24, -46], [-58, -18], [42, 36], [-14, 58]];
+function rise(el, t, at, dist = 34, dur = .5) { const p = eo3(seg(t, at, at + dur)); el.style.opacity = p; el.style.translate = `0 ${dist * (1 - p)}px`; }
+function render(t) {
+  const n8 = Math.max(0, Math.floor((t - T0) / E)), n16 = Math.max(0, Math.floor((t - T0) / (E / 2)));
+  // the hand-drawn lines redraw on every eighth; the grain moves on every sixteenth
+  fly.style.filter = `url(#${FX[n8 % 3]})`; $("sketch").style.filter = `url(#${FS[n8 % 3]})`; word.style.filter = `url(#${FK[n8 % 3]})`;
+  $("grain").style.translate = GR[n16 % 6].map((v) => v + "px").join(" ");
+  // the sheet lifts off as the mark flies up
+  $("sheet").style.opacity = 1 - seg(t, B(4), B(4) + .55);
+  drawMark(t);
+  // the title, one word per sixteenth from the downbeat of bar 2
+  rise($("w1"), t, B(4)); rise(word, t, B(4) + E / 2); rise($("w3"), t, B(4) + E);
+  drawWord(t);
+  // the phone comes up with the bar, the film settling back from a little too close (the site's in-film)
+  const pp = eo4(seg(t, B(4) + .1, B(4) + 1.2));
+  for (const el of [$("phone"), $("cast")]) { el.style.opacity = pp; el.style.translate = `0 ${120 * (1 - pp)}px`; }
+  $("feed").style.scale = 1.22 - .22 * eo4(seg(t, B(4) + .1, B(4) + 1.6));
+  // the feed: scrolled one reel per beat, landing on it
+  let pos = 0;
+  REELS.forEach(([b], i) => { if (i) pos += eo3(seg(t, B(b) - SWIPE, B(b))); });
+  track.style.translate = `0 ${-pos * 100}%`;
+  // the pen line under the title, on beat 6
+  rise($("lede"), t, B(6), 24);
+  drawScenes(t, n8);
+  // the address: up on beat 6, marked with the highlighter on the last bar
+  rise($("url"), t, B(6), 24);
+  $("hl").style.backgroundSize = (eo3(seg(t, B(16), B(16) + .35)) * 100) + "% 100%";
+  // bar 6: the poster clears. The phone drops off the bottom, the title and the address lift away; the mark stays.
+  const out = seg(t, B(20), B(20) + .45), outE = out * out * out;
+  for (const el of [$("phone"), $("cast")]) if (t >= B(20)) el.style.translate = `0 ${1100 * outE}px`;
+  if (t >= B(20)) { const f = eo3(seg(t, B(20), B(20) + .3)); for (const el of [$("w1"), word, $("w3"), $("url"), $("lede")]) { el.style.opacity = 1 - f; el.style.translate = `0 ${-30 * f}px`; } }
+  drawOutro(t);
+}
+
+/* ── "Join us" in the same marker as "Creator": strokes in a 100-high box, baseline 90, capital and small ── */
+const GJOIN = [
+  [[50, "M16 16L46 16M34 16L34 68C34 88 14 92 8 76"], [34, "M24 50L24 94C24 106 12 108 6 99M24 32L24 34"]],
+  GO,
+  [[36, "M8 16L30 15M19 16L19 88M8 88L30 87"], [22, "M11 50L11 88M11 32L11 34"]],
+  [[60, "M10 88L10 16L50 88L50 15"], [46, "M10 50L10 90M10 64C14 50 36 46 38 62L38 90"]],
+  null,
+  [[58, "M10 16L10 62C10 92 48 94 48 62L48 15"], [46, "M10 50L10 76C10 94 36 94 38 74M38 50L38 90"]],
+  [[52, "M44 24C36 12 10 14 10 32C10 50 44 48 44 68C44 90 14 92 6 78"], [40, "M34 54C28 46 10 46 10 58C10 68 34 66 34 78C34 92 12 92 6 84"]],
+];
+const JCASE0 = [0, 1, 0, 1, 0, 0, 1], JINK0 = [7, 2, 5, 0, 0, 4, 1], JTILT = [-3, 3, -2, 4, 0, -4, 2];
+const joinEl = $("joinus"); joinEl.className = "brush";
+joinEl.innerHTML = GJOIN.map((g) => (g ? "<svg><path/></svg>" : '<i class="gap"></i>')).join("");
+const jcells = [...joinEl.children];
+const JOIN_AT = B(22), JFLIP = B(23), JBARS = [B(24), B(28), B(33)]; // up with the first page; whole word flips on the bars and on Day 100
+function drawJoin(t) {
+  const n8 = t >= JFLIP ? Math.floor((t - JFLIP) / E) + 1 : 0, letters = [0, 1, 2, 3, 5, 6];
+  joinEl.style.filter = `url(#${["marker", "marker2", "marker3"][Math.max(0, Math.floor((t - T0) / E)) % 3]})`;
+  $("o2").style.opacity = t >= JOIN_AT ? 1 : 0;
+  jcells.forEach((c, k) => {
+    if (!GJOIN[k]) return;
+    let flips = 0, last = JOIN_AT + letters.indexOf(k) * E / 4;
+    let big = false;
+    for (let j = 0; j < n8; j++) if (letters[j % letters.length] === k) { flips++; last = JFLIP + j * E; big = false; }
+    for (const b of JBARS) if (t >= b) { flips++; if (b >= last) { last = b; big = true; } }
+    const cs = (JCASE0[k] + flips) % 2, [w, d] = GJOIN[k][cs], box = Math.max(GJOIN[k][0][0], GJOIN[k][1][0]);
+    c.setAttribute("viewBox", `0 0 ${box} 100`);
+    c.firstChild.setAttribute("d", d);
+    c.firstChild.setAttribute("transform", `translate(${(box - w) / 2} 0)`);
+    c.style.color = INKS[(JINK0[k] + flips * 3 + (flips ? k : 0)) % INKS.length];
+    const born = JOIN_AT + letters.indexOf(k) * E / 4, inP = seg(t, born, born + .22);
+    const first = flips === 0, p = seg(t, last, last + (big ? .3 : .2));
+    const sc = t < born ? 0 : first ? (1.35 - .35 * eo3(inP)) * eo3(Math.min(1, inP * 3)) : 1 + (big ? .32 : .2) * Math.pow(1 - p, 2);
+    c.style.transform = `rotate(${JTILT[k] * (cs ? .6 : 1)}deg) scale(${sc})`;
+  });
+}
+
+/* ── the outro: the 100-day pad. Its line rises on beat 21, the pad hangs on 21½, Day 1 comes off on 22, the pages
+   come off faster and faster (as on the site) and Day 99 is gone just before the downbeat of bar 8 (beat 28), where
+   Day 100 is left on the pad and "같이 해요" lands. Matter.js, stepped at 60 Hz on this clock, seeded, so every take is the same. ── */
+const TOTAL = 22.6; // the founder's longer track (copy_F74C69A9….MOV), 22.64 s
+const PAD = { x: 540, y: 520, w: 170, h: 211 }, PG = { w: 80, h: 99 };
+const INK = "#1C2133", PAPER = "#FFFEFB", BLUE = "#0A5CF5";
+const pcv = $("pilecv"), pctx = pcv.getContext("2d");
+const TEAR = (() => {               // Day n leaves the pad at TEAR[n-1]
+  const t0 = B(22), t1 = B(33) - .45, floor = 1 / 45;
+  const total = (qq) => { let s = 0; for (let k = 0; k < 98; k++) s += Math.max(floor, E * Math.pow(qq, k)); return s; };
+  let lo = .3, hi = .99; for (let i = 0; i < 50; i++) { const m = (lo + hi) / 2; if (total(m) > t1 - t0) hi = m; else lo = m; }
+  const out = [t0]; for (let k = 0; k < 98; k++) out.push(out[k] + Math.max(floor, E * Math.pow(lo, k)));
+  return out;
+})();
+let sim = null;
+function seeded(n) { return () => ((n = (n * 16807) % 2147483647) / 2147483647); }
+function newSim() {
+  const M = window.Matter, rnd = seeded(7);
+  const engine = M.Engine.create({ enableSleeping: true }), T = 200, W = 1080, H = 1350;
+  M.Composite.add(engine.world, [
+    M.Bodies.rectangle(W / 2, H + T / 2, W * 3, T, { isStatic: true, friction: .5 }),
+    M.Bodies.rectangle(-T / 2, H / 2, T, H * 4, { isStatic: true }),
+    M.Bodies.rectangle(W + T / 2, H / 2, T, H * 4, { isStatic: true }),
+  ]);
+  return { M, engine, rnd, pages: [], next: 1, clock: B(22) - 1 / 60 };
+}
+function tearOne(S) {
+  const { M, rnd } = S;
+  const b = M.Bodies.rectangle(PAD.x, PAD.y + PAD.h * .08, PG.w, PG.h * .34, { chamfer: { radius: 3 }, friction: .3, frictionStatic: .4, frictionAir: .06, restitution: .02, density: .0012 });
+  const tx = PG.w + rnd() * (1080 - PG.w * 2), dir = tx < PAD.x ? -1 : 1;
+  M.Body.setAngle(b, dir * .06);
+  M.Body.setVelocity(b, { x: dir * (1 + rnd() * 1.5), y: 2.5 + rnd() * 1.5 });
+  M.Body.setAngularVelocity(b, dir * (.035 + rnd() * .05));
+  M.Composite.add(S.engine.world, b);
+  S.pages.push({ body: b, n: S.next, tx, born: S.clock, sway: rnd() * 6.28, age: 0 });
+  S.next++;
+}
+function stepTo(t) {
+  if (!sim || t < sim.clock - 1e-6) sim = newSim();
+  while (sim.clock + 1 / 60 <= t + 1e-6) {
+    sim.clock += 1 / 60;
+    while (sim.next <= 99 && TEAR[sim.next - 1] <= sim.clock) tearOne(sim);
+    for (const p of sim.pages) {     // paper in the air: it leans toward its own spot and sways on the way down
+      if (p.tx == null) continue;
+      const b = p.body;
+      if (b.isSleeping || b.position.y > 1350 - PG.h * 1.5 || (++p.age > 40 && b.speed < .4)) { p.tx = null; continue; }
+      const lean = clamp((p.tx - b.position.x) / 140, -1, 1);
+      sim.M.Body.applyForce(b, b.position, { x: b.mass * (.0024 * lean + .0003 * Math.sin(p.sway + p.age * .11)), y: 0 });
+      sim.M.Body.setAngularVelocity(b, b.angularVelocity * .97 + .004 * Math.sin(p.sway + p.age * .11));
+    }
+    sim.M.Engine.update(sim.engine, 1000 / 60);
+  }
+}
+function sheet(ctx, x, y, a, w, h, n, lift, sc = 1) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.scale(sc, sc);
+  ctx.shadowColor = "rgba(28,33,51,.16)"; ctx.shadowBlur = lift; ctx.shadowOffsetY = lift / 3;
+  ctx.fillStyle = PAPER; ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h, w * .06); ctx.fill();
+  ctx.shadowColor = "transparent";
+  ctx.fillStyle = BLUE; ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h * .24, [w * .06, w * .06, 0, 0]); ctx.fill();
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = "#fff"; ctx.font = `600 ${Math.round(h * .12)}px "Geist", sans-serif`;
+  ctx.letterSpacing = `${(h * .02).toFixed(1)}px`; ctx.fillText("DAY", 0, -h / 2 + h * .125); ctx.letterSpacing = "0px";
+  ctx.fillStyle = INK; ctx.font = `700 ${Math.round(h * (n >= 100 ? .36 : .44))}px "Geist", sans-serif`;
+  ctx.fillText(String(n), 0, h * .13);
+  ctx.restore();
+}
+function binding(ctx, next) {
+  const L = PAD.x - PAD.w / 2, T = PAD.y - PAD.h / 2, w = PAD.w, bh = Math.round(w * .12);
+  const stubs = Math.min(5, 1 + Math.floor((next - 1) / 20)), by = T - stubs - bh + 1;
+  ctx.fillStyle = "#EFEBE2"; ctx.beginPath(); ctx.moveTo(L + 1, by + bh - 2); ctx.lineTo(L + w - 1, by + bh - 2);
+  const teeth = Math.round(w / 5);
+  for (let i = teeth; i >= 0; i--) ctx.lineTo(L + 1 + (w - 2) * i / teeth, T + (i % 2 ? 1.6 : (i * 7 % 3) * .5 - .4));
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "rgba(28,33,51,.14)"; ctx.lineWidth = 1;
+  for (let i = 1; i < stubs; i++) { ctx.beginPath(); ctx.moveTo(L + 2, T - i + .5); ctx.lineTo(L + w - 2, T - i + .5); ctx.stroke(); }
+  const tw = w * .2, th = bh * .75;
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.roundRect(PAD.x - tw / 2, by - th, tw, th + 4, [th / 2, th / 2, 0, 0]); ctx.fill();
+  ctx.fillStyle = "#F7F8FA"; ctx.beginPath(); ctx.arc(PAD.x, by - th * .32, Math.max(2, th * .26), 0, Math.PI * 2); ctx.fill();
+  ctx.save(); ctx.shadowColor = "rgba(28,33,51,.28)"; ctx.shadowBlur = 5; ctx.shadowOffsetY = 2;
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.roundRect(L - w * .04, by, w * 1.08, bh, [5, 5, 3, 3]); ctx.fill(); ctx.restore();
+  ctx.fillStyle = "rgba(255,255,255,.12)"; ctx.beginPath(); ctx.roundRect(L - w * .04 + 3, by + 2, w * 1.08 - 6, 1.5, 1); ctx.fill();
+  for (const x of [L + w * .13, L + w * .87]) {
+    ctx.fillStyle = "rgba(255,255,255,.5)"; ctx.beginPath(); ctx.arc(x, by + bh / 2, 2.4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x, by + bh / 2, .9, 0, Math.PI * 2); ctx.fill();
+  }
+}
+function drawOutro(t) {
+  const ctx = pctx; ctx.clearRect(0, 0, 1080, 1350);
+  rise($("o1"), t, B(21), 30);
+  // the pad hangs in on beat 21½, a little pop
+  const pin = seg(t, B(21.5), B(21.5) + .35);
+  if (t < B(21.5)) { $("o2").style.opacity = 0; $("url2").style.opacity = 0; return; }
+  if (t >= B(22) - 1 / 60) stepTo(t);
+  const S = t >= B(22) - 1 / 60 ? sim : { pages: [], next: 1, clock: t };
+  const grow = (p) => { const k = Math.min(1, (S.clock - p.born) / .42); return 1 + (PAD.w / PG.w - 1) * (1 - k) * (1 - k); };
+  for (const p of S.pages) if (grow(p) === 1) sheet(ctx, p.body.position.x, p.body.position.y, p.body.angle, PG.w, PG.h, p.n, 6);
+  const left = 100 - S.next;
+  for (let i = Math.min(4, Math.ceil(left / 20)); i > 0; i--) {
+    ctx.fillStyle = `rgba(28,33,51,${.05 + i * .02})`;
+    ctx.beginPath(); ctx.roundRect(PAD.x - PAD.w / 2 + 2, PAD.y - PAD.h / 2 + i * 3, PAD.w - 4, PAD.h, PAD.w * .06); ctx.fill();
+  }
+  ctx.save(); ctx.globalAlpha = eo3(pin);
+  const land = S.next >= 100 ? .16 * Math.pow(1 - seg(t, B(33), B(33) + .3), 2) * (t >= B(33) ? 1 : 0) : 0;
+  const popIn = 1 - .25 * Math.pow(1 - pin, 3);
+  sheet(ctx, PAD.x, PAD.y, 0, PAD.w, PAD.h, S.next, 18, popIn + land);
+  for (const p of S.pages) if (grow(p) > 1) { const k = grow(p); sheet(ctx, p.body.position.x, p.body.position.y, p.body.angle, PG.w * k, PG.h * k, p.n, 10); }
+  binding(ctx, S.next);
+  ctx.restore();
+  // Day 100: "Join us" lands with the track's return (beat 33), letter by letter on 32nds, in Creator's marker,
+  // then trades case and colour like Creator does; the address after it
+  drawJoin(t);
+  rise($("url2"), t, B(33.5), 20);
+}
+
+/* ── run: ?manual for the frame-by-frame recorder, ?t=N for a still, nothing for real time ── */
+const q = new URLSearchParams(location.search);
+const manual = q.has("manual"), still = q.has("t") ? parseFloat(q.get("t")) : null;
+document.documentElement.classList.add("manual");
+function activeReels(t) {
+  const out = [];
+  REELS.forEach(([b, , from], i) => {
+    const start = B(b) - SWIPE, next = i + 1 < REELS.length ? B(REELS[i + 1][0]) - SWIPE : 99;
+    if (t < B(20) + .6 && t >= (i ? start : 0) && t < next + SWIPE) out.push([vids[i], from + Math.max(0, t - start)]);
+  });
+  return out;
+}
+async function seekAll(t) {
+  await Promise.all(activeReels(t).map(([v, want]) => (Math.abs(v.currentTime - want) > .001
+    ? new Promise((r) => { v.addEventListener("seeked", r, { once: true }); v.currentTime = want; setTimeout(r, 2000); })
+    : null)));
+}
+window.renderAt = async (t) => { render(t); await seekAll(t); await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))); };
+Promise.all([
+  document.fonts.load('600 40px "Geist"').catch(() => {}), document.fonts.load('40px "Nanum Pen Script"', "우리의 가장 뜨거울 100일").catch(() => {}), document.fonts.load('40px "Guestbook Pen"', "쉬킨").catch(() => {}),
+  ...vids.map((v) => new Promise((r) => { if (v.readyState >= 2) r(); else { v.addEventListener("loadeddata", r, { once: true }); setTimeout(r, 6000); } })),
+]).then(async () => {
+  if (manual) { render(0); document.documentElement.dataset.scene = "1"; return; }
+  if (still != null) { await window.renderAt(still); document.documentElement.dataset.scene = "1"; return; }
+  const t0 = performance.now();
+  const loop = () => { const t = ((performance.now() - t0) / 1000) % TOTAL; render(t); activeReels(t).forEach(([v, want]) => { if (Math.abs(v.currentTime - want) > .25) v.currentTime = want; if (v.paused) v.play().catch(() => {}); }); requestAnimationFrame(loop); };
+  document.documentElement.dataset.scene = "1"; loop();
+});
+</script>
+</body>
+</html>
