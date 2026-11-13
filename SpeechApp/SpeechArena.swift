@@ -357,6 +357,9 @@ struct MedalBadge: View {
     var label: String = ""
     var size: CGFloat = 44
     @Environment(\.displayScale) private var scale
+    /// The empty slot follows the page: nawana's light pages too (the
+    /// speech app's stage is always dark, where it is drawn as before).
+    @Environment(\.colorScheme) private var scheme
     @State private var still: UIImage?
 
     var body: some View {
@@ -374,10 +377,12 @@ struct MedalBadge: View {
                         .frame(width: size, height: size)
                 }
             } else {
+                let light = scheme == .light
                 Circle()
-                    .strokeBorder(Color.white.opacity(0.14), lineWidth: 1)
-                    .background(Circle().fill(Color(white: 0.1)))
-                    .overlay(Image(systemName: "lock.fill").font(.system(size: size * 0.3)).foregroundStyle(.white.opacity(0.35)))
+                    .strokeBorder(light ? Color.black.opacity(0.08) : Color.white.opacity(0.14), lineWidth: 1)
+                    .background(Circle().fill(light ? Color(white: 0.9) : Color(white: 0.1)))
+                    .overlay(Image(systemName: "lock.fill").font(.system(size: size * 0.3))
+                        .foregroundStyle(light ? Color.black.opacity(0.3) : Color.white.opacity(0.35)))
                     .frame(width: size * 0.78, height: size * 0.78)
                     .frame(width: size, height: size)
             }
@@ -505,6 +510,11 @@ struct ToneTile<Content: View>: View {
     }
 }
 
+// nawana compiles this file too, for the cards, the pictures and the medals
+// (2026-11-13, founder: one card look in both apps). The pages and pieces
+// that lean on the speech app's own groups, calendar and trophy stay in the
+// speech app.
+#if SPEECH_APP
 /// The Challenges tab's whole page.
 struct SpeechArenaHome: View {
     @EnvironmentObject private var appState: AppState
@@ -808,30 +818,65 @@ struct ArenaMeStrip: View {
         .background(RoundedRectangle(cornerRadius: 28, style: .continuous).fill(Arena.card))
     }
 }
+#endif
 
 /// A challenge's picture, drawn once in Dear RoRo's coloured-pencil style
-/// (`day-cover-style.json`): the person in that role, on plain paper. Kept
-/// in the bundle by the last four of the challenge's id for now.
+/// (`day-cover-style.json`): the person in that role, on plain paper.
+///
+/// Served from R2 (2026-11-13, founder: a challenge goes up every day, and a
+/// picture that waits for an app build is a day late every day):
+/// `speech/pictures/<challenge id>.png` in `nawana-shows`, put there by
+/// `scripts/speech-picture-upload.sh`. A picture is fetched the first time
+/// its challenge is drawn, kept in Caches, and checked again (ETag) once per
+/// launch, so a redrawn picture replaces the old one. The pictures the app
+/// was built with stay as the fallback, by the last four of the id.
 enum ChallengeArt {
     /// The cards are cream (2026-11-12, founder). Constants: these are read
     /// on every frame of a card's zoom, so nothing here may touch storage.
-    static let paper = Color(red: 251 / 255, green: 248 / 255, blue: 240 / 255)
+    /// In nawana's light mode they are white, like every other card there
+    /// (2026-11-13, founder); the pictures are transparent, so nothing else
+    /// changes. Dark mode and the speech app keep the cream.
+    #if SPEECH_APP
+    static let paper = cream
+    #else
+    static let paper = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark ? UIColor(cream) : .white
+    })
+    #endif
+    static let cream = Color(red: 251 / 255, green: 248 / 255, blue: 240 / 255)
     static let inkText = Color(red: 0.13, green: 0.12, blue: 0.11)
     /// The button's fill and its label, the opposite of the card.
     static let buttonFill = Color(red: 0.13, green: 0.12, blue: 0.11)
     static let buttonText = Color.white
 
-    private static let lock = NSLock()
-    private static var decoded: [String: UIImage] = [:]
+    static let remoteBase = URL(string: "https://pub-83c97a52f2e549718b126bf60f710f1a.r2.dev/speech/pictures")!
 
-    /// The picture, already decoded. `UIImage(named:)` on a loose PNG decodes
-    /// on first draw, on the main thread, in the middle of the zoom; these
-    /// are decoded once, off it (`warm`).
+    private static let lock = NSLock()
+    /// Bundle pictures by the last four of the id.
+    private static var decoded: [String: UIImage] = [:]
+    /// Downloaded pictures by the whole id (lowercased).
+    private static var remote: [String: UIImage] = [:]
+    /// Ids already checked against R2 this launch.
+    private static var checked: Set<String> = []
+
+    /// Read by `image(for:)` so a view drawing a picture is drawn again when
+    /// one arrives. Reading it costs nothing: no storage, no lock.
+    @Observable final class Arrivals { var count = 0 }
+    static let arrivals = Arrivals()
+
+    /// The picture, already decoded: the downloaded one, else the one the app
+    /// was built with. Never touches storage or the network on the caller's
+    /// thread; a picture not checked yet this launch is fetched behind it.
     static func image(for id: UUID) -> UIImage? {
+        _ = arrivals.count
+        let full = id.uuidString.lowercased()
         let key = String(id.uuidString.suffix(4))
         lock.lock()
-        if let hit = decoded[key] { lock.unlock(); return hit }
+        let hit = remote[full] ?? decoded[key]
+        let needsCheck = checked.insert(full).inserted
         lock.unlock()
+        if needsCheck { Task.detached(priority: .utility) { await refresh(full) } }
+        if let hit { return hit }
         guard let image = load(key) else { return nil }
         lock.lock(); decoded[key] = image; lock.unlock()
         return image
@@ -843,12 +888,43 @@ enum ChallengeArt {
         return raw.preparingForDisplay() ?? raw
     }
 
+    private static var cacheDir: URL {
+        let dir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("challenge_art", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }
+
+    /// Fetches one picture if R2 has a newer one than the cached copy.
+    private static func refresh(_ full: String) async {
+        let file = cacheDir.appendingPathComponent("\(full).png")
+        let tagFile = cacheDir.appendingPathComponent("\(full).etag")
+        var req = URLRequest(url: remoteBase.appendingPathComponent("\(full).png"))
+        req.cachePolicy = .reloadIgnoringLocalCacheData
+        req.timeoutInterval = 20
+        if FileManager.default.fileExists(atPath: file.path),
+           let tag = try? String(contentsOf: tagFile, encoding: .utf8) {
+            req.setValue(tag, forHTTPHeaderField: "If-None-Match")
+        }
+        guard let (data, response) = try? await URLSession.shared.data(for: req),
+              let http = response as? HTTPURLResponse, http.statusCode == 200,
+              let raw = UIImage(data: data) else { return }
+        try? data.write(to: file, options: .atomic)
+        if let tag = http.value(forHTTPHeaderField: "ETag") {
+            try? tag.write(to: tagFile, atomically: true, encoding: .utf8)
+        }
+        let image = raw.preparingForDisplay() ?? raw
+        lock.lock(); remote[full] = image; lock.unlock()
+        await MainActor.run { arrivals.count += 1 }
+    }
+
     /// Decode every picture the app carries, off the main thread, at launch.
     static func warm() {
         Task.detached(priority: .utility) { await prepare() }
     }
 
-    /// The same, awaited: the launch curtain waits on it.
+    /// The same, awaited: the launch curtain waits on it. Also decodes the
+    /// pictures downloaded on earlier launches, so they draw at once.
     static func prepare() async {
         await Task.detached(priority: .userInitiated) {
             let urls = Bundle.main.urls(forResourcesWithExtension: "png", subdirectory: nil) ?? []
@@ -859,6 +935,15 @@ enum ChallengeArt {
                 lock.lock(); let have = decoded[key] != nil; lock.unlock()
                 if have { continue }
                 if let image = load(key) { lock.lock(); decoded[key] = image; lock.unlock() }
+            }
+            let cached = (try? FileManager.default.contentsOfDirectory(at: cacheDir, includingPropertiesForKeys: nil)) ?? []
+            for url in cached where url.pathExtension == "png" {
+                let full = url.deletingPathExtension().lastPathComponent
+                lock.lock(); let have = remote[full] != nil; lock.unlock()
+                if have { continue }
+                guard let raw = UIImage(contentsOfFile: url.path) else { continue }
+                let image = raw.preparingForDisplay() ?? raw
+                lock.lock(); remote[full] = image; lock.unlock()
             }
         }.value
     }
@@ -900,13 +985,8 @@ struct ArenaTicket: View {
                 .frame(height: 40)
                 ChallengeCardFace(script: script, category: category, figureHeight: 240, titleSize: 30, titleLines: 3)
                 goal.font(.subheadline).foregroundStyle(ChallengeArt.inkText.opacity(0.65))
-                Text("Take it on")
-                    .font(.headline)
-                    .foregroundStyle(ChallengeArt.buttonText)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(Capsule().fill(ChallengeArt.buttonFill))
-                    .padding(.top, 8)
+                // No button: the whole card opens the page, and the page has
+                // its own (2026-11-13, founder: two "Take it on"s in a row).
             }
             .padding(22)
             .frame(maxWidth: .infinity)
@@ -938,18 +1018,24 @@ struct ArenaTile: View {
                 if let best, let tier = MedalTier(score: best) {
                     MedalBadge(tier: tier, label: "\(best)", size: 34).padding(8)
                 } else if let best {
+                    // A score short of a medal is a disc the medal's size, in
+                    // the medal's place (2026-11-13, founder: a pill beside
+                    // the round medals read as something else).
                     Text(verbatim: "\(best)")
                         .font(.caption.weight(.semibold).monospacedDigit())
+                        .minimumScaleFactor(0.7)
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 8).padding(.vertical, 3)
-                        .background(Capsule().fill(.black.opacity(0.55)))
-                        .padding(10)
+                        .frame(width: 30, height: 30)
+                        .background(Circle().fill(ChallengeArt.inkText.opacity(0.6)))
+                        .frame(width: 34, height: 34)
+                        .padding(8)
                 }
             }
             .opacity(ended ? 0.75 : 1)
     }
 }
 
+#if SPEECH_APP
 /// A group's race: everyone's total as a bar, and how far to the one ahead.
 struct ArenaRace: View {
     let leaders: [SpeechGroups.Leader]
@@ -1003,6 +1089,7 @@ struct ArenaRace: View {
         .buttonStyle(.plain)
     }
 }
+#endif
 
 extension View {
     /// The Challenges tab is a dark stage whatever the phone's mode.

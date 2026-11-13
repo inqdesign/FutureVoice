@@ -683,7 +683,7 @@ struct SpeechChallengeListView: View {
 
     private func row(_ script: SpeechScript) -> some View {
         SpeechCardLink {
-            SpeechChallengeView(script: script).environmentObject(appState)
+            SpeechArenaDetail(script: script).environmentObject(appState)
         } label: {
             SpeechChallengeRow(script: script, standing: challenges.standings[script.id])
         }
@@ -693,7 +693,7 @@ struct SpeechChallengeListView: View {
     private func pastRow(_ script: SpeechScript) -> some View {
         let standing = challenges.standings[script.id]
         return NavigationLink {
-            SpeechChallengeView(script: script).environmentObject(appState)
+            SpeechArenaDetail(script: script).environmentObject(appState)
         } label: {
             HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 2) {

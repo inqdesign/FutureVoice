@@ -25,6 +25,11 @@ struct SpeechTab: View {
     /// The menu's two choices, for the tap that only learned after a fresh
     /// fetch that this account may write.
     @State private var choosingKind = false
+    /// The card a tap grows out of into the challenge's page.
+    @Namespace private var zoom
+    /// The challenge whose page is open over the tab (nawana's grid).
+    @State private var openChallenge: SpeechScript?
+    @Environment(\.displayScale) private var displayScale
     #if SPEECH_APP
     /// The bottom tab this instance is: the tabs replace the page switch.
     var fixedPage: Page = .challenges
@@ -111,14 +116,23 @@ struct SpeechTab: View {
             #if SPEECH_APP
             challengeSections
             #else
+            // The speech app's card and page (2026-11-13, founder: one look
+            // in both apps): the picture on cream, and a tap grows the card
+            // into the challenge's page. Presented over the whole tab, not
+            // pushed: a push rebuilds the navigation bar under the zoom, and
+            // the "Speech" header slid across the picture and the page behind
+            // jumped as it opened and closed (founder's recording).
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(challenges.live) { script in
-                    NavigationLink {
-                        SpeechChallengeView(script: script)
-                            .environmentObject(appState)
+                    Button {
+                        openChallenge = script
                     } label: {
-                        SpeechChallengeRow(script: script, standing: challenges.standings[script.id])
-                            .frame(maxHeight: .infinity, alignment: .top)
+                        ArenaTile(script: script, category: challenges.standings[script.id]?.category,
+                                  best: [challenges.standings[script.id]?.myBest, store.best(for: script.id)]
+                                      .compactMap { $0 }.max(),
+                                  tries: challenges.standings[script.id]?.attempts ?? 0,
+                                  ended: challenges.isPast(script.id))
+                            .zoomSource("tile-\(script.id)", in: zoom, radius: 30)
                     }
                     .buttonStyle(.plain)
                 }
@@ -374,8 +388,19 @@ struct SpeechTab: View {
             #else
             .navigationTitle(title)
             #endif
+            #if !SPEECH_APP
+            .fullScreenCover(item: $openChallenge) { script in
+                // Its own stack: the page's bar settings (a dark clock over
+                // the cream picture) need one.
+                NavigationStack {
+                    SpeechArenaDetail(script: script, covering: true)
+                }
+                .environmentObject(appState)
+                .zoomDestination("tile-\(script.id)", in: zoom)
+            }
+            #endif
             .navigationDestination(item: $linkedChallenge) { script in
-                SpeechChallengeView(script: script)
+                SpeechArenaDetail(script: script)
                     .environmentObject(appState)
             }
             // Same header as Watch and Progress: the title inline-large on
@@ -430,6 +455,13 @@ struct SpeechTab: View {
             store.reloadIfLanguageChanged()
             if store.scripts.isEmpty { store.reload() }
             BillingGate.shared.warm()
+            #if !SPEECH_APP
+            // The cards' pictures and the medals, decoded and made off the
+            // main thread before the first zoom (the speech app's home does
+            // the same).
+            ChallengeArt.warm()
+            MedalScene.warm(scale: displayScale)
+            #endif
         }
         .task(id: appState.targetLanguage) {
             await challenges.refresh(language: appState.targetLanguage)

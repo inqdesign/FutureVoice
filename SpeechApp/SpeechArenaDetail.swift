@@ -65,9 +65,14 @@ extension View {
     }
 
     func arrives(_ shown: Bool, step: Int) -> some View {
-        opacity(shown ? 1 : 0)
-            .offset(y: shown ? 0 : 26)
-            .animation(.spring(response: 0.55, dampingFraction: 0.9).delay(0.12 + Double(step) * 0.07), value: shown)
+        // The spring reaches the fade and the short slide only. Applied to
+        // the whole view, it also carried the view's PLACE: in nawana the page
+        // is a full-screen cover, first laid out at another size, and the
+        // buttons at its foot flew down from the top (2026-11-13, founder).
+        animation(.spring(response: 0.55, dampingFraction: 0.9).delay(0.12 + Double(step) * 0.07)) {
+            $0.opacity(shown ? 1 : 0)
+                .offset(y: shown ? 0 : 26)
+        }
     }
 }
 
@@ -178,22 +183,29 @@ struct SpeechArenaDetail: View {
     let script: SpeechScript
     var zoomID: String? = nil
     var zoom: Namespace.ID? = nil
+    /// Shown over the whole tab (nawana's grid presents it full screen): the
+    /// tab bar is already covered, and hiding it underneath would move the
+    /// page behind while the card zooms.
+    var covering: Bool = false
 
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var challenges = SpeechChallenges.shared
     @ObservedObject private var store = SpeechStore.shared
+    #if SPEECH_APP
     @ObservedObject private var groups = SpeechGroups.shared
+    @State private var groupBoard: [SpeechGroups.BoardRow]?
+    #endif
     @ObservedObject private var gate = BillingGate.shared
     @Environment(\.dismiss) private var dismiss
 
     @State private var board: [SpeechChallenges.BoardRow]?
-    @State private var groupBoard: [SpeechGroups.BoardRow]?
     @State private var shown = false
     @State private var practicing = false
     @State private var naming = false
     @State private var startAfterNaming = false
     @State private var showingScript = false
     @State private var showingTakes = false
+    @State private var showingMedals = false
     @State private var confirmWithdraw = false
     @State private var confirmRetire = false
     /// The fluent reading's opening, fading in as the page opens (2026-11-13,
@@ -216,9 +228,11 @@ struct SpeechArenaDetail: View {
                         seasonRecordLine
                     }
                     .arrives(shown, step: 1)
+                    #if SPEECH_APP
                     if let group = groups.selected {
                         groupSection(group).arrives(shown, step: 2)
                     }
+                    #endif
                     everyone.arrives(shown, step: 3)
                 }
                 .padding(.horizontal, 16)
@@ -229,7 +243,7 @@ struct SpeechArenaDetail: View {
         // The picture runs under the status bar to the screen's edges.
         .ignoresSafeArea(edges: .top)
         .noBarShade(.top)
-        .background(Color.black.ignoresSafeArea())
+        .background(Look.page.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
         // Dark clock and battery over the cream picture.
         .toolbarColorScheme(.light, for: .navigationBar)
@@ -240,7 +254,10 @@ struct SpeechArenaDetail: View {
         .overlay(alignment: .top) { pageButtons }
         // A challenge is a page of its own: the tabs step aside and the
         // buttons below are the way on (2026-11-13, founder).
-        .toolbar(MacLayout.tabBarOnPhoneOnly, for: .tabBar)
+        // Through the shared hider: nawana's tab roots hold the bar's
+        // visibility themselves, and a page's own `.toolbar` alone left the
+        // tabs showing there.
+        .hidesTabBar(!covering)
         .safeAreaInset(edge: .bottom) { actions.arrives(shown, step: 4) }
         .zoomDestination(zoomID ?? "", in: zoomID == nil ? nil : zoom)
         // The boards load once the card has grown, not during it.
@@ -275,6 +292,7 @@ struct SpeechArenaDetail: View {
             SpeechChallengeNameSheet(suggested: appState.persona?.displayName ?? "")
         }
         .sheet(isPresented: $showingScript) { SpeechScriptSheet(script: script, reading: intro) }
+        .sheet(isPresented: $showingMedals) { MedalGuideSheet() }
         .fullScreenCover(isPresented: $showingTakes) { SpeechTakesPager(scriptId: script.id) }
         .fullScreenCover(isPresented: $practicing, onDismiss: { Task { await reload() } }) {
             SpeechPrompterView(script: script, native: appState.nativeLanguage, level: appState.proficiency)
@@ -296,6 +314,9 @@ struct SpeechArenaDetail: View {
                 }
             }
         }
+        // The speech app is a dark stage whatever the phone's mode; nawana's
+        // page follows the phone (2026-11-13, founder).
+        .arenaScheme(SpeechAppFlags.isSpeechApp)
     }
 
     // MARK: The hero: the card itself, grown
@@ -309,17 +330,23 @@ struct SpeechArenaDetail: View {
             if let label = SpeechChallengeCategory.label(standing?.category) {
                 Text(label)
                     .font(.subheadline)
-                    .foregroundStyle(Arena.dim)
+                    .foregroundStyle(Look.dim)
             }
             Text(script.title)
                 .font(Arena.display(32))
-                .foregroundStyle(.white)
+                .foregroundStyle(Look.text)
                 .multilineTextAlignment(.center)
                 .lineLimit(3)
                 .minimumScaleFactor(0.8)
                 .padding(.horizontal, 20)
             if let best, let tier = MedalTier(score: best) {
-                MedalBadge(tier: tier, label: "\(best)", size: 52).padding(.top, 4)
+                // Tap: how medals work, like the medal on the "my best" card.
+                Button { showingMedals = true } label: {
+                    MedalBadge(tier: tier, label: "\(best)", size: 52)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("How medals work"))
+                .padding(.top, 4)
             }
         }
         .frame(maxWidth: .infinity)
@@ -349,13 +376,13 @@ struct SpeechArenaDetail: View {
         .clipped()
         .overlay {
             LinearGradient(stops: [
-                .init(color: .black.opacity(0), location: 0.56),
-                .init(color: .black.opacity(0.1), location: 0.64),
-                .init(color: .black.opacity(0.3), location: 0.73),
-                .init(color: .black.opacity(0.55), location: 0.82),
-                .init(color: .black.opacity(0.8), location: 0.9),
-                .init(color: .black.opacity(0.95), location: 0.96),
-                .init(color: .black, location: 1),
+                .init(color: Look.page.opacity(0), location: 0.56),
+                .init(color: Look.page.opacity(0.1), location: 0.64),
+                .init(color: Look.page.opacity(0.3), location: 0.73),
+                .init(color: Look.page.opacity(0.55), location: 0.82),
+                .init(color: Look.page.opacity(0.8), location: 0.9),
+                .init(color: Look.page.opacity(0.95), location: 0.96),
+                .init(color: Look.page, location: 1),
             ], startPoint: .top, endPoint: .bottom)
         }
         .visualEffect { content, proxy in
@@ -371,10 +398,10 @@ struct SpeechArenaDetail: View {
             if let intro = SpeechChallenges.intro(standing, native: LanguageCatalog.currentNative) {
                 Text(intro)
                     .font(.body)
-                    .foregroundStyle(.white.opacity(0.85))
+                    .foregroundStyle(Look.body)
                     .fixedSize(horizontal: false, vertical: true)
             } else if !script.summary.isEmpty {
-                Text(script.summary).font(.body).foregroundStyle(.white.opacity(0.85))
+                Text(script.summary).font(.body).foregroundStyle(Look.body)
             }
             HStack(spacing: 8) {
                 Text(SpeechFormat.length(SpeechLibrary.estimatedSeconds(script.body, language: script.language)))
@@ -386,12 +413,12 @@ struct SpeechArenaDetail: View {
                 }
             }
             .font(.footnote)
-            .foregroundStyle(Arena.dim)
+            .foregroundStyle(Look.dim)
             if let link = standing?.link {
                 Link(destination: link) {
                     Label("Watch the original", systemImage: "play.rectangle")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Look.text)
                 }
             }
         }
@@ -401,25 +428,30 @@ struct SpeechArenaDetail: View {
 
     private var mine: some View {
         HStack(spacing: 16) {
-            MedalBadge(tier: best.flatMap(MedalTier.init(score:)), label: best.map(String.init) ?? "", size: 56)
+            // Tap: how medals work (a medal is a score, not a place).
+            Button { showingMedals = true } label: {
+                MedalBadge(tier: best.flatMap(MedalTier.init(score:)), label: best.map(String.init) ?? "", size: 56)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("How medals work"))
             VStack(alignment: .leading, spacing: 3) {
                 if let best {
                     Text("Best \(best)").font(Arena.display(22))
                 } else {
                     Text("Not tried yet").font(Arena.display(22))
                 }
-                nextMedal.font(.subheadline).foregroundStyle(Arena.dim)
+                nextMedal.font(.subheadline).foregroundStyle(Look.dim)
             }
             Spacer()
             if let rank = standing?.myRank {
                 VStack(spacing: 2) {
                     Text(verbatim: "#\(rank)").font(Arena.display(22)).monospacedDigit()
-                    Text("of \(standing?.entrants ?? rank)").font(.caption).foregroundStyle(Arena.dim)
+                    Text("of \(standing?.entrants ?? rank)").font(.caption).foregroundStyle(Look.dim)
                 }
             }
         }
         .padding(18)
-        .background(RoundedRectangle(cornerRadius: 28, style: .continuous).fill(Arena.card))
+        .background(RoundedRectangle(cornerRadius: 28, style: .continuous).fill(Look.card))
     }
 
     /// A challenge back from an earlier season keeps my score there, frozen.
@@ -428,7 +460,7 @@ struct SpeechArenaDetail: View {
         if let record = challenges.seasonRecords[script.id] {
             Text("Season \(record.season): \(record.score) · #\(record.rank) of \(record.entrants)")
                 .font(.footnote.monospacedDigit())
-                .foregroundStyle(Arena.dim)
+                .foregroundStyle(Look.dim)
                 .padding(.horizontal, 18)
         }
     }
@@ -448,38 +480,40 @@ struct SpeechArenaDetail: View {
 
     // MARK: Boards
 
+    #if SPEECH_APP
     private func groupSection(_ group: SpeechGroups.Group) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(group.name).font(Arena.display(24))
             if let groupBoard {
                 if groupBoard.isEmpty {
-                    Text("Nobody in the group has read this yet.").font(.subheadline).foregroundStyle(Arena.dim)
+                    Text("Nobody in the group has read this yet.").font(.subheadline).foregroundStyle(Look.dim)
                 } else {
                     VStack(spacing: 0) {
                         ForEach(groupBoard) { row in boardLine(row.row) }
                     }
-                    .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Arena.card))
+                    .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Look.card))
                 }
             } else {
-                HStack { Spacer(); ProgressView().tint(.white); Spacer() }
+                HStack { Spacer(); ProgressView().tint(Look.dim); Spacer() }
             }
         }
     }
+    #endif
 
     private var everyone: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Leaderboard").font(Arena.display(24))
             if let board {
                 if board.isEmpty {
-                    Text("Nobody's on this board yet. Be the first.").font(.subheadline).foregroundStyle(Arena.dim)
+                    Text("Nobody's on this board yet. Be the first.").font(.subheadline).foregroundStyle(Look.dim)
                 } else {
                     VStack(spacing: 0) {
                         ForEach(board) { row in boardLine(row) }
                     }
-                    .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Arena.card))
+                    .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Look.card))
                 }
             } else {
-                HStack { Spacer(); ProgressView().tint(.white); Spacer() }
+                HStack { Spacer(); ProgressView().tint(Look.dim); Spacer() }
             }
             Group {
                 if isPast {
@@ -489,7 +523,7 @@ struct SpeechArenaDetail: View {
                 }
             }
                 .font(.footnote)
-                .foregroundStyle(.white.opacity(0.4))
+                .foregroundStyle(Look.faint)
         }
     }
 
@@ -500,13 +534,15 @@ struct SpeechArenaDetail: View {
             } else {
                 Text(verbatim: "\(row.rank)")
                     .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(Arena.dim)
+                    .foregroundStyle(Look.dim)
                     .frame(width: 34)
             }
             SpeechChallengeFace(face: row.face, size: 34)
             Text(row.display_name)
                 .font(.body.weight(row.is_me ? .semibold : .regular))
                 .lineLimit(1)
+            // nawana's Core seat rides beside the name, as on its old board.
+            if !SpeechAppFlags.isSpeechApp, let theme = row.core_theme { CoreCubeBadge(theme: theme) }
             if row.is_me {
                 Text("You").font(.caption.weight(.semibold)).foregroundStyle(Arena.gold)
             }
@@ -527,14 +563,14 @@ struct SpeechArenaDetail: View {
                 Image(systemName: "clock.arrow.circlepath")
                     .font(.headline)
                     .frame(width: 52, height: 52)
-                    .background(Circle().fill(Arena.raised))
+                    .background(Circle().fill(Look.raised))
                     .overlay(alignment: .topTrailing) {
                         if takes > 0 {
                             Text("\(takes)")
                                 .font(.caption2.weight(.bold).monospacedDigit())
-                                .foregroundStyle(.black)
+                                .foregroundStyle(Look.ctaText)
                                 .padding(.horizontal, 5).padding(.vertical, 1)
-                                .background(Capsule().fill(.white))
+                                .background(Capsule().fill(Look.cta))
                         }
                     }
             }
@@ -551,18 +587,18 @@ struct SpeechArenaDetail: View {
                             : best == nil ? LocalizedStringKey("speech.challenge.take")
                                           : LocalizedStringKey("speech.challenge.again"))
                     .font(.headline)
-                    .foregroundStyle(.black)
+                    .foregroundStyle(Look.ctaText)
                     .frame(maxWidth: .infinity)
                     .frame(height: 52)
-                    .background(Capsule().fill(Color(white: 0.92)))
+                    .background(Capsule().fill(Look.cta))
             }
         }
-        .foregroundStyle(.white)
+        .foregroundStyle(Look.text)
         .buttonStyle(.plain)
         .padding(.horizontal, 16)
         .padding(.top, 12)
         .padding(.bottom, 8)
-        .background(LinearGradient(colors: [.black.opacity(0), .black], startPoint: .top, endPoint: .center).ignoresSafeArea())
+        .background(LinearGradient(colors: [Look.page.opacity(0), Look.page], startPoint: .top, endPoint: .center).ignoresSafeArea())
     }
 
     private var pageButtons: some View {
@@ -615,9 +651,11 @@ struct SpeechArenaDetail: View {
 
     private func reload() async {
         async let rows = challenges.board(script.id)
+        #if SPEECH_APP
         if let group = groups.selected {
             groupBoard = await groups.board(group: group.id, script: script.id)
         }
+        #endif
         if let rows = await rows { board = rows }
     }
 }
@@ -655,10 +693,10 @@ private struct MiniReadingButton: View {
     var body: some View {
         let ready = model.phase == .ready
         ZStack {
-            Circle().fill(Arena.raised)
+            Circle().fill(Look.raised)
             if ready {
                 Circle()
-                    .stroke(Color.white.opacity(0.12), lineWidth: 2.5)
+                    .stroke(Look.ringTrack, lineWidth: 2.5)
                     .padding(4)
                 Circle()
                     .trim(from: 0, to: model.progress)
@@ -676,4 +714,22 @@ private struct MiniReadingButton: View {
         .accessibilityAddTraits(.isButton)
         .accessibilityLabel(Text("Script"))
     }
+}
+
+/// The page's colours (2026-11-13, founder): the speech app's dark stage as
+/// it was, and in nawana the system's own, so the page follows the phone's
+/// light or dark mode like every other page there.
+private enum Look {
+    static let adaptive = !SpeechAppFlags.isSpeechApp
+    static var page: Color { adaptive ? Color(.systemGroupedBackground) : .black }
+    static var card: Color { adaptive ? Color(.secondarySystemGroupedBackground) : Arena.card }
+    static var raised: Color { adaptive ? Color(.secondarySystemGroupedBackground) : Arena.raised }
+    static var text: Color { adaptive ? .primary : .white }
+    static var body: Color { adaptive ? .primary : .white.opacity(0.85) }
+    static var dim: Color { adaptive ? .secondary : Arena.dim }
+    static var faint: Color { adaptive ? Color(.tertiaryLabel) : .white.opacity(0.4) }
+    /// The main button: the opposite of the page.
+    static var cta: Color { adaptive ? Color(.label) : Color(white: 0.92) }
+    static var ctaText: Color { adaptive ? Color(.systemBackground) : .black }
+    static var ringTrack: Color { adaptive ? Color(.systemFill) : .white.opacity(0.12) }
 }

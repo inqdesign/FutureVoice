@@ -47,6 +47,13 @@ targets:
         excludes:
           - "Resources/Info.plist"
           - "Vendor/**"
+      # The speech app's challenge cards, pictures, medals and challenge page
+      # (2026-11-13, founder: one look in both apps). The speech-app-only
+      # parts of these files sit behind SPEECH_APP.
+      - path: SpeechApp/SpeechArena.swift
+      - path: SpeechApp/SpeechArenaDetail.swift
+      - path: SpeechApp/SpeechMedalCalendar.swift
+      - path: SpeechApp/Illustrations
     dependencies:
       # DeepFilterNet noise removal for the clone recording, on the phone
       # (`VoiceDenoiser`). A Rust static library with the model built in;

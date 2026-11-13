@@ -59,7 +59,13 @@ struct ArenaMedalCalendar: View {
 
             HStack(spacing: 12) {
                 if let rank { Text("#\(rank)") }
-                Text("\(medals) medals")
+                Button { showingGuide = true } label: {
+                    HStack(spacing: 3) {
+                        Text("\(medals) medals")
+                        Image(systemName: "info.circle")
+                    }
+                }
+                .buttonStyle(.plain)
                 HStack(spacing: 3) {
                     Image(systemName: "flame.fill")
                         .foregroundStyle(streak > 0 ? Arena.accent : Arena.dim)
@@ -70,7 +76,10 @@ struct ArenaMedalCalendar: View {
             .foregroundStyle(Arena.dim)
             .frame(maxWidth: .infinity)
         }
+        .sheet(isPresented: $showingGuide) { MedalGuideSheet() }
     }
+
+    @State private var showingGuide = false
 
     @ViewBuilder
     private func slot(_ day: Date) -> some View {
@@ -127,5 +136,52 @@ struct ArenaMedalCalendar: View {
         Circle()
             .fill(Color.white.opacity(lit ? 0.14 : 0.07))
             .overlay(Circle().stroke(Color.white.opacity(lit ? 0.9 : 0), lineWidth: 1.5))
+    }
+}
+
+/// How medals work (2026-11-13, founder): a medal is your own best score, so
+/// anyone can win gold; the rank is the board, and the two are separate.
+struct MedalGuideSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(MedalTier.allCases, id: \.self) { tier in
+                        HStack(spacing: 14) {
+                            MedalBadge(tier: tier, label: "\(tier.bar)", size: 40)
+                            Text(name(tier))
+                            Spacer()
+                            Text(verbatim: "\(tier.bar)+")
+                                .monospacedDigit()
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } footer: {
+                    Text("Your best take on a challenge earns its medal. Everyone who reaches the score gets it.")
+                }
+                Section("Rank") {
+                    Text("Your place on the challenge's board, by best score. It's separate from the medal: gold and 7th place can go together.")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle("How medals work")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private func name(_ tier: MedalTier) -> LocalizedStringKey {
+        switch tier {
+        case .bronze: return "Bronze"
+        case .silver: return "Silver"
+        case .gold: return "Gold"
+        }
     }
 }
