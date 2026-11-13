@@ -26,7 +26,10 @@ done
 [[ "${1:-}" == "--dry-run" ]] && exit 0
 
 read -r -p "Upload these 18 pictures to R2? [y/N] " ok
-[[ "$ok" == "y" || "$ok" == "Y" ]] || { echo "nothing uploaded"; exit 0; }
+# Keep only letters (a pasted or IME-typed answer can carry invisible
+# characters); ㅛ is y on a Korean keyboard.
+ok="$(printf '%s' "$ok" | tr -cd 'A-Za-zㅛ' | tr 'A-Z' 'a-z')"
+[[ "$ok" == "y" || "$ok" == "yes" || "$ok" == "ㅛ" ]] || { echo "nothing uploaded"; exit 0; }
 
 for pair in "${pairs[@]}"; do
   pic="${pair%%:*}"
