@@ -13,6 +13,7 @@ final class SpeechListenModel: ObservableObject {
     let player = AudioPlayer()
     private var data: Data?
     private var introTask: Task<Void, Never>?
+    private var introPlayed = false
 
     func load(_ script: SpeechScript) async {
         guard phase == .idle else { return }
@@ -41,24 +42,50 @@ final class SpeechListenModel: ObservableObject {
 
     var isPlaying: Bool { player.isPlaying }
 
-    /// Play or pause the whole reading, from where it was.
+    /// Play or pause the whole reading, from where it was (the start again
+    /// once it has played to the end).
     func toggle() {
         introTask?.cancel()
+        introTask = nil
         if player.isPlaying {
             player.pause()
         } else if player.isLoaded {
-            player.playSegment(from: player.currentTime, to: nil, loop: false)
+            player.fadeVolume(to: 1, over: 0)
+            let atEnd = player.currentTime >= player.duration - 0.25
+            player.playSegment(from: atEnd ? 0 : player.currentTime, to: nil, loop: false)
         } else if let data {
             try? player.play(data, source: "speech_listen")
         }
+    }
+
+    /// The reading goes on, whole: an intro still fading in keeps playing at
+    /// full volume instead of fading away, a paused one resumes where it was.
+    func playOn() {
+        guard phase == .ready else { return }
+        if player.isPlaying {
+            introTask?.cancel()
+            introTask = nil
+            player.fadeVolume(to: 1, over: 0.3)
+        } else {
+            toggle()
+        }
+    }
+
+    /// How far along the reading is, 0…1.
+    var progress: Double {
+        let total = player.duration > 0 ? player.duration : (text?.duration ?? 0)
+        return total > 0 ? min(1, player.currentTime / total) : 0
     }
 
     /// The challenge page's intro: the opening rises over a couple of
     /// seconds and fades away at the end of the first sentence that finishes
     /// after `seconds` (my choice of length: long enough to hear how it goes,
     /// short enough to read the page under it).
+    /// It PAUSES at the end, not stops (2026-11-13, founder): the page's
+    /// Script button is a mini player, and a tap goes on from there.
     func playIntro(seconds: Double = 9) {
-        guard let data, introTask == nil, !player.isPlaying else { return }
+        guard let data, !introPlayed, introTask == nil, !player.isPlaying else { return }
+        introPlayed = true
         guard (try? player.play(data, source: "speech_listen_intro")) != nil else { return }
         player.fadeVolume(to: 0, over: 0)
         player.fadeVolume(to: 1, over: 2.5)
@@ -69,7 +96,23 @@ final class SpeechListenModel: ObservableObject {
             self.player.fadeVolume(to: 0, over: 1.6)
             try? await Task.sleep(for: .seconds(1.7))
             guard !Task.isCancelled else { return }
-            self.player.stop()
+            self.player.pause()
+            self.player.fadeVolume(to: 1, over: 0)
+            self.introTask = nil
+        }
+    }
+
+    /// Quietly to a pause, keeping the place (a take or the takes opening
+    /// over the page).
+    func fadeToPause() {
+        introTask?.cancel()
+        introTask = nil
+        guard player.isPlaying else { return }
+        player.fadeVolume(to: 0, over: 0.4)
+        Task { [player] in
+            try? await Task.sleep(for: .seconds(0.45))
+            player.pause()
+            player.fadeVolume(to: 1, over: 0)
         }
     }
 

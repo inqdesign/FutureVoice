@@ -669,7 +669,11 @@ struct SpeechScriptSheet: View {
     @StateObject private var voiceoverPlayer = AudioPlayer()
     /// A challenge's fluent reading (2026-11-13): played here with the words
     /// lighting up, and its breaths and run-together words marked.
-    @StateObject private var listen = SpeechListenModel()
+    @StateObject private var listen: SpeechListenModel
+    /// The reading belongs to the page that opened the sheet (the speech
+    /// app's challenge page, whose button is its mini player): it plays on
+    /// from where it was, and goes on playing when the sheet closes.
+    private let sharesReading: Bool
     /// A script that arrives with its study already made (a nawana Podcast
     /// episode): nothing is edited, voiced or studied on this phone — the
     /// study was written once for everybody when the episode was published.
@@ -685,8 +689,10 @@ struct SpeechScriptSheet: View {
 
     init(script: SpeechScript, onEdited: @escaping (SpeechScript) -> Void = { _ in },
          study: ScriptStudy? = nil, shipped: Bool = false, studyHere: Bool = false,
-         canPractice: Bool = false) {
+         canPractice: Bool = false, reading: SpeechListenModel? = nil) {
         self.canPractice = canPractice
+        _listen = StateObject(wrappedValue: reading ?? SpeechListenModel())
+        sharesReading = reading != nil
         _script = State(initialValue: script)
         _study = State(initialValue: study)
         self.onEdited = onEdited
@@ -870,7 +876,7 @@ struct SpeechScriptSheet: View {
             }
             .onDisappear {
                 voiceoverPlayer.stop()
-                listen.stop()
+                if !sharesReading { listen.stop() }
             }
         }
     }

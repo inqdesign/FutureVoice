@@ -54,6 +54,23 @@ struct SpeechRootView: View {
     @Environment(\.displayScale) private var displayScale
     @State private var curtain = true
 
+    @ViewBuilder
+    private var content: some View {
+        if previewStep == "signin" {
+            NavigationStack { SpeechSignInView() }
+        } else if previewStep == "welcome" {
+            SpeechWelcomeView()
+        } else if !auth.didResolveInitialSession {
+            // Under the mark until the stored sign-in is read: before this, a
+            // signed-in launch showed the welcome page on its way to the tabs.
+            Color("LaunchBackground").ignoresSafeArea()
+        } else if !auth.isSignedIn {
+            SpeechWelcomeView()
+        } else {
+            SpeechAppTabs()
+        }
+    }
+
     private var launchMark: some View {
         ZStack {
             Color("LaunchBackground")
@@ -96,42 +113,30 @@ struct SpeechRootView: View {
     }
 
     var body: some View {
-        Group {
-            if previewStep == "signin" {
-                NavigationStack { SpeechSignInView() }
-            } else if previewStep == "welcome" {
-                SpeechWelcomeView()
-            } else if !auth.didResolveInitialSession {
-                // The launch screen's twin (same colour, same mark, same
-                // centring as `UILaunchScreen`) until the stored sign-in is
-                // read: before this, a signed-in launch showed the welcome
-                // page for a moment on its way to the tabs.
+        // ONE launch mark over everything, fading out once (2026-11-13,
+        // founder: the content showed through the splash, then the splash
+        // alone, then it went). It was two marks: one while the sign-in was
+        // read, then a second over the home, and the swap between them was
+        // animated, so for a quarter second both were half transparent and
+        // the home showed through. Now the mark never moves; what is under it
+        // changes without animation, and only the mark fades.
+        ZStack {
+            content
+            if previewStep == nil, curtain {
                 launchMark
-            } else if !auth.isSignedIn {
-                SpeechWelcomeView()
-            } else {
-                // The home is drawn UNDER the launch mark and the mark stays
-                // until it has settled (2026-11-13, founder: "it can stay on
-                // the splash a little longer, as long as nothing stutters").
-                // Its first layout, the 3D mic's first frames, the pictures
-                // and the medal stills all happen behind it; a card tapped
-                // in the first seconds no longer meets that work.
-                ZStack {
-                    SpeechAppTabs()
-                    if curtain {
-                        launchMark
-                            .transition(.opacity)
-                            .zIndex(1)
-                    }
-                }
-                .task {
-                    guard curtain else { return }
-                    await warmBehindCurtain()
-                    withAnimation(.easeOut(duration: 0.35)) { curtain = false }
-                }
+                    .transition(.opacity)
+                    .zIndex(1)
             }
         }
-        .animation(.easeOut(duration: 0.25), value: auth.didResolveInitialSession)
+        .task(id: auth.didResolveInitialSession) {
+            guard auth.didResolveInitialSession, curtain else { return }
+            // The home is drawn UNDER the mark and the mark stays until it has
+            // settled ("it can stay on the splash a little longer, as long as
+            // nothing stutters"): its first layout, the 3D mic's first frames,
+            // the pictures and the medal stills all happen behind it.
+            if auth.isSignedIn { await warmBehindCurtain() }
+            withAnimation(.easeOut(duration: 0.35)) { curtain = false }
+        }
         .environment(\.locale, Locale(identifier: UILanguage.chromeLanguage))
         .onChange(of: auth.session?.user.id) { _, userId in
             if userId == nil {

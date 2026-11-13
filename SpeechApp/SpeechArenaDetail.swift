@@ -195,9 +195,8 @@ struct SpeechArenaDetail: View {
         }
         .onAppear { shown = true }
         .onDisappear { intro.fadeOut() }
-        .onChange(of: practicing) { _, on in if on { intro.fadeOut() } }
-        .onChange(of: showingScript) { _, on in if on { intro.fadeOut() } }
-        .onChange(of: showingTakes) { _, on in if on { intro.fadeOut() } }
+        .onChange(of: practicing) { _, on in if on { intro.fadeToPause() } }
+        .onChange(of: showingTakes) { _, on in if on { intro.fadeToPause() } }
         .sheet(isPresented: $naming, onDismiss: {
             if startAfterNaming, SpeechChallenges.displayName != nil {
                 startAfterNaming = false
@@ -206,7 +205,7 @@ struct SpeechArenaDetail: View {
         }) {
             SpeechChallengeNameSheet(suggested: appState.persona?.displayName ?? "")
         }
-        .sheet(isPresented: $showingScript) { SpeechScriptSheet(script: script) }
+        .sheet(isPresented: $showingScript) { SpeechScriptSheet(script: script, reading: intro) }
         .fullScreenCover(isPresented: $showingTakes) { SpeechTakesPager(scriptId: script.id) }
         .fullScreenCover(isPresented: $practicing, onDismiss: { Task { await reload() } }) {
             SpeechPrompterView(script: script, native: appState.nativeLanguage, level: appState.proficiency)
@@ -471,14 +470,13 @@ struct SpeechArenaDetail: View {
                     }
             }
             .accessibilityLabel(Text("Takes"))
-            Button { showingScript = true } label: {
-                Image(systemName: "doc.text")
-                    .font(.headline)
-                    .frame(width: 52, height: 52)
-                    .background(Circle().fill(Arena.raised))
-                    .overlay { ListenRing(model: intro) }
+            // A mini player (2026-11-13, founder): the fluent reading's
+            // progress fills a ring inside the button, and a tap opens the
+            // script with the reading going on from where the intro paused.
+            MiniReadingButton(model: intro) {
+                intro.playOn()
+                showingScript = true
             }
-            .accessibilityLabel(Text("Script"))
             Button(action: start) {
                 Text(isPast ? LocalizedStringKey("speech.challenge.practice")
                             : best == nil ? LocalizedStringKey("speech.challenge.take")
@@ -555,30 +553,43 @@ struct SpeechArenaDetail: View {
     }
 }
 
-/// The ring round the Script button (2026-11-13, founder): the fluent
-/// reading lives under that button, so while the page's intro plays the ring
-/// moves with the voice, and a faint ring stays once it has stopped. Its own
-/// view, so the player's 30-a-second level redraws the ring and nothing else.
-private struct ListenRing: View {
+/// The page's fluent reading as a mini player (2026-11-13, founder: not a
+/// ring pulsing outside the button, a progress ring inside it). A tap opens
+/// the script, the reading playing on in it. Its own view, so the player's
+/// 30-a-second clock redraws this and nothing else.
+private struct MiniReadingButton: View {
     @ObservedObject var model: SpeechListenModel
     @ObservedObject var player: AudioPlayer
+    let open: () -> Void
 
-    init(model: SpeechListenModel) {
+    init(model: SpeechListenModel, open: @escaping () -> Void) {
         self.model = model
         self.player = model.player
+        self.open = open
     }
 
     var body: some View {
-        let playing = player.isPlaying
-        let level = CGFloat(playing ? player.level : 0)
-        Circle()
-            .stroke(Arena.accent.opacity(playing ? 0.55 + 0.45 * level : 0.4),
-                    lineWidth: playing ? 1.5 + 2.5 * level : 1.2)
-            .padding(-(3 + 4 * level))
-            .animation(.easeOut(duration: 0.12), value: level)
-            .opacity(model.phase == .ready ? 1 : 0)
-            .animation(.easeOut(duration: 0.3), value: model.phase == .ready)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
+        let ready = model.phase == .ready
+        ZStack {
+            Circle().fill(Arena.raised)
+            if ready {
+                Circle()
+                    .stroke(Color.white.opacity(0.12), lineWidth: 2.5)
+                    .padding(4)
+                Circle()
+                    .trim(from: 0, to: model.progress)
+                    .stroke(Arena.accent, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                    .padding(4)
+                    .animation(.linear(duration: 0.1), value: model.progress)
+            }
+            Image(systemName: "doc.text").font(.headline)
+        }
+        .frame(width: 52, height: 52)
+        .contentShape(Circle())
+        .onTapGesture(perform: open)
+        .accessibilityElement()
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel(Text("Script"))
     }
 }
