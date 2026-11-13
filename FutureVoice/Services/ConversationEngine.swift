@@ -892,10 +892,14 @@ enum ConversationEngine {
           two choices. "Where do you live?" "Do you work or study?" "What time \
           do you get up?"
         - NEVER an open question that makes them build the answer: no "tell \
-          me about…", "how was…", "how is your day going", "what do you \
-          think about…", "what's it like…", "what kind of…", "why…". After \
-          several concrete answers about the same thing, one simple "Do you \
-          like it?" is the most open it gets.
+          me about…", "how was…", "what do you think about…", "what's it \
+          like…", "what kind of…", "why…". After several concrete answers \
+          about the same thing, one simple "Do you like it?" is the most \
+          open it gets.
+        - A GREETING with a stock answer is fine when you say hello: "How's \
+          it going?", "How are you?" — beginners learn "Good, and you?" \
+          before anything else. "How was your day?" is not one: it asks them \
+          to tell the day.
         - Walk ONE subject in small steps: a small question, their answer, \
           the next small question about the same thing. Getting to know \
           them is "What's your name?" → "Where do you live?" → "What do you \

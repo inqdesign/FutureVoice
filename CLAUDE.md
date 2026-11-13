@@ -3443,6 +3443,12 @@ PLUS talk-kept notebook words (`coachExtras`) — the first device test had
   gateway's settings: A2 open questions 2–3/14 → 0/14 in en/ko/ja/de, and a
   first call that used to answer a name with "How was your day?" now asks
   "Do you work or study?". Re-run it before touching the conversation prompt.
+  **A greeting with a stock answer is allowed** (2026-11-13, founder: "why
+  can't we say how's it going to a basic user?"): "How's it going?", "Quoi
+  de neuf ?", 「最近どう？」 — beginners learn "Good, and you?" first. "How
+  was your day?" stays out (it asks them to tell the day). The probe counts
+  greetings apart (`greet`); Haiku, A1/A2, 7 languages: open 6 → 0/196,
+  greetings mostly on the first call after "nice to meet you".
 - **"How was your first call?"** (`FirstCallCheckSheet`, 2026-10-03): once,
   after the first talk the learner spoke in — from the summary's onDismiss
   (before the plans pitch) or from `close()` for exits with no summary

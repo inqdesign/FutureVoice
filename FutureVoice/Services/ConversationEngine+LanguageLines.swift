@@ -33,9 +33,9 @@ extension ConversationEngine {
         case "ja":
             return "\n- JAPANESE, BEGINNER QUESTIONS: at this level every question is one they"
                 + "\n  can answer in a word or with yes/no, the first turn included:"
-                + "\n  「今日は仕事だった？」「今、家にいる？」「毎日飲む？」. 「最近どう？」"
-                + "\n  「どんな感じ？」「どんな一日だった？」「何してた？」 are open questions,"
-                + "\n  so they are never asked."
+                + "\n  「今日は仕事だった？」「今、家にいる？」「毎日飲む？」. 「どんな感じ？」"
+                + "\n  「どんな一日だった？」「何してた？」 are open questions, so they are"
+                + "\n  never asked."
         default:
             return ""
         }

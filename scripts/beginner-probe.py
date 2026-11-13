@@ -125,13 +125,25 @@ CASES = {
 }
 
 OPEN = {
- "en": r"tell me (about|more)|how was|how's it|how is it|what do you think|\bwhy\b|how come|what('s| is) it like|what have you been|anything (new|else|fun)|what's new|how do you feel|what kind of",
+ "en": r"tell me (about|more)|how was|how is it|what do you think|\bwhy\b|how come|what('s| is) it like|what have you been|anything (else|fun)|how do you feel|what kind of",
  "ko": r"얘기해|이야기해|어땠|어떻게 생각|왜|어떤 느낌|뭐 하고 지냈|무슨 일 있|어떤 거|어떤 게",
  "ja": r"教えて|どうだった|どう思う|なんで|どうして|どんな感じ|何かあった|どんな",
- "de": r"erzähl|wie war|warum|was denkst|wie findest|wie fühlst|was gibt's neues|was für",
- "es": r"cuéntame|cómo (te )?fue|qué tal (te fue|estuvo)|por qué|qué (piensas|opinas)|cómo te sientes|qué hay de nuevo|qué tipo de|cómo es",
- "fr": r"raconte|c'était comment|comment (ça|c'est) (s'est passé|était)|pourquoi|qu'est-ce que tu en penses|tu penses quoi|comment tu te sens|quoi de neuf|quel genre|c'est comment",
- "zh": r"说说|讲讲|聊聊|过得怎么样|觉得.*怎么样|为什么|怎么会|你觉得|感觉怎么样|有什么新|什么样的",
+ "de": r"erzähl|wie war|warum|was denkst|wie findest|wie fühlst|was für",
+ "es": r"cuéntame|cómo (te )?fue|qué tal (te fue|estuvo)|por qué|qué (piensas|opinas)|cómo te sientes|qué tipo de|cómo es",
+ "fr": r"raconte|c'était comment|comment (ça|c'est) (s'est passé|était)|pourquoi|qu'est-ce que tu en penses|tu penses quoi|comment tu te sens|quel genre|c'est comment",
+ "zh": r"说说|讲讲|聊聊|过得怎么样|觉得.*怎么样|为什么|怎么会|你觉得|感觉怎么样|什么样的",
+}
+
+# Greetings with a stock answer ("How's it going?" → "Good, you?") are allowed
+# for beginners since 2026-11-13 (founder), so they are counted apart, not as open.
+GREET = {
+ "en": r"how's it going|how are you|how's everything|what's new|what's up|anything new",
+ "ko": r"잘 지냈|잘 지내|어떻게 지내|별일 없",
+ "ja": r"最近どう|元気|調子どう",
+ "de": r"wie geht's|wie geht es|was gibt's neues|alles gut",
+ "es": r"qué tal\s*\?|cómo estás|qué hay de nuevo|cómo va todo|qué onda",
+ "fr": r"quoi de neuf|ça va|comment ça va|comment vas-tu|tu vas bien",
+ "zh": r"最近怎么样|最近好吗|你好吗|有什么新",
 }
 
 key = dict(l.split("=", 1) for l in open(os.path.join(ROOT, "gateway/.dev.vars")) if "=" in l)["GEMINI_API_KEY"].strip().strip('"')
@@ -182,10 +194,11 @@ def measure(lang, text):
     qs = len(re.findall(r"[?？]", text))
     sentences = [s for s in re.split(r"(?<=[.!?。！？])\s*", text) if s.strip()]
     questions = [s for s in sentences if s.rstrip().endswith(("?", "？"))]
-    opened = any(re.search(OPEN[lang], q, re.I) for q in questions)
+    greet = any(re.search(GREET[lang], q, re.I) for q in questions)
+    opened = any(re.search(OPEN[lang], q, re.I) and not re.search(GREET[lang], q, re.I) for q in questions)
     last = questions[-1] if questions else ""
     size = len(last.split()) if lang in ("en", "de", "es", "fr") else len(re.sub(r"\s", "", last))
-    return {"q": qs, "multi": qs >= 2, "open": opened, "noq": qs == 0, "qsize": size if questions else None}
+    return {"q": qs, "multi": qs >= 2, "open": opened, "greet": greet, "noq": qs == 0, "qsize": size if questions else None}
 
 jobs = []
 for level in LEVELS:
@@ -206,17 +219,17 @@ with cf.ThreadPoolExecutor(8) as pool:
                         "learner": case[-1][1], "reply": text, **measure(lang, text)})
 
 print(f"model {MODEL}, {RUNS} runs × {len(CASES['en'])} cases")
-print(f"{'level':5} {'lang':4} {'multi':>7} {'open':>7} {'noq':>7} {'q/turn':>7} {'q size':>7}   (size: words en/de, chars ko/ja)")
+print(f"{'level':5} {'lang':4} {'multi':>7} {'open':>7} {'greet':>7} {'noq':>7} {'q/turn':>7} {'q size':>7}   (size: words en/de, chars ko/ja)")
 for level in LEVELS:
     for lang in LANGS:
         rs = [r for r in results if r["level"] == level and r["lang"] == lang]
         n = len(rs)
         print(f"{level:5} {lang:4} {sum(r['multi'] for r in rs):>3}/{n:<3} {sum(r['open'] for r in rs):>3}/{n:<3} "
-              f"{sum(r['noq'] for r in rs):>3}/{n:<3} {sum(r['q'] for r in rs)/max(n,1):>7.2f} "
+              f"{sum(r['greet'] for r in rs):>3}/{n:<3} {sum(r['noq'] for r in rs):>3}/{n:<3} {sum(r['q'] for r in rs)/max(n,1):>7.2f} "
               f"{(lambda xs: sum(xs)/len(xs) if xs else 0)([r['qsize'] for r in rs if r['qsize']]):>7.1f}")
 if "--show" in sys.argv:
     for r in sorted(results, key=lambda r: (r["level"], r["lang"], str(r["case"]), r["run"])):
-        flag = "MULTI " if r["multi"] else ("OPEN  " if r["open"] else ("NOQ   " if r["noq"] else "ok    "))
+        flag = "MULTI " if r["multi"] else ("OPEN  " if r["open"] else ("GREET " if r["greet"] else ("NOQ   " if r["noq"] else "ok    ")))
         print(f"[{r['level']} {r['lang']} {r['case']}] {flag}{r['reply']}")
 out = os.path.join(OUT, "beginner-probe.out.json")
 json.dump(results, open(out, "w"), ensure_ascii=False, indent=1)
