@@ -560,6 +560,14 @@ struct RootTabView: View {
         guard appState.pendingFreeTalk else { return }
         appState.pendingFreeTalk = false
         guard freeTalkCallId == nil, !freeTalkClosing else { return }
+        // The routine's talk, while a goal's plan is in it, practises that
+        // day's piece of the plan (`GoalPlan`). The ring stays a free talk.
+        if [.routine, .tutorBot].contains(appState.pendingFreeTalkEntry),
+           let call = GoalPlan.todaysCall(language: appState.targetLanguage) {
+            Analytics.capture("goal_plan_talk", ["entry": appState.pendingFreeTalkEntry.rawValue])
+            TutorBot.shared.goalCall = call
+            return
+        }
         startFreeTalk(from: appState.pendingFreeTalkEntry)
     }
 

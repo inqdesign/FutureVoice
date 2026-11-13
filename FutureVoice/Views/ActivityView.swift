@@ -210,7 +210,8 @@ struct ActivityView: View {
                                openTalk = sessionsByDay.values.flatMap { $0 }.first { $0.id == id }
                                    ?? SessionStore.shared.loadAcrossLanguages().first { $0.id == id }
                            },
-                           footer: selectedDay.map { AnyView(dayJournal(cal.startOfDay(for: $0))) })
+                           footer: selectedDay.map { AnyView(dayJournal(cal.startOfDay(for: $0))) },
+                           goalPlan: GoalPlan.active(language: appState.targetLanguage))
         } else {
             ProgressView().frame(maxWidth: .infinity, minHeight: 200)
         }

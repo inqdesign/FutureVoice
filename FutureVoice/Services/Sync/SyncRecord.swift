@@ -72,6 +72,9 @@ enum SyncKind: String, Codable, CaseIterable, Hashable {
     /// A day's reading and model answer for an upcoming goal (`GoalPrep`):
     /// written once, so the other device reads the same text.
     case goalPrep
+    /// Which upcoming goals' plans are in the routine (`GoalPlanStore`).
+    /// An older build can't name this kind and skips it, so no schema bump.
+    case goalPlan
     /// The "Your week" archive (`WeekRecapStore`), keyed by the week's end.
     case weekRecap
     // Blobs — files carried as assets, keyed by filename.
@@ -110,7 +113,7 @@ enum SyncKind: String, Codable, CaseIterable, Hashable {
             return true
         case .practiceDay, .talkDay, .usageDay, .persona, .personaNote, .profile,
              .counterpart, .dayCard, .defaults, .upcomingGoal, .learningPurpose,
-             .studyPlan, .promiseDay, .activityEvent, .goalPrep, .weekRecap,
+             .studyPlan, .promiseDay, .activityEvent, .goalPrep, .goalPlan, .weekRecap,
              .blobCounterpartPhoto,
              .blobTurn, .blobRecording, .blobDayCard, .blobAvatar, .blobVoiceSample,
              .blobSpeechAudio, .blobSpeechVideo:

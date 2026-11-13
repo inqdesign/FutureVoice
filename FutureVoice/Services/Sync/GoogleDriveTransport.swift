@@ -57,6 +57,8 @@ final class GoogleDriveTransport: SyncTransport, BlobCellularControl {
     /// and `savedLine` still disagree in shape and scope.
     static let excludedKinds: Set<SyncKind> = [
         .drill, .shadow, .savedLine, .defaults, .blobTurn, .blobVoiceSample, .blobRecording,
+        // Android has no goal plans yet; a kind it can't read it tombstones.
+        .goalPlan,
     ]
 
     private let userId: String

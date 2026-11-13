@@ -158,9 +158,15 @@ final class TutorBot: ObservableObject {
         let snap = PlannerSnapshot.make(weekStart: day, plan: plan, now: now)
         let progress = snap.progress[day] ?? [:]
         var out = Today(day: day)
+        // A goal's plan in the routine names what today's talk practises.
+        let goalPlan = GoalPlan.active(language: appState.targetLanguage, now: now)
         out.items = (snap.planned[day] ?? []).map { occ in
-            Item(id: occ.id, kind: occ.kind,
-                 title: occ.kind == .review ? occ.kind.label : occ.kind.titled(occ.amount),
+            var title = occ.kind == .review ? occ.kind.label : occ.kind.titled(occ.amount)
+            if occ.kind == .talk, let goalPlan, let item = goalPlan.today {
+                title += " · \(goalPlan.goal.title): \(item.label)"
+            }
+            return Item(id: occ.id, kind: occ.kind,
+                 title: title,
                  start: occ.start, anytime: occ.anytime, progress: progress[occ.id] ?? 0, end: occ.end)
         }
         out.dueCards = DueReviewView.waitingDeck(now: now).count

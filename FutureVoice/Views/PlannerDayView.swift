@@ -22,6 +22,8 @@ struct PlannerDayCard: View {
     var onOpenTalk: (UUID) -> Void = { _ in }
     /// The day's journal entry (its share card and numbers), at the foot.
     var footer: AnyView? = nil
+    /// A goal's plan in the routine: a talk line says what it practises.
+    var goalPlan: GoalPlan? = nil
 
     private let cal = Calendar.current
     private var uiLocale: Locale { Locale(identifier: LanguageCatalog.currentNative) }
@@ -119,6 +121,12 @@ struct PlannerDayCard: View {
             return explain("About \(n) waiting")
         }
         if occ.kind == .sayItAgain { return explain("Pick a talk") }
+        if occ.kind == .talk, let goalPlan {
+            let items = goalPlan.items(on: occ.start)
+            if !items.isEmpty {
+                return "\(goalPlan.goal.title): " + items.map(\.label).joined(separator: " · ")
+            }
+        }
         // A timed talk IS the daily call; with the call off it won't ring.
         if occ.kind == .talk, !occ.anytime, !DailyCallStore.shared.isEnabled {
             return explain("No call")

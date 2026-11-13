@@ -293,6 +293,7 @@ struct UpcomingGoalPage: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var store = UpcomingGoalStore.shared
+    @ObservedObject private var plans = GoalPlanStore.shared
     private let initial: UpcomingGoal
     /// The goal as stored now — reading its material saves it again.
     private var goal: UpcomingGoal { store.goals.first { $0.id == initial.id } ?? initial }
@@ -336,6 +337,7 @@ struct UpcomingGoalPage: View {
                     .listRowInsets(EdgeInsets())
                 }
                 if days.isEmpty || tab == .questions {
+                    planSection
                     questionsSection
                     if goal.brief?.hasSources == true { materialSection }
                 } else {
@@ -387,6 +389,92 @@ struct UpcomingGoalPage: View {
     }
 
     private enum Tab: Hashable { case questions, prepared }
+
+    // MARK: The plan to the day
+
+    /// One line of the plan: a date (or a run of dates) and what it practises.
+    private struct PlanLine: Identifiable {
+        var id: Date { from }
+        var from: Date
+        var to: Date
+        var items: [GoalPlan.Item]
+    }
+
+    /// The plan's rows by date, with runs of the same catch-up or mock-run
+    /// day folded into one line.
+    private func lines(_ plan: GoalPlan) -> [PlanLine] {
+        let cal = Calendar.current
+        var out: [PlanLine] = []
+        for row in plan.rows {
+            if let last = out.last, cal.isDate(last.to, inSameDayAs: row.date) {
+                out[out.count - 1].items.append(row.item)
+            } else if let last = out.last, last.items == [row.item], !row.item.isQuestion {
+                out[out.count - 1].to = row.date
+            } else {
+                out.append(PlanLine(from: row.date, to: row.date, items: [row.item]))
+            }
+        }
+        return out
+    }
+
+    @ViewBuilder
+    private var planSection: some View {
+        if questions != nil, let plan = GoalPlan.make(goal: goal), let date = goal.date {
+            let inRoutine = plans.adopted.contains(goal.id)
+            Section {
+                ForEach(lines(plan)) { line in
+                    // The date is a small line above (founder, 2026-11-13): a
+                    // date column broke a range over two lines and pushed the
+                    // question away from it.
+                    VStack(alignment: .leading, spacing: 6) {
+                        planDate(line)
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                        ForEach(Array(line.items.enumerated()), id: \.offset) { _, item in
+                            Label {
+                                Text(item.label).foregroundStyle(.primary)
+                            } icon: {
+                                Image(systemName: item.symbol).foregroundStyle(goal.kind.tint)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+                if inRoutine {
+                    Label("In your routine until the day", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                    Button("Take it out of my routine", role: .destructive) {
+                        plans.set(goal.id, adopted: false)
+                        Analytics.capture("goal_plan_removed", ["kind": goal.kind.rawValue])
+                    }
+                } else {
+                    Button {
+                        GoalPlan.adopt(goal)
+                    } label: {
+                        Text("Use this plan").frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+                }
+            } header: {
+                Text("Your plan to \(date.formatted(.dateTime.month(.abbreviated).day().locale(Locale(identifier: LanguageCatalog.currentNative))))")
+            } footer: {
+                Text(inRoutine
+                     ? "Your routine's talks practise this, at the times you set. Skip a day and the rest moves along."
+                     : "Laid on your routine's talk days. Each talk practises that day's piece; after the day, your routine is as before.")
+            }
+        }
+    }
+
+    private func planDate(_ line: PlanLine) -> some View {
+        let style = Date.FormatStyle.dateTime.weekday(.abbreviated).day()
+            .locale(Locale(identifier: LanguageCatalog.currentNative))
+        let cal = Calendar.current
+        return Text(cal.isDate(line.from, inSameDayAs: line.to)
+                    ? line.from.formatted(style)
+                    : "\(line.from.formatted(style)) – \(line.to.formatted(style))")
+    }
 
     private var questionsSection: some View {
         let lessons = TutorLessonStore.all(language: goal.language)
