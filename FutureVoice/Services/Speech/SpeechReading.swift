@@ -167,6 +167,69 @@ enum SpeechReading {
         Int(min(100, max(0, value)).rounded())
     }
 
+    /// A sound Azure scored under the price list's bar, where it was said.
+    struct WeakSound: Hashable {
+        var phoneme: String
+        var score: Int
+    }
+
+    /// Every weak sound, laid on the script token it was said in
+    /// (2026-11-13, founder: 35 sounds cost points and none showed on the
+    /// script). Pieces overlap by two words at their starts, so a word
+    /// assessed twice counts ONCE, its first reading: the count the price
+    /// list charges and the marks on the script are the same set.
+    static func weakSounds(pieces: [PronunciationResult], script: String,
+                           fluent: [SpeechReference.Word]? = nil) -> [Int: [WeakSound]] {
+        let bar = SpeechReadingScore.Price.weakSoundBelow
+        let spared = fluentLowSounds(fluent, script: script)
+        var out: [Int: [WeakSound]] = [:]
+        for (t, word) in judgedWords(pieces: pieces, script: script) {
+            let weak = word.phonemes.compactMap { p -> WeakSound? in
+                guard let a = p.accuracy, a < bar, spared[t]?.contains(p.phoneme) != true else { return nil }
+                return WeakSound(phoneme: p.phoneme, score: a)
+            }
+            if !weak.isEmpty { out[t] = weak }
+        }
+        return out
+    }
+
+    /// The fluent reading's sounds that the same assessment scores under
+    /// this, by script token (2026-11-13, founder: the reading says "nyu" in
+    /// newspapers, and the dictionary wants "noo"; it scored the reading 46
+    /// there). A learner who says such a sound like the reading is never
+    /// charged for it. 60 is a choice, not a measurement: the learner's bar
+    /// is 40, and a fluent reading this far under the dictionary is saying it
+    /// another way. About 1% of a script's sounds (measured on three).
+    static let fluentSoundBar = 60
+
+    static func fluentLowSounds(_ fluent: [SpeechReference.Word]?, script: String) -> [Int: Set<String>] {
+        guard let fluent, fluent.contains(where: { $0.ph != nil }) else { return [:] }
+        let tokens = SpeechDelivery.referenceTokens(script).map(\.core)
+        let match = SpeechDelivery.align(fluent.map { SpeechDelivery.core($0.w) }, tokens)
+        var out: [Int: Set<String>] = [:]
+        for (i, word) in fluent.enumerated() {
+            guard let t = match[i], let ph = word.ph else { continue }
+            let low = Set(ph.filter { $0.a < fluentSoundBar }.map(\.p))
+            if !low.isEmpty { out[t, default: []].formUnion(low) }
+        }
+        return out
+    }
+
+    /// Each script token's assessed word, its FIRST reading where pieces
+    /// overlap: what `weakSounds` counts from, and what the sounds sheet
+    /// shows a tapped word with.
+    static func judgedWords(pieces: [PronunciationResult], script: String) -> [Int: PronunciationResult.Word] {
+        let tokens = SpeechDelivery.referenceTokens(script).map(\.core)
+        let words = pieces.flatMap { $0.words.filter(\.isJudged) }
+        let match = SpeechDelivery.align(words.map { SpeechDelivery.core($0.word) }, tokens)
+        var out: [Int: PronunciationResult.Word] = [:]
+        for (i, word) in words.enumerated() {
+            guard let t = match[i], out[t] == nil else { continue }
+            out[t] = word
+        }
+        return out
+    }
+
     static func pearson(_ x: [Double], _ y: [Double]) -> Double? {
         guard x.count == y.count, x.count >= 4 else { return nil }
         let mx = x.reduce(0, +) / Double(x.count), my = y.reduce(0, +) / Double(y.count)
@@ -204,6 +267,10 @@ struct SpeechReadingScore: Codable, Hashable {
     var weakSounds: Int? = nil
     /// The script's words, for the words left unread (scoring 8).
     var scriptWords: Int? = nil
+    /// "listen": measured against the one listening reading (2026-11-13).
+    /// nil: the male/female pair, which a challenge take is re-judged off
+    /// when its result is opened (`SpeechReadingRejudge`).
+    var reference: String? = nil
 
     struct Parts: Codable, Hashable {
         var speed: Int
@@ -247,7 +314,10 @@ struct SpeechReadingScore: Codable, Hashable {
     enum Price {
         static let stop = 1.0             // a stop inside a sentence the native reading doesn't make
         static let word = 1.0             // a word changed, missed or added, or left unread at the end
-        static let sound = 0.5            // a sound Azure scores under `weakSoundBelow`
+        // A sound Azure scores under `weakSoundBelow`: 0.4, the calibration's
+        // own ratio to a word (0.37; it was 0.5 for one take, founder moved it
+        // to the data the same day).
+        static let sound = 0.4
         static let weakSoundBelow = 40
         static let rhythmPerPoint = 0.5   // per 0.01 of rhythm below `rhythmBar`
         static let rhythmBar = 90         // r × 100: natives sit around 93
@@ -272,8 +342,9 @@ struct SpeechReadingScore: Codable, Hashable {
         return max(0, Int(((1 - min(1, coverage)) * Double(w)).rounded()))
     }
 
-    /// Every line of the receipt, in the order the page lists them. Empty
-    /// before scoring 8.
+    /// Every line of the receipt, in the order the page lists them: from the
+    /// whole reading down to a single sound (2026-11-13, founder: speed and
+    /// rhythm first). Empty before scoring 8.
     var deductions: [Deduction] {
         guard version >= 8 else { return [] }
         let words = slips + unreadWords
@@ -281,15 +352,29 @@ struct SpeechReadingScore: Codable, Hashable {
         let r = max(0, Price.rhythmBar - rhythmPoint)
         let s = max(0, Price.speedBar - speedPoint)
         return [
+            Deduction(part: .speed, count: s, points: Double(s) * Price.speedPerPoint),
+            Deduction(part: .rhythm, count: r, points: Double(r) * Price.rhythmPerPoint),
             Deduction(part: .pauses, count: extraPauses.count, points: Double(extraPauses.count) * Price.stop),
             Deduction(part: .accuracy, count: words, points: Double(words) * Price.word),
             Deduction(part: .pronunciation, count: sounds, points: Double(sounds) * Price.sound),
-            Deduction(part: .rhythm, count: r, points: Double(r) * Price.rhythmPerPoint),
-            Deduction(part: .speed, count: s, points: Double(s) * Price.speedPerPoint),
         ]
     }
 
     var lost: Double { deductions.reduce(0) { $0 + $1.points } }
+
+    /// Each area holds 20 of the 100 points (2026-11-13, founder: "each area
+    /// scored, so what's weak shows at a glance"). An area's score is what
+    /// is left of its 20, out of 100; it stops at 0, so the total is always
+    /// the five areas' average, and mistakes past an area's 20 points no
+    /// longer count. `submit_speech_reading_take_v8` adds the same shares.
+    static let areaShare = 20.0
+
+    func areaLeft(_ d: Deduction) -> Double { max(0, Self.areaShare - d.points) }
+
+    /// An area's score out of 100.
+    func areaScore(_ d: Deduction) -> Int {
+        Int((areaLeft(d) * 100 / Self.areaShare).rounded())
+    }
 
     var isPerfect: Bool {
         if version >= 8 { return lost == 0 }
@@ -298,7 +383,10 @@ struct SpeechReadingScore: Codable, Hashable {
 
     var total: Int {
         if isPerfect { return 100 }
-        if version >= 8 { return min(99, max(0, Int((100 - lost).rounded()))) }
+        if version >= 8 {
+            let left = deductions.reduce(0) { $0 + areaLeft($1) }
+            return min(99, max(0, Int(left.rounded())))
+        }
         let mean = Double(parts.all.reduce(0) { $0 + $1.1 }) / 5
         // Stopping early scales everything but accuracy (which already
         // counts the words left out) — as the older scoring did.
@@ -309,7 +397,7 @@ struct SpeechReadingScore: Codable, Hashable {
     /// The part that cost the most, to work on next; nil on a perfect take.
     var focus: Part? {
         guard !isPerfect else { return nil }
-        if version >= 8 { return deductions.max { $0.points < $1.points }?.part }
+        if version >= 8 { return deductions.min { areaLeft($0) < areaLeft($1) }?.part }
         return parts.all.min { $0.1 < $1.1 }?.0
     }
 
@@ -402,7 +490,63 @@ enum SpeechReadingRepair {
     }
 }
 
+/// Re-judges a challenge take scored against the old male/female pair
+/// against the one listening reading (2026-11-13, founder: "re-judge the
+/// earlier attempts if we can"). Everything it needs is on the take: the
+/// assessed pieces with their word timings, the transcript, the recording.
+enum SpeechReadingRejudge {
+    static func needs(_ take: SpeechTake) -> Bool {
+        guard let r = take.metrics.reading else { return false }
+        return r.version >= 8 && r.reference == nil && !(take.assessments ?? []).isEmpty
+    }
+
+    /// The re-judged take, saved; nil when it didn't need it or couldn't be.
+    @MainActor
+    static func run(_ take: SpeechTake, script: SpeechScript) async -> SpeechTake? {
+        guard needs(take), SpeechListenService.available(for: script),
+              let fluent = await SpeechListenService.reading(script) else { return nil }
+        let starts = take.assessmentStartsMs
+        let pieces = (take.assessments ?? []).enumerated().map { i, result in
+            SpeechDelivery.Piece(reference: "", result: result,
+                                 startMs: starts.flatMap { $0.indices.contains(i) ? $0[i] : nil } ?? 0)
+        }
+        let language = script.language, body = script.body, transcript = take.transcript
+        let audio = SpeechStore.mediaURL(take.audioFilename)
+        var metrics = take.metrics
+        let pronunciation = metrics.pronunciation
+        let delivered = await Task.detached { SpeechDelivery.measure(pieces, language: language, audioURL: audio) }.value
+        let scored = await Task.detached {
+            SpeechAnalyzer.analyze(script: body, transcript: transcript, language: language,
+                                   envelope: nil, pronunciation: pronunciation)
+        }.value
+        metrics.slips = scored.slips
+        metrics.scriptTokens = scored.scriptTokens
+        let reference = SpeechReference(version: 2, male: fluent.words, female: fluent.words)
+        guard var reading = SpeechTakeSession.reading(pieces: pieces, reference: reference, script: body,
+                                                      metrics: metrics, delivery: delivered, fluent: fluent.words),
+              var current = SpeechStore.shared.takes.first(where: { $0.id == take.id }) else { return nil }
+        reading.gender = fluent.gender
+        reading.reference = "listen"
+        metrics.reading = reading
+        metrics.overall = reading.total
+        current.metrics = metrics
+        SpeechStore.shared.save(current)
+        Analytics.capture("speech_take_rejudged", ["overall": reading.total])
+        return current
+    }
+}
+
 extension SpeechTake {
+    /// A price-list take shows the total its price list gives TODAY: the
+    /// stored `overall` was written with the prices of the day it was read
+    /// (a sound cost 0.5 for one take on 2026-11-13). Read-time only.
+    var withCurrentPrices: SpeechTake {
+        guard let r = metrics.reading, r.version >= 8, metrics.overall != r.total else { return self }
+        var t = self
+        t.metrics.overall = r.total
+        return t
+    }
+
     /// Whether the video is the camera alone, with the script drawn on top
     /// when wanted. `prompter` says so; a take scored 7 or later always was,
     /// even if an older build has since dropped that record.
@@ -415,7 +559,13 @@ struct SpeechReference: Codable {
     var version: Int
     var male: [Word]
     var female: [Word]
-    struct Word: Codable { var w: String; var s: Int; var e: Int }
+    struct Word: Codable {
+        var w: String; var s: Int; var e: Int
+        /// The fluent reading's own sounds with their scores (the listening
+        /// reading only, 2026-11-13). nil on scoring references.
+        var ph: [Sound]? = nil
+        struct Sound: Codable { var p: String; var a: Int }
+    }
 
     func words(for gender: String) -> [Word] { gender == "female" ? female : male }
 }

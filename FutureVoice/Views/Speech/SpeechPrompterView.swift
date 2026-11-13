@@ -105,6 +105,19 @@ struct SpeechPrompterView: View {
         dismiss()
     }
 
+    /// How the prompter scrolls: with the voice, at the fluent reading's
+    /// tempo (karaoke, 2026-11-13), or at a steady speed.
+    enum ScrollMode: Hashable { case voice, fluent, steady }
+
+    private var scrollMode: ScrollMode {
+        session.fluentPace ? .fluent : session.followVoice ? .voice : .steady
+    }
+
+    private func setScrollMode(_ mode: ScrollMode) {
+        session.fluentPace = mode == .fluent
+        session.followVoice = mode != .steady
+    }
+
     // MARK: - Screen
 
     private var prompterScreen: some View {
@@ -119,8 +132,13 @@ struct SpeechPrompterView: View {
                                recording: isRecording,
                                follow: session.followVoice,
                                speed: session.speed,
-                               voiceActive: { [session] in session.voiceActive },
-                               held: holding)
+                               // Karaoke keeps moving on the fluent clock,
+                               // spoken or not.
+                               voiceActive: { [session] in
+                                   (session.fluentPace && session.guide != nil) || session.voiceActive
+                               },
+                               held: holding,
+                               guide: session.fluentPace ? session.guide : nil)
                 .overlay(alignment: .top) {
                     if holding {
                         Label("Paused", systemImage: "pause.fill")
@@ -214,9 +232,15 @@ struct SpeechPrompterView: View {
                         }
                     }
             AppMenu {
-                Picker("Scrolling", selection: $session.followVoice) {
-                    Label("Follow my voice", systemImage: "waveform").tag(true)
-                    Label("Steady speed", systemImage: "speedometer").tag(false)
+                Picker("Scrolling", selection: Binding(
+                    get: { scrollMode },
+                    set: { setScrollMode($0) }
+                )) {
+                    Label("Follow my voice", systemImage: "waveform").tag(ScrollMode.voice)
+                    if session.fluentPaceAvailable {
+                        Label("Fluent pace", systemImage: "music.note").tag(ScrollMode.fluent)
+                    }
+                    Label("Steady speed", systemImage: "speedometer").tag(ScrollMode.steady)
                 }
                 if !session.followVoice {
                     Picker("Speed", selection: $session.speed) {
@@ -462,15 +486,27 @@ struct SpeechPrompterView: View {
                 .accessibilityLabel(Text("Record again"))
             } else {
                 Button {
-                    session.followVoice.toggle()
-                    flash(session.followVoice ? explain("Follows your voice") : explain("Steady speed"))
+                    // Voice → fluent pace (when there's a fluent reading) →
+                    // steady speed → voice.
+                    switch scrollMode {
+                    case .voice: setScrollMode(session.fluentPaceAvailable ? .fluent : .steady)
+                    case .fluent: setScrollMode(.steady)
+                    case .steady: setScrollMode(.voice)
+                    }
+                    switch scrollMode {
+                    case .voice: flash(explain("Follows your voice"))
+                    case .fluent: flash(explain("Fluent pace: keep up with the highlight"))
+                    case .steady: flash(explain("Steady speed"))
+                    }
                 } label: {
-                    Image(systemName: session.followVoice ? "waveform" : "speedometer")
+                    Image(systemName: scrollMode == .fluent ? "music.note"
+                          : session.followVoice ? "waveform" : "speedometer")
                         .font(.title3)
                         .frame(width: 52, height: 52)
                 }
                 .buttonStyle(SpeechChromeButtonStyle(onCamera: cameraShowing))
-                .accessibilityLabel(session.followVoice ? Text("Scrolling follows your voice") : Text("Scrolling at a steady speed"))
+                .accessibilityLabel(scrollMode == .fluent ? Text("Scrolling at the fluent pace")
+                                    : session.followVoice ? Text("Scrolling follows your voice") : Text("Scrolling at a steady speed"))
             }
         }
     }
@@ -529,6 +565,9 @@ struct SpeechTeleprompter: View {
     var voiceActive: () -> Bool = { false }
     /// Pressed and held: the steady scroll eases to a stop.
     var held = false
+    /// Fluent pace: the word the fluent reading is on. The scroll follows it
+    /// instead of the reader, and it is drawn behind a yellow highlighter.
+    var guide: Int? = nil
 
     @StateObject private var scroller = PrompterScroller()
 
@@ -550,14 +589,14 @@ struct SpeechTeleprompter: View {
         GeometryReader { geo in
             let lineWidth = max(1, geo.size.width - 48)
             SpeechPrompterColumn(track: track, cursor: cursor, language: language,
-                                 textSize: textSize, width: geo.size.width,
+                                 textSize: textSize, width: geo.size.width, guide: guide,
                                  onCurrentWord: { frame in
                                      let across = min(1, max(0, (frame.minX - 24) / lineWidth))
                                      let lineAdvance = frame.height + textSize * 0.35
                                      scroller.setTarget(frame.minY + across * lineAdvance,
                                                         lineTop: frame.minY,
                                                         lineAdvance: lineAdvance,
-                                                        snap: cursor == 0)
+                                                        snap: (guide ?? cursor) == 0)
                                  })
                 .equatable()
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
@@ -685,6 +724,9 @@ struct SpeechPrompterColumn: View, Equatable {
     let language: String
     let textSize: Double
     let width: CGFloat
+    /// Fluent pace: the word the reading is on (highlighted, and the one the
+    /// scroll follows). nil otherwise.
+    var guide: Int? = nil
     /// Reports where the current word is (the scroll follows it). Off for
     /// the copy drawn into the video.
     var measures: Bool = true
@@ -693,7 +735,8 @@ struct SpeechPrompterColumn: View, Equatable {
     let onCurrentWord: (SpeechTeleprompter.WordFrame) -> Void
 
     static func == (a: Self, b: Self) -> Bool {
-        a.cursor == b.cursor && a.textSize == b.textSize && a.width == b.width && a.measures == b.measures
+        a.cursor == b.cursor && a.guide == b.guide && a.textSize == b.textSize && a.width == b.width
+            && a.measures == b.measures
             && a.language == b.language && a.track.signature == b.track.signature
     }
 
@@ -715,8 +758,17 @@ struct SpeechPrompterColumn: View, Equatable {
                             // eye off the line (founder, on device). A
                             // prompter just flows; the fades do the rest.
                             .foregroundStyle(.primary)
+                            // Fluent pace only, chosen by the reader: the
+                            // word they should be saying now (karaoke).
                             .background {
-                                if measures && word.id == currentWord {
+                                if word.id == guide {
+                                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                        .fill(Color.yellow.opacity(0.4))
+                                        .padding(-3)
+                                }
+                            }
+                            .background {
+                                if measures && word.id == (guide ?? currentWord) {
                                     Color.clear.onGeometryChange(for: SpeechTeleprompter.WordFrame.self) { proxy in
                                         let f = proxy.frame(in: .named(Self.space))
                                         return .init(minX: f.minX, minY: f.minY, width: f.width, height: f.height)

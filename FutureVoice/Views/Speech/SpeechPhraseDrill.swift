@@ -164,9 +164,9 @@ struct SpeechPhraseDrillSheet: View {
 
                 Section {
                     HStack(spacing: 10) {
-                        Button { playFluent() } label: { Label("Fluent", systemImage: "play.fill") }
+                        Button { playFluent() } label: { Label(explain(key: "speech.drill.fluent", default: "Fluent"), systemImage: "play.fill") }
                             .disabled(fluentWords.isEmpty)
-                        Button { playYours() } label: { Label("Yours", systemImage: "play.fill") }
+                        Button { playYours() } label: { Label(explain(key: "speech.drill.yours", default: "Yours"), systemImage: "play.fill") }
                             .disabled(yourWords.isEmpty)
                         Button { playBoth() } label: { Text("One after the other") }
                             .disabled(fluentWords.isEmpty || yourWords.isEmpty)
@@ -235,7 +235,7 @@ struct SpeechPhraseDrillSheet: View {
         if judging { return explain("Listening…") }
         if failed { return explain("Couldn't check that one. Try again.") }
         guard let last = tries.last else { return explain("Hear the fluent reading, then say it again.") }
-        if last.matched { return explain("That holds together. The mark is cleared for this try.") }
+        if last.matched { return explain("That holds together.") }
         if last.missing > 0 { return explain("Some words didn't come through. Say the whole phrase.") }
         if let s = last.stops.first { return explain("Still a stop after “\(s)”.") }
         if let h = last.held.first { return explain("“\(h)” is still long.") }

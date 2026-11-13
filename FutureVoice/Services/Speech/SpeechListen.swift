@@ -59,6 +59,28 @@ enum SpeechListenService {
         return (audio, file)
     }
 
+    /// The fluent reading's words, with its sounds, for scoring: from the
+    /// phone when it has them with sounds, else the server (which re-times
+    /// an older reading to add them). No audio is downloaded.
+    static func words(_ script: SpeechScript) async -> [SpeechReference.Word]? {
+        await reading(script)?.words
+    }
+
+    /// The reading itself (words, sounds and its voice's gender), without
+    /// its audio: what a take is scored against (2026-11-13, founder: the
+    /// one reading the learner hears is THE reference, karaoke-style).
+    static func reading(_ script: SpeechScript) async -> SpeechListenAudio? {
+        guard available(for: script) else { return nil }
+        let meta = directory.appendingPathComponent("\(digest(script)).json")
+        if let cached = (try? Data(contentsOf: meta)).flatMap({ try? JSONDecoder().decode(SpeechListenAudio.self, from: $0) }),
+           cached.words.contains(where: { $0.ph != nil }) {
+            return cached
+        }
+        guard let fresh = await fetch(script) else { return nil }
+        if let data = try? JSONEncoder().encode(fresh) { try? data.write(to: meta, options: .atomic) }
+        return fresh
+    }
+
     private static func fetch(_ script: SpeechScript) async -> SpeechListenAudio? {
         struct Body: Encodable {
             let text: String; let language: String; let listen = true; let challenge: String

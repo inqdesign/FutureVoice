@@ -57,6 +57,7 @@ final class SpeechStore: ObservableObject {
             .sorted { $0.createdAt > $1.createdAt }
         takes = ((try? Data(contentsOf: takesURL))
             .flatMap { try? decoder.decode([SpeechTake].self, from: $0) } ?? [])
+            .map(\.withCurrentPrices)
             .sorted { $0.createdAt > $1.createdAt }
     }
 

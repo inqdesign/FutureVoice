@@ -54,7 +54,7 @@ final class SpeechListenTests: XCTestCase {
 }
 
 /// Scoring 8's price list (2026-11-13), on the founder's docent take that
-/// morning: 4 stops, 3 words, 11 sounds, rhythm 0.77, pace 79% → 75.
+/// morning: 4 stops, 3 words, 11 sounds, rhythm 0.77, pace 79% → 76.
 final class SpeechPriceListTests: XCTestCase {
     private func score(stops: Int, slips: Int, sounds: Int?, rhythm: Double, speed: Double,
                        coverage: Double = 1, words: Int = 253) -> SpeechReadingScore {
@@ -69,8 +69,8 @@ final class SpeechPriceListTests: XCTestCase {
 
     func testFoundersReceipt() {
         let r = score(stops: 4, slips: 3, sounds: 11, rhythm: 0.77, speed: 0.79)
-        XCTAssertEqual(r.deductions.map(\.points), [4, 3, 5.5, 6.5, 6])
-        XCTAssertEqual(r.total, 75)
+        XCTAssertEqual(r.deductions.first { $0.part == .pronunciation }!.points, 4.4, accuracy: 0.0001)
+        XCTAssertEqual(r.total, 76)
         XCTAssertEqual(r.focus, .rhythm)
     }
 
@@ -85,6 +85,21 @@ final class SpeechPriceListTests: XCTestCase {
         XCTAssertEqual(r.total, 80)
     }
 
+    func testEachAreaIsTwentyAndStopsAtZero() {
+        // 30 stops cost 30, but the pauses area holds only 20 of the 100.
+        let r = score(stops: 30, slips: 0, sounds: 0, rhythm: 0.93, speed: 0.95)
+        XCTAssertEqual(r.areaScore(r.deductions.first { $0.part == .pauses }!), 0)
+        XCTAssertEqual(r.total, 80)
+        XCTAssertEqual(r.focus, .pauses)
+        XCTAssertEqual(r.deductions.map(\.part), [.speed, .rhythm, .pauses, .accuracy, .pronunciation])
+    }
+
+    func testFoundersAreas() {
+        let r = score(stops: 4, slips: 6, sounds: 35, rhythm: 0.82, speed: 0.79)
+        XCTAssertEqual(r.deductions.map { r.areaScore($0) }, [70, 80, 80, 70, 30])
+        XCTAssertEqual(r.total, 66)
+    }
+
     func testFasterThanTheNativeReadingCountsLikeSlower() {
         // Pace is the share of the native pace either way (min(s, 1/s)).
         XCTAssertEqual(score(stops: 0, slips: 0, sounds: 0, rhythm: 0.93, speed: 1.25).speedPoint, 80)
@@ -93,5 +108,45 @@ final class SpeechPriceListTests: XCTestCase {
     func testNamesAreNeverSlips() {
         let names = SpeechAnalyzer.properNames("The police even questioned a young Pablo Picasso. And here, I said.")
         XCTAssertEqual(names, ["pablo", "picasso"])
+    }
+}
+
+/// Weak sounds are counted where they were said, once per script word
+/// (2026-11-13): pieces overlap by two words, and a word assessed twice used
+/// to be charged twice.
+final class SpeechWeakSoundTests: XCTestCase {
+    private func word(_ w: String, _ sounds: [(String, Int)]) -> PronunciationResult.Word {
+        .init(word: w, accuracy: 80, error: "None", offsetMs: 0, durationMs: 200,
+              phonemes: sounds.map { .init(phoneme: $0.0, accuracy: $0.1) })
+    }
+    private func piece(_ words: [PronunciationResult.Word]) -> PronunciationResult {
+        .init(score: 80, accuracy: 80, fluency: 80, completeness: 100, prosody: nil, locale: "en-US",
+              recognized: "", words: words)
+    }
+
+    func testOverlapCountsOnce() {
+        let script = "It was a quiet Monday morning."
+        let a = piece([word("It", [("ɪ", 90)]), word("was", [("w", 90), ("z", 0)]), word("a", [("ə", 90)])])
+        let b = piece([word("was", [("w", 90), ("z", 10)]), word("a", [("ə", 90)]), word("quiet", [("t", 20)]),
+                       word("Monday", [("m", 95)]), word("morning", [("ŋ", 99)])])
+        let weak = SpeechReading.weakSounds(pieces: [a, b], script: script)
+        XCTAssertEqual(weak.values.reduce(0) { $0 + $1.count }, 2)   // z in "was" once, t in "quiet"
+        XCTAssertEqual(weak[1]?.first?.score, 0)                       // the first reading of "was"
+    }
+
+    func testASoundTheFluentReadingAlsoMissesIsNotCounted() {
+        // The founder's "newspapers": the fluent reading says "nyu" too, and
+        // the assessment scored the reading 46 there.
+        let script = "Newspapers printed her face."
+        let mine = piece([word("Newspapers", [("n", 39), ("u", 35), ("s", 100), ("z", 22)]),
+                          word("printed", [("t", 20)])])
+        var news = SpeechReference.Word(w: "newspapers", s: 0, e: 600)
+        news.ph = [.init(p: "n", a: 46), .init(p: "u", a: 46), .init(p: "s", a: 100), .init(p: "z", a: 90)]
+        var printed = SpeechReference.Word(w: "printed", s: 600, e: 900)
+        printed.ph = [.init(p: "t", a: 95)]
+        let weak = SpeechReading.weakSounds(pieces: [mine], script: script, fluent: [news, printed])
+        XCTAssertEqual(weak[0]?.map(\.phoneme), ["z"])   // n and u spared, z still counted
+        XCTAssertEqual(weak[1]?.map(\.phoneme), ["t"])
+        XCTAssertEqual(SpeechReading.weakSounds(pieces: [mine], script: script).values.reduce(0) { $0 + $1.count }, 4)
     }
 }

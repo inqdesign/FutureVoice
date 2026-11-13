@@ -39,6 +39,20 @@ final class SpeechTakeSession: ObservableObject {
     /// lasts for this visit only (a remembered switch kept reopening the
     /// prompter in the mode the reader had forgotten choosing).
     @Published var followVoice = true
+    /// Karaoke (2026-11-13, founder): the prompter moves at the FLUENT
+    /// reading's tempo from the reader's first word, and `guide` is the word
+    /// they should be saying now. Off by default (a beginner reads at their
+    /// own pace); per visit, like `followVoice`. The score is the same
+    /// either way.
+    @Published var fluentPace = false
+    /// The word the fluent reading is on, while `fluentPace` runs.
+    @Published private(set) var guide: Int?
+    /// The fluent reading has been laid onto the prompter's words.
+    @Published private(set) var fluentPaceAvailable = false
+    /// Each prompter word's start in the fluent reading, seconds.
+    private var guideStarts: [Double?] = []
+    /// The take's clock minus the fluent reading's, set at the first word.
+    private var guideOrigin: Double?
     /// Fixed-speed multiplier (0.7…1.3), only read when not following.
     @Published var speed: Double {
         didSet { UserDefaults.standard.set(speed, forKey: Self.speedKey) }
@@ -137,6 +151,9 @@ final class SpeechTakeSession: ObservableObject {
     /// The native reference reading, fetched as the screen opens so it is
     /// there when the take ends (Season 2 scoring only).
     private var referenceTask: Task<SpeechReference?, Never>?
+    /// The listening reading's words with its sounds: a sound it says off the
+    /// dictionary is never charged (`SpeechReading.fluentLowSounds`).
+    private var fluentTask: Task<SpeechListenAudio?, Never>?
 
     init(script: SpeechScript, native: String, level: CEFRLevel) {
         self.script = script
@@ -146,10 +163,27 @@ final class SpeechTakeSession: ObservableObject {
         if SpeechReading.isActive(for: script.language) {
             let body = script.body, language = script.language
             referenceTask = Task { await SpeechReferenceService.fetch(text: body, language: language) }
+            let listened = script
+            fluentTask = Task { await SpeechListenService.reading(listened) }
         }
         let defaults = UserDefaults.standard
         cameraOn = defaults.object(forKey: Self.cameraKey) as? Bool ?? true
         speed = defaults.object(forKey: Self.speedKey) as? Double ?? 1.0
+        // Fluent pace: the listening reading's word times laid onto the
+        // prompter's words, once the reading has loaded.
+        if let task = fluentTask {
+            let words = track.words.count
+            let body = script.body
+            Task { [weak self] in
+                guard let reading = await task.value else { return }
+                let starts = SpeechListenText.display(body: body, words: reading.words).map { $0.time?.start }
+                // Only when the reading lines up word for word with the
+                // prompter (spaced scripts split the same way).
+                guard starts.count == words, starts.contains(where: { $0 != nil }) else { return }
+                self?.guideStarts = starts
+                self?.fluentPaceAvailable = true
+            }
+        }
 
         camera.frameHandler = { [composer] buffer in composer.append(buffer) }
 
@@ -235,6 +269,8 @@ final class SpeechTakeSession: ObservableObject {
         HapticEngine.countdownGo()
         startedAt = Date()
         lastAdvanceAt = Date()
+        guide = nil
+        guideOrigin = nil
         phase = .recording
         runTicker()
     }
@@ -261,6 +297,14 @@ final class SpeechTakeSession: ObservableObject {
         guard phase == .recording, followVoice else { return }
         partials += 1
         let next = track.advance(current: cursor, heard: text)
+        // The fluent clock starts at the reader's first word: lined up on the
+        // word they reached, so it never begins behind them.
+        if fluentPace, guideOrigin == nil, next > 0, !guideStarts.isEmpty {
+            let reached = min(next, guideStarts.count) - 1
+            if let at = guideStarts[...reached].last(where: { $0 != nil }) ?? nil {
+                guideOrigin = clock - at
+            }
+        }
         if next != cursor {
             follows += 1
             cursor = min(next, track.words.count)
@@ -285,6 +329,13 @@ final class SpeechTakeSession: ObservableObject {
         clock = Date().timeIntervalSince(startedAt)
         if clock.rounded(.down) != elapsed { elapsed = clock.rounded(.down) }
         let wps = track.wordsPerSecond(language: script.language)
+
+        // Karaoke: the word the fluent reading is on at this moment.
+        if fluentPace, let origin = guideOrigin {
+            let t = clock - origin
+            let at = guideStarts.lastIndex { ($0 ?? .infinity) <= t }
+            if at != guide { guide = at }
+        }
 
         // Steady speed: the cursor walks at the planned pace (the prompter
         // itself moves on its own clock; this keeps the auto-stop honest).
@@ -479,9 +530,24 @@ final class SpeechTakeSession: ObservableObject {
         if SpeechReading.isActive(for: language) {
             let delivered = await delivery.value
             let refTask = referenceTask
-            if let reference = await Self.within(seconds: 45, { await refTask?.value ?? nil }),
-               let reading = Self.reading(pieces: assessed, reference: reference, script: body,
-                                          metrics: metrics, delivery: delivered) {
+            let flTask = fluentTask
+            // THE reference is the one reading the learner hears (karaoke:
+            // its tempo, rhythm and pauses are the target), in whatever voice
+            // the challenge was given: measured on 138 human readings, the
+            // reference's gender moves pauses and rhythm by nothing and
+            // speed by ~4 points, with no loss against the experts. A script
+            // with no such reading (the learner's own) keeps the pair.
+            let fluent = await Self.within(seconds: 20, { await flTask?.value ?? nil })
+            let single = fluent.map { SpeechReference(version: 2, male: $0.words, female: $0.words) }
+            let paired: SpeechReference? = single == nil
+                ? await Self.within(seconds: 45, { await refTask?.value ?? nil }) : nil
+            if let reference = single ?? paired,
+               var reading = Self.reading(pieces: assessed, reference: reference, script: body,
+                                          metrics: metrics, delivery: delivered, fluent: fluent?.words) {
+                if let fluent {
+                    reading.gender = fluent.gender
+                    reading.reference = "listen"
+                }
                 metrics.reading = reading
                 metrics.overall = reading.total
                 metrics.scoring = SpeechReading.version
@@ -725,7 +791,8 @@ final class SpeechTakeSession: ObservableObject {
     /// the reference in the reader's gender, told by the voice's pitch.
     nonisolated static func reading(pieces: [SpeechDelivery.Piece], reference: SpeechReference,
                                     script: String, metrics: SpeechMetrics,
-                                    delivery: SpeechDelivery) -> SpeechReadingScore? {
+                                    delivery: SpeechDelivery,
+                                    fluent: [SpeechReference.Word]? = nil) -> SpeechReadingScore? {
         let scriptTokens = SpeechDelivery.referenceTokens(script)
         let tokens = scriptTokens.map(\.core)
         var take: [(word: String, startMs: Int, endMs: Int, breakAfter: Bool)] = []
@@ -742,19 +809,10 @@ final class SpeechTakeSession: ObservableObject {
             reference: SpeechReading.timeline(words: ref, script: tokens),
             script: tokens, stops: scriptTokens.map(\.stop), slips: metrics.slips, scriptTokens: metrics.scriptTokens,
             missed: metrics.missed, soundAccuracy: delivery.soundAccuracy, weakest: delivery.weakest,
-            coverage: metrics.coverage ?? 1, gender: gender, weakSounds: weakSounds(in: pieces))
-    }
-
-    /// Every sound Azure scored under the price list's bar, over the judged
-    /// words of every piece (scoring 8). nil when nothing was assessed.
-    nonisolated static func weakSounds(in pieces: [SpeechDelivery.Piece]) -> Int? {
-        guard !pieces.isEmpty else { return nil }
-        let bar = SpeechReadingScore.Price.weakSoundBelow
-        return pieces.reduce(0) { total, piece in
-            total + piece.result.words.filter(\.isJudged).reduce(0) { n, word in
-                n + word.phonemes.filter { ($0.accuracy ?? 100) < bar }.count
-            }
-        }
+            coverage: metrics.coverage ?? 1, gender: gender,
+            weakSounds: pieces.isEmpty ? nil
+                : SpeechReading.weakSounds(pieces: pieces.map(\.result), script: script, fluent: fluent)
+                    .values.reduce(0) { $0 + $1.count })
     }
 
     /// The value, or nil if it takes longer than `seconds`.

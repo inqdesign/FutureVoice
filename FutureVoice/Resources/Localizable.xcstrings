@@ -197822,6 +197822,514 @@
           }
         }
       }
+    },
+    "No stops where the native reading runs on" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "원어민이 이어 읽는 곳에서 멈추지 않았어요"
+          }
+        }
+      }
+    },
+    "%lld stops mid-sentence: %@" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문장 중간에서 %lld번 멈춤: %@"
+          }
+        }
+      }
+    },
+    "%lld changed, missed or added" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld개 바꿔 읽거나 빠뜨리거나 더 읽음"
+          }
+        }
+      }
+    },
+    "%lld not reached" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld개는 끝까지 못 읽음"
+          }
+        }
+      }
+    },
+    "Sounds weren't checked on this take" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이번 테이크는 소리를 확인하지 못했어요"
+          }
+        }
+      }
+    },
+    "%lld sounds wrong" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "틀린 소리 %lld개"
+          }
+        }
+      }
+    },
+    "Rhythm %@ (native readers about 0.93)" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "리듬 %@ (원어민은 0.93 안팎)"
+          }
+        }
+      }
+    },
+    "held: %@" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "길게 끈 단어: %@"
+          }
+        }
+      }
+    },
+    "%lld%% of the native reading's pace" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "원어민 낭독 속도의 %lld%%"
+          }
+        }
+      }
+    },
+    "Fluent reading" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "원어민 낭독"
+          }
+        }
+      }
+    },
+    "%@ breathe" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 숨 쉬기"
+          }
+        }
+      }
+    },
+    "%@ run together" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 이어 읽기"
+          }
+        }
+      }
+    },
+    "A stop" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "멈춘 곳"
+          }
+        }
+      }
+    },
+    "A held word" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "길게 끈 단어"
+          }
+        }
+      }
+    },
+    "How long each word lasts" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "단어마다 걸린 시간"
+          }
+        }
+      }
+    },
+    "%@ the fluent reading · %@ yours" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 원어민 낭독 · %@ 내 낭독"
+          }
+        }
+      }
+    },
+    "One after the other" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "번갈아 듣기"
+          }
+        }
+      }
+    },
+    "Fix this phrase" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 구절 다시 읽기"
+          }
+        }
+      }
+    },
+    "You stopped %@s after “%@”. The fluent reading runs straight on." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%2$@” 뒤에서 %1$@초 멈췄어요. 원어민 낭독은 그대로 이어 읽어요."
+          }
+        }
+      }
+    },
+    "You held “%@” for %@s, far longer than the fluent reading." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%1$@” 한 단어에 %2$@초를 썼어요. 원어민 낭독보다 훨씬 길어요."
+          }
+        }
+      }
+    },
+    "Say the phrase, then tap stop." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "구절을 말한 다음 정지를 누르세요."
+          }
+        }
+      }
+    },
+    "Couldn't check that one. Try again." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이번 건 확인하지 못했어요. 다시 해 보세요."
+          }
+        }
+      }
+    },
+    "Hear the fluent reading, then say it again." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "원어민 낭독을 듣고 따라 말해 보세요."
+          }
+        }
+      }
+    },
+    "That holds together." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자연스럽게 이어졌어요."
+          }
+        }
+      }
+    },
+    "Some words didn't come through. Say the whole phrase." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "들리지 않은 단어가 있어요. 구절을 처음부터 끝까지 말해 보세요."
+          }
+        }
+      }
+    },
+    "Still a stop after “%@”." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%@” 뒤에서 아직 멈춰요."
+          }
+        }
+      }
+    },
+    "“%@” is still long." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%@” 아직 길어요."
+          }
+        }
+      }
+    },
+    "Closer. Let the small words go faster." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "좋아지고 있어요. 작은 단어는 더 빨리 넘겨 보세요."
+          }
+        }
+      }
+    },
+    "stop" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "멈춤"
+          }
+        }
+      }
+    },
+    "speech.drill.fluent" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fluent"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "원어민"
+          }
+        }
+      }
+    },
+    "speech.drill.yours" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yours"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 낭독"
+          }
+        }
+      }
+    },
+    "%@ ⏸︎: a stop mid-sentence · %@: a word changed, missed or added · %@ dotted: a sound said wrong · %@: a word held too long" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ ⏸︎: 문장 중간 멈춤 · %2$@: 바꿔 읽거나 빠뜨리거나 더 읽은 단어 · %3$@ 점선: 틀린 소리 · %4$@: 너무 길게 끈 단어"
+          }
+        }
+      }
+    },
+    "Purple" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "보라"
+          }
+        }
+      }
+    },
+    "speech.legend.blue" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Blue"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "파랑"
+          }
+        }
+      }
+    },
+    "Each area is 20 of the 100 points, and the total is their average. Every mistake costs points from its area: −1 for each point of pace under 85, −0.5 for each point of rhythm under 90, −1 a stop mid-sentence, −1 a word, −0.4 a sound. An area stops at 0." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다섯 영역이 100점 중 20점씩을 맡고, 총점은 다섯 영역의 평균이에요. 실수 하나마다 그 영역에서 점수가 깎여요. 속도가 85에서 1 모자랄 때마다 −1, 리듬이 90에서 1 모자랄 때마다 −0.5, 문장 중간 멈춤 −1, 단어 −1, 소리 −0.4. 한 영역은 0점 아래로 내려가지 않아요."
+          }
+        }
+      }
+    },
+    "Your reading" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 낭독"
+          }
+        }
+      }
+    },
+    "My reading" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 낭독"
+          }
+        }
+      }
+    },
+    "Hear this script read the way your future self would, in your own voice." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "미래의 내가 이 원고를 어떻게 읽는지, 내 목소리로 들어 보세요."
+          }
+        }
+      }
+    },
+    "A sound under 40 counts, −0.4 each." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "40점 아래인 소리가 하나에 −0.4씩 깎여요."
+          }
+        }
+      }
+    },
+    "%lld sounds counted" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "깎인 소리 %lld개"
+          }
+        }
+      }
+    },
+    "Counted sounds" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "깎인 소리"
+          }
+        }
+      }
+    },
+    "Full assessment" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "전체 평가 보기"
+          }
+        }
+      }
+    },
+    "counted" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "깎임"
+          }
+        }
+      }
+    },
+    "sounded like %@" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@처럼 들림"
+          }
+        }
+      }
+    },
+    "Every word and sound with its score." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모든 단어와 소리의 점수를 볼 수 있어요."
+          }
+        }
+      }
+    },
+    "The fluent reading says it this way too · not counted" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "원어민 낭독도 이렇게 읽어요 · 안 깎임"
+          }
+        }
+      }
+    },
+    "Fluent pace" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "원어민 속도"
+          }
+        }
+      }
+    },
+    "Fluent pace: keep up with the highlight" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "원어민 속도: 노란 표시를 따라 읽어요"
+          }
+        }
+      }
+    },
+    "Scrolling at the fluent pace" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "원어민 속도로 넘어가요"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

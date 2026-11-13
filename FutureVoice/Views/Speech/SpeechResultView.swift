@@ -56,6 +56,20 @@ struct SpeechResultView: View {
     @State private var showingPronunciation = false
     /// The mark whose phrase is being practised (2026-11-13).
     @State private var drillMark: SpeechPhraseMark?
+    /// A purple word tapped on the marked script: its sounds sheet.
+    @State private var soundFocus: SoundFocus?
+    /// The listening reading's words with its sounds: a sound it says off
+    /// the dictionary is never counted (2026-11-13).
+    @State private var fluentWords: [SpeechReference.Word]?
+    struct SoundFocus: Identifiable { let word: Int; var id: Int { word } }
+    /// The take's own voice under the marked script (2026-11-13, founder:
+    /// listen and watch the marks as it plays). Its own player: `audio`
+    /// makes the page step aside for the hero, and this must not.
+    @StateObject private var scriptAudio = AudioPlayer()
+    /// The future self's reading of the same script: a player of its own,
+    /// so each keeps its place (founder: play my first sentence, stop, hear
+    /// the future self's from ITS start, go back to mine where I stopped).
+    @StateObject private var futureAudio = AudioPlayer()
 
     private var take: SpeechTake? {
         let stored = store.takes.first { $0.id == takeId }
@@ -162,13 +176,28 @@ struct SpeechResultView: View {
             }
         }
         .task(id: video) { await hero.show(video, take: take.id) }
-        .onChange(of: takeId) { _, _ in audio.stop() }
-        .task(id: take.id) { await SpeechReadingRepair.restore(take, script: script) }
+        .onChange(of: takeId) { _, _ in
+            audio.stop()
+            scriptAudio.stop()
+            futureAudio.stop()
+        }
+        .task(id: take.id) {
+            await SpeechReadingRepair.restore(take, script: script)
+            // Scored against the old pair: judged again against the one
+            // reading, and a camera take goes back on the board with it.
+            if let judged = await SpeechReadingRejudge.run(take, script: script) {
+                SpeechChallenges.shared.enter(take: judged, script: script,
+                                              recordedOnCamera: judged.videoFilename != nil || judged.prompter != nil)
+            }
+            await spareFluentSounds(take, script: script)
+        }
         // Here, on the page: the details live in the system sheet, which goes
         // away while the take plays, and this must not stop the take.
         .onDisappear {
             hero.stop()
             audio.stop()
+            scriptAudio.stop()
+            futureAudio.stop()
         }
         #if DEBUG
         .onAppear {
@@ -390,20 +419,37 @@ struct SpeechResultView: View {
             if let marks = scriptMarks?.takeId == take.id ? scriptMarks?.marks : nil {
                 let timing = m.reading.map { SpeechMarkedScript.timing($0, marks: marks) }
                 Section {
-                    SpeechMarkedScript(paragraphs: marks, language: script.language,
-                                       held: timing?.held ?? [:], pauses: timing?.pauses ?? [:],
-                                       onMark: SpeechListenService.available(for: script) ? { drillMark = $0 } : nil)
+                    SpeechScriptListening(
+                        take: take, scriptModel: script, mine: scriptAudio, future: futureAudio,
+                        script: SpeechMarkedScript(
+                            paragraphs: marks, language: script.language,
+                            held: timing?.held ?? [:], pauses: timing?.pauses ?? [:],
+                            onMark: SpeechListenService.available(for: script) ? { drillMark = $0 } : nil,
+                            sounds: (m.reading?.version ?? 0) >= 8
+                                ? SpeechMarkedScript.soundsByWord(take, script: script.body, marks: marks,
+                                                                  fluent: fluentWords) : [:],
+                            onSound: { soundFocus = SoundFocus(word: $0) }))
                         .padding(.vertical, 4)
                         .id("script")
                         .sheet(item: $drillMark) { mark in
                             SpeechPhraseDrillSheet(script: script, take: take, mark: mark)
+                        }
+                        .sheet(item: $soundFocus) { focus in
+                            SpeechSoundsSheet(take: take, script: script, marks: marks, fluent: fluentWords,
+                                              focus: focus.word)
                         }
                 } header: {
                     Text("Script")
                 } footer: {
                     if m.reading != nil {
                         // One legend for everything the script shows.
-                        Text("\(Text("Red").foregroundStyle(.red)): read differently or left out · \(Text("+word").foregroundStyle(.red)): not in the script · \(Text("Orange").foregroundStyle(.orange)): held longer than the native reading · \(Text("⏸︎").foregroundStyle(.orange)): a stop where the native reading has none")
+                        if (m.reading?.version ?? 0) >= 8 {
+                            // One colour per area, the same on the tiles, the
+                            // receipt and here (2026-11-13, founder).
+                            Text("\(Text("Orange").foregroundStyle(.orange)) ⏸︎: a stop mid-sentence · \(Text("Red").foregroundStyle(.red)): a word changed, missed or added · \(Text("Purple").foregroundStyle(.purple)) dotted: a sound said wrong · \(Text(explain(key: "speech.legend.blue", default: "Blue")).foregroundStyle(.blue)): a word held too long")
+                        } else {
+                            Text("\(Text("Red").foregroundStyle(.red)): read differently or left out · \(Text("+word").foregroundStyle(.red)): not in the script · \(Text("Orange").foregroundStyle(.orange)): held longer than the native reading · \(Text("⏸︎").foregroundStyle(.orange)): a stop where the native reading has none")
+                        }
                     } else if !m.missed.isEmpty {
                         Text("Red: skipped or read differently. The small red words are what the mic heard.")
                     }
@@ -729,7 +775,7 @@ struct SpeechResultView: View {
                 HStack {
                     Text("Total").font(.headline)
                     Spacer()
-                    Text(verbatim: "100 − \(Self.points(r.lost)) = \(r.total)")
+                    Text(verbatim: "\(r.total)")
                         .font(.headline.monospacedDigit())
                 }
             } else {
@@ -745,7 +791,7 @@ struct SpeechResultView: View {
         } footer: {
             VStack(alignment: .leading, spacing: 6) {
                 if r.version >= 8 {
-                    Text("Every mistake costs points: −1 a stop mid-sentence, −1 a word, −0.5 a sound, −0.5 for each point of rhythm under 90, −1 for each point of pace under 85%.")
+                    Text("Each area is 20 of the 100 points, and the total is their average. Every mistake costs points from its area: −1 for each point of pace under 85, −0.5 for each point of rhythm under 90, −1 a stop mid-sentence, −1 a word, −0.4 a sound. An area stops at 0.")
                 }
                 Text("The names are just for fun.")
                 Text("Native speakers average \(SpeechReading.nativeAverage) · 100 is an announcer's read")
@@ -868,11 +914,20 @@ struct SpeechResultView: View {
     private func receiptRow(_ d: SpeechReadingScore.Deduction, _ r: SpeechReadingScore) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack {
-                Label(readingTitle(d.part), systemImage: readingIcon(d.part))
+                Label {
+                    Text(readingTitle(d.part))
+                } icon: {
+                    Image(systemName: readingIcon(d.part)).foregroundStyle(d.part.color)
+                }
                 Spacer()
-                Text(verbatim: d.points == 0 ? "0" : "−" + Self.points(d.points))
+                if d.points > 0 {
+                    Text(verbatim: "−" + Self.points(min(d.points, SpeechReadingScore.areaShare)))
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                Text(verbatim: "\(r.areaScore(d))")
                     .font(.body.weight(.semibold).monospacedDigit())
-                    .foregroundStyle(d.points == 0 ? Color.green : Color.orange)
+                    .foregroundStyle(SpeechScoreColor.color(r.areaScore(d)))
             }
             Text(receiptDetail(d, r))
                 .font(.caption)
@@ -929,8 +984,8 @@ struct SpeechResultView: View {
     /// of its own, so it shows the sub-scores its old total was made of.
     private func scoreTiles(_ m: SpeechMetrics) -> [(title: LocalizedStringKey, score: Int)] {
         if let r = m.reading, r.version >= 8 {
-            // The receipt: what each part cost, in points (shown as −N).
-            return r.deductions.map { (readingTitle($0.part), -Int(($0.points * 10).rounded())) }
+            // Each area out of 100, in the receipt's order.
+            return r.deductions.map { (readingTitle($0.part), r.areaScore($0)) }
         }
         if let r = m.reading {
             return SpeechReadingScore.Part.allCases.map { part in
@@ -951,30 +1006,30 @@ struct SpeechResultView: View {
         let tiles = scoreTiles(m)
         return HStack(alignment: .top, spacing: 2) {
             ForEach(tiles.indices, id: \.self) { index in
-                let receipt = (m.reading?.version ?? 0) >= 8
+                // The price list's areas carry their colour on a dot by the
+                // name, the same colour as their marks on the script.
+                let area: Color? = m.reading.flatMap { r in
+                    r.version >= 8 && r.deductions.indices.contains(index) ? r.deductions[index].part.color : nil
+                }
                 VStack(spacing: 3) {
-                    if receipt {
-                        // Points lost (tenths, so −6.5 survives): 0 is green.
-                        let lost = -Double(tiles[index].score) / 10
-                        Text(verbatim: lost == 0 ? "0" : "−" + Self.points(lost))
-                            .font(.title.weight(.bold).monospacedDigit())
-                            .foregroundStyle(lost == 0 ? Color.green : Color.orange)
-                            .contentTransition(.numericText(value: lost))
-                    } else {
-                        Text(verbatim: "\(tiles[index].score)")
-                            .font(.title.weight(.bold).monospacedDigit())
-                            .foregroundStyle(SpeechScoreColor.color(tiles[index].score))
-                            .contentTransition(.numericText(value: Double(tiles[index].score)))
-                        ProgressView(value: Double(min(100, max(0, tiles[index].score))), total: 100)
-                            .tint(SpeechScoreColor.color(tiles[index].score))
-                            .padding(.horizontal, 10)
-                            .accessibilityHidden(true)
+                    Text(verbatim: "\(tiles[index].score)")
+                        .font(.title.weight(.bold).monospacedDigit())
+                        .foregroundStyle(SpeechScoreColor.color(tiles[index].score))
+                        .contentTransition(.numericText(value: Double(tiles[index].score)))
+                    ProgressView(value: Double(min(100, max(0, tiles[index].score))), total: 100)
+                        .tint(SpeechScoreColor.color(tiles[index].score))
+                        .padding(.horizontal, 10)
+                        .accessibilityHidden(true)
+                    HStack(spacing: 4) {
+                        if let area {
+                            Circle().fill(area).frame(width: 6, height: 6).accessibilityHidden(true)
+                        }
+                        Text(tiles[index].title)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                     }
-                    Text(tiles[index].title)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
                 }
                 .frame(maxWidth: .infinity)
                 .accessibilityElement(children: .combine)
@@ -1361,6 +1416,25 @@ struct SpeechResultView: View {
         try? session.setActive(true)
     }
 
+    /// Loads the fluent reading's sounds and, on a price-list take scored
+    /// before they were kept, takes off what it counted for sounds the
+    /// reading itself says the same way (this phone's copy; a board entry
+    /// stands until a better take).
+    private func spareFluentSounds(_ take: SpeechTake, script: SpeechScript) async {
+        guard let r = take.metrics.reading, r.version >= 8, let pieces = take.assessments, !pieces.isEmpty,
+              let fluent = await SpeechListenService.words(script) else { return }
+        fluentWords = fluent
+        let count = SpeechReading.weakSounds(pieces: pieces, script: script.body, fluent: fluent)
+            .values.reduce(0) { $0 + $1.count }
+        guard count != r.weakSounds,
+              var current = SpeechStore.shared.takes.first(where: { $0.id == take.id }),
+              var reading = current.metrics.reading else { return }
+        reading.weakSounds = count
+        current.metrics.reading = reading
+        current.metrics.overall = reading.total
+        SpeechStore.shared.save(current)
+    }
+
     private func playAudio(_ take: SpeechTake) {
         guard let data = try? Data(contentsOf: SpeechStore.mediaURL(take.audioFilename)) else { return }
         try? audio.play(data, source: "speech_take")
@@ -1399,6 +1473,32 @@ private struct SpeechMarkedScript: View {
     /// A tap on a held word or a stop opens the phrase drill (2026-11-13).
     /// nil: the marks are only drawn.
     var onMark: ((SpeechPhraseMark) -> Void)? = nil
+    /// By the script word's index: the sounds in it Azure scored under the
+    /// price list's bar (scoring 8), drawn as a dotted purple underline with
+    /// the sounds written small after the word. A tap opens the
+    /// pronunciation detail.
+    var sounds: [Int: [SpeechReading.WeakSound]] = [:]
+    var onSound: ((Int) -> Void)? = nil
+    /// The word being heard while the take plays (by the script's written
+    /// word), behind a yellow highlighter.
+    var current: Int? = nil
+
+    /// The weak sounds of a take, by the script's written word.
+    static func soundsByWord(_ take: SpeechTake, script: String,
+                             marks: [[SpeechAnalyzer.ScriptMark]],
+                             fluent: [SpeechReference.Word]? = nil) -> [Int: [SpeechReading.WeakSound]] {
+        guard let pieces = take.assessments, !pieces.isEmpty else { return [:] }
+        var wordOfToken: [Int: Int] = [:]
+        var t = 0
+        for (w, mark) in marks.flatMap({ $0 }).enumerated() {
+            for _ in SpeechDelivery.referenceTokens(mark.word) { wordOfToken[t] = w; t += 1 }
+        }
+        var out: [Int: [SpeechReading.WeakSound]] = [:]
+        for (token, weak) in SpeechReading.weakSounds(pieces: pieces, script: script, fluent: fluent) {
+            if let w = wordOfToken[token] { out[w, default: []] += weak }
+        }
+        return out
+    }
 
     /// Season 2's per-token findings laid onto the script's words: a word
     /// owns as many scoring tokens as `SpeechDelivery.referenceTokens` makes
@@ -1427,11 +1527,15 @@ private struct SpeechMarkedScript: View {
                 }
             }
         }
-        // The marks are links only to open the drill: they keep their orange.
-        .tint(.orange)
+        // The marks are links only to open the drill or the sounds: a link
+        // takes the tint, so the colour is carried by each mark's background,
+        // underline and note, and the linked text stays plain.
+        .tint(Color.primary)
         .environment(\.openURL, OpenURLAction { url in
             guard url.scheme == "fvmark", let index = Int(url.lastPathComponent) else { return .systemAction }
-            if url.host == "held", let s = held[index] {
+            if url.host == "sound" {
+                onSound?(index)
+            } else if url.host == "held", let s = held[index] {
                 onMark?(SpeechPhraseMark(word: index, kind: .held, seconds: s))
             } else if url.host == "stop", let s = pauses[index] {
                 onMark?(SpeechPhraseMark(word: index, kind: .stop, seconds: s))
@@ -1454,10 +1558,33 @@ private struct SpeechMarkedScript: View {
         for (i, mark) in line.enumerated() {
             if i > 0 { out += AttributedString(gap) }
             var word = AttributedString(mark.word)
-            if let s = held[first + i] {
-                word.backgroundColor = .orange.opacity(0.25)
-                if onMark != nil { word.link = URL(string: "fvmark://held/\(first + i)") }
-                word += note(" " + explain("\(String(format: "%.1f", s))s"), .orange)
+            var notes = AttributedString()
+            let heldSeconds = held[first + i]
+            let weak = (mark.op == .match || mark.op == .ins) ? sounds[first + i] : nil
+            if let s = heldSeconds {
+                word.backgroundColor = SpeechReadingScore.Part.rhythm.color.opacity(0.22)
+                notes += note(" " + explain("\(String(format: "%.1f", s))s"), SpeechReadingScore.Part.rhythm.color)
+            }
+            if let weak {
+                word.underlineStyle = Text.LineStyle(pattern: .dot, color: SpeechReadingScore.Part.pronunciation.color)
+                // Phoneme names come in IPA for English only; elsewhere the
+                // underline alone marks the word.
+                let names = weak.map(\.phoneme).filter { !$0.isEmpty }
+                if !names.isEmpty {
+                    notes += note(" " + names.joined(separator: " "), SpeechReadingScore.Part.pronunciation.color)
+                }
+            }
+            if heldSeconds != nil, onMark != nil {
+                word.link = URL(string: "fvmark://held/\(first + i)")
+            } else if weak != nil, onSound != nil {
+                word.link = URL(string: "fvmark://sound/\(first + i)")
+            }
+            word += notes
+            // A highlighter behind the word, never a weight: bold made the word
+            // wider and the line rewrapped as the reading moved (2026-11-13,
+            // founder). Yellow is no area's colour.
+            if current == first + i {
+                word.backgroundColor = Color.yellow.opacity(0.45)
             }
             switch mark.op {
             case .match, .ins:
@@ -1481,8 +1608,12 @@ private struct SpeechMarkedScript: View {
                 out += note(" +" + extra, .red)
             }
             if let s = pauses[first + i] {
-                var stop = note(" ⏸︎" + explain("\(String(format: "%.1f", s))s"), .orange)
-                if onMark != nil { stop.link = URL(string: "fvmark://stop/\(first + i)") }
+                var stop = note(" ⏸︎" + explain("\(String(format: "%.1f", s))s"), SpeechReadingScore.Part.pauses.color)
+                if onMark != nil {
+                    // A link takes the tint: the stop keeps its colour as a fill.
+                    stop.link = URL(string: "fvmark://stop/\(first + i)")
+                    stop.backgroundColor = SpeechReadingScore.Part.pauses.color.opacity(0.25)
+                }
                 out += stop
             }
         }
@@ -2084,3 +2215,416 @@ private struct NoScrollEdgeEffect: ViewModifier {
         }
     }
 }
+
+extension SpeechReadingScore.Part {
+    /// One colour per area of the price list, the same on the tiles, the
+    /// receipt and the marked script (2026-11-13, founder). Indigo stays the
+    /// Core's alone.
+    var color: Color {
+        switch self {
+        case .pauses: return .orange
+        case .accuracy: return .red
+        case .pronunciation: return .purple
+        case .rhythm: return .blue
+        case .speed: return .teal
+        }
+    }
+}
+
+/// Listening under the marked script (2026-11-13, founder): the take's own
+/// voice, or the same script read by the FUTURE SELF in the learner's cloned
+/// voice, so the marks can be heard against the way it should go. The future
+/// self's reading is the Speech tab's paid voiceover (`ScriptVoiceover`):
+/// made once per script, charged in talk minutes, free to replay. Either way
+/// the word being heard is drawn on the script.
+private struct SpeechScriptListening: View {
+    enum Source: Hashable { case mine, future }
+
+    let take: SpeechTake
+    let scriptModel: SpeechScript
+    /// Two players, each keeping its own place; starting one pauses the
+    /// other (founder: play my first sentence, stop, hear the future self's
+    /// from ITS start, then mine goes on from where I stopped).
+    @ObservedObject var mine: AudioPlayer
+    @ObservedObject var future: AudioPlayer
+    let script: SpeechMarkedScript
+
+    @EnvironmentObject private var appState: AppState
+    @ObservedObject private var center = ScriptVoiceoverCenter.shared
+    @ObservedObject private var gate = BillingGate.shared
+    /// The one last started: the script follows it.
+    @State private var active: Source = .mine
+    @State private var wall: TalkWall?
+    @State private var error: String?
+
+    /// No voiceover in the speech app: its only voice is the reader's.
+    private var voiceId: String? {
+        #if SPEECH_APP
+        return nil
+        #else
+        return appState.voiceCloneId
+        #endif
+    }
+    private var stored: ScriptVoiceoverStore.Stored? {
+        voiceId.flatMap { center.existing(for: scriptModel, voiceId: $0) }
+    }
+    private var quote: Int { ScriptVoiceover.quoteMinutes(text: scriptModel.body, language: scriptModel.language) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                SpeechPlayTile(title: "My reading", seconds: take.durationSeconds,
+                               tint: .accentColor, player: mine,
+                               action: { start(.mine) }, load: { load(.mine) })
+                if voiceId != nil {
+                    if let stored {
+                        SpeechPlayTile(title: "Future self", seconds: stored.meta.seconds,
+                                       tint: SpeechReadingScore.Part.pronunciation.color, player: future,
+                                       action: { start(.future) }, load: { load(.future) })
+                    } else {
+                        makeButton
+                    }
+                }
+            }
+            if voiceId != nil, stored == nil {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Hear this script read the way your future self would, in your own voice.")
+                    Text(ScriptVoiceover.priceLine(minutes: quote, account: gate.account))
+                        .foregroundStyle(.secondary)
+                    if let voiceId, case .failed(let message)? = center.job(for: scriptModel, voiceId: voiceId) {
+                        Text(message).foregroundStyle(.red)
+                    }
+                }
+                .font(.footnote)
+            }
+        }
+        .padding(.vertical, 4)
+        .talkWall($wall, source: "speech_result_future_self")
+        .alert("Couldn't make it in your voice", isPresented: Binding(
+            get: { error != nil }, set: { if !$0 { error = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: { Text(error ?? "") }
+        .onAppear { gate.warm() }
+        SpeechFollowingScript(player: active == .mine ? mine : future,
+                              wordTimes: active == .mine
+                                  ? SpeechFollowingScript.wordTimes(take, script: scriptModel.body)
+                                  : futureWordTimes,
+                              script: script)
+    }
+
+    private var futureWordTimes: [(start: Double, end: Double)?] {
+        guard let timings = stored?.meta.timings, !timings.isEmpty else { return [] }
+        let words = timings.map { SpeechReference.Word(w: $0.word, s: $0.startMs, e: $0.endMs) }
+        return SpeechListenText.display(body: scriptModel.body, words: words).map { $0.time }
+    }
+
+    /// Ready one at the start without playing (a drag before any play), and
+    /// make it the one the script follows.
+    private func load(_ source: Source) {
+        let player = source == .mine ? mine : future
+        let other = source == .mine ? future : mine
+        if other.isPlaying { other.pause() }
+        active = source
+        let url: URL? = source == .mine ? SpeechStore.mediaURL(take.audioFilename) : stored?.url
+        guard !player.isLoaded, let url, let data = try? Data(contentsOf: url) else { return }
+        player.prepare(data)
+    }
+
+    /// Play or pause one; starting it pauses the other, which keeps its place.
+    private func start(_ source: Source) {
+        let player = source == .mine ? mine : future
+        let other = source == .mine ? future : mine
+        if other.isPlaying { other.pause() }
+        active = source
+        if player.isPlaying {
+            player.pause()
+        } else if player.isLoaded {
+            player.playSegment(from: player.currentTime, to: nil, loop: false)
+        } else {
+            let url: URL? = source == .mine ? SpeechStore.mediaURL(take.audioFilename) : stored?.url
+            guard let url, let data = try? Data(contentsOf: url) else { return }
+            try? player.play(data, source: source == .mine ? "speech_take_script" : "speech_voiceover")
+        }
+    }
+
+    private var makeButton: some View {
+        Group {
+            if let voiceId, case .making(let done, let total)? = center.job(for: scriptModel, voiceId: voiceId) {
+                HStack(spacing: 8) {
+                    ProgressView()
+                    Text(verbatim: "\(done)/\(total)").font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, minHeight: 56)
+                .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color(.tertiarySystemFill)))
+            } else {
+                Button(action: makeFuture) {
+                    Label("Future self", systemImage: "person.wave.2")
+                        .font(.subheadline.weight(.semibold))
+                        .padding(10)
+                        .frame(maxWidth: .infinity, minHeight: 56)
+                        .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(SpeechReadingScore.Part.pronunciation.color.opacity(0.12)))
+                }
+                .buttonStyle(.plain)
+                .disabled(quote > ScriptVoiceover.maxMinutes)
+            }
+        }
+    }
+
+    private func makeFuture() {
+        guard let voiceId else { return }
+        Task {
+            if await BillingGate.shared.blocks() { wall = .paywall(tier: nil); return }
+            center.clearFailure(for: scriptModel, voiceId: voiceId)
+            do {
+                try await center.make(script: scriptModel, voiceId: voiceId, quotedMinutes: quote)
+                Analytics.capture("speech_result_future_self_made", ["minutes": quote])
+            } catch let e as VoiceError {
+                if let w = await TalkWall.resolve(e) { wall = w } else { error = e.localizedDescription }
+            } catch is CancellationError {
+            } catch {
+                // Shown under the buttons from the job's state.
+            }
+        }
+    }
+}
+
+/// One of the two players: its button, its own clock, and a bar that can be
+/// dragged to any point (2026-11-13, founder). A drag pauses while it moves
+/// and plays on if it was playing; the script's highlight follows.
+private struct SpeechPlayTile: View {
+    let title: LocalizedStringKey
+    let seconds: Double
+    let tint: Color
+    @ObservedObject var player: AudioPlayer
+    let action: () -> Void
+    /// Loads the recording without playing, so a bar can be dragged first.
+    let load: () -> Void
+    @State private var resumeAfterDrag = false
+
+    var body: some View {
+        let started = player.isLoaded || player.currentTime > 0
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 10) {
+                Button(action: action) {
+                    Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 36, height: 36)
+                        .background(Circle().fill(tint))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text(title))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.subheadline.weight(.semibold))
+                    Text(verbatim: started ? "\(clock(player.currentTime)) / \(clock(seconds))" : clock(seconds))
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+            Slider(value: Binding(
+                get: { min(player.currentTime, max(seconds, 0.1)) },
+                set: { player.seek(to: $0) }
+            ), in: 0...max(seconds, 0.1)) { editing in
+                if editing {
+                    load()   // also makes this the one the script follows
+                    resumeAfterDrag = player.isPlaying
+                    if player.isPlaying { player.pause() }
+                } else if resumeAfterDrag {
+                    player.playSegment(from: player.currentTime, to: nil, loop: false)
+                }
+            }
+            .tint(tint)
+            .controlSize(.mini)
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
+            .fill(player.isPlaying ? tint.opacity(0.12) : Color(.tertiarySystemFill)))
+    }
+
+    private func clock(_ t: Double) -> String {
+        let s = Int(t.rounded(.down))
+        return "\(s / 60):" + String(format: "%02d", s % 60)
+    }
+}
+
+/// The marked script, following the take while it plays. Only this view
+/// redraws on the player's clock, never the whole result page.
+private struct SpeechFollowingScript: View {
+    @ObservedObject var player: AudioPlayer
+    /// Each written word's time in the take, nil where it wasn't timed (or
+    /// the whole list empty on a take that didn't keep where its pieces
+    /// began: it plays without following).
+    let wordTimes: [(start: Double, end: Double)?]
+    let script: SpeechMarkedScript
+
+    static func wordTimes(_ take: SpeechTake, script: String) -> [(start: Double, end: Double)?] {
+        guard let words = SpeechPhrase.takeWords(take) else { return [] }
+        return SpeechListenText.display(body: script, words: words).map { $0.time }
+    }
+
+    var body: some View {
+        var marked = script
+        if player.isPlaying || player.currentTime > 0 {
+            let t = player.currentTime
+            marked.current = wordTimes.lastIndex { ($0?.start ?? .infinity) <= t }
+        }
+        return marked
+    }
+}
+
+/// The sounds behind the purple marks (2026-11-13, founder: the older
+/// pronunciation sheet said 93 with little to fix, beside a score that had
+/// counted 35 sounds). This one reads the SAME rule as the score: the tapped
+/// word's sounds first, then the pronunciation area and every counted sound
+/// in reading order. Azure's full report stays one tap further.
+private struct SpeechSoundsSheet: View {
+    let take: SpeechTake
+    let script: SpeechScript
+    let marks: [[SpeechAnalyzer.ScriptMark]]
+    let fluent: [SpeechReference.Word]?
+    @State var focus: Int
+    @Environment(\.dismiss) private var dismiss
+    @State private var showingFull = false
+
+    private var words: [String] { marks.flatMap { $0 }.map(\.word) }
+
+    /// By written word: sounds the fluent reading itself says off the
+    /// dictionary, which are never counted.
+    private var sparedByWord: [Int: Set<String>] {
+        var wordOfToken: [Int: Int] = [:]
+        var t = 0
+        for (w, mark) in marks.flatMap({ $0 }).enumerated() {
+            for _ in SpeechDelivery.referenceTokens(mark.word) { wordOfToken[t] = w; t += 1 }
+        }
+        var out: [Int: Set<String>] = [:]
+        for (token, low) in SpeechReading.fluentLowSounds(fluent, script: script.body) {
+            if let w = wordOfToken[token] { out[w, default: []].formUnion(low) }
+        }
+        return out
+    }
+
+    /// Each written word's assessed word (the first token it holds).
+    private var judgedByWord: [Int: PronunciationResult.Word] {
+        guard let pieces = take.assessments else { return [:] }
+        var wordOfToken: [Int: Int] = [:]
+        var t = 0
+        for (w, mark) in marks.flatMap({ $0 }).enumerated() {
+            for _ in SpeechDelivery.referenceTokens(mark.word) { wordOfToken[t] = w; t += 1 }
+        }
+        var out: [Int: PronunciationResult.Word] = [:]
+        for (token, word) in SpeechReading.judgedWords(pieces: pieces, script: script.body) {
+            if let w = wordOfToken[token], out[w] == nil { out[w] = word }
+        }
+        return out
+    }
+
+    private var bar: Int { SpeechReadingScore.Price.weakSoundBelow }
+
+    var body: some View {
+        let judged = judgedByWord
+        let spared = sparedByWord
+        let counted = judged.keys.sorted().compactMap { w -> (Int, [PronunciationResult.Phoneme])? in
+            let weak = judged[w]!.phonemes.filter {
+                ($0.accuracy ?? 100) < bar && spared[w]?.contains($0.phoneme) != true
+            }
+            return weak.isEmpty ? nil : (w, weak)
+        }
+        let total = counted.reduce(0) { $0 + $1.1.count }
+        NavigationStack {
+            List {
+                if let word = judged[focus] {
+                    Section {
+                        ForEach(Array(word.phonemes.enumerated()), id: \.offset) { _, p in
+                            soundRow(p, spared: spared[focus]?.contains(p.phoneme) == true)
+                        }
+                    } header: {
+                        Text(verbatim: "“\(words.indices.contains(focus) ? words[focus] : word.word)”")
+                    } footer: {
+                        Text("A sound under 40 counts, −0.4 each.")
+                    }
+                }
+                Section {
+                    HStack {
+                        Label {
+                            Text("Pronunciation")
+                        } icon: {
+                            Image(systemName: "waveform.badge.mic").foregroundStyle(SpeechReadingScore.Part.pronunciation.color)
+                        }
+                        Spacer()
+                        if let r = take.metrics.reading,
+                           let d = r.deductions.first(where: { $0.part == .pronunciation }) {
+                            Text(verbatim: "\(r.areaScore(d))")
+                                .font(.headline.monospacedDigit())
+                                .foregroundStyle(SpeechScoreColor.color(r.areaScore(d)))
+                        }
+                    }
+                    Text("\(total) sounds counted")
+                        .foregroundStyle(.secondary)
+                }
+                if !counted.isEmpty {
+                    Section("Counted sounds") {
+                        ForEach(counted, id: \.0) { w, weak in
+                            Button { focus = w } label: {
+                                HStack(alignment: .firstTextBaseline) {
+                                    Text(verbatim: words.indices.contains(w) ? words[w] : "")
+                                        .foregroundStyle(.primary)
+                                    Spacer()
+                                    Text(verbatim: weak.map { "\($0.phoneme.isEmpty ? "·" : $0.phoneme) \($0.accuracy ?? 0)" }
+                                        .joined(separator: " · "))
+                                        .font(.subheadline.monospacedDigit())
+                                        .foregroundStyle(SpeechReadingScore.Part.pronunciation.color)
+                                }
+                            }
+                            .listRowBackground(w == focus ? Color.yellow.opacity(0.2) : nil)
+                        }
+                    }
+                }
+                if let all = take.assessments, !all.isEmpty {
+                    Section {
+                        Button("Full assessment") { showingFull = true }
+                    } footer: {
+                        Text("Every word and sound with its score.")
+                    }
+                    .sheet(isPresented: $showingFull) {
+                        PronunciationDetailSheet(results: all, language: script.language)
+                    }
+                }
+            }
+            .navigationTitle("Pronunciation")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+            }
+        }
+    }
+
+    private func soundRow(_ p: PronunciationResult.Phoneme, spared: Bool) -> some View {
+        let score = p.accuracy ?? 0
+        let isCounted = (p.accuracy ?? 100) < bar && !spared
+        let heard = p.heard?.first.flatMap { $0.phoneme != p.phoneme && $0.score >= 50 ? $0.phoneme : nil }
+        return HStack {
+            Text(verbatim: p.phoneme.isEmpty ? "·" : p.phoneme)
+                .font(.body.monospaced())
+            if let heard {
+                Text("sounded like \(heard)").font(.footnote).foregroundStyle(.secondary)
+            }
+            Spacer()
+            if spared, (p.accuracy ?? 100) < bar {
+                Text("The fluent reading says it this way too · not counted")
+                    .font(.footnote).foregroundStyle(.secondary)
+                    .multilineTextAlignment(.trailing)
+            } else if isCounted {
+                Text("counted").font(.footnote.weight(.semibold))
+                    .foregroundStyle(SpeechReadingScore.Part.pronunciation.color)
+            }
+            Text(verbatim: "\(score)")
+                .font(.body.monospacedDigit())
+                .foregroundStyle(isCounted ? SpeechReadingScore.Part.pronunciation.color : .secondary)
+        }
+    }
+}
+

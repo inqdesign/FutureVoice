@@ -39,7 +39,11 @@ const VOICES: Record<string, Record<"male" | "female", string>> = {
   en: { male: "c961b81c-a935-4c17-bfb3-ba2239de8c2f", female: "999df508-4de5-40a7-8bd3-8c12f678c284" },
 }
 
-type Word = { w: string; s: number; e: number }
+/** A word and its times in ms; `ph` (listening audio only, 2026-11-13) is
+ *  each of its sounds with Azure's score, so a sound the FLUENT reading
+ *  itself says differently from the dictionary is never charged to a
+ *  learner who says it the same way (founder: the reading says "nyu"). */
+type Word = { w: string; s: number; e: number; ph?: { p: string; a: number }[] }
 
 async function sha256(s: string): Promise<string> {
   const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s))
@@ -97,9 +101,10 @@ function windows(pcm: Int16Array): [number, number][] {
   return edges.slice(0, -1).map((e, k) => [e * block, edges[k + 1] * block])
 }
 
-type AzureWord = { Word: string; Offset?: number; Duration?: number; ErrorType?: string }
+type AzurePhoneme = { Phoneme?: string; AccuracyScore?: number; PronunciationAssessment?: { AccuracyScore?: number } }
+type AzureWord = { Word: string; Offset?: number; Duration?: number; ErrorType?: string; Phonemes?: AzurePhoneme[] }
 
-async function timeWords(pcm: Int16Array, text: string, locale: string): Promise<Word[]> {
+async function timeWords(pcm: Int16Array, text: string, locale: string, withPhonemes = false): Promise<Word[]> {
   const key = Deno.env.get("AZURE_SPEECH_KEY")!, region = Deno.env.get("AZURE_SPEECH_REGION")!
   const cfg = {
     ReferenceText: text, GradingSystem: "HundredMark", Granularity: "Phoneme",
@@ -130,6 +135,12 @@ async function timeWords(pcm: Int16Array, text: string, locale: string): Promise
         w: w.Word,
         s: Math.round(base + (w.Offset ?? 0) / 10_000),
         e: Math.round(base + ((w.Offset ?? 0) + (w.Duration ?? 0)) / 10_000),
+        ...(withPhonemes ? {
+          ph: (w.Phonemes ?? []).map((p) => ({
+            p: p.Phoneme ?? "",
+            a: Math.round(p.AccuracyScore ?? p.PronunciationAssessment?.AccuracyScore ?? 0),
+          })),
+        } : {}),
       }))
   }))
   return parts.flat()
@@ -201,7 +212,25 @@ async function listen(text: string, language: string, challenge: string | undefi
   const voice = voices[gender]
   const key = await sha256(`listen|${LISTEN_VERSION}|${language}|${gender}|${voice}|${CARTESIA_MODEL}|${LISTEN_RATE}|${text}`)
   const { data: hit } = await admin.from("speech_listen_audio").select("url, words").eq("key", key).maybeSingle()
-  if (hit) return json({ version: LISTEN_VERSION, gender, url: hit.url, words: hit.words })
+  if (hit && (hit.words as Word[]).some((w) => w.ph)) {
+    return json({ version: LISTEN_VERSION, gender, url: hit.url, words: hit.words })
+  }
+  if (hit) {
+    // Made before sounds were kept: re-time the audio already in R2 (no new
+    // voice), keeping each sound's score. Free, like a cache hit.
+    try {
+      const r = await fetch(hit.url)
+      if (!r.ok) throw new Error(`r2 get ${r.status}`)
+      const buf = new Uint8Array(await r.arrayBuffer())
+      const pcm = new Int16Array(buf.buffer.slice(buf.byteOffset + 44, buf.byteOffset + buf.byteLength - ((buf.byteLength - 44) % 2)))
+      const words = await timeWords(to16k(pcm), text, "en-US", true)
+      if (words.length) {
+        await admin.from("speech_listen_audio").update({ words }).eq("key", key)
+        return json({ version: LISTEN_VERSION, gender, url: hit.url, words })
+      }
+    } catch (_) { /* fall through to what was on file */ }
+    return json({ version: LISTEN_VERSION, gender, url: hit.url, words: hit.words })
+  }
 
   if (!Deno.env.get("R2_ACCOUNT_ID") || !Deno.env.get("R2_ACCESS_KEY_ID") || !Deno.env.get("R2_SECRET_ACCESS_KEY")) {
     return errorResponse(503, "not_configured")
@@ -217,7 +246,7 @@ async function listen(text: string, language: string, challenge: string | undefi
   }
   try {
     const pcm = await synthesize(text, voice, language, LISTEN_RATE)
-    const words = await timeWords(to16k(pcm), text, "en-US")
+    const words = await timeWords(to16k(pcm), text, "en-US", true)
     const bytes = new Uint8Array(pcm.buffer, pcm.byteOffset, pcm.byteLength)
     const url = await putR2(`speech/${language}/${key}.wav`, wavBytes(bytes, LISTEN_RATE))
     await admin.from("speech_listen_audio").upsert({
