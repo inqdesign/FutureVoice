@@ -891,8 +891,13 @@ struct ArenaTicket: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(ChallengeArt.inkText.opacity(0.55))
                     Spacer()
-                    MedalBadge(tier: best.flatMap(MedalTier.init(score:)), label: best.map(String.init) ?? "", size: 40)
+                    // Only a medal won: a locked one read as the challenge
+                    // being locked (2026-11-13, founder).
+                    if let best, let tier = MedalTier(score: best) {
+                        MedalBadge(tier: tier, label: "\(best)", size: 40)
+                    }
                 }
+                .frame(height: 40)
                 ChallengeCardFace(script: script, category: category, figureHeight: 240, titleSize: 30, titleLines: 3)
                 goal.font(.subheadline).foregroundStyle(ChallengeArt.inkText.opacity(0.65))
                 Text("Take it on")

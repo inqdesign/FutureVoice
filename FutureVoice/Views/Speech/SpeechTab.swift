@@ -351,15 +351,26 @@ struct SpeechTab: View {
                 .padding(.bottom, 24)
             }
             #if SPEECH_APP
-            .noBarShade(.top)
+            // Challenges: the system's own bar and its scroll blur
+            // (2026-11-13, founder: native components only).
+            .noBarShade(fixedPage == .challenges ? [] : .top)
             .tabBarBand()
             .background { if fixedPage == .challenges { Arena.background } else { Color(.systemGroupedBackground).ignoresSafeArea() } }
             #else
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
             #endif
             #if SPEECH_APP
-            // Challenges has no title: whose board it is stands in for one.
-            .navigationTitle(fixedPage == .challenges ? Text(verbatim: "") : Text(title))
+            // Challenges' title is whose board it is, and the system's title
+            // menu switches it (2026-11-13, founder: native, not a pill of
+            // our own in the bar).
+            .navigationTitle(fixedPage == .challenges
+                             ? Text(groups.selected?.name ?? explain("Everyone"))
+                             : Text(title))
+            .toolbarTitleMenu {
+                if fixedPage == .challenges {
+                    SpeechGroupMenuItems(creating: $creatingGroup, joining: $joiningGroup)
+                }
+            }
             #else
             .navigationTitle(title)
             #endif
@@ -369,12 +380,18 @@ struct SpeechTab: View {
             }
             // Same header as Watch and Progress: the title inline-large on
             // the toolbar row, the tab's one action at its trailing edge.
+            #if SPEECH_APP
+            // Challenges: the small title, because iOS opens a title menu
+            // only from it. With the large one, switching groups needed a
+            // scroll first (2026-11-13, founder).
+            .toolbarTitleDisplayMode(fixedPage == .challenges ? .inline : .inlineLarge)
+            #else
             .toolbarTitleDisplayMode(.inlineLarge)
+            #endif
             .toolbar {
                 #if SPEECH_APP
                 if fixedPage == .challenges {
-                    SpeechChallengesHeader(creating: $creatingGroup, joining: $joiningGroup,
-                                           openMe: { openMe?() })
+                    SpeechChallengesHeader(openMe: { openMe?() })
                 }
                 #endif
                 if showsNewScript {

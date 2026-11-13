@@ -22028,6 +22028,23 @@
         }
       }
     },
+    "speech.category.docent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Museum guide"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "도슨트"
+          }
+        }
+      }
+    },
     "speech.category.famous_speech" : {
       "comment" : "Speech challenge category, shown above the card title. Keyed.",
       "extractionState" : "manual",
@@ -22402,6 +22419,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "電視購物"
+          }
+        }
+      }
+    },
+    "speech.category.weather" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weather forecast"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "일기예보"
           }
         }
       }

@@ -5,58 +5,44 @@ import SwiftUI
 /// The Challenges tab's header (2026-11-10, founder): no large title. On the
 /// left, whose board the page is showing, everyone or one of my groups, as a
 /// menu; making or joining a group lives in the same menu.
-struct SpeechGroupSwitcher: View {
+struct SpeechGroupMenuItems: View {
     @ObservedObject private var groups = SpeechGroups.shared
     @Binding var creating: Bool
     @Binding var joining: Bool
 
     var body: some View {
-        AppMenu {
-            Button {
-                groups.select(nil)
-            } label: {
-                if groups.selectedId == nil {
-                    Label("Everyone", systemImage: "checkmark")
-                } else {
-                    Text("Everyone")
-                }
+        Button {
+            groups.select(nil)
+        } label: {
+            if groups.selectedId == nil {
+                Label("Everyone", systemImage: "checkmark")
+            } else {
+                Text("Everyone")
             }
-            if !groups.groups.isEmpty {
-                Section("My groups") {
-                    ForEach(groups.groups) { group in
-                        Button {
-                            groups.select(group.id)
-                        } label: {
-                            if groups.selectedId == group.id {
-                                Label(group.name, systemImage: "checkmark")
-                            } else {
-                                Text(group.name)
-                            }
+        }
+        if !groups.groups.isEmpty {
+            Section("My groups") {
+                ForEach(groups.groups) { group in
+                    Button {
+                        groups.select(group.id)
+                    } label: {
+                        if groups.selectedId == group.id {
+                            Label(group.name, systemImage: "checkmark")
+                        } else {
+                            Text(group.name)
                         }
                     }
                 }
             }
-            Section {
-                Button { creating = true } label: {
-                    Label("Make a group", systemImage: "person.2.badge.plus")
-                }
-                Button { joining = true } label: {
-                    Label("Join with a code", systemImage: "number")
-                }
-            }
-        } label: {
-            HStack(spacing: 5) {
-                Text(groups.selected?.name ?? explain("Everyone"))
-                    .font(Arena.display(26))
-                    .lineLimit(1)
-                Image(systemName: "chevron.down")
-                    .font(.footnote.weight(.bold))
-                    .foregroundStyle(.secondary)
-            }
-            .foregroundStyle(.primary)
-            .fixedSize()
         }
-        .accessibilityLabel(Text("Whose board"))
+        Section {
+            Button { creating = true } label: {
+                Label("Make a group", systemImage: "person.2.badge.plus")
+            }
+            Button { joining = true } label: {
+                Label("Join with a code", systemImage: "number")
+            }
+        }
     }
 }
 
@@ -730,30 +716,14 @@ struct SpeechGroupPostSheet: View {
     }
 }
 
-/// The Challenges tab's bar: the group switcher at the leading edge, my face
-/// at the trailing one, both without the bar's glass capsule.
+/// The Challenges tab's bar: my face at the trailing edge (the title, with
+/// the system's title menu, says whose board it is).
 struct SpeechChallengesHeader: ToolbarContent {
-    @Binding var creating: Bool
-    @Binding var joining: Bool
     var openMe: () -> Void
 
     var body: some ToolbarContent {
-        if #available(iOS 26, *) {
-            ToolbarItem(placement: .topBarLeading) {
-                SpeechGroupSwitcher(creating: $creating, joining: $joining)
-            }
-            .sharedBackgroundVisibility(.hidden)
-            ToolbarItem(placement: .topBarTrailing) {
-                SpeechHeaderFace(openMe: openMe)
-            }
-            .sharedBackgroundVisibility(.hidden)
-        } else {
-            ToolbarItem(placement: .topBarLeading) {
-                SpeechGroupSwitcher(creating: $creating, joining: $joining)
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                SpeechHeaderFace(openMe: openMe)
-            }
+        ToolbarItem(placement: .topBarTrailing) {
+            SpeechHeaderFace(openMe: openMe)
         }
     }
 }

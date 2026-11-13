@@ -81,8 +81,13 @@ struct ChallengeCardFace: View {
     var titleSize: CGFloat = 17
     var titleLines: Int = 2
 
+    @ObservedObject private var challenges = SpeechChallenges.shared
+
+    private var large: Bool { titleSize > 24 }
+    private var standing: SpeechChallenges.Standing? { challenges.standings[script.id] }
+
     var body: some View {
-        VStack(spacing: titleSize > 24 ? 12 : 8) {
+        VStack(spacing: large ? 12 : 8) {
             if let art = ChallengeArt.image(for: script.id) {
                 Image(uiImage: art)
                     .resizable()
@@ -92,21 +97,80 @@ struct ChallengeCardFace: View {
             } else {
                 Spacer(minLength: 0)
             }
-            if titleSize > 24, let label = SpeechChallengeCategory.label(category) {
-                Text(label)
-                    .font(.subheadline)
-                    .foregroundStyle(ChallengeArt.inkText.opacity(0.55))
+            VStack(spacing: large ? 6 : 3) {
+                // The category as an eyebrow over the title (2026-11-13,
+                // founder). Every card keeps its line, so titles stay level.
+                Text(SpeechChallengeCategory.label(category) ?? " ")
+                    .font((large ? Font.caption : .caption2).weight(.semibold))
+                    .tracking(0.6)
+                    .textCase(.uppercase)
+                    .foregroundStyle(ChallengeArt.inkText.opacity(0.45))
+                    .lineLimit(1)
+                Text(script.title)
+                    .font(Arena.display(titleSize))
+                    .foregroundStyle(ChallengeArt.inkText)
+                    .multilineTextAlignment(.center)
+                    // Every card keeps room for the longest title, so a short
+                    // one never hands its line to the picture.
+                    .lineLimit(titleLines, reservesSpace: true)
+                    .minimumScaleFactor(0.8)
+                    .frame(maxWidth: .infinity)
             }
-            Text(script.title)
-                .font(Arena.display(titleSize))
-                .foregroundStyle(ChallengeArt.inkText)
-                .multilineTextAlignment(.center)
-                // Every card keeps room for the longest title, so a short
-                // one never hands its line to the picture.
-                .lineLimit(titleLines, reservesSpace: true)
-                .minimumScaleFactor(0.8)
-                .frame(maxWidth: .infinity)
+            crowd
         }
+    }
+
+    /// Who is on it, quietly (2026-11-13, founder: "minimal, but say how many
+    /// took it and who leads"): the top three's faces and the count.
+    private var crowd: some View {
+        let people = standing?.entrants ?? 0
+        let faces = Array((standing?.topThree ?? []).prefix(3))
+        let size: CGFloat = large ? 22 : 16
+        return HStack(spacing: 6) {
+            if !faces.isEmpty {
+                HStack(spacing: -size * 0.3) {
+                    ForEach(Array(faces.enumerated()), id: \.offset) { i, face in
+                        CardLeaderFace(face: face, size: size)
+                            .zIndex(Double(3 - i))
+                    }
+                }
+            }
+            Group {
+                if people > 0 {
+                    Text("\(people) taking part")
+                } else {
+                    Text("Be the first")
+                }
+            }
+            .font((large ? Font.footnote : .caption2).monospacedDigit())
+            .foregroundStyle(ChallengeArt.inkText.opacity(0.5))
+            .lineLimit(1)
+        }
+        .frame(height: size)
+    }
+}
+
+/// A leader's face on a cream card: their photo, or their initial.
+private struct CardLeaderFace: View {
+    let face: SpeechChallenges.Face
+    let size: CGFloat
+
+    var body: some View {
+        Group {
+            if let image = face.image {
+                Image(uiImage: image).resizable().scaledToFill()
+            } else {
+                Text(face.display_name.first.map { String($0).uppercased() } ?? "")
+                    .font(.system(size: size * 0.5, weight: .semibold, design: .rounded))
+                    .foregroundStyle(ChallengeArt.inkText.opacity(0.6))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color(red: 0.90, green: 0.87, blue: 0.80))
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(Circle())
+        .overlay(Circle().stroke(ChallengeArt.paper, lineWidth: 1.5))
+        .accessibilityHidden(true)
     }
 }
 

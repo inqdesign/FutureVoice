@@ -85,19 +85,24 @@ struct ArenaMedalCalendar: View {
                 .font(.subheadline.weight(today ? .bold : .regular))
                 .foregroundStyle(today ? Color.white : Arena.dim.opacity(future ? 0.45 : 1))
             ZStack {
-                sphere(lit: today)
-                if let script {
-                    let score = best(script)
-                    if let score, let tier = MedalTier(score: score) {
-                        MedalBadge(tier: tier, label: "\(score)", size: 42)
-                    } else if let score {
-                        Text(verbatim: "\(score)")
-                            .font(.subheadline.weight(.semibold).monospacedDigit())
-                    } else if !future {
-                        Image(systemName: "plus")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundStyle(.white.opacity(today ? 0.95 : 0.6))
-                    }
+                if let script, let score = best(script), let tier = MedalTier(score: score) {
+                    MedalBadge(tier: tier, label: "\(score)", size: 42)
+                } else if let script, let score = best(script) {
+                    flatSlot(lit: today)
+                    Text(verbatim: "\(score)")
+                        .font(.subheadline.weight(.semibold).monospacedDigit())
+                } else if let script, !future, let art = ChallengeArt.image(for: script.id) {
+                    // Still to read: the challenge's own picture (2026-11-13,
+                    // founder), on its cream card ground.
+                    Circle().fill(ChallengeArt.paper)
+                    Image(uiImage: art)
+                        .resizable()
+                        .scaledToFit()
+                        .padding(4)
+                        .clipShape(Circle())
+                    Circle().stroke(Color.white.opacity(today ? 0.9 : 0), lineWidth: 1.5)
+                } else {
+                    flatSlot(lit: today)
                 }
             }
             .frame(width: 44, height: 44)
@@ -117,12 +122,10 @@ struct ArenaMedalCalendar: View {
         }
     }
 
-    /// The round slot: a dark glassy bead, lit from above.
-    private func sphere(lit: Bool) -> some View {
+    /// An empty slot: flat, no light on it (a lit bead read as a ball).
+    private func flatSlot(lit: Bool) -> some View {
         Circle()
-            .fill(RadialGradient(colors: [Color(white: lit ? 0.32 : 0.22), Color(white: 0.06)],
-                                 center: UnitPoint(x: 0.35, y: 0.25), startRadius: 1, endRadius: 30))
-            .overlay(Circle().stroke(Color.white.opacity(lit ? 0.45 : 0.12), lineWidth: lit ? 1.2 : 0.8))
-            .shadow(color: .black.opacity(0.6), radius: 3, y: 2)
+            .fill(Color.white.opacity(lit ? 0.14 : 0.07))
+            .overlay(Circle().stroke(Color.white.opacity(lit ? 0.9 : 0), lineWidth: 1.5))
     }
 }
