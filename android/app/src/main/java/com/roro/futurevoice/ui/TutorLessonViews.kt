@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.material.icons.filled.DonutLarge
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -213,14 +214,28 @@ private fun ChallengeRow(i: Int, c: TutorLesson.Challenge, isNow: Boolean) {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TutorTopicSheet(language: String, level: CefrLevel, onPick: (String, String?) -> Unit, onDismiss: () -> Unit) {
+fun TutorTopicSheet(language: String, level: CefrLevel, onPick: (String, String?) -> Unit, onDismiss: () -> Unit,
+                    /** The lesson running in this call, drawn on top so the page says
+                     *  what is being practiced now (iOS cd57f343). */
+                    current: com.roro.futurevoice.talk.TutorLesson? = null) {
     val context = LocalContext.current
+    // The learner's own goals and the questions each is practiced on — the
+    // same questions, and the same lesson ids, as the goal's page.
+    var goalQuestions by remember {
+        mutableStateOf<List<Pair<com.roro.futurevoice.data.UpcomingGoal, List<com.roro.futurevoice.talk.GoalPrep.Question>>>>(emptyList())
+    }
+    var lessons by remember { mutableStateOf<List<com.roro.futurevoice.talk.TutorLesson>>(emptyList()) }
     var own by remember { mutableStateOf<List<com.roro.futurevoice.talk.Scenario>>(emptyList()) }
     var progress by remember { mutableStateOf<Map<String, TutorTopicProgress>>(emptyMap()) }
     var chapter by remember { mutableStateOf<TutorCurriculum.Chapter?>(null) }
     var stepUp by remember { mutableStateOf<TutorCurriculum.Topic?>(null) }
     androidx.compose.runtime.LaunchedEffect(language) {
         progress = TutorProgressStore.all(context, language)
+        lessons = com.roro.futurevoice.talk.TutorLessonStore.all(context, language)
+        goalQuestions = com.roro.futurevoice.data.UpcomingGoalStore.active(context, language).mapNotNull { g ->
+            val qs = com.roro.futurevoice.talk.GoalPrep.cachedQuestions(context, g)
+            if (qs.isNullOrEmpty()) null else g to qs
+        }
         own = runCatching { ScenarioStore.shared(context).load(language) }.getOrDefault(emptyList())
             .filter { it.starterId == null && it.archivedAt == null }.take(12)
     }
@@ -264,6 +279,67 @@ fun TutorTopicSheet(language: String, level: CefrLevel, onPick: (String, String?
                 }
             } else {
                 LazyColumn {
+                    current?.takeIf { it.droppedAt == null && !it.isFinished }?.let { lesson ->
+                        item(key = "h-now") { SheetHeader(stringResource(R.string.now)) }
+                        item(key = "now") {
+                            Row(
+                                Modifier.fillMaxWidth().clickable { onDismiss() }
+                                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                Icon(Icons.Filled.School, contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                                Text(lesson.title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                                Text("${lesson.doneCount}/${lesson.challenges.size}", style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
+                    goalQuestions.forEach { (goal, questions) ->
+                        item(key = "h-goal-${goal.id}") {
+                            Row(Modifier.padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Icon(goal.kind.icon(), contentDescription = null, modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(goal.title, style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        items(questions, key = { "g-${goal.id}-${it.text}" }) { q ->
+                            val state = com.roro.futurevoice.talk.GoalPrep.state(q.text, goal, lessons)
+                            val isNow = current?.topicId == com.roro.futurevoice.talk.GoalPrep.topicId(goal, q.text) &&
+                                current?.droppedAt == null
+                            Row(
+                                Modifier.fillMaxWidth().clickable {
+                                    // The same lesson the goal's page opens on this question.
+                                    com.roro.futurevoice.core.Analytics.capture("tutor_topic_goal_picked", mapOf("kind" to goal.kind.raw))
+                                    onPick("\u201C${q.text}\u201D — ${goal.title}. ${goal.drillBlurb}",
+                                        com.roro.futurevoice.talk.GoalPrep.topicId(goal, q.text))
+                                    onDismiss()
+                                }.padding(horizontal = 20.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                when (state) {
+                                    com.roro.futurevoice.talk.GoalPrep.QuestionState.READY ->
+                                        Icon(Icons.Filled.CheckCircle, null, tint = Color(0xFF34C759), modifier = Modifier.size(24.dp))
+                                    com.roro.futurevoice.talk.GoalPrep.QuestionState.PRACTICING ->
+                                        Icon(Icons.Filled.DonutLarge, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                                    com.roro.futurevoice.talk.GoalPrep.QuestionState.UNTOUCHED ->
+                                        Icon(Icons.Outlined.Circle, null, tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(24.dp))
+                                }
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text(q.text, style = MaterialTheme.typography.bodyLarge)
+                                    if (isNow) Text(stringResource(R.string.now), style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary)
+                                    else if (state == com.roro.futurevoice.talk.GoalPrep.QuestionState.PRACTICING)
+                                        Text(stringResource(R.string.in_progress), style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
                     TutorCurriculum.next(progress, level)?.let { next ->
                         item(key = "h-next") { SheetHeader(stringResource(R.string.next_up)) }
                         item(key = "next") {

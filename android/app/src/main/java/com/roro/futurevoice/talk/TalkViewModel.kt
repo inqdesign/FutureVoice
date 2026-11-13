@@ -166,6 +166,9 @@ data class TalkUiState(
      *  words on the wrap-up board, and whether the voice is still saying them. */
     val goodbye: CallGoodbye.Line? = null,
     val goodbyePlaying: Boolean = false,
+    /** A topic picked mid-call from the island (iOS `islandPicked`): what the
+     *  call is about now. Null: the topic it was launched with. */
+    val pickedTopic: String? = null,
     /** How many of [turns] came from the resumed talk (iOS `isResuming` +
      *  `didSaveCurrentSession`: a resumed talk starts saved, and only a new
      *  turn makes it something closing would lose). */
@@ -574,9 +577,9 @@ class TalkViewModel(context: Context) : ViewModel() {
                         level = config.level,
                         topPatterns = profile.recurringMistakes,
                         weakVocabAreas = profile.weakVocabAreas,
-                        topic = config.composedTopic,
+                        topic = (this@TalkViewModel.config ?: config).composedTopic,
                         persona = config.persona,
-                        newsFacts = config.newsFacts,
+                        newsFacts = (this@TalkViewModel.config ?: config).newsFacts,
                         counterpart = config.cast?.person,
                         personHistory = history,
                         brief = brief,
@@ -714,6 +717,27 @@ class TalkViewModel(context: Context) : ViewModel() {
                 _state.update { it.copy(goodbye = line) }
                 log("no_audio")
             }
+        }
+    }
+
+    /**
+     * A new topic picked mid-call in a plain call from the island (iOS
+     * `islandPicked`, d29542ee): the prompt follows and the fluent self opens
+     * it. The talk is saved under it.
+     */
+    fun pickIslandTopic(picked: String) {
+        val cfg = config ?: return
+        config = cfg.copy(topic = picked, topicBlurb = "", newsFacts = emptyList())
+        _state.update { it.copy(pickedTopic = picked) }
+        val build = promptForTutor ?: return
+        if (REALTIME) {
+            realtimeSystem = build(tutorThisCall)
+            val phase = _state.value.phase
+            if (phase == TalkPhase.IDLE || phase == TalkPhase.ENDED) return
+            realtime.setSystem(realtimeSystem)
+            realtime.nudge("The learner picked a new topic on their screen: \"$picked\". Say sure in a few words and open it with one short question.")
+        } else {
+            systemPrompt = build(tutorThisCall)
         }
     }
 
@@ -881,14 +905,14 @@ class TalkViewModel(context: Context) : ViewModel() {
                         level = config.level,
                         topPatterns = profile.recurringMistakes,
                         weakVocabAreas = profile.weakVocabAreas,
-                        topic = config.composedTopic,
+                        topic = (this@TalkViewModel.config ?: config).composedTopic,
                         persona = config.persona,
                         // Free talk only: a scenario casts the model as the
                         // barista and a Find-people call as a stranger; neither
                         // can run an introduction without breaking what it was
                         // launched as.
                         firstMeeting = freeTalk && config.persona?.metAt == null && !config.picksTopic && !tutor,
-                        newsFacts = config.newsFacts,
+                        newsFacts = (this@TalkViewModel.config ?: config).newsFacts,
                         counterpart = config.cast?.person,
                         personHistory = history,
                         brief = brief,

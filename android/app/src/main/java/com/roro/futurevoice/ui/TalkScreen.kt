@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
@@ -766,6 +767,32 @@ fun TalkScreen(
     // `ConversationView`: `.background(Color(.systemBackground))`) — white in
     // light, black in dark, header and feed one surface.
     val callPage = MaterialTheme.colorScheme.surface
+    // The tutor's island over the bar (iOS `CallIsland`, d29542ee): open when
+    // the call starts, folded into the bar once the learner speaks. The
+    // pronunciation call keeps its old header.
+    var islandExpanded by remember { mutableStateOf(true) }
+    var showingIslandTopics by remember { mutableStateOf(false) }
+    val islandOn = !state.pronOn && preview?.titleRes == null
+    val learnerSpoke = state.turns.any { it.role == TurnRole.USER }
+    LaunchedEffect(learnerSpoke) { if (learnerSpoke && islandExpanded) islandExpanded = false }
+    /** A scene or a person's call keeps the topic and the way it was launched. */
+    val islandCanChange = !withPerson && scenarioId == null
+    val shownTopic = state.pickedTopic ?: topic
+    val emptyTopicTitle = stringResource(when {
+        state.pronOn -> TalkRingMode.PRONUNCIATION.title
+        state.tutorOn -> TalkRingMode.TUTOR.title
+        else -> TalkRingMode.FREE_TALK.title
+    })
+    val newsTitle = stringResource(R.string.news)
+    // What the call is about right now: a running lesson is the topic, not
+    // the mode's name (iOS cd57f343).
+    val islandTitle = state.tutorLesson?.takeIf { state.tutorOn && it.droppedAt == null }?.title
+        ?: if (state.pickedTopic == null && newsFacts.isNotEmpty()) newsTitle else shownTopic.ifBlank { emptyTopicTitle }
+    if (showingIslandTopics) {
+        TutorTopicSheet(targetLanguage, level, onPick = { picked, _ -> vm.pickIslandTopic(picked) },
+            onDismiss = { showingIslandTopics = false })
+    }
+    Box(Modifier.fillMaxSize()) {
     Scaffold(
         containerColor = callPage,
         topBar = {
@@ -783,6 +810,9 @@ fun TalkScreen(
                     val stagedTitle = preview?.titleRes
                     if (stagedTitle != null) Text(stringResource(stagedTitle),
                         style = MaterialTheme.typography.titleMedium, maxLines = 1)
+                    // The island is drawn over the whole screen (it grows past
+                    // the bar), so the title slot only keeps its place.
+                    else if (islandOn) Spacer(Modifier.height(CALL_ISLAND_PILL_HEIGHT))
                     else Column(horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.clickable { showingLevel = true }) {
                         // A news call is titled "News": its topic is a whole
@@ -837,6 +867,9 @@ fun TalkScreen(
                     }
                 },
                 navigationIcon = {
+                    // The open island lies over the bar; its buttons would show
+                    // through at both ends, so they step out while it is open.
+                    if (!(islandOn && islandExpanded)) {
                     // A talk with unsaved turns doesn't vanish on a stray tap
                     // — closing is an explicit choice between saving (the End
                     // flow: summary, drills) and discarding. Only the
@@ -856,8 +889,10 @@ fun TalkScreen(
                         .background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape)) {
                         Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.close))
                     }
+                    }
                 },
                 actions = {
+                    if (!(islandOn && islandExpanded)) {
                     // End the call and STAY: the wrap-up is the most valuable
                     // minute the app spends, and leaving here skipped it
                     // entirely. Done is what leaves.
@@ -883,6 +918,7 @@ fun TalkScreen(
                             Text(stringResource(R.string.end), style = MaterialTheme.typography.titleMedium,
                                 color = androidx.compose.ui.graphics.Color(0xFFFF3B30))
                         }
+                    }
                     }
                 },
             )
@@ -918,7 +954,7 @@ fun TalkScreen(
             }
             if (showingTutorTopics) {
                 TutorTopicSheet(targetLanguage, level, onPick = { title, id -> vm.pickTutorTopic(title, id) },
-                    onDismiss = { showingTutorTopics = false })
+                    onDismiss = { showingTutorTopics = false }, current = state.tutorLesson)
             }
             LaunchedEffect(showingTutorTopics) { vm.setTutorTopicsShowing(showingTutorTopics) }
             val focus = state.grammarFocus
@@ -1353,6 +1389,45 @@ fun TalkScreen(
 
 
         }
+    }
+    if (islandOn) {
+        val elapsed by produceState(0L, state.phase) {
+            while (state.phase != TalkPhase.ENDED) {
+                value = vm.elapsedSeconds()
+                kotlinx.coroutines.delay(1000)
+            }
+            value = 0L
+        }
+        CallIsland(
+            title = islandTitle, level = level,
+            minutesLeft = state.minutesRemaining?.takeIf { it <= 10 },
+            clock = elapsed.takeIf { it > 0 && state.phase != TalkPhase.ENDED }
+                ?.let { com.roro.futurevoice.data.TalkTime.clock(it.toInt()) },
+            guidance = if (islandCanChange) when {
+                state.tutorOn -> CallGuidance.TUTOR
+                coachMode -> CallGuidance.COACH
+                else -> CallGuidance.FREE
+            } else null,
+            onGuidance = { picked ->
+                if (picked != CallGuidance.TUTOR) {
+                    com.roro.futurevoice.talk.CoachMode.setChoice(context, picked == CallGuidance.COACH)
+                    coachMode = picked == CallGuidance.COACH
+                    vm.setCoachMode(coachMode)
+                }
+                com.roro.futurevoice.talk.TutorMode.set(context, picked == CallGuidance.TUTOR)
+                tutorMode = picked == CallGuidance.TUTOR
+                vm.setTutorMode(tutorMode)
+            },
+            onChangeTopic = if (islandCanChange) ({
+                if (state.tutorOn) showingTutorTopics = true else showingIslandTopics = true
+            }) else null,
+            onSettings = { showingCallSettings = true },
+            expanded = islandExpanded,
+            onExpanded = { islandExpanded = it },
+            modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding()
+                .padding(top = (64.dp - CALL_ISLAND_PILL_HEIGHT) / 2),
+        )
+    }
     }
 
     spent?.let { pool ->
