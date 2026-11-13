@@ -440,7 +440,7 @@ class SyncEngine(
                     frozen = true, size = record.size))
                 continue
             }
-            val frozen = record.schema > SyncSchema.READABLE
+            val frozen = record.schema > SyncSchema.readable(handler.kind, key)
             val result = handler.merge(localSide, remoteSide)
             val matchesServer = if (record.isTombstone) result == null else result == record.payload
             index.put(SyncIndex.Entry(

@@ -73,10 +73,20 @@ enum class SyncKind(val raw: String, val isLanguageScoped: Boolean, val isBlob: 
  */
 object SyncSchema {
     const val VERSION = 1
-    /** The newest stamp this build understands (iOS `readable`). Above
-     *  [VERSION] because a single key may be stamped ahead of the rest,
-     *  without touching the others or dropping anyone's change token. */
-    const val READABLE = 2
+
+    /** The newest stamp this build reads for this record; above it the
+     *  record is frozen. Narrower than iOS `readable` (2 for everything): only
+     *  the two gender keys are read at 2. Every other kind stays frozen above
+     *  [VERSION] — a speech take iOS stamps 2 crosses over Drive, and the
+     *  stamp exists so a build that doesn't know every iOS field can't
+     *  rewrite the take without them. */
+    fun readable(kind: SyncKind, key: String): Int =
+        if (isGenderKey(kind, key)) 2 else VERSION
+
+    private fun isGenderKey(kind: SyncKind, key: String) =
+        kind == SyncKind.DEFAULTS &&
+            (key == com.roro.futurevoice.data.LearnerGender.VALUE_KEY ||
+                key == com.roro.futurevoice.data.LearnerGender.SOURCE_KEY)
 
     /** What a record of this kind is stamped with on push. */
     fun stamp(kind: SyncKind): Int = VERSION
@@ -87,9 +97,7 @@ object SyncSchema {
      *  tombstoned for every device. Stamped 2, older builds freeze it
      *  instead: the learner's gender setting (2026-11-13). */
     fun stamp(kind: SyncKind, key: String): Int {
-        if (kind == SyncKind.DEFAULTS &&
-            (key == com.roro.futurevoice.data.LearnerGender.VALUE_KEY ||
-                key == com.roro.futurevoice.data.LearnerGender.SOURCE_KEY)) return 2
+        if (isGenderKey(kind, key)) return 2
         return stamp(kind)
     }
 }

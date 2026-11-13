@@ -67,7 +67,11 @@ class LearnerGenderTest {
         assertEquals(2, SyncSchema.stamp(SyncKind.DEFAULTS, LearnerGender.SOURCE_KEY))
         assertEquals(1, SyncSchema.stamp(SyncKind.DEFAULTS, "futurevoice.speechSpeed"))
         assertTrue(LearnerGender.VALUE_KEY in SYNCED_DEFAULTS_KEYS)
-        // This build reads what it stamps.
-        assertTrue(SyncSchema.READABLE >= 2)
+        // This build reads its own gender records at 2…
+        assertFalse(2 > SyncSchema.readable(SyncKind.DEFAULTS, LearnerGender.VALUE_KEY))
+        assertFalse(2 > SyncSchema.readable(SyncKind.DEFAULTS, LearnerGender.SOURCE_KEY))
+        // …and still freezes everything else stamped 2, an iOS speech take first.
+        assertTrue(2 > SyncSchema.readable(SyncKind.SPEECH_TAKE, "take-1"))
+        assertTrue(2 > SyncSchema.readable(SyncKind.DEFAULTS, "futurevoice.speechSpeed"))
     }
 }
