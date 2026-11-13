@@ -278,6 +278,9 @@ class TalkViewModel(context: Context) : ViewModel() {
      *  mid-call answers the question already on screen (iOS
      *  `lastFinishedReply`). */
     private var lastFinishedReply: Pair<String, String>? = null
+    /** Each finished fluent-self line's text, by turn id: the app reads what
+     *  the tutor said about a try it judged itself ([tutorReconcile]). */
+    private val finishedReplies = mutableMapOf<String, String>()
     private var coachPlan = CoachPlan()
     /** The steer last sent to the gateway ("" = none). */
     private var coachSteerSent = ""
@@ -468,6 +471,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         tutorLastFixes = emptyList()
         resetTutorTries()
         tutorCheckTurnIds.clear()
+        finishedReplies.clear()
         pendingTutorNudge = null
         _state.update { it.copy(tutorOn = tutorThisCall, pronOn = pronThisCall) }
         // Send-to-answer whatever the setting says on the pronunciation call
@@ -576,6 +580,8 @@ class TalkViewModel(context: Context) : ViewModel() {
                         tutorJustTicked = tutorJustTicked,
                         tutorLastFixes = tutorLastFixes,
                         tutorPlanning = _state.value.tutorPlanning,
+                        tutorSelfJudges = tutorSelfJudges,
+                        tutorRealGoal = _state.value.tutorLesson?.let { realGoalLine(it) },
                     ) + ConversationEngine.turnOutputInstruction(config.targetLanguage, config.nativeLanguage,
                         counterpart = config.cast?.person, inScene = config.scenarioId != null, level = config.level)
                 }
@@ -795,6 +801,8 @@ class TalkViewModel(context: Context) : ViewModel() {
                         tutorJustTicked = tutorJustTicked,
                         tutorLastFixes = tutorLastFixes,
                         tutorPlanning = _state.value.tutorPlanning,
+                        tutorSelfJudges = tutorSelfJudges,
+                        tutorRealGoal = _state.value.tutorLesson?.let { realGoalLine(it) },
                     ) + ConversationPrompt.REALTIME_STYLE_RULES
                 }
                 promptForTutor = if (pronThisCall) { _ -> pronSystemPrompt(config) } else build
@@ -1008,7 +1016,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         // A picked-up call is a new gateway session: a running lesson's hold
         // has to be set on it again, and a note written while it was paused
         // goes out now (iOS 74d3ccf3).
-        if (tutorJudging) realtime.setHoldReplies(true)
+        if (tutorHolds) realtime.setHoldReplies(true)
         pendingTutorNudge?.let { pendingTutorNudge = null; realtime.nudge(it) }
     }
 
@@ -1126,6 +1134,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                         _state.value.turns.firstOrNull { it.id == id }?.transcript.orEmpty()
                     }
                     lastFinishedReply = id to text
+                    if (tutorThisCall) finishedReplies[id] = text
                     advanceCoach(text, id)
                 }
             }
@@ -2506,7 +2515,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         _state.update { it.copy(tutorLesson = saved) }
         realtimeSystem = build(tutorThisCall)
         connectRealtime(cfg, null, emptyList())
-        realtime.setHoldReplies(true)
+        realtime.setHoldReplies(tutorHolds)
         realtime.nudge(if (saved.inFinalCheck) TutorNudges.RESUME_FINAL_CHECK else TutorNudges.RESUME)
         return true
     }
@@ -2693,6 +2702,13 @@ class TalkViewModel(context: Context) : ViewModel() {
         val i = lesson.current ?: return
         val asked = tutorLine(answeredBy = turnId)
         val challenge = lesson.challenges[i]
+        // The tutor already answered this try itself (not held); the app
+        // checks behind it and never speaks first ([tutorReconcile]).
+        val selfJudged = tutorSelfJudges
+        if (selfJudged && tutorWaitTurnAt != null) {
+            tutorWaitNoteAt = System.currentTimeMillis()
+            tutorWaitKind = "self"
+        }
         viewModelScope.launch {
             // Asked on every try, fixes or not: a request to change the
             // topic can come with a mistake in it.
@@ -2705,6 +2721,11 @@ class TalkViewModel(context: Context) : ViewModel() {
             val early = _state.value.tutorLesson
             if (tutorCallOver || !tutorStillSaid(turnId, said) || early == null ||
                 early.id != lesson.id || early.current != i) return@launch
+            if (verdict?.wantsOtherTopic == true && selfJudged) {
+                // The tutor already agreed (its TUTOR MODE block says so).
+                dropTutorLesson(said = said)
+                return@launch
+            }
             if (verdict?.wantsOtherTopic == true) {
                 // The held turn's one line, before the lesson changes.
                 tutorNudge(TutorNudges.LEAVE, waitKind = "leave")
@@ -2715,6 +2736,11 @@ class TalkViewModel(context: Context) : ViewModel() {
             // a miss — and with no judge to say otherwise, still help.
             val kind = if (ownLanguage) TutorJudge.Verdict.Kind.HELP
                 else verdict?.turnKind ?: TutorJudge.Verdict.Kind.ATTEMPT
+            if (selfJudged && kind != TutorJudge.Verdict.Kind.ATTEMPT) {
+                log(if (kind == TutorJudge.Verdict.Kind.HELP) "tutor_turn_help" else "tutor_turn_talk",
+                    mapOf("self" to "1"))
+                return@launch
+            }
             if (kind == TutorJudge.Verdict.Kind.HELP) {
                 log("tutor_turn_help", mapOf("own_language" to if (ownLanguage) "1" else "0"))
                 tutorNudge(TutorNudges.help(ownLanguage, LanguageCatalog.englishName(cfg.targetLanguage),
@@ -2731,8 +2757,17 @@ class TalkViewModel(context: Context) : ViewModel() {
             if (tutorCallOver || !tutorStillSaid(turnId, said) || now == null ||
                 now.id != lesson.id || now.current != i) return@launch
             val slips = fixes.map { "\"${it.was}\" → \"${it.now}\"" }
-            if (verdict == null) { tutorNudge(TutorNudges.LINE_UNCHECKED, waitKind = "unchecked"); return@launch }
+            if (verdict == null) {
+                // The tutor already answered it; with no check there is
+                // nothing to add or tick.
+                if (!selfJudged) tutorNudge(TutorNudges.LINE_UNCHECKED, waitKind = "unchecked")
+                return@launch
+            }
             tutorLastTry = said
+            if (selfJudged) {
+                tutorReconcile(turnId, said, lesson.id, i, challenge, verdict, slips, cfg.targetLanguage)
+                return@launch
+            }
             // A goal's lesson (an interview): an answer the interviewer would
             // count against them is not done, whatever the grammar and the
             // level (iOS 2026-11-12). The slips stay on the card.
@@ -2789,6 +2824,75 @@ class TalkViewModel(context: Context) : ViewModel() {
                 tutorNudge(TutorNudges.doneNext(i, n, c.task, c.example), waitKind = "done")
             }
         }
+    }
+
+    /**
+     * A try the tutor judged itself, checked behind it (iOS `tutorReconcile`,
+     * f75c9b5c): the app's verdict (judge + correction, as for a held turn)
+     * against what the tutor's line did. Both clean and the tutor moved on →
+     * tick. The app found a slip, a missing part or a weak answer but the
+     * tutor moved on → a note makes it take that back, and the challenge
+     * stays. The tutor asked again → nothing to do.
+     */
+    private suspend fun tutorReconcile(turnId: String, said: String, lessonId: String, i: Int,
+                                       challenge: TutorLesson.Challenge, verdict: TutorJudge.Verdict,
+                                       slips: List<String>, targetLanguage: String) {
+        val appClean = slips.isEmpty() && verdict.done && !verdict.isWeak
+        val reply = tutorReply(after = turnId)
+        val tutorSaid = reply?.let { TutorReplyRead.read(it, challenge, targetLanguage) }
+        val now = _state.value.tutorLesson
+        if (tutorCallOver || now == null || now.id != lessonId || now.current != i) return
+        log("tutor_self_judge", mapOf(
+            "app" to if (appClean) "clean" else if (verdict.isWeak) "weak" else if (slips.isNotEmpty()) "slips" else "not_done",
+            "tutor" to (tutorSaid?.raw ?: "unknown"),
+            "index" to (i + 1).toString(),
+        ))
+        if (appClean) {
+            if (tutorSaid != TutorReplyRead.Said.MOVED_ON) return
+            resetTutorTries()
+            tutorLastFixes = emptyList()
+            val stamp = System.currentTimeMillis()
+            var next = now.copy(challenges = now.challenges.mapIndexed { k, c ->
+                if (k == i) c.copy(doneAt = stamp, line = said) else c
+            })
+            if (next.current == null) next = beginFinalCheck(next, targetLanguage)
+            TutorLessonStore.save(appContext, next)
+            _state.update { it.copy(tutorLesson = next) }
+            // The tutor already moved on: nothing for its next turn to do.
+            tutorJustTicked = false
+            com.roro.futurevoice.ui.HapticEngine.success(appContext)
+            log("tutor_challenge_done", mapOf("index" to (i + 1).toString(),
+                "of" to next.challenges.size.toString(), "by" to "self"))
+            sendTutorSystem()
+            return
+        }
+        tutorMissedThisChallenge = true
+        tutorCleanOnce = false
+        tutorLastFixes = slips
+        sendTutorSystem()
+        if (tutorSaid != TutorReplyRead.Said.MOVED_ON) return
+        val what = when {
+            verdict.isWeak -> "as an answer in the real situation it is weak: ${verdict.weakNote ?: "generic"}"
+            slips.isNotEmpty() -> "slips: ${slips.joinToString("; ")}"
+            else -> "it doesn't do challenge ${i + 1} yet (\"${challenge.task}\")${verdict.missingNote?.let { ": $it" } ?: ""}"
+        }
+        tutorNudge("You moved on, but the app's check of their last try found what you missed: $what. In at most 15 words take it back (\"Wait, one thing: …\"), name only that, and ask them to say that line once more. The lesson stays on challenge ${i + 1}.",
+            waitKind = "self_takeback")
+    }
+
+    /** The tutor's line that answered [turnId], once it has finished. */
+    private suspend fun tutorReply(after: String, limitMs: Long = 25_000): String? {
+        val start = System.currentTimeMillis()
+        while (System.currentTimeMillis() - start < limitMs && !tutorCallOver) {
+            val turns = _state.value.turns
+            val idx = turns.indexOfFirst { it.id == after }
+            if (idx >= 0) {
+                val reply = turns.drop(idx + 1).firstOrNull { it.role == TurnRole.FLUENT_SELF }
+                reply?.let { finishedReplies[it.id] }?.let { return it }
+            }
+            delay(250)
+        }
+        return null
     }
 
     /**
@@ -3087,6 +3191,21 @@ class TalkViewModel(context: Context) : ViewModel() {
             return lesson.droppedAt == null
         }
 
+    /** The tutor judges a challenge's tries itself and answers at once, like
+     *  free talk (iOS `tutorSelfJudges`, f75c9b5c); the app checks behind it
+     *  ([tutorReconcile]). The final check and what follows a lesson are
+     *  still answered with the app's verdict. */
+    private val tutorSelfJudges: Boolean
+        get() {
+            if (!tutorThisCall || _state.value.tutorPlanning) return false
+            val lesson = _state.value.tutorLesson ?: return false
+            if (lesson.droppedAt != null || lesson.isFinished || lesson.inFinalCheck) return false
+            return lesson.current != null
+        }
+
+    /** Every learner turn waits at the gateway for the app's note (iOS `tutorHolds`). */
+    private val tutorHolds: Boolean get() = tutorJudging && !tutorSelfJudges
+
     /** The lesson moved: the gateway gets the rebuilt prompt (iOS `sendTutorSystem`). */
     private fun sendTutorSystem() {
         val build = promptForTutor ?: return
@@ -3097,7 +3216,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                 // While a lesson runs the tutor answers only with the app's
                 // verdict, so an answer is never met twice and the checklist
                 // never disagrees with what the tutor says.
-                realtime.setHoldReplies(tutorJudging)
+                realtime.setHoldReplies(tutorHolds)
             }
         } else {
             systemPrompt = build(tutorThisCall)

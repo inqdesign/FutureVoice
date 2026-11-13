@@ -82,6 +82,10 @@ object ConversationEngine {
         tutorLastFixes: List<String> = emptyList(),
         /** A lesson is being planned (iOS `tutorPlanning:`). */
         tutorPlanning: Boolean = false,
+        /** The tutor judges a challenge's try itself (iOS `tutorSelfJudges:`). */
+        tutorSelfJudges: Boolean = false,
+        /** A goal's real situation, for its lesson's bar (iOS `tutorRealGoal:`). */
+        tutorRealGoal: String? = null,
         now: Long = System.currentTimeMillis(),
     ): String {
         val languageName = LanguageCatalog.englishName(targetLanguage)
@@ -171,7 +175,7 @@ object ConversationEngine {
             newsBlock = newsBlock, briefBlock = briefBlock,
             targetLanguage = targetLanguage, tutor = tutor,
             tutorBlock = if (tutor) TutorPrompt.block(targetLanguage, languageName, tutorLesson,
-                tutorJustTicked, tutorLastFixes, tutorPlanning) else "",
+                tutorJustTicked, tutorLastFixes, tutorPlanning, tutorSelfJudges, tutorRealGoal) else "",
             futureBlock = futureBlock,
             // iOS `counterpart == nil && topic.isEmpty` (5a462332): the
             // Spanish gender line and the Japanese self-address line.

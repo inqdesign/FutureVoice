@@ -318,6 +318,44 @@ object TutorJudge {
 }
 
 /**
+ * What the tutor said (iOS `TutorReplyRead`, f75c9b5c): when the tutor judges
+ * a try itself, the app reads what its line DID, so the checklist ticks only
+ * when the tutor moved on and the app's own check found nothing.
+ */
+object TutorReplyRead {
+    enum class Said(val raw: String) { MOVED_ON("moved_on"), AGAIN("again"), OTHER("other") }
+
+    @Serializable
+    private data class R(val said: String)
+
+    suspend fun read(reply: String, challenge: TutorLesson.Challenge, targetLanguage: String): Said? =
+        withTimeoutOrNull(10_000) {
+            runCatching {
+                val target = LanguageCatalog.englishName(targetLanguage)
+                val system = "A tutor is drilling a $target learner on one line at a time. The " +
+                    "learner just tried this one: \"${challenge.task}\" (for example: " +
+                    "\"${challenge.example}\"). Read the tutor's reply and say what it does:\n" +
+                    "\"moved_on\" — accepts the try and moves on: to the next part, or asks " +
+                    "them to say it all in one go.\n" +
+                    "\"again\" — asks them to say it again (fixed, once more, or with " +
+                    "something added), points out a slip, or says what is missing.\n" +
+                    "\"other\" — neither: answers a question, chats, or helps them find words.\n" +
+                    "Return STRICT JSON only: {\"said\": \"moved_on\"|\"again\"|\"other\"}"
+                val r = GeminiClient(AuthRepository()).sendJson(
+                    system = system,
+                    messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER,
+                        "The tutor said: $reply")),
+                    serializer = R.serializer(),
+                    model = GeminiClient.Model.FLASH_LITE_31, maxTokens = 60, purpose = "tutor",
+                    idempotencyKey = "tutor-said:${StoreJson.newId()}",
+                    fastThinking = true,
+                )
+                Said.entries.firstOrNull { it.raw == r.said }
+            }.getOrNull()
+        }
+}
+
+/**
  * The lesson's final check (iOS `TutorFinalCheck`, founder 2026-10-28): every
  * challenge said in one answer, with nothing on screen to lean on. The bar is
  * CONFIDENCE, not perfection — every part said and understood passes, small
@@ -378,7 +416,8 @@ object TutorFinalCheck {
  */
 object TutorPrompt {
     fun block(targetLanguage: String, languageName: String, lesson: TutorLesson?,
-              justTicked: Boolean, lastFixes: List<String>, planning: Boolean = false): String {
+              justTicked: Boolean, lastFixes: List<String>, planning: Boolean = false,
+              selfJudges: Boolean = false, realGoal: String? = null): String {
         val now = lesson?.current
         val lessonPart = when {
             planning && lesson != null -> ConversationPrompt.tutorLessonPlanning(
@@ -387,6 +426,16 @@ object TutorPrompt {
                 lesson.titleTarget,
                 lesson.challenges.withIndex().joinToString("\n") { (i, c) -> "  ${i + 1}. ${c.task}" })
             lesson != null && lesson.isFinished -> ConversationPrompt.tutorLessonDone(lesson.titleTarget)
+            // The tutor judges each try itself and answers at once (iOS
+            // f75c9b5c); the app checks behind it.
+            selfJudges && lesson != null && now != null -> {
+                val rows = lesson.challenges.withIndex().joinToString("\n") { (i, c) ->
+                    val mark = if (c.doneAt != null) "DONE" else if (i == now) "NOW " else "    "
+                    "  [$mark] ${i + 1}. ${c.task} — e.g. \"${c.example}\""
+                }
+                ConversationPrompt.tutorLessonSelf(lesson.titleTarget, rows, now,
+                    realGoal?.let { ConversationPrompt.tutorWeakRule(it) } ?: "")
+            }
             lesson != null && now != null -> {
                 val rows = lesson.challenges.withIndex().joinToString("\n") { (i, c) ->
                     val mark = if (c.doneAt != null) "DONE" else if (i == now) "NOW " else "    "
@@ -397,8 +446,11 @@ object TutorPrompt {
             }
             else -> ConversationPrompt.TUTOR_NO_TOPIC
         }
+        // Byte-identical to before when the app judges (the held turn).
+        val tryRule = if (selfJudges && lesson?.current != null) ConversationPrompt.TUTOR_TRY_SELF
+            else ConversationPrompt.TUTOR_TRY_HELD
         return ConversationPrompt.tutorBlock(targetLanguage, languageName, lessonPart,
-            tutorNow(lesson, justTicked && !planning))
+            tutorNow(lesson, justTicked && !planning && !selfJudges), tryRule)
     }
 
     private fun tutorNow(lesson: TutorLesson?, justTicked: Boolean): String {

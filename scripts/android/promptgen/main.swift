@@ -131,6 +131,9 @@ struct Fixture {
     var lesson: TutorLesson? = nil
     var ticked = false
     var fixes: [String] = []
+    /// The tutor judges a try itself (iOS f75c9b5c), and a goal's real situation.
+    var selfJudges = false
+    var realGoal: String? = nil
 }
 
 /// Tutor mode's lesson (iOS af3c7ffe): `done` of `total` challenges ticked.
@@ -179,6 +182,13 @@ let fixtures: [Fixture] = [
             tutor: true, lesson: { var l = lesson(done: 3); l.finishedAt = callStart; return l }()),
     Fixture(name: "tutor_de_b2_lesson_quiet", target: "de", native: "en", level: .b2,
             topic: "Ordering at a cafe", tutor: true, lesson: lesson(done: 2)),
+    // The tutor judges each try itself (iOS f75c9b5c): no tutorNow after a
+    // tick, and a goal's lesson carries the real situation's bar.
+    Fixture(name: "tutor_en_b1_self", target: "en", native: "ko", level: .b1, persona: fullPersona,
+            tutor: true, lesson: lesson(done: 1), ticked: true, selfJudges: true),
+    Fixture(name: "tutor_ko_a2_self_goal", target: "ko", native: "en", level: .a2,
+            tutor: true, lesson: lesson(done: 0), selfJudges: true,
+            realGoal: "interview: Lufthansa flight attendant at Munich, no date set"),
     Fixture(name: "first_counterpart_ignored_es", target: "es", native: "en", level: .b2, persona: nil,
             counterpart: manager, firstMeeting: true),
     // The learner's goals (iOS 3d655c8b): WHO YOU BECAME on a free talk and
@@ -206,7 +216,8 @@ for f in fixtures {
         topPatterns: f.patterns, weakVocabAreas: f.weak, topic: f.topic,
         persona: f.persona, counterpart: f.counterpart, newsFacts: f.news, brief: f.brief,
         firstMeeting: f.firstMeeting, clock: f.clock, tutor: f.tutor,
-        tutorLesson: f.lesson, tutorJustTicked: f.ticked, tutorLastFixes: f.fixes)
+        tutorLesson: f.lesson, tutorJustTicked: f.ticked, tutorLastFixes: f.fixes,
+        tutorSelfJudges: f.selfJudges, tutorRealGoal: f.realGoal)
 }
 
 let outputs: [(String, String, String, Counterpart?, Bool)] = [

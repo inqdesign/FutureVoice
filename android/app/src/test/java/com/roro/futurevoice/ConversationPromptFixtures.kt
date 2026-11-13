@@ -91,6 +91,8 @@ object ConversationPromptFixtures {
         val news: List<String> = emptyList(), val brief: ScenarioBrief? = null,
         val firstMeeting: Boolean = false, val clock: PromptClock? = null, val tutor: Boolean = false,
         val lesson: TutorLesson? = null, val ticked: Boolean = false, val fixes: List<String> = emptyList(),
+        /** The tutor judges a try itself (iOS f75c9b5c), and a goal's real situation. */
+        val selfJudges: Boolean = false, val realGoal: String? = null,
     )
 
     /** main.swift's `lesson(done:of:)`: [done] of [total] challenges ticked. */
@@ -133,6 +135,11 @@ object ConversationPromptFixtures {
             tutor = true, lesson = lesson(3).copy(finishedAt = CALL_START)),
         Fixture("tutor_de_b2_lesson_quiet", "de", "en", CefrLevel.B2,
             topic = "Ordering at a cafe", tutor = true, lesson = lesson(2)),
+        Fixture("tutor_en_b1_self", "en", "ko", CefrLevel.B1, persona = fullPersona,
+            tutor = true, lesson = lesson(1), ticked = true, selfJudges = true),
+        Fixture("tutor_ko_a2_self_goal", "ko", "en", CefrLevel.A2,
+            tutor = true, lesson = lesson(0), selfJudges = true,
+            realGoal = "interview: Lufthansa flight attendant at Munich, no date set"),
         Fixture("first_counterpart_ignored_es", "es", "en", CefrLevel.B2, persona = null, counterpart = manager,
             firstMeeting = true),
         // The learner's goals (iOS 3d655c8b): WHO YOU BECAME on a free talk and
