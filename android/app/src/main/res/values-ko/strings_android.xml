@@ -224,6 +224,13 @@
     <string name="accent_castilian">스페인식</string>
     <string name="accent_parisian">프랑스식</string>
     <string name="accent_canadian">캐나다식</string>
+    <string name="learner_gender_title">성별</string>
+    <string name="learner_gender_not_set">정하지 않음</string>
+    <string name="learner_gender_male">남성</string>
+    <string name="learner_gender_female">여성</string>
+    <string name="learner_gender_unsaid">밝히지 않음</string>
+    <string name="s_uses_it_in_sentences_about_you">%1$s로 내 이야기를 할 때 써요.</string>
+    <string name="guessed_from_your_voice">목소리로 짐작했어요.</string>
     <string name="your_fluent_self_speaks_with_this_accent_in_your_own_voice">유창해진 내가 내 목소리로, 이 억양으로 말해요. 직접 들어본 뒤에 바꿀 수도 있어요.</string>
     <string name="voice_change_already">최근 30일 안에 이미 목소리를 바꿨어요.</string>
     <string name="voice_change_again_from">%s부터 다시 목소리를 바꿀 수 있어요.</string>

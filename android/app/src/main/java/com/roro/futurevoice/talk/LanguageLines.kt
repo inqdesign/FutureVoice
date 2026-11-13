@@ -1,6 +1,7 @@
 package com.roro.futurevoice.talk
 
 import com.roro.futurevoice.data.LanguageCatalog
+import com.roro.futurevoice.data.LearnerGender
 
 /**
  * iOS `ConversationEngine+LanguageLines.swift` (5a462332, 2026-11-06): prompt
@@ -45,16 +46,10 @@ object LanguageLines {
      *  half only as the future self; the variety half only when no other
      *  variety was picked (Castilian has its own line). */
     fun spanishGuard(targetLanguage: String, asFutureSelf: Boolean,
-                     accentId: String? = LanguageVariety.accentId): String {
+                     accentId: String? = LanguageVariety.accentId,
+                     gender: LearnerGender? = LearnerGender.current): String {
         if (base(targetLanguage) != "es") return ""
-        var out = ""
-        if (asFutureSelf) {
-            out += "\n- SPANISH, GENDER: you are them, so you share their gender, and you don't" +
-                "\n  know it until About the user says it or they show it in a word about" +
-                "\n  themselves. Until then, say things in forms that have no gender (\"Mucho" +
-                "\n  gusto.\", \"Qué gusto.\", \"No pasa nada.\", \"¿Estás bien?\"); once they" +
-                "\n  show it, use that form for both of you for the rest of the call."
-        }
+        var out = genderLine(targetLanguage, asFutureSelf, gender)
         if (LanguageVariety.writingVariety(targetLanguage, accentId) == null) {
             out += "\n- SPANISH, WHICH SPANISH: your voice has a Latin American accent, so speak" +
                 "\n  everyday Latin American Spanish, the kind understood from Mexico to" +
@@ -69,14 +64,82 @@ object LanguageLines {
      *  content/contente), and with no line Haiku spoke as a man to a learner
      *  named Minji in every beginner-probe call that needed a form
      *  (2026-11-13). Neutral forms only, the Spanish lesson. */
-    fun frenchGuard(targetLanguage: String, asFutureSelf: Boolean): String {
-        if (base(targetLanguage) != "fr" || !asFutureSelf) return ""
-        return "\n- FRENCH, GENDER: you are them, so you share their gender, and you don't" +
-            "\n  know it until About the user says it or they show it in a word about" +
-            "\n  themselves. Until then, say things in forms that have no gender, meeting" +
-            "\n  them included (\"Ça me fait plaisir de te rencontrer.\", \"Pas de souci.\"," +
-            "\n  \"Tu as bien dormi ?\"); once they show it, use that form for both of you" +
-            "\n  for the rest of the call."
+    fun frenchGuard(targetLanguage: String, asFutureSelf: Boolean,
+                    gender: LearnerGender? = LearnerGender.current): String {
+        if (base(targetLanguage) != "fr") return ""
+        return genderLine(targetLanguage, asFutureSelf, gender)
+    }
+
+    /** iOS `genderLine` — the learner's gender ([LearnerGender]) in a French
+     *  or Spanish call, "" everywhere else. As the future self, the model IS
+     *  them, so its own words take their gender too. With nothing on file it
+     *  is the measured 2026-11-13 line, byte for byte (neutral until they
+     *  show it). A cast person only hears it when it is male or female: how
+     *  to talk ABOUT them. */
+    fun genderLine(targetLanguage: String, asFutureSelf: Boolean, gender: LearnerGender?): String {
+        val lang = base(targetLanguage)
+        if (!LearnerGender.matters(lang)) return ""
+        val name = if (lang == "fr") "FRENCH" else "SPANISH"
+        val male: String; val female: String; val neutral: String
+        if (lang == "fr") {
+            male = "content, prêt, allé"; female = "contente, prête, allée"
+            neutral = "(\"Ça me fait plaisir de te rencontrer.\", \"Pas de souci.\",\n  \"Tu as bien dormi ?\")"
+        } else {
+            male = "cansado, listo, encantado"; female = "cansada, lista, encantada"
+            neutral = "(\"Mucho gusto.\", \"Qué gusto.\", \"No pasa nada.\",\n  \"¿Estás bien?\")"
+        }
+        if (!asFutureSelf) {
+            return when (gender) {
+                LearnerGender.MALE -> "\n- $name, THE LEARNER: they are a man, so what you say about them takes the masculine ($male)."
+                LearnerGender.FEMALE -> "\n- $name, THE LEARNER: they are a woman, so what you say about them takes the feminine ($female)."
+                else -> ""
+            }
+        }
+        return when (gender) {
+            LearnerGender.MALE ->
+                "\n- $name, GENDER: you are them, and they are a man: everything you say about" +
+                    "\n  yourself or about them takes the masculine ($male)."
+            LearnerGender.FEMALE ->
+                "\n- $name, GENDER: you are them, and they are a woman: everything you say about" +
+                    "\n  yourself or about them takes the feminine ($female)."
+            LearnerGender.UNSAID ->
+                "\n- $name, GENDER: they prefer not to say their gender. Say everything about" +
+                    "\n  yourself and about them in forms that have no gender $neutral," +
+                    "\n  the whole call."
+            null -> if (lang == "fr") {
+                "\n- FRENCH, GENDER: you are them, so you share their gender, and you don't" +
+                    "\n  know it until About the user says it or they show it in a word about" +
+                    "\n  themselves. Until then, say things in forms that have no gender, meeting" +
+                    "\n  them included (\"Ça me fait plaisir de te rencontrer.\", \"Pas de souci.\"," +
+                    "\n  \"Tu as bien dormi ?\"); once they show it, use that form for both of you" +
+                    "\n  for the rest of the call."
+            } else {
+                "\n- SPANISH, GENDER: you are them, so you share their gender, and you don't" +
+                    "\n  know it until About the user says it or they show it in a word about" +
+                    "\n  themselves. Until then, say things in forms that have no gender (\"Mucho" +
+                    "\n  gusto.\", \"Qué gusto.\", \"No pasa nada.\", \"¿Estás bien?\"); once they" +
+                    "\n  show it, use that form for both of you for the rest of the call."
+            }
+        }
+    }
+
+    /** iOS `genderAboutLine` — free talk's "About them" line for the same
+     *  thing: free talk's prompt is facts, not rules, so the gender is a fact
+     *  there too. Null outside French and Spanish. */
+    fun genderAboutLine(targetLanguage: String, gender: LearnerGender?): String? {
+        val lang = base(targetLanguage)
+        if (!LearnerGender.matters(lang)) return null
+        val languageName = LanguageCatalog.englishName(lang)
+        return when (gender) {
+            LearnerGender.MALE ->
+                "- Gender: a man. In $languageName, what you say about them, and about yourself since you are them, takes the masculine."
+            LearnerGender.FEMALE ->
+                "- Gender: a woman. In $languageName, what you say about them, and about yourself since you are them, takes the feminine."
+            LearnerGender.UNSAID ->
+                "- Gender: they prefer not to say. In $languageName, say things about them and about yourself in words that don't show one."
+            null ->
+                "- Gender: not known. In $languageName, keep words about them and about yourself free of it until they show it."
+        }
     }
 
     /** iOS `notesLanguageGuard` — the explanation notes ("why", "reason") in

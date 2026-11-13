@@ -241,6 +241,13 @@
     <string name="accent_castilian">Castilian</string>
     <string name="accent_parisian">Parisian</string>
     <string name="accent_canadian">Canadian</string>
+    <string name="learner_gender_title">Gender</string>
+    <string name="learner_gender_not_set">Not set</string>
+    <string name="learner_gender_male">Male</string>
+    <string name="learner_gender_female">Female</string>
+    <string name="learner_gender_unsaid">Prefer not to say</string>
+    <string name="s_uses_it_in_sentences_about_you">%1$s uses it in sentences about you.</string>
+    <string name="guessed_from_your_voice">Guessed from your voice.</string>
     <string name="your_fluent_self_speaks_with_this_accent_in_your_own_voice">Your fluent self speaks with this accent, in your own voice. You can change it once you\'ve heard it.</string>
     <string name="voice_change_already">You\'ve already changed your voice in the last 30 days.</string>
     <string name="voice_change_again_from">You can change your voice again from %s.</string>

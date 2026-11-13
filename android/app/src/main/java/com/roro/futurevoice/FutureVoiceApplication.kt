@@ -23,6 +23,7 @@ class FutureVoiceApplication : Application() {
         com.roro.futurevoice.data.LevelMap.init(this)
         com.roro.futurevoice.data.SpanishMorph.init(this)
         com.roro.futurevoice.data.FrenchMorph.init(this)
+        com.roro.futurevoice.data.LearnerGender.init(this)
         // A Japanese learner's dictionary: loaded if the pack is installed,
         // fetched if it isn't (off the main thread either way).
         if (com.roro.futurevoice.data.LanguageScope.active(this).substringBefore('-') == "ja")

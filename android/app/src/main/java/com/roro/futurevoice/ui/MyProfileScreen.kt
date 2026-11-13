@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -15,6 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.UnfoldMore
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -184,6 +186,9 @@ fun MyProfileScreen(
                     .padding(horizontal = 16.dp).padding(bottom = 32.dp),
             ) {
                 ProfileSection(persona, onEditProfile)
+                if (com.roro.futurevoice.data.LearnerGender.matters(targetLanguage)) {
+                    GenderSection(targetLanguage, app.state.collectAsState().value.nativeLanguage)
+                }
                 PurposeSection { editingPurposes = true }
                 // What they are preparing for (iOS `upcomingSection`, a9fbef92).
                 UpcomingGoalsSection(targetLanguage)
@@ -262,6 +267,64 @@ private fun ProfileSection(persona: UserPersona?, onEdit: () -> Unit) {
             Text(stringResource(R.string.edit), style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.primary)
         }
+    }
+}
+
+/** The gender French and Spanish sentences take
+ *  ([com.roro.futurevoice.data.LearnerGender], iOS `genderSection`), only
+ *  while one of them is the target. A guess from the voice says so. */
+@Composable
+private fun GenderSection(targetLanguage: String, nativeLanguage: String) {
+    val context = LocalContext.current
+    var gender by remember { mutableStateOf(com.roro.futurevoice.data.LearnerGender.current(context)) }
+    var source by remember { mutableStateOf(com.roro.futurevoice.data.LearnerGender.source(context)) }
+    var open by remember { mutableStateOf(false) }
+    @Composable
+    fun label(g: com.roro.futurevoice.data.LearnerGender?): String = stringResource(when (g) {
+        null -> R.string.learner_gender_not_set
+        com.roro.futurevoice.data.LearnerGender.MALE -> R.string.learner_gender_male
+        com.roro.futurevoice.data.LearnerGender.FEMALE -> R.string.learner_gender_female
+        com.roro.futurevoice.data.LearnerGender.UNSAID -> R.string.learner_gender_unsaid
+    })
+    // "Not set" is offered only while nothing is on file.
+    val options = (if (gender == null) listOf<com.roro.futurevoice.data.LearnerGender?>(null) else emptyList()) +
+        com.roro.futurevoice.data.LearnerGender.entries
+    GroupedSectionSpacer()
+    GroupedCard {
+        Row(
+            Modifier.fillMaxWidth().defaultMinSize(minHeight = 44.dp).clickable { open = true }
+                .padding(start = 16.dp, end = 12.dp, top = 11.dp, bottom = 11.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(stringResource(R.string.learner_gender_title), style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+            // The menu hangs off the trailing VALUE (shared iOS menu).
+            androidx.compose.foundation.layout.Box {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(label(gender), style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.End,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(androidx.compose.material.icons.Icons.Filled.UnfoldMore, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 4.dp).size(18.dp))
+                }
+                com.roro.futurevoice.ui.brand.IosPickerMenu(
+                    expanded = open, onDismissRequest = { open = false },
+                    options = options.map { it to label(it) },
+                    selected = gender,
+                    onPick = { new ->
+                        if (new == null) return@IosPickerMenu
+                        com.roro.futurevoice.data.LearnerGender.set(context, new,
+                            com.roro.futurevoice.data.LearnerGender.Source.CHOSEN)
+                        gender = new
+                        source = com.roro.futurevoice.data.LearnerGender.Source.CHOSEN
+                    })
+            }
+        }
+    }
+    GroupedFooter(stringResource(R.string.s_uses_it_in_sentences_about_you,
+        LanguageCatalog.ownName(targetLanguage, nativeLanguage)))
+    if (source == com.roro.futurevoice.data.LearnerGender.Source.VOICE) {
+        GroupedFooter(stringResource(R.string.guessed_from_your_voice))
     }
 }
 

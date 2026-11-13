@@ -240,6 +240,13 @@
     <string name="accent_castilian">De España</string>
     <string name="accent_parisian">Parisino</string>
     <string name="accent_canadian">Canadiense</string>
+    <string name="learner_gender_title">Género</string>
+    <string name="learner_gender_not_set">Sin definir</string>
+    <string name="learner_gender_male">Hombre</string>
+    <string name="learner_gender_female">Mujer</string>
+    <string name="learner_gender_unsaid">Prefiero no decirlo</string>
+    <string name="s_uses_it_in_sentences_about_you">%1$s: se usa en las frases que hablan de ti.</string>
+    <string name="guessed_from_your_voice">Lo dedujimos de tu voz.</string>
     <string name="your_fluent_self_speaks_with_this_accent_in_your_own_voice">Tu yo fluido habla con este acento, con tu propia voz. Cuando lo escuches, puedes cambiarlo.</string>
     <string name="voice_change_already">Ya cambiaste tu voz en los últimos 30 días.</string>
     <string name="voice_change_again_from">Podrás volver a cambiar tu voz a partir del %s.</string>

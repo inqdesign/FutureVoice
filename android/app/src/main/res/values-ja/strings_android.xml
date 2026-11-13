@@ -224,6 +224,13 @@
     <string name="accent_castilian">スペイン</string>
     <string name="accent_parisian">フランス</string>
     <string name="accent_canadian">カナダ</string>
+    <string name="learner_gender_title">性別</string>
+    <string name="learner_gender_not_set">未設定</string>
+    <string name="learner_gender_male">男性</string>
+    <string name="learner_gender_female">女性</string>
+    <string name="learner_gender_unsaid">回答しない</string>
+    <string name="s_uses_it_in_sentences_about_you">%1$sで自分のことを話すときに使います。</string>
+    <string name="guessed_from_your_voice">声から推測しました。</string>
     <string name="your_fluent_self_speaks_with_this_accent_in_your_own_voice">流暢な自分が、自分の声でこのアクセントで話します。実際に聞いてから変えることもできます。</string>
     <string name="voice_change_already">この30日以内に、もう声を変えています。</string>
     <string name="voice_change_again_from">%sから、また声を変えられます。</string>
