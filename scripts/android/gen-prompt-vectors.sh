@@ -31,6 +31,11 @@ fi
 if git cat-file -e "$REF:FutureVoice/Services/FutureGoal.swift" 2>/dev/null; then
   git show "$REF:FutureVoice/Services/FutureGoal.swift" > "$SRC/FutureGoal.swift"
 fi
+# The learner's gender for French and Spanish (iOS 625f56ba): genderLine and
+# genderAboutLine read it; the voice guess below it is stubbed.
+if git cat-file -e "$REF:FutureVoice/Services/LearnerGender.swift" 2>/dev/null; then
+  git show "$REF:FutureVoice/Services/LearnerGender.swift" > "$SRC/LearnerGender.swift"
+fi
 BIN=$SRC/promptgen
 swiftc -O -o "$BIN" scripts/android/promptgen/stubs.swift scripts/android/promptgen/main.swift "$SRC"/*.swift
 TZ=UTC "$BIN" "$OUT" "$(git rev-parse --short "$REF")"

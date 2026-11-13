@@ -47,3 +47,12 @@ struct PronunciationResult: Codable, Hashable { struct Word: Codable, Hashable {
 // Speech score parts (iOS Models.swift names them; the prompts never read them).
 struct SpeechParts: Codable, Hashable {}
 struct SpeechReadingScore: Codable, Hashable {}
+
+// Chinese readings (iOS 0197dcbc) compare transcripts; no prompt reads them.
+enum ChineseMorph { static func reading(of s: String) -> String { s } }
+// LearnerGender's voice guess (iOS 625f56ba); no prompt reads it.
+final class VoiceSampleStore { static let shared = VoiceSampleStore(); var url: URL? { nil } }
+enum VoicePitch { static func medianF0(url: URL) -> Double? { nil } }
+// LearnerGender.set tells sync a setting changed; no prompt reads it.
+enum SyncKindStub { case defaults }
+enum SyncEngine { static func noteChanged(_ k: SyncKindStub) {} }

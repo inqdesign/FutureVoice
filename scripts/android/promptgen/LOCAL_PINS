@@ -33,3 +33,7 @@ gen-correction-prompt.py 0197dcbc
 gen-tutor-prompts.py a6b8c504
 # French accents, Parisian and Canadian (iOS ea09ee2a; a6b8c504 contains it).
 gen-voice-accents.py a6b8c504
+# The shared pin moved to iOS 7084be4a for the beginner greeting; the summary
+# stays where it was until the Chinese port re-ports englishName's TS twin
+# ("Simplified Chinese", iOS 0197dcbc).
+gen-summary-prompt.py c51fc206
