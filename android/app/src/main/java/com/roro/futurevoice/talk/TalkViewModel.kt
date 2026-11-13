@@ -470,9 +470,11 @@ class TalkViewModel(context: Context) : ViewModel() {
         tutorCheckTurnIds.clear()
         pendingTutorNudge = null
         _state.update { it.copy(tutorOn = tutorThisCall, pronOn = pronThisCall) }
-        // Send-to-answer whatever the setting says on the pronunciation call:
-        // a learner murmuring along must not become a judged take.
-        sendToAnswerOn = SendToAnswer.resolve(SendToAnswer.choice(appContext), config.level.code) || pronThisCall
+        // Send-to-answer whatever the setting says on the pronunciation call
+        // (a learner murmuring along must not become a judged take) and in a
+        // tutor lesson, for its reset (iOS f98358c2).
+        sendToAnswerOn = SendToAnswer.resolve(SendToAnswer.choice(appContext), config.level.code) ||
+            pronThisCall || tutorThisCall
         promptForTutor = null
         coachPlan = CoachPlan()
         coachSteerSent = ""
@@ -1022,7 +1024,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             if (st == RealtimeTalkClient.State.LISTENING) speakLocalOpener()
             val was = lastRealtimeState
             lastRealtimeState = st
-            if (pronThisCall) viewModelScope.launch { pronStateChanged(was, st) }
+            if (appSendsTurns) viewModelScope.launch { pronStateChanged(was, st) }
             if (st == RealtimeTalkClient.State.HEARING) markLearnerSpoke()
             val over = _state.value.phase == TalkPhase.ENDED || _state.value.phase == TalkPhase.IDLE
             if (phase != null && !over) {
@@ -1036,7 +1038,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             val wasPending = _state.value.sendPending
             _state.update { it.copy(partial = text, level = realtime.level,
                 sendPending = it.sendPending && text.isNotEmpty()) }
-            if (pronThisCall) viewModelScope.launch {
+            if (appSendsTurns) viewModelScope.launch {
                 if (wasPending && !_state.value.sendPending) pronSendSettled()
                 pronHeard(text)
             }
@@ -1506,7 +1508,10 @@ class TalkViewModel(context: Context) : ViewModel() {
 
     /** Send-to-answer flipped in the call settings (iOS `onChange(of:
      *  sendToAnswer)`): reaches a live call at once. */
-    fun setSendToAnswer(on: Boolean) {
+    fun setSendToAnswer(choice: Boolean) {
+        // The pronunciation call and a tutor lesson run on Send whatever the
+        // setting says (iOS `sendToAnswer`).
+        val on = choice || appSendsTurns
         if (on == sendToAnswerOn) return
         sendToAnswerOn = on
         if (!on) { sendPendingJob?.cancel(); _state.update { it.copy(sendPending = false) } }
@@ -1944,6 +1949,11 @@ class TalkViewModel(context: Context) : ViewModel() {
         tutorThisCall = on
         if (on) { tutorWasOn = true; realtime.tutorCall = true }
         _state.update { it.copy(tutorOn = on) }
+        // Its turns are the app's to send now (`appSendsTurns`), or no longer
+        // (iOS c51fc206), and a lesson runs on Send (iOS f98358c2).
+        pronSendJob?.cancel()
+        pronWindowOpen = on && realtime.state == RealtimeTalkClient.State.LISTENING
+        setSendToAnswer(SendToAnswer.resolve(SendToAnswer.choice(appContext), config?.level?.code ?: ""))
         val build = promptForTutor ?: return   // not built yet: it reads tutorThisCall
         if (REALTIME) {
             realtimeSystem = build(on)
@@ -2206,13 +2216,18 @@ class TalkViewModel(context: Context) : ViewModel() {
         }
     }
 
+    /** A tutor lesson takes the same turn-taking (iOS c51fc206, founder
+     *  2026-11-13: "the same logic" — Send and reset there, and a turn that
+     *  still sends by itself once they go quiet). */
+    private val appSendsTurns: Boolean get() = pronThisCall || tutorThisCall
+
     /** The pronunciation call's turn-taking (iOS `pronStateChanged`): the
      *  gateway holds everything (send-to-answer) and the APP sends. What was
      *  heard while the fluent self was speaking — reading along, a murmur —
      *  is thrown away when it stops; from then on is the learner's turn,
      *  sent by itself once they go quiet. */
     private fun pronStateChanged(old: RealtimeTalkClient.State, new: RealtimeTalkClient.State) {
-        if (!pronThisCall) return
+        if (!appSendsTurns) return
         if (new == RealtimeTalkClient.State.SPEAKING) {
             pronWindowOpen = false
             pronSendJob?.cancel()
@@ -2234,7 +2249,7 @@ class TalkViewModel(context: Context) : ViewModel() {
 
     /** A send the gateway had nothing for: it is still their turn. */
     private fun pronSendSettled() {
-        if (pronThisCall && !_state.value.sendPending && realtime.state != RealtimeTalkClient.State.SPEAKING) {
+        if (appSendsTurns && !_state.value.sendPending && realtime.state != RealtimeTalkClient.State.SPEAKING) {
             pronWindowOpen = true
         }
     }
@@ -2243,18 +2258,22 @@ class TalkViewModel(context: Context) : ViewModel() {
      *  when the sentence on screen is (nearly) all there — a reader pausing
      *  mid-sentence for a hard word must not be cut off. */
     private fun pronHeard(partial: String) {
-        if (!pronThisCall) return
+        if (!appSendsTurns) return
         if (partial.isBlank()) pronHeardSince = null
         else if (pronHeardSince == null) pronHeardSince = System.currentTimeMillis()
         if (!pronWindowOpen || _state.value.sendPending) return
         pronSendJob?.cancel()
         if (partial.isBlank()) return
         val round = _state.value.pronRound
-        val sentence = round?.current?.let { round.lines[it].drillWord ?: round.lines[it].text }.orEmpty()
+        // The line on screen: the sentence or word being read, or in a tutor
+        // lesson the current challenge's example (iOS c51fc206).
+        val lesson = _state.value.tutorLesson
+        val sentence = if (pronThisCall) round?.current?.let { round.lines[it].drillWord ?: round.lines[it].text }.orEmpty()
+            else lesson?.current?.let { lesson.challenges[it].example }.orEmpty()
         val whole = sentence.isNotEmpty() && PronunciationJudge.overlap(partial, sentence) >= 0.8
         // A word practiced alone has no middle to pause in, and a word that
         // came out wrong never matches the screen (iOS, 2026-11-10).
-        val drilling = round?.current?.let { round.lines[it].drillWord != null } == true
+        val drilling = pronThisCall && round?.current?.let { round.lines[it].drillWord != null } == true
         pronSendJob = viewModelScope.launch {
             delay(if (whole) 1000 else if (drilling) 1200 else 2500)
             // Still voicing (the transcript lags the mouth): give it a beat.

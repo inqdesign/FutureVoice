@@ -1168,7 +1168,7 @@ fun TalkScreen(
                             }
                             // Send-to-answer and it is the learner's turn: the
                             // pill IS Send (iOS `sendModeActive`).
-                            val sendMode = (sendToAnswer || state.pronOn) && onCall &&
+                            val sendMode = (sendToAnswer || state.pronOn || state.tutorOn) && onCall &&
                                 (state.phase == TalkPhase.LISTENING || state.sendPending)
                             val hasHeldWords = state.partial.isNotBlank()
                             // Send-to-answer once the learner has started: the
@@ -1282,7 +1282,7 @@ fun TalkScreen(
                             }
                             // The phase, quietly, where the hand is.
                             Text(
-                                if ((sendToAnswer || state.pronOn) && onCall && state.phase == TalkPhase.LISTENING && !paused)
+                                if ((sendToAnswer || state.pronOn || state.tutorOn) && onCall && state.phase == TalkPhase.LISTENING && !paused)
                                     stringResource(if (state.partial.isNotBlank()) R.string.take_your_time_tap_to_send
                                         else R.string.speak_then_tap_to_send)
                                 else phaseHint(state.phase, paused, state.pausedForIdle),
