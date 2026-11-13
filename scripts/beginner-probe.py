@@ -45,6 +45,8 @@ if not os.environ.get("NO_DUMP"):
 
 # The realtime path appends this to the system prompt (ConversationView).
 view = open(os.path.join(ROOT, "FutureVoice/Views/ConversationView.swift")).read()
+# Named callStyleRules since free talk got its own prompt with no style rules;
+# the dumped prompt is the cast/scene one, which still carries them.
 style = re.search(r'static let (?:realtimeStyleRules|callStyleRules) = """\n(.*?)\n        """', view, re.S).group(1)
 style = re.sub(r"\\\n\s*", "", "\n".join(l.strip() for l in style.splitlines()))
 
@@ -63,6 +65,8 @@ FIRST = {
         [("m", "Hallo. Ich bin das zukünftige Du — das, das fließend Deutsch spricht. Also — was machst du gerade so?"), ("u", "Freut mich.")]],
  "es": [[("m", "Hola. Soy tu yo del futuro, el que habla español con fluidez. Bueno, ¿en qué andas estos días?"), ("u", "Hola. Eh... soy Minji.")],
         [("m", "Hola. Soy tu yo del futuro, el que habla español con fluidez. Bueno, ¿en qué andas estos días?"), ("u", "Mucho gusto.")]],
+ "fr": [[("m", "Salut. Je suis le toi du futur, celui qui parle français couramment. Alors, tu fais quoi de tes journées en ce moment ?"), ("u", "Salut. Euh... je suis Minji.")],
+        [("m", "Salut. Je suis le toi du futur, celui qui parle français couramment. Alors, tu fais quoi de tes journées en ce moment ?"), ("u", "Enchanté.")]],
  "zh": [[("m", "你好。我是流利说中文的未来的你。对了，你最近都在忙什么？"), ("u", "你好。嗯……我叫敏智。")],
         [("m", "你好。我是流利说中文的未来的你。对了，你最近都在忙什么？"), ("u", "很高兴认识你。")]],
 }
@@ -104,6 +108,13 @@ CASES = {
   [("m", "¿Qué hay de nuevo?"), ("u", "Me gusta café.")],
   [("m", "¿Qué tal el fin de semana?"), ("u", "음... 잘 모르겠어.")],
  ],
+ "fr": [
+  [("m", "Salut ! Ça me fait plaisir de te parler. Tu fais quoi en ce moment ?"), ("u", "Euh... je travaille. Beaucoup.")],
+  [("m", "Salut ! Ça va, ta journée ?"), ("u", "Oui. Je suis fatigué.")],
+  [("m", "Qu'est-ce que tu as fait aujourd'hui ?"), ("u", "Je vais travail. Après maison.")],
+  [("m", "Quoi de neuf ?"), ("u", "J'aime café.")],
+  [("m", "C'était comment, ton week-end ?"), ("u", "음... 잘 모르겠어.")],
+ ],
  "zh": [
   [("m", "嘿！最近在忙什么呢？"), ("u", "嗯……工作。很忙。")],
   [("m", "你今天过得怎么样？"), ("u", "好。我累了。")],
@@ -119,6 +130,7 @@ OPEN = {
  "ja": r"教えて|どうだった|どう思う|なんで|どうして|どんな感じ|何かあった|どんな",
  "de": r"erzähl|wie war|warum|was denkst|wie findest|wie fühlst|was gibt's neues|was für",
  "es": r"cuéntame|cómo (te )?fue|qué tal (te fue|estuvo)|por qué|qué (piensas|opinas)|cómo te sientes|qué hay de nuevo|qué tipo de|cómo es",
+ "fr": r"raconte|c'était comment|comment (ça|c'est) (s'est passé|était)|pourquoi|qu'est-ce que tu en penses|tu penses quoi|comment tu te sens|quoi de neuf|quel genre|c'est comment",
  "zh": r"说说|讲讲|聊聊|过得怎么样|觉得.*怎么样|为什么|怎么会|你觉得|感觉怎么样|有什么新|什么样的",
 }
 
@@ -172,7 +184,7 @@ def measure(lang, text):
     questions = [s for s in sentences if s.rstrip().endswith(("?", "？"))]
     opened = any(re.search(OPEN[lang], q, re.I) for q in questions)
     last = questions[-1] if questions else ""
-    size = len(last.split()) if lang in ("en", "de", "es") else len(re.sub(r"\s", "", last))
+    size = len(last.split()) if lang in ("en", "de", "es", "fr") else len(re.sub(r"\s", "", last))
     return {"q": qs, "multi": qs >= 2, "open": opened, "noq": qs == 0, "qsize": size if questions else None}
 
 jobs = []

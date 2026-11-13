@@ -38,6 +38,7 @@ export const ACCENT_LANGUAGE: Record<string, string> = {
   "general-american": "en", "british": "en", "australian": "en", "indian-english": "en", "southern-us": "en",
   "standard-german": "de", "standard-japanese": "ja", "korean": "ko",
   "mexican": "es", "castilian": "es",
+  "parisian": "fr", "canadian-french": "fr",
 }
 
 /** A voice's own accent, required before others can be added — deliberately
@@ -49,6 +50,7 @@ export const ACCENT_LANGUAGE: Record<string, string> = {
 const BASE_ACCENT: Record<string, string> = {
   en: "new-zealand", de: "austrian-german", ja: "standard-japanese", ko: "korean",
   es: "united-states-spanish",
+  fr: "belgian-french",
 }
 
 /** The app's accent picks arrive as PROMPTS in words (VoiceAccentCatalog)
@@ -61,6 +63,8 @@ export function accentFromDescription(description: string): string | null {
   if (d.includes("standard german") || d.includes("hochdeutsch")) return "standard-german"
   if (d.includes("mexican spanish")) return "mexican"
   if (d.includes("castilian spanish")) return "castilian"
+  if (d.includes("parisian french")) return "parisian"
+  if (d.includes("canadian french")) return "canadian-french"
   if (d.includes("japanese")) return "standard-japanese"
   if (d.includes("korean")) return "korean"
   return null
@@ -84,6 +88,8 @@ export const LANGUAGE_DEFAULT_ACCENT: Record<string, string> = {
   en: "general-american",
   de: GERMAN_DEFAULT,
   es: "mexican",
+  // French (2026-11-13): Parisian, the app's first French option.
+  fr: "parisian",
 }
 
 /** "Original" (2026-10-20): `<uuid>:original-<lang>` is the voice as

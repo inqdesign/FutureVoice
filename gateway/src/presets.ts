@@ -29,6 +29,8 @@ const VOICED: Record<string, string[]> = {
        "7be83d14-4707-43ad-9774-e24eb38320f0", "6b92f628-be90-497c-8f4c-3b035002df71"],
   es: ["3797b3c0-ab71-40dc-bfa0-a8c6ff9c1e8b", "7b001dff-b8b2-4da7-92e4-5c794798effa",
        "727f663b-0e90-4031-90f2-558b7334425b", "e9f0368b-3662-4a01-b037-e13ca5203c74"],
+  fr: ["735287ee-ce91-4b08-8de4-63315c5ba1fb", "ab636c8b-9960-4fb3-bb0c-b7b655fb9745",
+       "6c64b57a-bc65-48e4-bff4-12dbe85606cd", "adff5dcb-249f-463f-aa89-d98d8ca05e88"],
   zh: ["6eb8965c-e295-47bd-a9e4-3eeebb3abcff", "16212f18-4955-4be9-a6cd-2196ce2c11d1",
        "bf32f849-7bc9-4b91-8c62-954588efcc30", "653b9445-ae0c-4312-a3ce-375504cff31e"],
 }

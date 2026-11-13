@@ -725,6 +725,7 @@ final class VocabStore: ObservableObject {
     nonisolated static func offListContentWords(in texts: [String]) -> [String: Int] {
         guard !Self.matchesKorean, !Self.matchesJapanese, !Self.matchesChinese else { return [:] }
         if Self.matchesSpanish { return spanishOffListContentWords(in: texts) }
+        if Self.matchesFrench { return frenchOffListContentWords(in: texts) }
         let language = Self.taggerLanguage
         let content: Set<String> = [
             NLTag.noun.rawValue, NLTag.verb.rawValue,
@@ -794,6 +795,28 @@ final class VocabStore: ObservableObject {
         return out
     }
 
+    /// French: the same four filters through `FrenchMorph`, which reads each
+    /// word in its sentence (l'été → été, j'ai été → être).
+    nonisolated private static func frenchOffListContentWords(in texts: [String]) -> [String: Int] {
+        var out: [String: Int] = [:]
+        for text in texts {
+            let seenHere = offListMemo.value(for: text, language: .french) {
+                var found = Set<String>()
+                for (_, range, entry) in FrenchMorph.analyze(text) {
+                    guard let lemma = entry?.lemma,
+                          lemma.count >= 3,
+                          !CoreVocabulary.set.contains(lemma),
+                          !CoreVocabulary.isUngraded(lemma),
+                          !Self.isCapitalizedMidSentence(text, range) else { continue }
+                    found.insert(lemma)
+                }
+                return found
+            }
+            for lemma in seenHere { out[lemma, default: 0] += 1 }
+        }
+        return out
+    }
+
     /// Capitalized, and not because it opens a sentence.
     nonisolated private static func isCapitalizedMidSentence(_ text: String,
                                                               _ range: Range<String.Index>) -> Bool {
@@ -834,6 +857,12 @@ final class VocabStore: ObservableObject {
         if Self.matchesSpanish {
             // Same rule as the tagger path below, from the bundled table.
             let lemma = SpanishMorph.lemma(of: w)
+            if CoreVocabulary.set.contains(lemma) || !CoreVocabulary.set.contains(w) { return lemma }
+            return w
+        }
+        if Self.matchesFrench {
+            // A lone word, so no context: the table's default reading.
+            let lemma = FrenchMorph.lemma(of: w)
             if CoreVocabulary.set.contains(lemma) || !CoreVocabulary.set.contains(w) { return lemma }
             return w
         }
@@ -887,6 +916,12 @@ final class VocabStore: ObservableObject {
         LanguageCatalog.language(LanguageScope.active)?.code == "es"
     }
 
+    /// French: Apple's French lemma is wrong in context (suis → suivre), so
+    /// `FrenchMorph`'s table stands in for the tagger.
+    nonisolated private static var matchesFrench: Bool {
+        LanguageCatalog.language(LanguageScope.active)?.code == "fr"
+    }
+
     /// NLTagger language for the current target. NLLanguage raw values ARE
     /// bare BCP-47 codes ("en", "de"), so the active code maps directly;
     /// an unsupported code just yields nil tags → surface-token fallback.
@@ -915,6 +950,7 @@ final class VocabStore: ObservableObject {
             return out
         }
         if Self.matchesSpanish { return spanishLemmas(in: texts) }
+        if Self.matchesFrench { return frenchLemmas(in: texts) }
         let language = Self.taggerLanguage
         var out = Set<String>()
         var tagger: NLTagger?
@@ -979,6 +1015,25 @@ final class VocabStore: ObservableObject {
                 for (word, _) in SpanishMorph.words(in: text) {
                     let lemma = SpanishMorph.lemma(of: word)
                     if lemma.count > 1 { found.insert(lemma) }
+                }
+                return found
+            })
+        }
+        return out
+    }
+
+    /// French: every word read in its sentence through `FrenchMorph`
+    /// (mangé → manger, l'été → été). A function word or a word the table
+    /// doesn't know comes back as itself, like Spanish; an elided l' or j'
+    /// is no word at all.
+    nonisolated private static func frenchLemmas(in texts: [String]) -> Set<String> {
+        var out = Set<String>()
+        for text in texts {
+            out.formUnion(lemmaMemo.value(for: text, language: .french) {
+                var found = Set<String>()
+                for (word, _, entry) in FrenchMorph.analyze(text) {
+                    let lemma = entry?.lemma ?? FrenchMorph.normalized(word)
+                    if lemma.count > 1, !lemma.hasSuffix("'") { found.insert(lemma) }
                 }
                 return found
             })

@@ -114,7 +114,7 @@ final class ScriptStudyVoiceoverTests: XCTestCase {
 
     /// A one-minute script is NOT three minutes: it is the characters.
     func testOneMinuteScriptIsPricedByItsCharacters() {
-        for code in ["en", "ko", "ja", "de", "es"] {
+        for code in ["en", "ko", "ja", "de", "es", "fr"] {
             let script = SpeechLibrary.builtIn(for: code)!
             let chars = ScriptVoiceover.chargeableCharacters(script.body)
             XCTAssertEqual(ScriptVoiceover.quoteMinutes(text: script.body, language: code),

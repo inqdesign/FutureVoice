@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Carries the English cuts over to Korean, Japanese and Spanish through
+"""Carries the English cuts over to Korean, Japanese, Spanish and French through
 Tatoeba en–xx pairs, the way parallel_cuts.py does for German.
 
 The target side is read by the APP's own analyzers (KoreanMorph,
@@ -15,6 +15,8 @@ reference: r 0.879, cuts 0.546 / 0.580 / 0.611, gap/sd 0.86 / 0.77):
   es  r 0.887  cuts 0.301/0.330/0.358 · 0.308/0.336/0.358  gap/sd 0.80/0.79
   ja  r 0.845  cuts 0.863/0.903/0.934 · 0.862/0.900/0.935  gap/sd 0.69/0.55
   ko  r 0.864  cuts 0.554/0.592/0.615 · 0.566/0.602/0.633  gap/sd 0.78/0.48
+Measured 2026-11-13 (FrenchMorph + Lexique wordlist):
+  fr  r 0.888  cuts 0.331/0.356/0.385 · 0.335/0.358/0.398  gap/sd 0.68/0.97
 PROVISIONAL by construction: translations, not speech.
 
 usage: python3 parallel_cuts_more.py FutureVoice/Resources FutureVoice/Services/VocabSophistication.swift \\

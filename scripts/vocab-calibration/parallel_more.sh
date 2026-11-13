@@ -1,25 +1,26 @@
 #!/bin/bash
-# Tatoeba en–ko / en–ja / en–es pairs read exactly as the phone reads them,
+# Tatoeba en–ko / en–ja / en–es / en–fr pairs read exactly as the phone reads them,
 # for parallel_cuts_more.py. Compiles the app's own KoreanMorph, JapaneseMorph,
-# SpanishMorph, WordClass and VocabSophistication (copied, bundle lookups
+# SpanishMorph, FrenchMorph, WordClass and VocabSophistication (copied, bundle lookups
 # pointed at FutureVoice/Resources) with small stand-ins for the rest; the
 # English side is NLTagger lemma|Class, as parallel_pairs.swift writes it.
 #
 # Inputs (CC BY 2.0 FR) from https://downloads.tatoeba.org/exports/per_language/,
 # decompressed side by side in ONE directory: eng_sentences.tsv (from eng/),
 # kor_sentences.tsv + kor-eng_links.tsv (kor/), jpn_sentences.tsv +
-# jpn-eng_links.tsv (jpn/), spa_sentences.tsv + spa-eng_links.tsv (spa/);
+# jpn-eng_links.tsv (jpn/), spa_sentences.tsv + spa-eng_links.tsv (spa/),
+# fra_sentences.tsv + fra-eng_links.tsv (fra/);
 # ~150 MB in all. Needs the profiles from VocabSophistication.swift in place.
 #
-# usage: scripts/vocab-calibration/parallel_more.sh <tatoeba dir> <out dir>
-#   writes <out dir>/pairs_{ko,ja,es}.tsv (ja and es take a few minutes each)
+# usage: [LANGS="fr"] scripts/vocab-calibration/parallel_more.sh <tatoeba dir> <out dir>
+#   writes <out dir>/pairs_{ko,ja,es,fr}.tsv (ja, es and fr take a few minutes each)
 # then:  python3 scripts/vocab-calibration/parallel_cuts_more.py FutureVoice/Resources \
 #            FutureVoice/Services/VocabSophistication.swift ko <out dir>/pairs_ko.tsv
 set -euo pipefail
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 DATA="$(cd "$1" && pwd)"; mkdir -p "$2"; OUT="$(cd "$2" && pwd)"
 WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
-for f in KoreanMorph JapaneseMorph SpanishMorph WordClass VocabSophistication; do
+for f in KoreanMorph JapaneseMorph SpanishMorph FrenchMorph WordClass VocabSophistication; do
   sed -e 's/Bundle\.main\.url(forResource: /resURL(/' -e 's/, withExtension: "tsv")/)/' \
     "$REPO/FutureVoice/Services/$f.swift" > "$WORK/$f.swift"
 done
@@ -79,7 +80,7 @@ SWIFT
 cat > "$WORK/main.swift" <<'SWIFT'
 import Foundation
 import NaturalLanguage
-// usage: pairs <ko|ja|es> <Resources dir> <tatoeba dir> <out.tsv>
+// usage: pairs <ko|ja|es|fr> <Resources dir> <tatoeba dir> <out.tsv>
 // Writes: target id, English lemma|Class (NLTagger, as parallel_pairs.swift),
 // the target's content headwords as VocabSophistication reads them on device
 // (stop words NOT yet removed), English text, target text.
@@ -87,7 +88,7 @@ let a = CommandLine.arguments
 let lang = a[1]; RES = a[2]; let dir = a[3]
 ACTIVE = lang
 CoreVocabulary.load(lang)
-let t3 = ["ko": "kor", "ja": "jpn", "es": "spa"][lang]!
+let t3 = ["ko": "kor", "ja": "jpn", "es": "spa", "fr": "fra"][lang]!
 func read(_ p: String) -> String { String(decoding: FileManager.default.contents(atPath: p)!, as: UTF8.self) }
 var tgt: [Substring: Substring] = [:], en: [Substring: Substring] = [:]
 let tText = read("\(dir)/\(t3)_sentences.tsv"), links = read("\(dir)/\(t3)-eng_links.tsv")
@@ -108,7 +109,7 @@ func lem(_ s: String) -> String {
     }
     return o.joined(separator: " ")
 }
-let reader: VocabSophistication.Reader = lang == "ko" ? .korean : lang == "ja" ? .japanese : .spanish
+let reader: VocabSophistication.Reader = lang == "ko" ? .korean : lang == "ja" ? .japanese : lang == "fr" ? .french : .spanish
 let profile = VocabSophistication.Profile(a2: 0, b1: 0, nativeLike: 0, reader: reader, stopWords: [])
 let tagger = NLTagger(tagSchemes: [.lemma, .lexicalClass])
 var seen = Set<Substring>(); var out = ""
@@ -120,9 +121,9 @@ for p in pairs {
 }
 FileManager.default.createFile(atPath: a[4], contents: out.data(using: .utf8))
 SWIFT
-(cd "$WORK" && swiftc -O -o pairs Stubs.swift KoreanMorph.swift JapaneseMorph.swift SpanishMorph.swift \
+(cd "$WORK" && swiftc -O -o pairs Stubs.swift KoreanMorph.swift JapaneseMorph.swift SpanishMorph.swift FrenchMorph.swift \
   WordClass.swift VocabSophistication.swift main.swift)
-for l in ko ja es; do
+for l in ${LANGS:-ko ja es fr}; do
   "$WORK/pairs" "$l" "$REPO/FutureVoice/Resources" "$DATA" "$OUT/pairs_$l.tsv"
   echo "$OUT/pairs_$l.tsv: $(wc -l < "$OUT/pairs_$l.tsv") pairs"
 done

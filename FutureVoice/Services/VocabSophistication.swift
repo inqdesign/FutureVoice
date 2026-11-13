@@ -62,6 +62,9 @@ enum VocabSophistication {
         case japanese
         /// `SpanishMorph`'s table (lemma + class); iOS has no Spanish lemma.
         case spanish
+        /// `FrenchMorph`'s table, read in the sentence (l'été → été,
+        /// j'ai aimé → aimer); Apple's French lemma is wrong in context.
+        case french
     }
 
     static let profiles: [String: Profile] = [
@@ -130,6 +133,18 @@ enum VocabSophistication {
                         "cuatro", "cinco", "seis", "siete", "ocho", "nueve",
                         "diez", "cien", "mil", "mío", "mía", "tuyo", "tuya",
                         "suyo", "suya", "nuestro", "nuestra"
+                      ]),
+        // French (2026-11-13): 365k Tatoeba en–fr pairs pooled like
+        // speakers, r 0.89 (as good as Spanish); cuts 0.331/0.356/0.385 and
+        // 0.335/0.358/0.398 on the two halves. Frequency bands, like Spanish.
+        "fr": Profile(a2: 0.33, b1: 0.36, nativeLike: 0.39, reader: .french,
+                      stopWords: [
+                        // Auxiliaries and modals (be / have / do / go / can / must).
+                        "être", "avoir", "faire", "aller", "pouvoir", "devoir",
+                        "vouloir", "falloir",
+                        // The negation (ne … pas is one "not"), numerals.
+                        "ne", "pas", "un", "deux", "trois", "quatre", "cinq",
+                        "six", "sept", "huit", "neuf", "dix", "cent", "mille"
                       ]),
     ]
 
@@ -255,6 +270,11 @@ enum VocabSophistication {
                 if let lemma, lemma.count > 1 { found.append(lemma) }
             }
             lemmas = found
+        case .french:
+            // Content readings only: a function word has no entry. The
+            // participle after avoir is already the verb (FrenchMorph's
+            // context rule), so the Spanish repair isn't needed here.
+            lemmas = FrenchMorph.analyze(text).compactMap { $0.entry?.lemma }.filter { $0.count > 1 }
         }
         return lemmas.filter { !profile.stopWords.contains($0) }
     }

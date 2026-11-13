@@ -96,7 +96,10 @@ enum LanguageCatalog {
         // plus curated B2–C2 — cased headwords (nouns capitalized), matched
         // case-insensitively by CoreVocabulary.
         Language(code: "de", sttLocale: "de-DE", tokenStyle: .word, wordlistResource: "cefr_words_de"),
-        Language(code: "fr", sttLocale: "fr-FR", tokenStyle: .word, wordlistResource: nil),
+        // French wordlist (2026-11-13): frequency bands over Lexique 3.83 +
+        // Tatoeba under a hand-written A1/A2 core — FLELex, the one CEFR
+        // list, is CC BY-NC-SA. See scripts/build-fr-wordlist.py.
+        Language(code: "fr", sttLocale: "fr-FR", tokenStyle: .word, wordlistResource: "cefr_words_fr"),
         Language(code: "it", sttLocale: "it-IT", tokenStyle: .word, wordlistResource: nil),
         Language(code: "pt", sttLocale: "pt-BR", tokenStyle: .word, wordlistResource: nil),
         // Japanese wordlist: JLPT N5–N1 (Waller's reconstruction, CC-BY, via

@@ -104,7 +104,16 @@ enum CoreVocabulary {
                "algo", "alguien", "nadie", "cada", "mismo", "tal", "más", "menos",
                "muy", "así", "también", "tampoco", "tan", "sí", "no", "ya",
                "bueno", "vale", "eh", "em", "este", "pues", "oye", "mira",
-               "okay", "ok", "hola", "adiós", "gracias", "hmm", "ah", "oh", "ay"]
+               "okay", "ok", "hola", "adiós", "gracias", "hmm", "ah", "oh", "ay"],
+        // Mirrors the build's own list (scripts/build-fr-wordlist.py).
+        "fr": ["être", "avoir", "aller", "faire", "pouvoir", "devoir", "vouloir", "falloir",
+               "beaucoup", "peu", "trop", "tout", "rien", "chaque", "même", "tel", "autre",
+               "plus", "moins", "très", "aussi", "ainsi", "alors", "donc", "puis", "pas", "ne",
+               "oui", "non", "si", "déjà", "encore", "bon", "euh", "ben", "bah", "hein", "quoi",
+               "voilà", "ouais", "ok", "okay", "salut", "bonjour", "merci", "est-ce que",
+               "ça", "cela", "ceci", "quelque", "quelques", "certain", "plusieurs", "assez",
+               "là", "ici", "comme", "comment", "pourquoi", "quand", "où", "y", "en",
+               "hmm", "ah", "oh"]
     ]
 
     /// True when the word's absence from the pool is a decision rather than a
@@ -136,6 +145,9 @@ enum CoreVocabulary {
         case "es":
             // No lemma model on iOS — the bundled form table instead.
             return level(of: SpanishMorph.lemma(of: token))
+        case "fr":
+            // Apple's French lemma is wrong in context — the bundled table.
+            return level(of: FrenchMorph.lemma(of: token))
         default:
             return level(of: token)
         }

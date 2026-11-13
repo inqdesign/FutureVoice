@@ -240,6 +240,27 @@ enum PronunciationCourse {
                           phonemes: [], english: "the five pure vowels (casa, mesa, todo): short and clean, never glided like English 'o-u' or 'e-i'"),
                 ]),
             ]
+        case "fr":
+            return [
+                Chapter(id: "fr.vow", icon: "waveform", title: vowels, topics: [
+                    Topic(id: "fr.u", symbol: "u · ou", examples: "tu · tout · dessus · dessous",
+                          phonemes: [], english: "'u' (tu, rue): lips rounded tight as for 'oo' while the tongue says 'ee' — tu vs tout"),
+                    Topic(id: "fr.nasal", symbol: "an · on · in", examples: "vent · vont · vin · pain",
+                          phonemes: [], english: "the nasal vowels (vent, vont, vin): air through the nose, no 'n' or 'ng' sound at the end"),
+                    Topic(id: "fr.e", symbol: "é · è", examples: "été · café · père · mère",
+                          phonemes: [], english: "'é' closed and short (été, café) vs 'è' open (père, mère), never glided into 'ay'"),
+                    Topic(id: "fr.eu", symbol: "eu", examples: "deux · peu · peur · heure",
+                          phonemes: [], english: "'eu' (deux, peur): rounded lips with the tongue forward — not 'oo', not 'uh'"),
+                ]),
+                Chapter(id: "fr.cons", icon: "mouth.fill", title: consonants, topics: [
+                    Topic(id: "fr.r", symbol: "r", examples: "rouge · Paris · très · rentrer",
+                          phonemes: [], english: "the French 'r' (rouge, très): made at the back of the throat, a light scrape, never rolled or English"),
+                    Topic(id: "fr.liaison", symbol: "liaison", examples: "les amis · vous avez · un enfant",
+                          phonemes: [], english: "liaison: a silent final consonant joins the next vowel (les amis → lé-za-mi, vous avez → vou-za-vé)"),
+                    Topic(id: "fr.silent", symbol: "lettres muettes", examples: "petit · beaucoup · ils parlent",
+                          phonemes: [], english: "silent endings: the final t, p, s, x and -ent of verbs are not said (petit, beaucoup, ils parlent)"),
+                ]),
+            ]
         case "zh":
             // zh-CN scores a syllable WITH its tone ("mai 3"), and a wrong
             // tone only pulls it to the 60s–90s (measured 2026-11-13 with

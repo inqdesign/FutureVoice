@@ -103,7 +103,8 @@ final class VocabSophisticationTests: XCTestCase {
         XCTAssertEqual(VocabSophistication.level(read(0.56), profile: de, precision: nil)?.level, .a2)
         XCTAssertEqual(VocabSophistication.level(read(0.59), profile: de, precision: nil)?.level, .b1)
         XCTAssertTrue(VocabSophistication.isCalibrated("de"))
-        XCTAssertFalse(VocabSophistication.isCalibrated("fr"))
+        XCTAssertTrue(VocabSophistication.isCalibrated("fr"))
+        XCTAssertFalse(VocabSophistication.isCalibrated("it"))
     }
 
     /// Korean, Japanese and Spanish carry the English cuts over through

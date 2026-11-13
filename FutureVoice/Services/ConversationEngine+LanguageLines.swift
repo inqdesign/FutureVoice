@@ -83,6 +83,21 @@ extension ConversationEngine {
         }
         return out
     }
+
+    /// French, beside `spanishGuard` and for the same reason: French marks
+    /// the speaker's gender too (enchanté/enchantée, content/contente), and
+    /// with no line Haiku spoke as a man to a learner named Minji in every
+    /// beginner-probe call that needed a form (2026-11-13). Neutral forms
+    /// only, the Spanish lesson.
+    static func frenchGuard(_ targetLanguage: String, asFutureSelf: Bool) -> String {
+        guard LanguageCatalog.base(targetLanguage) == "fr", asFutureSelf else { return "" }
+        return "\n- FRENCH, GENDER: you are them, so you share their gender, and you don't"
+            + "\n  know it until About the user says it or they show it in a word about"
+            + "\n  themselves. Until then, say things in forms that have no gender, meeting"
+            + "\n  them included (\"Ça me fait plaisir de te rencontrer.\", \"Pas de souci.\","
+            + "\n  \"Tu as bien dormi ?\"); once they show it, use that form for both of you"
+            + "\n  for the rest of the call."
+    }
 }
 
 // MARK: - Corrections, tutor and coach (2026-11-06)
@@ -97,10 +112,11 @@ extension ConversationEngine {
     /// language when the learner thinks in another one: Japanese 19/48 and
     /// German 7/48 with Korean as the native language (Spanish 0, English
     /// 1). After: German 0/48, Japanese 6/48 (only with the worked example).
+    /// French (2026-11-13): Haiku wrote 5/36 in ENGLISH for a Korean speaker.
     static func notesLanguageGuard(_ targetLanguage: String, nativeLanguage: String) -> String {
         let target = LanguageCatalog.base(targetLanguage)
         let native = LanguageCatalog.base(nativeLanguage)
-        guard target == "ja" || target == "de", native != target else { return "" }
+        guard ["ja", "de", "fr"].contains(target), native != target else { return "" }
         if target == "ja" && native == "ko" {
             return "\n- NOTES IN KOREAN: \"reason\" and every \"why\" are Korean sentences with"
                 + "\n  the Japanese words that changed quoted inside them, like this:"
@@ -110,7 +126,8 @@ extension ConversationEngine {
         }
         let nativeName = LanguageCatalog.englishName(nativeLanguage)
         let targetName = LanguageCatalog.englishName(targetLanguage)
-        let terms = target == "de" ? "Akkusativ, Perfekt, Partizip" : "助詞, 過去形, て形"
+        let terms = target == "de" ? "Akkusativ, Perfekt, Partizip"
+            : target == "fr" ? "passé composé, subjonctif, accord" : "助詞, 過去形, て形"
         return "\n- NOTES IN \(nativeName.uppercased()), EVERY ONE: each \"why\" and the \"reason\""
             + "\n  are read by someone who thinks in \(nativeName). Write every one of them in"
             + "\n  \(nativeName), never in \(targetName), even though what they explain is"
@@ -122,6 +139,8 @@ extension ConversationEngine {
     /// in reported speech that is still true ("me dijo que está bien" →
     /// "estaba", 2/2 runs; after 0/94 false, 0/24 missed) and German
     /// demonstrative pronouns ("der meinte" → "er meinte"; after 0/70, 0/24).
+    /// French: Haiku put the dropped ne back ("je m'en souviens plus", 1 of
+    /// 94 spoken lines; Gemini 0/94, 0/26 missed).
     static func spokenGrammarGuard(_ targetLanguage: String) -> String {
         switch LanguageCatalog.base(targetLanguage) {
         case "es":
@@ -134,6 +153,11 @@ extension ConversationEngine {
                 + "\n  it\" at the start of a clause (\"der meinte, das passt\", \"die kommt"
                 + "\n  morgen\"): correct spoken German, never a fix, and never swapped for"
                 + "\n  er / sie / es."
+        case "fr":
+            return "\n- SPOKEN FRENCH: a negation said without its ne (\"je sais pas\", \"je m'en"
+                + "\n  souviens plus\"), on for \"we\", a dropped il in \"faut que\", ça and t'as are"
+                + "\n  how French is spoken: correct, never a fix, and never written back"
+                + "\n  into the written form."
         default:
             return ""
         }

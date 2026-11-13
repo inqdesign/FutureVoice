@@ -1503,6 +1503,14 @@ struct VoicePreset: Hashable, Identifiable {
             "FF59babHL8N8gfTgtBMT": "727f663b-0e90-4031-90f2-558b7334425b",  // Carmen (F)
             "L0Dsvb3SLTyegXwtm47J": "e9f0368b-3662-4a01-b037-e13ca5203c74",  // Javier (M)
         ]
+        // French (2026-11-13): the four French voices Find people casts for
+        // French-speaking profiles (`ProfileVoice`), slot for slot by gender.
+        let french = [
+            "NDTYOmYEjbDIVCKB35i3": "735287ee-ce91-4b08-8de4-63315c5ba1fb",  // Emmanuelle (F)
+            "UgBBYS2sOqTuMpoF3BR0": "ab636c8b-9960-4fb3-bb0c-b7b655fb9745",  // Erwan (M)
+            "FF59babHL8N8gfTgtBMT": "6c64b57a-bc65-48e4-bff4-12dbe85606cd",  // Eloise (F)
+            "L0Dsvb3SLTyegXwtm47J": "adff5dcb-249f-463f-aa89-d98d8ca05e88",  // Leo (M)
+        ]
         // Chinese (2026-11-13): the four Mandarin voices Find people already
         // casts for zh-Hans profiles (`ProfileVoice`), slot for slot by
         // gender. Not yet listened to as scene partners.
@@ -1513,7 +1521,7 @@ struct VoicePreset: Hashable, Identifiable {
             "L0Dsvb3SLTyegXwtm47J": "653b9445-ae0c-4312-a3ce-375504cff31e",  // Liu (M)
         ]
         return ["en": english, "de": german, "ko": korean, "ja": japanese, "es": spanish,
-                "zh": chinese]
+                "fr": french, "zh": chinese]
     }()
 
     /// What the slots spoke as in Korean and Japanese from 2026-09-28 until
@@ -1564,6 +1572,8 @@ struct VoicePreset: Hashable, Identifiable {
                "FF59babHL8N8gfTgtBMT": "陽菜", "L0Dsvb3SLTyegXwtm47J": "健太"],
         "es": ["NDTYOmYEjbDIVCKB35i3": "Carolina", "UgBBYS2sOqTuMpoF3BR0": "Jorge",
                "FF59babHL8N8gfTgtBMT": "Carmen", "L0Dsvb3SLTyegXwtm47J": "Javier"],
+        "fr": ["NDTYOmYEjbDIVCKB35i3": "Emmanuelle", "UgBBYS2sOqTuMpoF3BR0": "Erwan",
+               "FF59babHL8N8gfTgtBMT": "Éloïse", "L0Dsvb3SLTyegXwtm47J": "Léo"],
         "zh": ["NDTYOmYEjbDIVCKB35i3": "李静", "UgBBYS2sOqTuMpoF3BR0": "张浩",
                "FF59babHL8N8gfTgtBMT": "林兰", "L0Dsvb3SLTyegXwtm47J": "刘洋"],
     ]

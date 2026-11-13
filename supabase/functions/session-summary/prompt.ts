@@ -115,13 +115,15 @@ export function registerGuard(targetLanguage: string): string {
 }
 
 const SPOKEN_GRAMMAR_ES = "\n- SPANISH REPORTED SPEECH: after a past verb of saying (dijo, me contó,\n  comentó) the reported verb may stay in the present when it is still true\n  now (\"me dijo que está bien\", \"dijo que viene mañana\"): that is correct\n  Spanish, not a slip; never turn it into the imperfect."
+const SPOKEN_GRAMMAR_FR = "\n- SPOKEN FRENCH: a negation said without its ne (\"je sais pas\", \"je m'en\n  souviens plus\"), on for \"we\", a dropped il in \"faut que\", ça and t'as are\n  how French is spoken: correct, never a fix, and never written back\n  into the written form."
 const SPOKEN_GRAMMAR_DE = "\n- GERMAN DEMONSTRATIVES: in speech der / die / das stand for \"he / she /\n  it\" at the start of a clause (\"der meinte, das passt\", \"die kommt\n  morgen\"): correct spoken German, never a fix, and never swapped for\n  er / sie / es."
 
-/** `ConversationEngine.spokenGrammarGuard` — Spanish and German only. */
+/** `ConversationEngine.spokenGrammarGuard` — Spanish, German and French only. */
 export function spokenGrammarGuard(targetLanguage: string): string {
   switch (base(targetLanguage)) {
     case "es": return SPOKEN_GRAMMAR_ES
     case "de": return SPOKEN_GRAMMAR_DE
+    case "fr": return SPOKEN_GRAMMAR_FR
     default: return ""
   }
 }

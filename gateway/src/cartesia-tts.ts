@@ -120,6 +120,7 @@ const ACCENT_LANGUAGE: Record<string, string> = {
   "general-american": "en", "british": "en", "australian": "en", "indian-english": "en", "southern-us": "en",
   "standard-german": "de", "standard-japanese": "ja", "korean": "ko",
   "mexican": "es", "castilian": "es",
+  "parisian": "fr", "canadian-french": "fr",
 }
 
 /** The accent a call in each language is spoken in unless the id names
@@ -130,6 +131,8 @@ const LANGUAGE_DEFAULT_ACCENT: Record<string, string> = {
   en: "general-american",
   de: "standard-german",
   es: "mexican",
+  // French (2026-11-13): Parisian, the app's first French option.
+  fr: "parisian",
 }
 
 /** Languages Cartesia is told a line is in — it reads a line in whatever

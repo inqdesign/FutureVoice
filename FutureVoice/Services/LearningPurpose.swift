@@ -246,7 +246,7 @@ enum LearningPurposeStore {
 /// Speaking exams per target language. A language with none of its own falls
 /// back to OPIc, which is offered in most.
 enum ExamKind: String, CaseIterable, Identifiable {
-    case ielts, toefl, opic, toeicSpeaking, goethe, telc, topik, bjt, dele, siele, hskk, tsc
+    case ielts, toefl, opic, toeicSpeaking, goethe, telc, topik, bjt, dele, siele, delf, tcf, tef, hskk, tsc
     var id: String { rawValue }
 
     var name: String {
@@ -261,6 +261,9 @@ enum ExamKind: String, CaseIterable, Identifiable {
         case .bjt: return "BJT"
         case .dele: return "DELE"
         case .siele: return "SIELE"
+        case .delf: return "DELF / DALF"
+        case .tcf: return "TCF"
+        case .tef: return "TEF"
         case .hskk: return "HSKK"
         case .tsc: return "TSC"
         }
@@ -273,6 +276,8 @@ enum ExamKind: String, CaseIterable, Identifiable {
         case "ko": return [.topik, .opic]
         case "ja": return [.opic, .bjt]
         case "es": return [.dele, .siele, .opic]
+        // TCF and TEF are what Canadian immigration and French universities ask for.
+        case "fr": return [.delf, .tcf, .tef, .opic]
         // HSKK is HSK's speaking test; TSC (Test of Spoken Chinese) is the
         // one Korean companies ask for.
         case "zh": return [.hskk, .tsc, .opic]
@@ -357,6 +362,14 @@ enum ExamTopics {
                     ExamTopic(title: "Una cafetería a la que va a menudo", part: "Survey"),
                     ExamTopic(title: "Llame a una tienda por un producto que llegó roto", part: "Role-play"),
                 ]
+            case "fr":
+                return [
+                    ExamTopic(title: "Décrivez votre logement", part: "Survey"),
+                    ExamTopic(title: "Votre dernier voyage", part: "Survey"),
+                    ExamTopic(title: "Qu'est-ce que vous faites d'habitude le week-end ?", part: "Survey"),
+                    ExamTopic(title: "Un café où vous allez souvent", part: "Survey"),
+                    ExamTopic(title: "Appelez un magasin : l'article que vous avez reçu est cassé", part: "Role-play"),
+                ]
             case "de":
                 return [
                     ExamTopic(title: "Beschreiben Sie Ihre Wohnung", part: "Survey"),
@@ -430,6 +443,32 @@ enum ExamTopics {
                 ExamTopic(title: "Llame a un compañero para cambiar el día de una reunión", part: "Tarea 3"),
                 ExamTopic(title: "Cuente una experiencia que le hizo cambiar de opinión", part: "Tarea 4"),
                 ExamTopic(title: "¿Deberían los estudiantes llevar uniforme? Dé su opinión", part: "Tarea 5"),
+            ]
+        case .delf:
+            return [
+                ExamTopic(title: "Parlez de vous : vos études, votre travail, vos loisirs", part: "Entretien dirigé"),
+                ExamTopic(title: "Votre voisin fait du bruit tous les soirs : allez lui parler", part: "Jeu de rôle"),
+                ExamTopic(title: "Faut-il interdire les voitures dans le centre des villes ?", part: "Point de vue",
+                          points: ["le problème", "votre opinion", "des exemples"]),
+                ExamTopic(title: "Vous voulez échanger un vêtement trop petit dans un magasin", part: "Jeu de rôle"),
+                ExamTopic(title: "Le télétravail rend-il les gens plus heureux ?", part: "Point de vue",
+                          points: ["les avantages", "les inconvénients", "votre position"]),
+                ExamTopic(title: "Les réseaux sociaux rapprochent-ils les gens ?", part: "Débat"),
+            ]
+        case .tcf:
+            return [
+                ExamTopic(title: "Présentez-vous : votre famille, votre travail, vos projets", part: "Tâche 1"),
+                ExamTopic(title: "Vous cherchez un logement : posez vos questions à l'agent immobilier", part: "Tâche 2"),
+                ExamTopic(title: "Vaut-il mieux vivre en ville ou à la campagne ?", part: "Tâche 3"),
+                ExamTopic(title: "Vous voulez vous inscrire à un club de sport : renseignez-vous", part: "Tâche 2"),
+                ExamTopic(title: "Les enfants devraient-ils apprendre deux langues dès l'école primaire ?", part: "Tâche 3"),
+            ]
+        case .tef:
+            return [
+                ExamTopic(title: "Vous appelez au sujet d'une annonce pour un cours de cuisine : posez des questions", part: "Section A"),
+                ExamTopic(title: "Vous appelez au sujet d'une chambre à louer : renseignez-vous", part: "Section A"),
+                ExamTopic(title: "Convainquez un ami de faire du bénévolat avec vous", part: "Section B"),
+                ExamTopic(title: "Convainquez un ami de partir en vacances en train plutôt qu'en avion", part: "Section B"),
             ]
         case .hskk:
             return [

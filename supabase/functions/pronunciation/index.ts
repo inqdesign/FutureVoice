@@ -3,7 +3,7 @@
 //
 // Body: {
 //   audio_b64: string,   // WAV, 16 kHz mono PCM16, ≤ 30 s (the REST short-audio limit)
-//   language:  string,   // target language code ("en", "de", "ja", "ko", "es", "zh")
+//   language:  string,   // target language code ("en", "de", "ja", "ko", "es", "fr", "zh")
 //   reference: string,   // the line the learner was reading — scripted assessment
 //   accent?:   string,   // the learner's voice accent id ("en-GB", "es-ES") → locale
 //   surface?:  string    // "shadow" | "speech" | …, ledger metadata only
@@ -64,9 +64,10 @@ const MAX_REFERENCE_CHARS = 1_500
 /// lenient about vowels, and a per-sound read beats a per-word one.
 const LOCALE_BY_ACCENT: Record<string, string> = {
   "es-MX": "es-MX", "es-ES": "es-ES",
+  "fr-FR": "fr-FR", "fr-CA": "fr-CA",
 }
 const LOCALE_BY_LANGUAGE: Record<string, string> = {
-  en: "en-US", de: "de-DE", ja: "ja-JP", ko: "ko-KR", es: "es-MX", zh: "zh-CN",
+  en: "en-US", de: "de-DE", ja: "ja-JP", ko: "ko-KR", es: "es-MX", fr: "fr-FR", zh: "zh-CN",
 }
 // zh-CN scores each SYLLABLE with its tone ("mai 3") — but only in its own
 // alphabet: asked for IPA it returns no phonemes at all (measured

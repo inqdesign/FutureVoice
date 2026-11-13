@@ -17,7 +17,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$ROOT/FutureVoice/Resources/VoicePreviews"
-LANGS="${LANGS:-en de ja ko es zh}"   # the selectable targets
+LANGS="${LANGS:-en de ja ko es fr zh}"   # the selectable targets
 MODEL="sonic-3.6"
 SPEED="1.1667"   # SpeechSpeed's default rung (0.9) on Cartesia's scale (cartesia.ts cartesiaSpeed)
 
@@ -47,6 +47,10 @@ voice_for() {  # $1 lang, $2 slot  → the voice that speaks that slot (Cartesia
     es:UgBBYS2sOqTuMpoF3BR0) echo 7b001dff-b8b2-4da7-92e4-5c794798effa ;;
     es:FF59babHL8N8gfTgtBMT) echo 727f663b-0e90-4031-90f2-558b7334425b ;;
     es:L0Dsvb3SLTyegXwtm47J) echo e9f0368b-3662-4a01-b037-e13ca5203c74 ;;
+    fr:NDTYOmYEjbDIVCKB35i3) echo 735287ee-ce91-4b08-8de4-63315c5ba1fb ;;
+    fr:UgBBYS2sOqTuMpoF3BR0) echo ab636c8b-9960-4fb3-bb0c-b7b655fb9745 ;;
+    fr:FF59babHL8N8gfTgtBMT) echo 6c64b57a-bc65-48e4-bff4-12dbe85606cd ;;
+    fr:L0Dsvb3SLTyegXwtm47J) echo adff5dcb-249f-463f-aa89-d98d8ca05e88 ;;
     zh:NDTYOmYEjbDIVCKB35i3) echo 6eb8965c-e295-47bd-a9e4-3eeebb3abcff ;;
     zh:UgBBYS2sOqTuMpoF3BR0) echo 16212f18-4955-4be9-a6cd-2196ce2c11d1 ;;
     zh:FF59babHL8N8gfTgtBMT) echo bf32f849-7bc9-4b91-8c62-954588efcc30 ;;
@@ -79,6 +83,7 @@ pace_line_for() {  # must stay byte-identical to VoiceCloneScript.paceSample
     ko) echo '앞으로 이 속도로 말할게. 조금 들어보고, 이 정도면 편하게 들리는지 알려줘.' ;;
     ja) echo 'これからはこの速さで話すね。少し聞いてみて、これなら聞き取りやすいか教えて。' ;;
     es) echo 'A partir de ahora hablaré a este ritmo. Escucha un momento y dime si se me entiende bien.' ;;
+    fr) echo 'À partir de maintenant je parlerai à ce rythme. Écoute un instant et dis-moi si tu me suis bien.' ;;
     zh) echo '以后我就用这个速度说话。你听一下，告诉我这样好不好跟上。' ;;
     *)  echo 'From now on I'"'"'ll talk at this pace. Listen for a moment, and tell me if it'"'"'s easy enough to follow.' ;;
   esac

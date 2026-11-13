@@ -14,7 +14,7 @@ final class CoachPromptDumpTests: XCTestCase {
         }
         let url = URL(fileURLWithPath: dir, isDirectory: true)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
-        for lang in ["en", "ko", "ja", "de", "es"] {
+        for lang in ["en", "ko", "ja", "de", "es", "fr"] {
             for level in CEFRLevel.allCases {
                 let prompt = CoachSuggester.system(target: lang, native: lang == "ko" ? "en" : "ko",
                                                    level: level, register: nil)

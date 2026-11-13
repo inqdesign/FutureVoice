@@ -627,7 +627,7 @@ enum ShadowEngine {
         }
         let code = String(language.prefix(2))
         let hasDigit = out.unicodeScalars.contains { CharacterSet.decimalDigits.contains($0) }
-        let commaDecimal = code == "de" || code == "es"
+        let commaDecimal = code == "de" || code == "es" || code == "fr"
 
         if hasDigit {
             // Thousands separators, then the decimal mark.
@@ -703,6 +703,8 @@ enum ShadowEngine {
                "₩": ("won", "won"), "¥": ("yen", "yen")],
         "es": ["$": ("dólar", "dólares"), "€": ("euro", "euros"), "£": ("libra", "libras"),
                "₩": ("won", "wones"), "¥": ("yen", "yenes")],
+        "fr": ["$": ("dollar", "dollars"), "€": ("euro", "euros"), "£": ("livre", "livres"),
+               "₩": ("won", "wons"), "¥": ("yen", "yens")],
         "ko": ["$": ("달러", "달러"), "€": ("유로", "유로"), "£": ("파운드", "파운드"),
                "₩": ("원", "원"), "¥": ("엔", "엔")],
         "ja": ["$": ("ドル", "ドル"), "€": ("ユーロ", "ユーロ"), "£": ("ポンド", "ポンド"),
@@ -710,10 +712,10 @@ enum ShadowEngine {
         "zh": ["$": ("美元", "美元"), "€": ("欧元", "欧元"), "£": ("英镑", "英镑"),
                "₩": ("韩元", "韩元"), "¥": ("元", "元")],
     ]
-    private static let percentWord = ["en": "percent", "de": "prozent", "es": "por ciento",
+    private static let percentWord = ["en": "percent", "de": "prozent", "es": "por ciento", "fr": "pour cent",
                                       "ko": "퍼센트", "ja": "パーセント"]
-    private static let decimalWord = ["en": "point", "de": "komma", "es": "coma", "ko": "점", "ja": "点",
-                                      "zh": "点"]
+    private static let decimalWord = ["en": "point", "de": "komma", "es": "coma", "fr": "virgule",
+                                      "ko": "점", "ja": "点", "zh": "点"]
     private static let ordinalWord = ["one": "first", "two": "second", "three": "third", "five": "fifth",
                                       "eight": "eighth", "nine": "ninth", "twelve": "twelfth"]
 
@@ -830,7 +832,7 @@ enum ShadowEngine {
     private static let maxNumberRuns = 24
 
     private static func hasReadings(_ language: String) -> Bool {
-        ["en", "de", "es", "ko"].contains { language.hasPrefix($0) }
+        ["en", "de", "es", "fr", "ko"].contains { language.hasPrefix($0) }
     }
 
     /// The ways a digit run is read aloud in `language`, the plain spell-out
@@ -854,6 +856,7 @@ enum ShadowEngine {
         case "en": out += englishReadings(n, digits: digits, each: each, plain: plain, spell: spell)
         case "de": out += germanReadings(n, digits: digits, each: each, plain: plain, spell: spell)
         case "es": out += spanishReadings(n, digits: digits, each: each, plain: plain, spell: spell)
+        case "fr": out += frenchReadings(n, digits: digits, each: each, plain: plain, spell: spell)
         case "ko": out += koreanReadings(n, digits: digits, each: each)
         default: break
         }
@@ -935,6 +938,48 @@ enum ShadowEngine {
                 let base = String(stem.dropLast(1))
                 out += [base, base + "a"]
             }
+        }
+        if digits.count >= 2 { out.append(each.map(spell).joined(separator: " ")) }
+        return out
+    }
+
+    /// une for a final "un" (vingt et une), the Belgian and Swiss tens
+    /// (septante, huitante, nonante), the old year reading of four digits
+    /// (dix neuf cent quatre vingt dix), digit by digit.
+    private static func frenchReadings(_ n: Int, digits: String, each: [Int], plain: String,
+                                       spell: (Int) -> String) -> [String] {
+        var out: [String] = []
+        var stems = [plain]
+        if digits.count == 4, (1100...1999).contains(n) {
+            let lo = n % 100
+            stems.append(spell(n / 100) + " cent" + (lo > 0 ? " " + spell(lo) : ""))
+        }
+        // Belgium and Switzerland: 70 septante, 80 huitante, 90 nonante.
+        for stem in stems where stem.contains("soixante") || stem.contains("quatre vingt") {
+            let swiss = stem
+                .replacingOccurrences(of: "soixante et onze", with: "septante et un")
+                .replacingOccurrences(of: "soixante dix", with: "septante")
+                .replacingOccurrences(of: "soixante onze", with: "septante et un")
+                .replacingOccurrences(of: "soixante douze", with: "septante deux")
+                .replacingOccurrences(of: "soixante treize", with: "septante trois")
+                .replacingOccurrences(of: "soixante quatorze", with: "septante quatre")
+                .replacingOccurrences(of: "soixante quinze", with: "septante cinq")
+                .replacingOccurrences(of: "soixante seize", with: "septante six")
+                .replacingOccurrences(of: "quatre vingt dix", with: "nonante")
+                .replacingOccurrences(of: "quatre vingt onze", with: "nonante et un")
+                .replacingOccurrences(of: "quatre vingt douze", with: "nonante deux")
+                .replacingOccurrences(of: "quatre vingt treize", with: "nonante trois")
+                .replacingOccurrences(of: "quatre vingt quatorze", with: "nonante quatre")
+                .replacingOccurrences(of: "quatre vingt quinze", with: "nonante cinq")
+                .replacingOccurrences(of: "quatre vingt seize", with: "nonante six")
+            if swiss != stem { out.append(swiss) }
+            let huit = stem.replacingOccurrences(of: "quatre vingts", with: "huitante")
+                .replacingOccurrences(of: "quatre vingt ", with: "huitante ")
+            if huit != stem { out.append(huit) }
+        }
+        out += stems.dropFirst()
+        for stem in stems where stem == "un" || stem.hasSuffix(" un") {
+            out.append(stem + "e")
         }
         if digits.count >= 2 { out.append(each.map(spell).joined(separator: " ")) }
         return out

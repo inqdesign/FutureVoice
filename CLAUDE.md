@@ -2785,6 +2785,51 @@ is TOCFL/Taiwan). The target code is a bare `zh`; `englishName("zh")` is
 - Exams HSKK, TSC, OPIc. Speech sample `…00b` is in the app only; no
   challenge row was added. Tests: `ChineseTargetTests`.
 
+## French as a TARGET language (2026-11-13)
+
+Founder: French is a top-3 language worldwide, so it goes in, built the way
+Spanish was. French UI (the `fr` column) was already done; this is French as
+the language PRACTISED.
+
+- **The list is frequency bands from Lexique 3.83** (CC BY-SA 4.0; FLELex,
+  the one CEFR list, is CC BY-NC-SA) under a hand-written A1/A2 core
+  (`scripts/fr-core-a1a2.txt`), ranked by subtitle frequency × Tatoeba use.
+  `scripts/build-fr-wordlist.py` writes `cefr_words_fr.tsv`,
+  `word_classes_fr.tsv` and `fr_forms.tsv` from ONE set of rules, so speech
+  and list can't disagree. Lexique spells soeur/oeil; the build and
+  `FrenchMorph` write the ligature (œ before u or i). Lexique lacks
+  après-midi, which the build adds.
+- **Never put French on the tagger path.** Apple's French lemma is wrong in
+  context ("Je suis fatiguée" → suivre, measured on a Mac) and cuts
+  grand-mère in two. `FrenchMorph` reads the table, with TWO context rules
+  the table can't decide alone: after a determiner the noun reading
+  ("l'été" is summer, "j'ai été" is être), after a form of avoir the verb
+  reading ("j'ai aimé" is aimer, "je suis fatigué" stays the adjective).
+  Elided l'/j'/qu' are their own function words; a word that keeps its
+  apostrophe or hyphen (aujourd'hui, grand-mère, peut-être) is looked up
+  whole first. Lexique's per-form frequency split is NOT used to choose a
+  reading: it gives "suis" to suivre.
+- **Vocabulary level** calibrated like Spanish (`parallel_more.sh`, French
+  reader): r 0.89, cuts 0.33 / 0.36 / 0.39.
+- **Voices:** presets Emmanuelle · Erwan · Éloïse · Léo (Find people's French
+  voices). Accents Parisian (default) and Canadian, the two French accents
+  Cartesia can put on a voice (`is_localizable`); base accent belgian-french.
+  Canadian has its own variety line (magasiner, courriel, souper).
+- **Corrections**, `scripts/correction-probe.py fr` over
+  `correction-cases-fr.json`: Gemini 0/94 false, 0/26 missed; Haiku 1/94
+  false before `spokenGrammarGuard` "fr" (it put back the dropped ne), 0/94
+  after, 2/26 missed ("Je habite"). With a Korean native, Haiku wrote 5/36
+  notes in English; `notesLanguageGuard` now covers fr, 0/48.
+- **The future self's gender** (`frenchGuard`, beside `spanishGuard`, same
+  placement, so NOT in free talk's own prompt, like Spanish): with only "je
+  suis Minji" to go on, Haiku still opens "Enchanté" 4/8 (nearly always
+  before). Open.
+- Exams DELF / DALF, TCF, TEF, OPIc. Speech challenges `…0f0001` (the
+  bundled sample) and `…0f0002` (ageing), `20261113160000`, which also opens
+  French Season 1. Pronunciation: Azure fr-FR / fr-CA, a course on u/ou,
+  nasal vowels, é/è, eu, r, liaison and silent endings. Numbers: vingt et
+  une, septante/huitante/nonante, the old year reading.
+- Tests: `FrenchTargetTests`.
 ## One line per language, measured (2026-11-06)
 
 The shared prompt rules carry English examples, and the other languages

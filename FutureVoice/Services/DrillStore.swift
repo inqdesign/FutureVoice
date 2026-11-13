@@ -678,6 +678,7 @@ final class DrillStore: LanguageScopedStore {
             "문법", "조사를", "시제", "관사", "올바르게", "정확하게",
             "文法", "助詞", "時制", "正しく", "grammatik",
             "gramática", "conjugación", "concordancia",
+            "grammaire", "conjugaison", "correctement",
             "correctly",            // "using X correctly"
             "properly",
             "appropriately",

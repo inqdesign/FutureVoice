@@ -86,6 +86,15 @@ enum VoiceAccentCatalog {
             VoiceAccent(id: "es-ES", label: "Castilian",
                         prompt: prompt("Castilian Spanish accent as spoken in Madrid, Spain")),
         ],
+        // The two French accents Cartesia can put on a learner's voice
+        // (`is_localizable`, 2026-11-13). Parisian first, so it is the
+        // default: the French of France, and of every exam.
+        "fr": [
+            VoiceAccent(id: "fr-FR", label: "Parisian",
+                        prompt: prompt("Parisian French accent as spoken in France")),
+            VoiceAccent(id: "fr-CA", label: "Canadian",
+                        prompt: prompt("Canadian French accent as spoken in Quebec")),
+        ],
     ]
 
     /// Where `AppState.voiceAccentId` is stored. Prompt builders read it here
@@ -124,6 +133,9 @@ enum VoiceAccentCatalog {
         "es-ES": Variety(name: "Castilian Spanish as spoken in Spain",
                          examples: "vosotros for \"you all\", ordenador, coche, móvil, zumo, vale",
                          others: "ustedes, computadora, carro, celular, jugo"),
+        "fr-CA": Variety(name: "Canadian French as spoken in Quebec",
+                         examples: "magasiner, courriel, fin de semaine, déjeuner for breakfast, dîner for lunch, souper for dinner, char",
+                         others: "faire les courses, e-mail, week-end, petit-déjeuner, voiture"),
     ]
 
     private static let samples: [String: String] = [
@@ -141,5 +153,10 @@ enum VoiceAccentCatalog {
         // seseo vs distinción, the ll/y, and a final s held or softened.
         "es": "Mañana voy a comprar unos zapatos y una cerveza en la plaza de "
             + "Valencia. Te llamo luego, ¿de acuerdo? Si no, nos vemos el lunes.",
+        // Accent tells: the uvular r ("rentrer", "après"), the nasal vowels
+        // (pain, matin, lundi), Quebec's tu/di ("tu", "dis") and its long
+        // diphthongs ("fête", "père").
+        "fr": "Demain matin, je passe chercher du pain et je rentre tôt pour "
+            + "la fête de mon père. Tu me rappelles après, d'accord ? On se dit lundi.",
     ]
 }
