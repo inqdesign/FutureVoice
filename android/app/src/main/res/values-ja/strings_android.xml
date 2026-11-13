@@ -222,6 +222,8 @@
     <string name="accent_standard_german">標準ドイツ語</string>
     <string name="accent_mexican">メキシコ</string>
     <string name="accent_castilian">スペイン</string>
+    <string name="accent_parisian">フランス</string>
+    <string name="accent_canadian">カナダ</string>
     <string name="your_fluent_self_speaks_with_this_accent_in_your_own_voice">流暢な自分が、自分の声でこのアクセントで話します。実際に聞いてから変えることもできます。</string>
     <string name="voice_change_already">この30日以内に、もう声を変えています。</string>
     <string name="voice_change_again_from">%sから、また声を変えられます。</string>

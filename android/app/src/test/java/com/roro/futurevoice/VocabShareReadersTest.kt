@@ -58,7 +58,8 @@ class VocabShareReadersTest {
                 assertEquals("$code $mean", level, VocabShare.level(read(mean), profile, null)?.first)
             }
         }
-        assertFalse(VocabShare.isCalibrated("fr"))
+        assertTrue(VocabShare.isCalibrated("fr"))
+        assertFalse(VocabShare.isCalibrated("it"))
     }
 
     private fun words(text: String, code: String) =

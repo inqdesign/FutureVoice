@@ -212,6 +212,8 @@
     <string name="accent_standard_german">Hochdeutsch</string>
     <string name="accent_mexican">Mexiko</string>
     <string name="accent_castilian">Spanien</string>
+    <string name="accent_parisian">Frankreich</string>
+    <string name="accent_canadian">Kanada</string>
     <string name="your_fluent_self_speaks_with_this_accent_in_your_own_voice">Dein fließendes Ich spricht mit diesem Akzent, in deiner eigenen Stimme. Wenn du es gehört hast, kannst du ihn noch ändern.</string>
     <string name="voice_change_already">Du hast deine Stimme in den letzten 30 Tagen schon geändert.</string>
     <string name="voice_change_again_from">Ab dem %s kannst du deine Stimme wieder ändern.</string>

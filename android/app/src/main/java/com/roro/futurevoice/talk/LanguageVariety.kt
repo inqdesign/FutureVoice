@@ -29,6 +29,9 @@ object LanguageVariety {
         "es-ES" to Variety("Castilian Spanish as spoken in Spain",
             "vosotros for \"you all\", ordenador, coche, móvil, zumo, vale",
             "ustedes, computadora, carro, celular, jugo"),
+        "fr-CA" to Variety("Canadian French as spoken in Quebec",
+            "magasiner, courriel, fin de semaine, déjeuner for breakfast, dîner for lunch, souper for dinner, char",
+            "faire les courses, e-mail, week-end, petit-déjeuner, voiture"),
     )
 
     fun writingVariety(language: String, accentId: String? = this.accentId): Variety? {

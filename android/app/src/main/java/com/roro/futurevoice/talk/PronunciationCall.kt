@@ -193,6 +193,19 @@ object PronunciationCourse {
                     t("es.vowels", "a e i o u", "casa · mesa · libro · todo", emptyList(), "the five pure vowels (casa, mesa, todo): short and clean, never glided like English 'o-u' or 'e-i'"),
                 )),
             )
+            "fr" -> listOf(
+                Chapter("fr.vow", "waveform", vowels, listOf(
+                    t("fr.u", "u · ou", "tu · tout · dessus · dessous", emptyList(), "'u' (tu, rue): lips rounded tight as for 'oo' while the tongue says 'ee' — tu vs tout"),
+                    t("fr.nasal", "an · on · in", "vent · vont · vin · pain", emptyList(), "the nasal vowels (vent, vont, vin): air through the nose, no 'n' or 'ng' sound at the end"),
+                    t("fr.e", "é · è", "été · café · père · mère", emptyList(), "'é' closed and short (été, café) vs 'è' open (père, mère), never glided into 'ay'"),
+                    t("fr.eu", "eu", "deux · peu · peur · heure", emptyList(), "'eu' (deux, peur): rounded lips with the tongue forward — not 'oo', not 'uh'"),
+                )),
+                Chapter("fr.cons", "mouth", consonants, listOf(
+                    t("fr.r", "r", "rouge · Paris · très · rentrer", emptyList(), "the French 'r' (rouge, très): made at the back of the throat, a light scrape, never rolled or English"),
+                    t("fr.liaison", "liaison", "les amis · vous avez · un enfant", emptyList(), "liaison: a silent final consonant joins the next vowel (les amis → lé-za-mi, vous avez → vou-za-vé)"),
+                    t("fr.silent", "lettres muettes", "petit · beaucoup · ils parlent", emptyList(), "silent endings: the final t, p, s, x and -ent of verbs are not said (petit, beaucoup, ils parlent)"),
+                )),
+            )
             else -> emptyList()
         }
     }

@@ -51,7 +51,8 @@ class VoiceQuotaTest {
     @Test fun slotsSpeakNativeVoicesPerLanguage() {
         assertEquals("999df508-4de5-40a7-8bd3-8c12f678c284", VoicePreset.speaking("NDTYOmYEjbDIVCKB35i3", "en"))
         assertEquals("1ade29fc-6b82-4607-9e70-361720139b12", VoicePreset.speaking("NDTYOmYEjbDIVCKB35i3", "de-DE"))
-        assertEquals("NDTYOmYEjbDIVCKB35i3", VoicePreset.speaking("NDTYOmYEjbDIVCKB35i3", "fr"))
+        assertEquals("735287ee-ce91-4b08-8de4-63315c5ba1fb", VoicePreset.speaking("NDTYOmYEjbDIVCKB35i3", "fr"))
+        assertEquals("NDTYOmYEjbDIVCKB35i3", VoicePreset.speaking("NDTYOmYEjbDIVCKB35i3", "it"))
         assertEquals("Lea", VoicePreset.name("NDTYOmYEjbDIVCKB35i3", "Paige", "de"))
     }
 }

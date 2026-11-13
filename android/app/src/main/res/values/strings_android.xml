@@ -239,6 +239,8 @@
     <string name="accent_standard_german">Standard German</string>
     <string name="accent_mexican">Mexican</string>
     <string name="accent_castilian">Castilian</string>
+    <string name="accent_parisian">Parisian</string>
+    <string name="accent_canadian">Canadian</string>
     <string name="your_fluent_self_speaks_with_this_accent_in_your_own_voice">Your fluent self speaks with this accent, in your own voice. You can change it once you\'ve heard it.</string>
     <string name="voice_change_already">You\'ve already changed your voice in the last 30 days.</string>
     <string name="voice_change_again_from">You can change your voice again from %s.</string>

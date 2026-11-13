@@ -64,12 +64,28 @@ object LanguageLines {
         return out
     }
 
+    /** iOS `frenchGuard` — beside [spanishGuard] and for the same reason:
+     *  French marks the speaker's gender too (enchanté/enchantée,
+     *  content/contente), and with no line Haiku spoke as a man to a learner
+     *  named Minji in every beginner-probe call that needed a form
+     *  (2026-11-13). Neutral forms only, the Spanish lesson. */
+    fun frenchGuard(targetLanguage: String, asFutureSelf: Boolean): String {
+        if (base(targetLanguage) != "fr" || !asFutureSelf) return ""
+        return "\n- FRENCH, GENDER: you are them, so you share their gender, and you don't" +
+            "\n  know it until About the user says it or they show it in a word about" +
+            "\n  themselves. Until then, say things in forms that have no gender, meeting" +
+            "\n  them included (\"Ça me fait plaisir de te rencontrer.\", \"Pas de souci.\"," +
+            "\n  \"Tu as bien dormi ?\"); once they show it, use that form for both of you" +
+            "\n  for the rest of the call."
+    }
+
     /** iOS `notesLanguageGuard` — the explanation notes ("why", "reason") in
      *  the learner's own language when the target is Japanese or German. */
     fun notesLanguageGuard(targetLanguage: String, nativeLanguage: String): String {
         val target = base(targetLanguage)
         val native = base(nativeLanguage)
-        if (!(target == "ja" || target == "de") || native == target) return ""
+        // French (2026-11-13): Haiku wrote 5/36 in ENGLISH for a Korean speaker.
+        if (target !in setOf("ja", "de", "fr") || native == target) return ""
         if (target == "ja" && native == "ko") {
             return "\n- NOTES IN KOREAN: \"reason\" and every \"why\" are Korean sentences with" +
                 "\n  the Japanese words that changed quoted inside them, like this:" +
@@ -79,7 +95,8 @@ object LanguageLines {
         }
         val nativeName = LanguageCatalog.englishName(nativeLanguage)
         val targetName = LanguageCatalog.englishName(targetLanguage)
-        val terms = if (target == "de") "Akkusativ, Perfekt, Partizip" else "助詞, 過去形, て形"
+        val terms = if (target == "de") "Akkusativ, Perfekt, Partizip"
+            else if (target == "fr") "passé composé, subjonctif, accord" else "助詞, 過去形, て形"
         return "\n- NOTES IN ${nativeName.uppercase()}, EVERY ONE: each \"why\" and the \"reason\"" +
             "\n  are read by someone who thinks in $nativeName. Write every one of them in" +
             "\n  $nativeName, never in $targetName, even though what they explain is" +
@@ -97,6 +114,12 @@ object LanguageLines {
             "\n  it\" at the start of a clause (\"der meinte, das passt\", \"die kommt" +
             "\n  morgen\"): correct spoken German, never a fix, and never swapped for" +
             "\n  er / sie / es."
+        // French: Haiku put the dropped ne back ("je m'en souviens plus", 1 of
+        // 94 spoken lines; Gemini 0/94, 0/26 missed).
+        "fr" -> "\n- SPOKEN FRENCH: a negation said without its ne (\"je sais pas\", \"je m'en" +
+            "\n  souviens plus\"), on for \"we\", a dropped il in \"faut que\", ça and t'as are" +
+            "\n  how French is spoken: correct, never a fix, and never written back" +
+            "\n  into the written form."
         else -> ""
     }
 

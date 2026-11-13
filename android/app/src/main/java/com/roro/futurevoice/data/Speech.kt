@@ -280,6 +280,7 @@ object SpeechLibrary {
             "ja" -> "000000000003"
             "de" -> "000000000004"
             "es" -> "000000000009"
+            "fr" -> "0000000f0001"
             else -> "000000000001"
         }
         return "5BEEC000-0000-4000-8000-$suffix"
@@ -293,6 +294,7 @@ object SpeechLibrary {
         "ja" to "声に出して話そう",
         "de" to "Sprecht es laut aus",
         "es" to "¿Por qué practicar en voz alta?",
+        "fr" to "Pourquoi s’entraîner à voix haute ?",
     )
 
     private val builtInBodies = mapOf(
@@ -350,6 +352,17 @@ Decir las cosas en voz alta también ayuda a recordarlas. Hay estudios que indic
 Y si te grabas, notas cosas que de otra forma nunca descubrirías: lo rápido que hablas de verdad, cuántas veces dices «eh» o «mmm», y si la voz se te apaga al final de las frases.
 
 Las presentaciones, las entrevistas, incluso una primera conversación con alguien nuevo: todo se vuelve más fácil con práctica. ¿Y el minuto que acabas de pasar leyendo esto en voz alta? Esa fue tu primera repetición.
+""".trim(),
+        "fr" to """
+Ça vous est déjà arrivé ? Dans votre tête, la phrase est parfaite. Et au moment de la dire, elle s’écroule.
+
+Parler, c’est un savoir-faire, pas seulement un savoir. Vous pouvez connaître tous les mots et toute la grammaire : si votre bouche n’a jamais construit cette phrase, elle vous lâchera au moment où vous en aurez besoin. C’est pour ça qu’il faut s’entraîner à voix haute.
+
+Dire les choses à voix haute aide aussi à les retenir. Des études suggèrent qu’on se souvient mieux de ce qu’on a dit que de ce qu’on a seulement lu.
+
+Et si vous vous enregistrez, vous remarquerez des choses qui vous échappent autrement : à quelle vitesse vous parlez vraiment, combien de fois vous dites « euh », et si votre voix baisse à la fin des phrases.
+
+Une présentation, un entretien, même une première conversation avec quelqu’un de nouveau : tout devient plus facile avec de l’entraînement. Et la minute que vous venez de passer à lire ce texte à voix haute ? C’était votre premier entraînement.
 """.trim(),
     )
 

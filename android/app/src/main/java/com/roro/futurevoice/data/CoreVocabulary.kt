@@ -23,6 +23,10 @@ object CoreVocabulary {
         // Tatoeba under a hand-written A1/A2 core — no CEFR-graded Spanish
         // list can ship commercially. See scripts/build-es-wordlist.swift.
         "es" to "cefr_words_es",
+        // French wordlist (iOS 2026-11-13): frequency bands over Lexique 3.83 +
+        // Tatoeba under a hand-written A1/A2 core — FLELex, the one CEFR
+        // list, is CC BY-NC-SA. See scripts/build-fr-wordlist.py.
+        "fr" to "cefr_words_fr",
     )
 
     private class Pool(
@@ -175,6 +179,9 @@ object CoreVocabulary {
         }
         // Spanish: no lemma model on either platform — the bundled form table.
         if (language.substringBefore('-') == "es") return level(SpanishMorph.lemma(token), "es")
+        // French: Apple's French lemma is wrong in context, Android has none —
+        // the bundled table.
+        if (language.substringBefore('-') == "fr") return level(FrenchMorph.lemma(token), "fr")
         if (language.substringBefore('-') != "ja") return level(token, language)
         val head = JapaneseMorph.headwords(token, set(language), forms(language))
             .firstOrNull()?.first ?: return null
@@ -268,6 +275,17 @@ object CoreVocabulary {
             "muy", "así", "también", "tampoco", "tan", "sí", "no", "ya",
             "bueno", "vale", "eh", "em", "este", "pues", "oye", "mira",
             "okay", "ok", "hola", "adiós", "gracias", "hmm", "ah", "oh", "ay"),
+        // Mirrors the build's own list (scripts/build-fr-wordlist.py), the iOS
+        // list as is: like Spanish, French off-list words come only from the
+        // form table.
+        "fr" to setOf("être", "avoir", "aller", "faire", "pouvoir", "devoir", "vouloir", "falloir",
+            "beaucoup", "peu", "trop", "tout", "rien", "chaque", "même", "tel", "autre",
+            "plus", "moins", "très", "aussi", "ainsi", "alors", "donc", "puis", "pas", "ne",
+            "oui", "non", "si", "déjà", "encore", "bon", "euh", "ben", "bah", "hein", "quoi",
+            "voilà", "ouais", "ok", "okay", "salut", "bonjour", "merci", "est-ce que",
+            "ça", "cela", "ceci", "quelque", "quelques", "certain", "plusieurs", "assez",
+            "là", "ici", "comme", "comment", "pourquoi", "quand", "où", "y", "en",
+            "hmm", "ah", "oh"),
     )
 
     /** True when the word's absence from the pool is a decision rather than a
@@ -334,6 +352,7 @@ object VocabLemmas {
         if (lang == "ko") return koreanLemmas(texts)
         if (lang == "ja") return japaneseLemmas(texts)
         if (lang == "es") return spanishLemmas(texts)
+        if (lang == "fr") return frenchLemmas(texts)
         val forms = if (lang == "en") CoreVocabulary.forms("en") else emptyMap()
         val out = HashSet<String>()
         for (text in texts) {
@@ -359,6 +378,11 @@ object VocabLemmas {
             // unless its lemma is in the pool too.
             "es" -> SpanishMorph.lemma(t).let { lemma ->
                 val pool = CoreVocabulary.set("es")
+                if (lemma in pool || t !in pool) lemma else t
+            }
+            // A lone word, so no context: the table's default reading.
+            "fr" -> FrenchMorph.lemma(t).let { lemma ->
+                val pool = CoreVocabulary.set("fr")
                 if (lemma in pool || t !in pool) lemma else t
             }
             "ko" -> KoreanMorph.dictionaryForm(t, CoreVocabulary.set("ko"), CoreVocabulary::koreanRank) ?: t
@@ -390,6 +414,23 @@ object VocabLemmas {
             for ((word, _) in SpanishMorph.words(text)) {
                 val lemma = SpanishMorph.lemma(word)
                 if (lemma.length > 1) out.add(lemma)
+            }
+        }
+        return out
+    }
+
+    /**
+     * French: every word read in its sentence through [FrenchMorph]
+     * (mangé → manger, l'été → été). A function word or a word the table
+     * doesn't know comes back as itself, like Spanish; an elided l' or j'
+     * is no word at all (iOS `frenchLemmas`).
+     */
+    private fun frenchLemmas(texts: List<String>): Set<String> {
+        val out = HashSet<String>()
+        for (text in texts) {
+            for (r in FrenchMorph.analyze(text)) {
+                val lemma = r.entry?.lemma ?: FrenchMorph.normalized(r.word)
+                if (lemma.length > 1 && !lemma.endsWith("'")) out.add(lemma)
             }
         }
         return out

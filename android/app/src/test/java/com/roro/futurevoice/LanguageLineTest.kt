@@ -21,6 +21,9 @@ class LanguageLineTest {
             assertEquals(lang, "", LanguageLines.selfAddress(lang, asFutureSelf = true))
             assertEquals(lang, "", LanguageLines.spanishGuard(lang, asFutureSelf = true, accentId = null))
         }
+        for (lang in listOf("en", "es", "zh-Hans")) {
+            assertEquals(lang, "", LanguageLines.frenchGuard(lang, asFutureSelf = true))
+        }
         assertEquals(ConversationPrompt.beginnerQuestions(CefrLevel.A2),
             ConversationPrompt.beginnerQuestions(CefrLevel.A2, "en"))
         assertEquals("", ConversationPrompt.beginnerQuestions(CefrLevel.B1, "ko"))
@@ -40,10 +43,12 @@ class LanguageLineTest {
         assertFalse(cast.contains("GENDER"))
         assertTrue(cast.contains("WHICH SPANISH"))
         assertTrue(LanguageLines.spanishGuard("es", asFutureSelf = true, accentId = null).contains("GENDER"))
+        assertTrue(LanguageLines.frenchGuard("fr", asFutureSelf = true).contains("FRENCH, GENDER"))
+        assertEquals("", LanguageLines.frenchGuard("fr", asFutureSelf = false))
     }
 
     @Test fun coachingLinesStayInTheirLanguage() {
-        for (lang in listOf("en", "ko", "fr")) {
+        for (lang in listOf("en", "ko", "it")) {
             assertEquals(lang, "", LanguageLines.spokenGrammarGuard(lang))
             assertEquals(lang, "", CoachSuggester.bracketAgreementLine(lang))
             assertEquals(lang, "", LanguageLines.notesLanguageGuard(lang, "ko"))
@@ -57,6 +62,9 @@ class LanguageLineTest {
         assertTrue(LanguageLines.notesLanguageGuard("ja", "en").contains("never in Japanese"))
         assertTrue(LanguageLines.spokenGrammarGuard("es").contains("REPORTED SPEECH"))
         assertTrue(LanguageLines.spokenGrammarGuard("de").contains("DEMONSTRATIVES"))
+        assertTrue(LanguageLines.spokenGrammarGuard("fr").contains("SPOKEN FRENCH"))
+        assertTrue(LanguageLines.notesLanguageGuard("fr", "ko").contains("passé composé, subjonctif, accord"))
+        assertEquals("", CoachSuggester.bracketAgreementLine("fr"))
         assertTrue(LanguageLines.tutorRegisterLine("ko").contains("반말"))
         assertTrue(LanguageLines.tutorRegisterLine("ja").contains("plain form"))
         assertTrue(LanguageLines.tutorRegisterLine("es").contains("Dilo otra vez"))

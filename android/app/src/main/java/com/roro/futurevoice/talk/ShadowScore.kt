@@ -352,7 +352,7 @@ object ShadowScore {
             .replace('’', '\'').replace('‘', '\'').replace('ʼ', '\'')
         val code = language.take(2)
         val hasDigit = out.any { it.isDigit() }
-        val commaDecimal = code == "de" || code == "es"
+        val commaDecimal = code == "de" || code == "es" || code == "fr"
         if (hasDigit) {
             out = (if (commaDecimal) GROUP_DOT else GROUP_COMMA).replace(out, "")
         }
@@ -415,14 +415,17 @@ object ShadowScore {
             "₩" to ("won" to "won"), "¥" to ("yen" to "yen")),
         "es" to mapOf("$" to ("dólar" to "dólares"), "€" to ("euro" to "euros"), "£" to ("libra" to "libras"),
             "₩" to ("won" to "wones"), "¥" to ("yen" to "yenes")),
+        "fr" to mapOf("$" to ("dollar" to "dollars"), "€" to ("euro" to "euros"), "£" to ("livre" to "livres"),
+            "₩" to ("won" to "wons"), "¥" to ("yen" to "yens")),
         "ko" to mapOf("$" to ("달러" to "달러"), "€" to ("유로" to "유로"), "£" to ("파운드" to "파운드"),
             "₩" to ("원" to "원"), "¥" to ("엔" to "엔")),
         "ja" to mapOf("$" to ("ドル" to "ドル"), "€" to ("ユーロ" to "ユーロ"), "£" to ("ポンド" to "ポンド"),
             "₩" to ("ウォン" to "ウォン"), "¥" to ("円" to "円")),
     )
-    private val PERCENT_WORD = mapOf("en" to "percent", "de" to "prozent", "es" to "por ciento",
+    private val PERCENT_WORD = mapOf("en" to "percent", "de" to "prozent", "es" to "por ciento", "fr" to "pour cent",
         "ko" to "퍼센트", "ja" to "パーセント")
-    private val DECIMAL_WORD = mapOf("en" to "point", "de" to "komma", "es" to "coma", "ko" to "점", "ja" to "点")
+    private val DECIMAL_WORD = mapOf("en" to "point", "de" to "komma", "es" to "coma", "fr" to "virgule",
+        "ko" to "점", "ja" to "点")
     private val ORDINAL_WORD = mapOf("one" to "first", "two" to "second", "three" to "third", "five" to "fifth",
         "eight" to "eighth", "nine" to "ninth", "twelve" to "twelfth")
 
@@ -475,7 +478,7 @@ object ShadowScore {
         @Suppress("NAME_SHADOWING") val target = written(target, language)
         var tokens = tokenize(expandForDiff(heard, language), style)
         val digits = Regex("\\d+")
-        val known = listOf("en", "de", "es", "ko").any { language.startsWith(it) }
+        val known = listOf("en", "de", "es", "fr", "ko").any { language.startsWith(it) }
         if (!known || (!digits.containsMatchIn(heard) && !digits.containsMatchIn(target))) return tokens
         // Edit distance, not matches: "one hundred and five" for "105"
         // matches every target word and still leaves an added "and".
@@ -595,6 +598,42 @@ object ShadowScore {
                         out.addAll(listOf(base, base + "a"))
                     }
                 }
+                if (digits.length >= 2) out.add(each.joinToString(" ") { spell(it) })
+            }
+            // une for a final "un" (vingt et une), the Belgian and Swiss tens
+            // (septante, huitante, nonante), the old year reading of four
+            // digits (dix neuf cent quatre vingt dix), digit by digit.
+            "fr" -> {
+                val stems = mutableListOf(plain)
+                if (digits.length == 4 && n in 1100..1999) {
+                    val lo = n % 100
+                    stems.add(spell(n / 100) + " cent" + (if (lo > 0) " " + spell(lo) else ""))
+                }
+                // Belgium and Switzerland: 70 septante, 80 huitante, 90 nonante.
+                for (stem in stems) if ("soixante" in stem || "quatre vingt" in stem) {
+                    val swiss = stem
+                        .replace("soixante et onze", "septante et un")
+                        .replace("soixante dix", "septante")
+                        .replace("soixante onze", "septante et un")
+                        .replace("soixante douze", "septante deux")
+                        .replace("soixante treize", "septante trois")
+                        .replace("soixante quatorze", "septante quatre")
+                        .replace("soixante quinze", "septante cinq")
+                        .replace("soixante seize", "septante six")
+                        .replace("quatre vingt dix", "nonante")
+                        .replace("quatre vingt onze", "nonante et un")
+                        .replace("quatre vingt douze", "nonante deux")
+                        .replace("quatre vingt treize", "nonante trois")
+                        .replace("quatre vingt quatorze", "nonante quatre")
+                        .replace("quatre vingt quinze", "nonante cinq")
+                        .replace("quatre vingt seize", "nonante six")
+                    if (swiss != stem) out.add(swiss)
+                    val huit = stem.replace("quatre vingts", "huitante")
+                        .replace("quatre vingt ", "huitante ")
+                    if (huit != stem) out.add(huit)
+                }
+                out.addAll(stems.drop(1))
+                for (stem in stems) if (stem == "un" || stem.endsWith(" un")) out.add(stem + "e")
                 if (digits.length >= 2) out.add(each.joinToString(" ") { spell(it) })
             }
             "ko" -> {

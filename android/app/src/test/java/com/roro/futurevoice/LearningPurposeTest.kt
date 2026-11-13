@@ -52,7 +52,7 @@ class LearningPurposeTest {
     @Test fun examsPerLanguage() {
         assertEquals(listOf(ExamKind.IELTS, ExamKind.TOEFL, ExamKind.OPIC, ExamKind.TOEIC_SPEAKING),
             ExamKind.options("en-GB"))
-        assertEquals(listOf(ExamKind.OPIC), ExamKind.options("fr"))
+        assertEquals(listOf(ExamKind.OPIC), ExamKind.options("it"))
         val blurb = ExamTopic("Describe X", "Part 2", listOf("a", "b")).callBlurb(ExamKind.IELTS)
         assertTrue(blurb.startsWith("Speaking practice for the IELTS exam. This is a common Part 2 question: \"Describe X\"."))
         assertTrue(blurb.contains("The cue card asks them to cover: a; b."))

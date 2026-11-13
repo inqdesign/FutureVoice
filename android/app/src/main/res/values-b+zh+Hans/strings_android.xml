@@ -222,6 +222,8 @@
     <string name="accent_standard_german">标准德语</string>
     <string name="accent_mexican">墨西哥式</string>
     <string name="accent_castilian">西班牙式</string>
+    <string name="accent_parisian">法国式</string>
+    <string name="accent_canadian">加拿大式</string>
     <string name="your_fluent_self_speaks_with_this_accent_in_your_own_voice">流利的自己会用你的声音、带着这个口音说话。听过之后也能再换。</string>
     <string name="voice_change_already">最近 30 天内已经换过声音了。</string>
     <string name="voice_change_again_from">%s 起可以再换声音。</string>

@@ -238,6 +238,8 @@
     <string name="accent_standard_german">Alemán estándar</string>
     <string name="accent_mexican">Mexicano</string>
     <string name="accent_castilian">De España</string>
+    <string name="accent_parisian">Parisino</string>
+    <string name="accent_canadian">Canadiense</string>
     <string name="your_fluent_self_speaks_with_this_accent_in_your_own_voice">Tu yo fluido habla con este acento, con tu propia voz. Cuando lo escuches, puedes cambiarlo.</string>
     <string name="voice_change_already">Ya cambiaste tu voz en los últimos 30 días.</string>
     <string name="voice_change_again_from">Podrás volver a cambiar tu voz a partir del %s.</string>

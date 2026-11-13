@@ -113,6 +113,7 @@ class VocabStore private constructor(context: Context) {
         fun offListContentWords(texts: List<String>, language: String): Map<String, Int> {
             if (language == "ko" || language == "ja") return emptyMap()
             if (language == "es") return spanishOffListContentWords(texts)
+            if (language == "fr") return frenchOffListContentWords(texts)
             val pool = CoreVocabulary.set(language)
             val out = HashMap<String, Int>()
             for (text in texts) {
@@ -145,6 +146,27 @@ class VocabStore private constructor(context: Context) {
                     val lemma = entry.lemma
                     if (lemma.length < 3 || lemma in pool || CoreVocabulary.isUngraded(lemma, "es")) continue
                     if (isCapitalizedMidSentence(text, start, word)) continue
+                    seenHere.add(lemma)
+                }
+                for (lemma in seenHere) out[lemma] = (out[lemma] ?: 0) + 1
+            }
+            return out
+        }
+
+        /**
+         * French: the same four filters through [FrenchMorph], which reads
+         * each word in its sentence (l'été → été, j'ai été → être) — iOS
+         * `frenchOffListContentWords`.
+         */
+        private fun frenchOffListContentWords(texts: List<String>): Map<String, Int> {
+            val pool = CoreVocabulary.set("fr")
+            val out = HashMap<String, Int>()
+            for (text in texts) {
+                val seenHere = HashSet<String>()
+                for (r in FrenchMorph.analyze(text)) {
+                    val lemma = r.entry?.lemma ?: continue
+                    if (lemma.length < 3 || lemma in pool || CoreVocabulary.isUngraded(lemma, "fr")) continue
+                    if (isCapitalizedMidSentence(text, r.start, r.word)) continue
                     seenHere.add(lemma)
                 }
                 for (lemma in seenHere) out[lemma] = (out[lemma] ?: 0) + 1

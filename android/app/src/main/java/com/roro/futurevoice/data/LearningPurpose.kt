@@ -294,7 +294,8 @@ enum class ExamKind(val raw: String, val examName: String) {
     IELTS("ielts", "IELTS"), TOEFL("toefl", "TOEFL"), OPIC("opic", "OPIc"),
     TOEIC_SPEAKING("toeicSpeaking", "TOEIC Speaking"), GOETHE("goethe", "Goethe-Zertifikat"),
     TELC("telc", "telc"), TOPIK("topik", "TOPIK"), BJT("bjt", "BJT"),
-    DELE("dele", "DELE"), SIELE("siele", "SIELE");
+    DELE("dele", "DELE"), SIELE("siele", "SIELE"),
+    DELF("delf", "DELF / DALF"), TCF("tcf", "TCF"), TEF("tef", "TEF");
 
     companion object {
         fun options(language: String): List<ExamKind> = when (LearningPurposeStore.base(language)) {
@@ -303,6 +304,8 @@ enum class ExamKind(val raw: String, val examName: String) {
             "ko" -> listOf(TOPIK, OPIC)
             "ja" -> listOf(OPIC, BJT)
             "es" -> listOf(DELE, SIELE, OPIC)
+            // TCF and TEF are what Canadian immigration and French universities ask for.
+            "fr" -> listOf(DELF, TCF, TEF, OPIC)
             else -> listOf(OPIC)
         }
     }
@@ -368,6 +371,13 @@ object ExamTopics {
                 ExamTopic("Una cafetería a la que va a menudo", "Survey"),
                 ExamTopic("Llame a una tienda por un producto que llegó roto", "Role-play"),
             )
+            "fr" -> listOf(
+                ExamTopic("Décrivez votre logement", "Survey"),
+                ExamTopic("Votre dernier voyage", "Survey"),
+                ExamTopic("Qu'est-ce que vous faites d'habitude le week-end ?", "Survey"),
+                ExamTopic("Un café où vous allez souvent", "Survey"),
+                ExamTopic("Appelez un magasin : l'article que vous avez reçu est cassé", "Role-play"),
+            )
             "de" -> listOf(
                 ExamTopic("Beschreiben Sie Ihre Wohnung", "Survey"),
                 ExamTopic("Ihre letzte Reise", "Survey"),
@@ -432,6 +442,29 @@ object ExamTopics {
             ExamTopic("Llame a un compañero para cambiar el día de una reunión", "Tarea 3"),
             ExamTopic("Cuente una experiencia que le hizo cambiar de opinión", "Tarea 4"),
             ExamTopic("¿Deberían los estudiantes llevar uniforme? Dé su opinión", "Tarea 5"),
+        )
+        ExamKind.DELF -> listOf(
+            ExamTopic("Parlez de vous : vos études, votre travail, vos loisirs", "Entretien dirigé"),
+            ExamTopic("Votre voisin fait du bruit tous les soirs : allez lui parler", "Jeu de rôle"),
+            ExamTopic("Faut-il interdire les voitures dans le centre des villes ?", "Point de vue",
+                listOf("le problème", "votre opinion", "des exemples")),
+            ExamTopic("Vous voulez échanger un vêtement trop petit dans un magasin", "Jeu de rôle"),
+            ExamTopic("Le télétravail rend-il les gens plus heureux ?", "Point de vue",
+                listOf("les avantages", "les inconvénients", "votre position")),
+            ExamTopic("Les réseaux sociaux rapprochent-ils les gens ?", "Débat"),
+        )
+        ExamKind.TCF -> listOf(
+            ExamTopic("Présentez-vous : votre famille, votre travail, vos projets", "Tâche 1"),
+            ExamTopic("Vous cherchez un logement : posez vos questions à l'agent immobilier", "Tâche 2"),
+            ExamTopic("Vaut-il mieux vivre en ville ou à la campagne ?", "Tâche 3"),
+            ExamTopic("Vous voulez vous inscrire à un club de sport : renseignez-vous", "Tâche 2"),
+            ExamTopic("Les enfants devraient-ils apprendre deux langues dès l'école primaire ?", "Tâche 3"),
+        )
+        ExamKind.TEF -> listOf(
+            ExamTopic("Vous appelez au sujet d'une annonce pour un cours de cuisine : posez des questions", "Section A"),
+            ExamTopic("Vous appelez au sujet d'une chambre à louer : renseignez-vous", "Section A"),
+            ExamTopic("Convainquez un ami de faire du bénévolat avec vous", "Section B"),
+            ExamTopic("Convainquez un ami de partir en vacances en train plutôt qu'en avion", "Section B"),
         )
     }
 }

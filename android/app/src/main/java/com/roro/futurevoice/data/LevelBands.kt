@@ -98,6 +98,9 @@ object LevelBands {
             JAPANESE,
             /** [SpanishMorph]'s table; a participle after haber is its verb. */
             SPANISH,
+            /** [FrenchMorph]'s table, read in the sentence (l'été → été,
+             *  j'ai aimé → aimer). */
+            FRENCH,
         }
 
         class Profile(val a2: Double, val b1: Double, val nativeLike: Double, val stopWords: Set<String>,
@@ -154,6 +157,17 @@ object LevelBands {
                 "siete", "ocho", "nueve", "diez", "cien", "mil", "mío", "mía", "tuyo", "tuya",
                 "suyo", "suya", "nuestro", "nuestra",
             ), Reader.SPANISH),
+            // French (iOS 2026-11-13): 365k Tatoeba en–fr pairs pooled like
+            // speakers, r 0.89 (as good as Spanish); cuts 0.331/0.356/0.385 and
+            // 0.335/0.358/0.398 on the two halves. Frequency bands, like Spanish.
+            "fr" to Profile(0.33, 0.36, 0.39, setOf(
+                // Auxiliaries and modals (be / have / do / go / can / must).
+                "être", "avoir", "faire", "aller", "pouvoir", "devoir",
+                "vouloir", "falloir",
+                // The negation (ne … pas is one "not"), numerals.
+                "ne", "pas", "un", "deux", "trois", "quatre", "cinq",
+                "six", "sept", "huit", "neuf", "dix", "cent", "mille",
+            ), Reader.FRENCH),
         )
 
         fun isCalibrated(language: String) = language in profiles
@@ -238,6 +252,10 @@ object LevelBands {
                     }
                     found
                 }
+                // Content readings only: a function word has no entry. The
+                // participle after avoir is already the verb (FrenchMorph's
+                // context rule), so the Spanish repair isn't needed here.
+                Reader.FRENCH -> FrenchMorph.analyze(text).mapNotNull { it.entry?.lemma }.filter { it.length > 1 }
             }
             return lemmas.filter { it !in profile.stopWords }
         }

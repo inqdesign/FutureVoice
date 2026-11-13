@@ -124,6 +124,7 @@ data class StarterSituation(
                     "ja" to listOf("こんにちは！初めてですよね？", "はじめまして！よろしくお願いします。"),
                     "de" to listOf("Hallo! Ich glaube, wir kennen uns noch nicht.", "Hallo, freut mich, Sie kennenzulernen!"),
                     "es" to listOf("¡Hola! Creo que todavía no nos conocemos.", "¡Hola! Mucho gusto."),
+                    "fr" to listOf("Bonjour ! Je crois qu'on ne se connaît pas encore.", "Bonjour ! Enchanté."),
                 ),
                 learnerSide = "The learner is from another country and is learning this language; they have just met a native speaker for the first time. What they're asked is about themselves — their name, where they're from, whether they work or study and what, how long they've been here, why they're learning the language — and a natural answer gives that fact (as a bracketed example). Asking the same thing back is something a speaker does now and then, not on every answer. They have just met, so the learner speaks in the polite form (German Sie, French vous, Spanish usted, Korean 해요체 -요 endings, Japanese です・ます) whatever form the line uses. That is the ending only: honorifics that raise a person (Korean -(으)시-, Japanese 尊敬語) are for the OTHER person and never go on the learner's own actions — Korean 살았어요, not 사셨어요, even when the question asked 사셨어요."),
             StarterSituation(
@@ -136,6 +137,7 @@ data class StarterSituation(
                     "ja" to listOf("こんにちは、ご注文はお決まりですか？", "こんにちは！何にしますか？"),
                     "de" to listOf("Hallo! Was darf's sein?", "Hallo, was hätten Sie gern?"),
                     "es" to listOf("¡Hola! ¿Qué le sirvo?", "¡Hola! ¿Qué va a tomar?"),
+                    "fr" to listOf("Bonjour ! Qu'est-ce que je vous sers ?", "Bonjour ! Vous désirez ?"),
                 )),
             StarterSituation(
                 id = "order-restaurant", icon = "fork.knife",
@@ -147,6 +149,7 @@ data class StarterSituation(
                     "ja" to listOf("こんにちは、お飲み物はどうされますか？", "こんにちは！ご注文はお決まりですか？"),
                     "de" to listOf("Hallo! Darf ich Ihnen schon etwas zu trinken bringen?", "Hallo! Haben Sie schon gewählt?"),
                     "es" to listOf("¡Hola! ¿Le traigo algo de tomar para empezar?", "¡Hola! ¿Ya saben qué van a pedir, o necesitan un momento?"),
+                    "fr" to listOf("Bonsoir ! Je vous apporte quelque chose à boire pour commencer ?", "Bonsoir ! Vous avez choisi, ou il vous faut encore un moment ?"),
                 )),
             StarterSituation(
                 id = "ask-directions", icon = "map.fill",
@@ -158,6 +161,7 @@ data class StarterSituation(
                     "ja" to "すみません、[駅]はどう行けばいいですか？",
                     "de" to "Entschuldigung, wie komme ich zum [Bahnhof]?",
                     "es" to "Disculpe, ¿cómo llego a la [estación]?",
+                    "fr" to "Excusez-moi, pour aller à la [gare], s'il vous plaît ?",
                 ),
                 learnerFirstMeaning = R.string.excuse_me_how_do_i_get_to_the_station),
             StarterSituation(
@@ -170,6 +174,7 @@ data class StarterSituation(
                     "ja" to listOf("こんにちは、何かお探しですか？", "こんにちは！気になるものがあったら声をかけてくださいね。"),
                     "de" to listOf("Hallo! Suchen Sie etwas Bestimmtes?", "Hallo! Kann ich Ihnen helfen?"),
                     "es" to listOf("¡Hola! ¿Busca algo en especial?", "¡Hola! ¿Le puedo ayudar en algo?"),
+                    "fr" to listOf("Bonjour ! Vous cherchez quelque chose en particulier ?", "Bonjour ! Je peux vous aider ?"),
                 )),
             StarterSituation(
                 id = "doctor-appointment", icon = "cross.case.fill",
@@ -181,6 +186,7 @@ data class StarterSituation(
                     "ja" to listOf("はい、クリニックです。どうされましたか？", "お電話ありがとうございます。クリニックです。"),
                     "de" to listOf("Arztpraxis, guten Tag! Was kann ich für Sie tun?", "Praxis, hallo! Wie kann ich helfen?"),
                     "es" to listOf("Consultorio, buenos días. ¿En qué le puedo ayudar?", "Hola, consultorio médico. Dígame."),
+                    "fr" to listOf("Cabinet médical, bonjour. Que puis-je faire pour vous ?", "Cabinet du docteur, bonjour. Je vous écoute."),
                 )),
             StarterSituation(
                 id = "hotel-checkin", icon = "bed.double.fill",
@@ -192,6 +198,7 @@ data class StarterSituation(
                     "ja" to listOf("こんにちは、チェックインですか？", "こんにちは！どうされましたか？"),
                     "de" to listOf("Hallo! Möchten Sie einchecken?", "Guten Tag! Wie kann ich Ihnen helfen?"),
                     "es" to listOf("¡Hola! ¿Viene a registrarse?", "¡Buenas tardes! ¿En qué le puedo ayudar?"),
+                    "fr" to listOf("Bonjour ! C'est pour un check-in ?", "Bonsoir ! Que puis-je faire pour vous ?"),
                 )),
             StarterSituation(
                 id = "train-ticket", icon = "tram.fill",
@@ -203,6 +210,7 @@ data class StarterSituation(
                     "ja" to listOf("こんにちは、どちらまでですか？", "こんにちは！どうされましたか？"),
                     "de" to listOf("Hallo! Wohin soll's gehen?", "Hallo, was kann ich für Sie tun?"),
                     "es" to listOf("¡Hola! ¿A dónde va?", "Hola, ¿en qué le puedo ayudar?"),
+                    "fr" to listOf("Bonjour ! Vous allez où ?", "Bonjour, qu'est-ce que je peux faire pour vous ?"),
                 )),
             StarterSituation(
                 id = "make-plans", icon = "person.2.fill",
@@ -215,6 +223,7 @@ data class StarterSituation(
                     "ja" to listOf("おー、元気？", "あ、来た来た！最近どう？"),
                     "de" to listOf("Hey! Na, wie geht's?", "Hey, da bist du ja! Was gibt's Neues?"),
                     "es" to listOf("¡Hola! ¿Qué tal todo?", "¡Ey, por fin llegas! ¿Qué hay de nuevo?"),
+                    "fr" to listOf("Salut ! Ça va ?", "Ah, te voilà ! Quoi de neuf ?"),
                 )),
             StarterSituation(
                 id = "neighbor-small-talk", icon = "house.fill",
@@ -227,6 +236,7 @@ data class StarterSituation(
                     "ja" to listOf("あ、こんにちは！お元気ですか？", "どうも、こんにちは！お久しぶりです。"),
                     "de" to listOf("Oh, hallo! Wie geht's Ihnen?", "Hallo! Lange nicht gesehen."),
                     "es" to listOf("¡Ay, hola! ¿Cómo está?", "¡Hola! ¡Cuánto tiempo!"),
+                    "fr" to listOf("Oh, bonjour ! Comment allez-vous ?", "Bonjour ! Ça fait un moment qu'on ne s'est pas vus !"),
                 )),
         )
         // MARK: - Purpose chips (`LearningPurpose`)

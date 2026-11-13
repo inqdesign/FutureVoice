@@ -47,7 +47,7 @@ class StarterSituationTest {
         assertEquals("안녕하세요, 뭐 드릴까요?", ko.openers?.first())
         assertEquals(0, ko.openerCursor)
         // No written lines in this language → the call writes its own.
-        assertNull(cafe.scenario(emptyList(), "fr", "Au café", "un barista").openers)
+        assertNull(cafe.scenario(emptyList(), "it", "Al bar", "un barista").openers)
     }
 
     @Test fun theLearnerOpensOnTheStreet() {
@@ -55,18 +55,19 @@ class StarterSituationTest {
         assertNull(s.openers)
         assertEquals("Entschuldigung, wie komme ich zum [Bahnhof]?", street.learnerFirstLine("de"))
         assertEquals("Disculpe, ¿cómo llego a la [estación]?", street.learnerFirstLine("es"))
-        assertEquals("Excuse me, how do I get to the [station]?", street.learnerFirstLine("fr"))
+        assertEquals("Excusez-moi, pour aller à la [gare], s'il vous plaît ?", street.learnerFirstLine("fr"))
+        assertEquals("Excuse me, how do I get to the [station]?", street.learnerFirstLine("it"))
         assertNull(cafe.learnerFirstLine("en"))
         assertEquals(street, StarterSituation.of(s))
         assertNull(StarterSituation.of(Scenario(environment = "mine")))
     }
 
-    @Test fun everyStarterHasFiveLanguagesOfAWayIn() {
+    @Test fun everyStarterHasSixLanguagesOfAWayIn() {
         assertEquals(10, StarterSituation.all.size)
         assertEquals(StarterSituation.all.size, StarterSituation.all.map { it.id }.toSet().size)
         for (st in StarterSituation.all) {
             val lines = st.learnerFirst ?: st.openers.mapValues { it.value.first() }
-            assertEquals(st.id, setOf("en", "ko", "ja", "de", "es"), lines.keys)
+            assertEquals(st.id, setOf("en", "ko", "ja", "de", "es", "fr"), lines.keys)
         }
     }
 

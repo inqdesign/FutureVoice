@@ -225,6 +225,8 @@
     <string name="accent_standard_german">Allemand standard</string>
     <string name="accent_mexican">Mexicain</string>
     <string name="accent_castilian">Castillan</string>
+    <string name="accent_parisian">Parisien</string>
+    <string name="accent_canadian">Québécois</string>
     <string name="your_fluent_self_speaks_with_this_accent_in_your_own_voice">Ton moi fluide parle avec cet accent, avec ta propre voix. Tu pourras le changer une fois que tu l’auras entendu.</string>
     <string name="voice_change_already">Tu as déjà changé ta voix au cours des 30 derniers jours.</string>
     <string name="voice_change_again_from">Tu pourras de nouveau changer ta voix à partir du %s.</string>

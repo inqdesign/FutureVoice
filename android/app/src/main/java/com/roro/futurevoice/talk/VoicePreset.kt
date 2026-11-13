@@ -65,7 +65,16 @@ object VoicePreset {
             EMMA to "727f663b-0e90-4031-90f2-558b7334425b",   // Carmen (F)
             JAMES to "e9f0368b-3662-4a01-b037-e13ca5203c74",  // Javier (M)
         )
-        mapOf("en" to english, "de" to german, "ko" to korean, "ja" to japanese, "es" to spanish)
+        // French (2026-11-13): the four French voices Find people casts for
+        // French-speaking profiles (`ProfileVoice`), slot for slot by gender.
+        val french = mapOf(
+            PAIGE to "735287ee-ce91-4b08-8de4-63315c5ba1fb",  // Emmanuelle (F)
+            MARK to "ab636c8b-9960-4fb3-bb0c-b7b655fb9745",   // Erwan (M)
+            EMMA to "6c64b57a-bc65-48e4-bff4-12dbe85606cd",   // Eloise (F)
+            JAMES to "adff5dcb-249f-463f-aa89-d98d8ca05e88",  // Leo (M)
+        )
+        mapOf("en" to english, "de" to german, "ko" to korean, "ja" to japanese, "es" to spanish,
+            "fr" to french)
     }
 
     /**
@@ -79,6 +88,7 @@ object VoicePreset {
         "ko" to mapOf(PAIGE to "시안", MARK to "민준", EMMA to "한별", JAMES to "준호"),
         "ja" to mapOf(PAIGE to "美咲", MARK to "翔太", EMMA to "陽菜", JAMES to "健太"),
         "es" to mapOf(PAIGE to "Carolina", MARK to "Jorge", EMMA to "Carmen", JAMES to "Javier"),
+        "fr" to mapOf(PAIGE to "Emmanuelle", MARK to "Erwan", EMMA to "Éloïse", JAMES to "Léo"),
     )
 
     /**
