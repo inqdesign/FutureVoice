@@ -307,7 +307,7 @@ struct SpeechChallengeView: View {
         .navigationBarTitleDisplayMode(.inline)
         // A page pushed into the tab, like a book page: the tab bar goes,
         // and the glass panel's buttons take the foot.
-        .toolbar(MacLayout.tabBarOnPhoneOnly, for: .tabBar)
+        .hidesTabBar()
         .refreshable { await reload() }
         .task { await reload() }
         // The board first; the script and the way in together at the foot
@@ -677,7 +677,7 @@ struct SpeechChallengeListView: View {
         }
         .navigationTitle("All challenges")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar(MacLayout.tabBarOnPhoneOnly, for: .tabBar)
+        .hidesTabBar()
         .refreshable { await challenges.refresh(language: appState.targetLanguage) }
     }
 
@@ -1189,7 +1189,7 @@ struct SpeechOverallBoardView: View {
         }
         .navigationTitle("Overall ranking")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar(inTab ? .automatic : MacLayout.tabBarOnPhoneOnly, for: .tabBar)
+        .hidesTabBar(!inTab)
         .refreshable { await load() }
         .task(id: season) { await load() }
     }

@@ -656,7 +656,7 @@ struct ProgressTab: View {
                     .background(Color(.systemGroupedBackground).ignoresSafeArea())
                     .navigationTitle("Latest assessment")
                     .navigationBarTitleDisplayMode(.inline)
-                    .toolbar(MacLayout.tabBarOnPhoneOnly, for: .tabBar)
+                    .hidesTabBar()
                 } label: {
                     HStack {
                         Text("Read the full report")

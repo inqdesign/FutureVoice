@@ -73,7 +73,7 @@ struct ShadowBrowserView: View {
 
     var body: some View {
         content
-            .toolbar(MacLayout.tabBarOnPhoneOnly, for: .tabBar)
+            .hidesTabBar()
             .safeAreaInset(edge: .top, spacing: 0) {
                 // The split only means something once at least one line has
                 // been practiced — until then everything is "to study".

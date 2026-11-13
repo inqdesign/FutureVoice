@@ -86,7 +86,7 @@ struct ScenarioDetailView: View {
         }
         .navigationTitle(scenario?.environment ?? "")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar(MacLayout.tabBarOnPhoneOnly, for: .tabBar)
+        .hidesTabBar()
         .toolbar { toolbarMenu }
         .bookExport(exporter)
         .sheet(isPresented: $showingPaywall) { PaywallView(source: "scenario_book") }

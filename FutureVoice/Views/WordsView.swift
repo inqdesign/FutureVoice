@@ -213,7 +213,7 @@ struct WordsView: View {
         }
         .navigationTitle(navTitle)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar(MacLayout.tabBarOnPhoneOnly, for: .tabBar)
+        .hidesTabBar()
         .toolbar {
             // The cloud — the explore view over the whole core vocabulary.
             ToolbarItem(placement: .topBarTrailing) {

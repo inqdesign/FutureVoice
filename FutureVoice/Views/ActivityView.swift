@@ -122,7 +122,7 @@ struct ActivityView: View {
         .navigationTitle(explain("My routine"))
         .sheet(item: $cardDay) { DayCardSheet(day: $0.date) }
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar(MacLayout.tabBarOnPhoneOnly, for: .tabBar)
+        .hidesTabBar()
         // The strips and the day list swipe sideways; the page's back swipe
         // stays on the edge so it doesn't take those swipes.
         .edgeOnlyBackSwipe()

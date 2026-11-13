@@ -167,10 +167,15 @@ struct TodayBookCard: View {
                     .foregroundStyle(.primary)
                     .lineLimit(2)
                 if let note {
+                    // The summary's one line, marked through like a
+                    // highlighter pen in the book's colour (2026-11-13,
+                    // founder).
                     Text(note)
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.primary)
                         .lineLimit(noteLines)
+                        .lineSpacing(5)
+                        .markerHighlight(book.tint.opacity(0.22))
                 }
             }
             if rowLines != 0 { keyRows(lines: rowLines) }
@@ -330,6 +335,36 @@ struct TodayBookCard: View {
             .padding(.horizontal, 18)
             .padding(.bottom, 12)
             BookChapterButtons(book: book, study: study)
+        }
+    }
+}
+
+/// A highlighter pen drawn over each line of a text: a soft band a little
+/// taller and wider than the line, under the glyphs.
+@available(iOS 18.0, *)
+private struct MarkerHighlight: TextRenderer {
+    var color: Color
+
+    func draw(layout: Text.Layout, in ctx: inout GraphicsContext) {
+        for line in layout {
+            let b = line.typographicBounds.rect
+            // A little taller than the line itself, so the words sit inside
+            // the band and stay easy to read (founder: half-height read low).
+            let band = b.insetBy(dx: -4, dy: -2)
+            ctx.fill(Path(roundedRect: band, cornerRadius: 3), with: .color(color))
+            ctx.draw(line)
+        }
+    }
+}
+
+extension View {
+    /// Marks a `Text` like a highlighter pen; plain text before iOS 18.
+    @ViewBuilder
+    func markerHighlight(_ color: Color) -> some View {
+        if #available(iOS 18.0, *) {
+            textRenderer(MarkerHighlight(color: color))
+        } else {
+            self
         }
     }
 }

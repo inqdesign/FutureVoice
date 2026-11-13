@@ -79,7 +79,7 @@ struct VocabularyView: View {
         .navigationTitle(titleText)
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
-        .toolbar(MacLayout.tabBarOnPhoneOnly, for: .tabBar)
+        .hidesTabBar()
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button {

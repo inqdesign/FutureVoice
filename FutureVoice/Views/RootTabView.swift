@@ -50,6 +50,9 @@ struct RootTabView: View {
     /// broke here: the counterpart inside the inserted NavigationStack
     /// measured at the origin, so the pill flew to the top-left.)
     @State private var pillDocked = false
+    /// The pages deeper in a tab that hide the bar; the roots below keep it
+    /// down until the last one is gone, then it slides up (`hidesTabBar`).
+    private let tabBar = TabBarVisibility.shared
     /// Proxy faded out after docking — the call's own mic pill (same
     /// Futureself surface, same frame) has taken over.
     @State private var pillHidden = false
@@ -188,10 +191,12 @@ struct RootTabView: View {
         ZStack {
             TabView(selection: $selection) {
                 ConversationHome()
+                    .toolbar(tabBar.isHidden ? MacLayout.tabBarOnPhoneOnly : .automatic, for: .tabBar)
                     .tabItem { Label("Talk", systemImage: "waveform") }
                     .tag(Tab.home)
 
                 SpeechTab()
+                    .toolbar(tabBar.isHidden ? MacLayout.tabBarOnPhoneOnly : .automatic, for: .tabBar)
                     .tabItem { Label("Speech", systemImage: "music.mic") }
                     .tag(Tab.speech)
 
@@ -202,15 +207,17 @@ struct RootTabView: View {
                     // visible here outranks the `.hidden` of a scene pushed
                     // inside the tab, and a new situation played with the
                     // tab bar over it once the box closed.
-                    .toolbar(watchCreation.creating ? MacLayout.tabBarOnPhoneOnly : .automatic, for: .tabBar)
+                    .toolbar(watchCreation.creating || tabBar.isHidden ? MacLayout.tabBarOnPhoneOnly : .automatic, for: .tabBar)
                     .tabItem { Label("Watch", systemImage: "play.circle.fill") }
                     .tag(Tab.watch)
 
                 PracticeTab()
+                    .toolbar(tabBar.isHidden ? MacLayout.tabBarOnPhoneOnly : .automatic, for: .tabBar)
                     .tabItem { Label("Review", systemImage: "book.fill") }
                     .tag(Tab.practice)
 
                 ProgressTab()
+                    .toolbar(tabBar.isHidden ? MacLayout.tabBarOnPhoneOnly : .automatic, for: .tabBar)
                     .tabItem { Label("Progress", systemImage: "chart.bar.fill") }
                     .tag(Tab.progress)
             }

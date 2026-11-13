@@ -518,7 +518,7 @@ struct ConversationHome: View {
             onBuildScenario: fromTopics { showingBuilder = true },
             onOwnTopic: fromTopics { runOwnTopic() })
             .environmentObject(appState)
-            .toolbar(MacLayout.tabBarOnPhoneOnly, for: .tabBar)
+            .hidesTabBar()
     }
 
     // MARK: - Hero (welcome question + the goal ring / call button)
@@ -1560,7 +1560,7 @@ struct TalkScenariosListView: View {
         }
         .navigationTitle("Scenarios")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar(MacLayout.tabBarOnPhoneOnly, for: .tabBar)
+        .hidesTabBar()
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button { showingBuilder = true } label: {

@@ -111,7 +111,7 @@ struct ConversationDetailView: View {
         // study chapter it's the only place saying which book is open.
         .navigationTitle(postTalk == nil ? session.displayTitle : chrome("Review book"))
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar(MacLayout.tabBarOnPhoneOnly, for: .tabBar)
+        .hidesTabBar()
         .toolbar { toolbarMenu }
         .bookExport(exporter)
         .onAppear {
@@ -1251,7 +1251,7 @@ struct TalkTranscriptView: View {
         }
         .navigationTitle(session.displayTitle)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar(MacLayout.tabBarOnPhoneOnly, for: .tabBar)
+        .hidesTabBar()
         // Same dissolve the live call uses: the transcript slides under the
         // controls instead of stopping at a solid strip (2026-09-03).
         .fadingBottomBar { controls }
