@@ -51,6 +51,18 @@ final class LearnerGenderTests: XCTestCase {
         XCTAssertTrue(ConversationEngine.genderAboutLine("fr", gender: nil)!.contains("not known"))
     }
 
+    /// The lesson planner's examples are lines they say about themselves.
+    func testThePlannerExamplesAgreeWithThem() {
+        XCTAssertEqual(TutorPlanner.exampleLines("en", gender: .female), "")
+        XCTAssertEqual(TutorPlanner.exampleLines("de", gender: .male), "")
+        XCTAssertTrue(TutorPlanner.exampleLines("fr", gender: .female).contains("takes the feminine"))
+        XCTAssertTrue(TutorPlanner.exampleLines("fr", gender: .male).contains("takes the masculine"))
+        XCTAssertTrue(TutorPlanner.exampleLines("fr", gender: nil).contains("je viens de Corée"))
+        XCTAssertTrue(TutorPlanner.exampleLines("fr", gender: .unsaid).contains("never j'suis"))
+        XCTAssertTrue(TutorPlanner.exampleLines("es", gender: .unsaid).contains("soy de Corea"))
+        XCTAssertFalse(TutorPlanner.exampleLines("es", gender: .female).contains("j'suis"))
+    }
+
     /// Older builds must freeze the new settings, not tombstone them.
     func testTheSettingIsStampedAboveOlderBuilds() {
         XCTAssertEqual(SyncSchema.stamp(for: .defaults, key: LearnerGender.valueKey), 2)

@@ -44,11 +44,13 @@ exec(src[src.index("FIRST = {"):src.index("OPEN = {")], data)
 FIRST, CASES = data["FIRST"], data["CASES"]
 
 view = open(os.path.join(ROOT, "FutureVoice/Views/ConversationView.swift")).read()
-style = re.search(r'static let realtimeStyleRules = """\n(.*?)\n        """', view, re.S).group(1)
+style = re.search(r'static let (?:realtimeStyleRules|callStyleRules) = """\n(.*?)\n        """', view, re.S).group(1)
 style = re.sub(r"\\\n\s*", "", "\n".join(l.strip() for l in style.splitlines()))
 gw = open(os.path.join(ROOT, "gateway/src/claude-reply.ts")).read()
 ADDENDUM = (open(os.environ["ADDENDUM_FILE"]).read() if os.environ.get("ADDENDUM_FILE")
-            else re.search(r"CLAUDE_ADDENDUM = `(.*?)`", gw, re.S).group(1))
+            # CLAUDE_ADDENDUM = CLAUDE_SPOKEN_ONLY + `…` since free talk got the spoken-only half alone
+            else re.search(r"CLAUDE_SPOKEN_ONLY = `(.*?)`", gw, re.S).group(1)
+                 + re.search(r"CLAUDE_ADDENDUM = CLAUDE_SPOKEN_ONLY \+ `(.*?)`", gw, re.S).group(1))
 
 # What a real notebook looks like on the founder's own account: occupation,
 # family, and dated lines heard on calls — the "notes" the leaked reasoning
@@ -130,7 +132,7 @@ def code_flags(lang, text):
     if lang in ("ko", "ja"):
         latin = [w for w in LATIN_WORD.findall(text) if w not in NAMES]
         if len(latin) >= 3: flags.append("latin")
-    if lang in ("de", "es"):
+    if lang in ("de", "es", "fr"):
         en = re.findall(r"\b(the|and|should|would|which|what|this|that|with|reply|user)\b", text)
         if len(en) >= 3: flags.append("english")
     return flags
@@ -148,7 +150,7 @@ Line:
 
 Answer with one word: LEAK or CLEAN."""
 
-LANG_NAME = {"en": "English", "ko": "Korean", "ja": "Japanese", "de": "German", "es": "Spanish"}
+LANG_NAME = {"en": "English", "ko": "Korean", "ja": "Japanese", "de": "German", "es": "Spanish", "fr": "French"}
 
 def judge(lang, text):
     try:

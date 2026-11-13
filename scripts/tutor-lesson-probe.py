@@ -45,8 +45,8 @@ TUTOR_EXTRA = os.environ.get("TUTOR_EXTRA", "")
 JUDGE_MODEL = os.environ.get("JUDGE_MODEL", "gemini")
 GEMINI = re.search(r"GEMINI_API_KEY=(.*)", open(f"{ROOT}/gateway/.dev.vars").read()).group(1).strip().strip('"')
 ANTHROPIC = open(os.path.expanduser("~/keys/anthropic.txt")).read().strip()
-NAMES = {"en": "English", "ko": "Korean", "ja": "Japanese", "de": "German", "es": "Spanish"}
-NATIVE = {"en": "Korean", "ko": "English", "ja": "Korean", "de": "Korean", "es": "Korean"}
+NAMES = {"en": "English", "ko": "Korean", "ja": "Japanese", "de": "German", "es": "Spanish", "fr": "French"}
+NATIVE = {"en": "Korean", "ko": "English", "ja": "Korean", "de": "Korean", "es": "Korean", "fr": "Korean"}
 
 # ---------- Swift source lifting
 
@@ -146,7 +146,8 @@ def ladder(level):
 
 CV = read("FutureVoice/Views/ConversationView.swift")
 N_READY = note_literal(CV, "Today's lesson is ready")
-N_NOTYET = note_literal(CV, "Result: NOT YET.")
+# The slips note; a "weak answer" NOT YET (2026-11) sits ahead of it in the file.
+N_NOTYET = note_literal(CV, "Result: NOT YET. \\(what)")
 N_ONCE = note_literal(CV, "Result: ONCE MORE.")
 N_DONE = note_literal(CV, "Result: DONE — challenge")
 N_HELP = note_literal(CV, "Not a try: they \\(ownLanguage")
@@ -233,6 +234,10 @@ LESSON = {
     ("Say your name and where you're from", "Soy Minji y soy de Busan."),
     ("Say what you do for work or study", "Trabajo de enfermera en un hospital."),
     ("Say one thing you like doing in your free time, with a reason", "Me encanta hacer senderismo porque me despeja.")]),
+ "fr": ("Te présenter", [
+    ("Say your name and where you're from", "Je m'appelle Minji et je viens de Busan."),
+    ("Say what you do for work or study", "Je suis infirmière dans un hôpital."),
+    ("Say one thing you like doing in your free time, with a reason", "J'adore faire de la randonnée, ça me vide la tête.")]),
 }
 ASK = {
  "en": "Now, what do you do? For example: I work as a nurse at a hospital. Your turn, about you.",
@@ -240,6 +245,7 @@ ASK = {
  "ja": "じゃあ次は仕事のこと。たとえば「病院で看護師をしています。」自分のことで言ってみて。",
  "de": "Jetzt: Was machst du beruflich? Zum Beispiel: Ich arbeite als Krankenpflegerin im Krankenhaus. Sag's über dich.",
  "es": "Ahora, ¿a qué te dedicas? Por ejemplo: Trabajo de enfermera en un hospital. Dilo sobre ti.",
+ "fr": "Maintenant, tu fais quoi dans la vie ? Par exemple : Je suis infirmière dans un hôpital. À toi, parle de toi.",
 }
 # (line with a slip, its "was" → "now", the right line)
 TRY = {
@@ -248,6 +254,7 @@ TRY = {
  "ja": ("会社でエンジニアにしています。", '"エンジニアにしています" → "エンジニアをしています"', "自動車会社でエンジニアをしています。"),
  "de": ("Ich arbeite als ein Ingenieur bei eine Autofirma.", '"als ein Ingenieur bei eine Autofirma" → "als Ingenieur bei einer Autofirma"', "Ich arbeite als Ingenieur bei einer Autofirma."),
  "es": ("Yo trabajo como un ingeniero en una empresa de coches.", '"trabajo como un ingeniero" → "trabajo de ingeniero"', "Trabajo de ingeniero en una empresa de coches."),
+ "fr": ("Je suis un ingénieur dans une entreprise de voitures.", '"Je suis un ingénieur" → "Je suis ingénieur"', "Je suis ingénieur dans une entreprise automobile."),
 }
 # What the tutor said back after a NOT YET (stands in for its own fix line).
 FIXED = {
@@ -256,6 +263,7 @@ FIXED = {
  "ja": "こう言うよ。「会社でエンジニアをしています。」もう一回言ってみて。",
  "de": "Man sagt: Ich arbeite als Ingenieur bei einer Firma. Sag's noch mal.",
  "es": "Se dice: Trabajo de ingeniero en una empresa. Dilo otra vez.",
+ "fr": "On dit : Je suis ingénieur dans une entreprise. Redis-le.",
 }
 # A remark / question (talk) and a request for the words (help), in the target.
 TALK = {
@@ -264,6 +272,7 @@ TALK = {
  "ja": "ねえ、未来の私はまだその仕事好き？",
  "de": "Sag mal, magst du deinen Job in der Zukunft noch?",
  "es": "Oye, ¿en el futuro todavía te gusta tu trabajo?",
+ "fr": "Dis, dans le futur, tu aimes toujours ton travail ?",
 }
 HELP = {
  "en": "How do I say that I design car parts?",
@@ -271,19 +280,21 @@ HELP = {
  "ja": "車の部品を設計してるって、どう言うの？",
  "de": "Wie sage ich, dass ich Autoteile entwerfe?",
  "es": "¿Cómo digo que diseño piezas de coche?",
+ "fr": "Comment je dis que je conçois des pièces de voiture ?",
 }
 # Said in the learner's native language (NATIVE above).
 OWN = {
  "en": "자동차 부품 설계하는 일 해.", "ko": "I design car parts.", "ja": "자동차 부품 설계하는 일 해.",
- "de": "자동차 부품 설계하는 일 해.", "es": "자동차 부품 설계하는 일 해.",
+ "de": "자동차 부품 설계하는 일 해.", "es": "자동차 부품 설계하는 일 해.", "fr": "자동차 부품 설계하는 일 해.",
 }
-FRAGMENT = {"en": "Engineer.", "ko": "엔지니어.", "ja": "エンジニア。", "de": "Ingenieur.", "es": "Ingeniero."}
+FRAGMENT = {"en": "Engineer.", "ko": "엔지니어.", "ja": "エンジニア。", "de": "Ingenieur.", "es": "Ingeniero.", "fr": "Ingénieur."}
 OTHER = {
  "en": "Can we do something else? Ordering food maybe.",
  "ko": "다른 거 하면 안 돼? 음식 주문하는 거.",
  "ja": "別のことやってもいい？注文の練習とか。",
  "de": "Können wir was anderes machen? Essen bestellen vielleicht.",
  "es": "¿Podemos hacer otra cosa? Pedir comida, por ejemplo.",
+ "fr": "On peut faire autre chose ? Commander à manger, par exemple.",
 }
 
 def note_values(lang, own_language=False, slips=None, what=None):
@@ -333,11 +344,32 @@ REQ = {
  "ja": [("よし、今日はレッスンね。今日はどんなことが言えるようになりたい？", "カフェで注文する練習をしたい。"), (None, "自己紹介")],
  "de": [("Okay, heute ist Unterricht. Was willst du heute sagen können?", "Ich will üben, im Café zu bestellen."), (None, "Sich vorstellen")],
  "es": [("Bueno, hoy toca clase. ¿Qué quieres poder decir hoy?", "Quiero practicar pedir en una cafetería."), (None, "Presentarte")],
+ "fr": [("Bon, aujourd'hui c'est cours. Qu'est-ce que tu veux savoir dire aujourd'hui ?", "Je veux m'entraîner à commander dans un café."), (None, "Te présenter")],
 }
+
+# TutorPlanner.exampleLines, retyped: every phrase is checked against the
+# Swift so a changed line stops the probe. GENDER=male|female|unsaid (default unsaid).
+GENDER = os.environ.get("GENDER", "unsaid")
+WHO = {"male": "they are a man, so it takes the masculine",
+       "female": "they are a woman, so it takes the feminine",
+       "unsaid": "their gender isn't known, so write it so that nothing in it shows one: a verb or a noun where an adjective or a job would have to agree ({neutral}), and no made-up name"}
+NEUTRAL = {"fr": "je viens de Corée, not je suis coréen; je fais des études, not je suis étudiant",
+           "es": "soy de Corea, not soy coreano; estudio, not soy estudiante"}
+for _p in [w.replace("{neutral}", "\\(neutral)") for w in WHO.values()] + list(NEUTRAL.values()) + [", spelled in full (je suis, never j'suis)",
+                                 "In \\(name) an example about themselves agrees with who they are: \\(who). Every word of it is \\(name)\\(spelled)."]:
+    if _p not in TL:
+        raise SystemExit(f"TutorPlanner.exampleLines changed — update the probe: {_p}")
+
+def example_lines(lang):
+    if lang not in ("fr", "es"):
+        return ""
+    spelled = ", spelled in full (je suis, never j'suis)" if lang == "fr" else ""
+    return f"\n  In {NAMES[lang]} an example about themselves agrees with who they are: {WHO[GENDER].replace('{neutral}', NEUTRAL[lang])}. Every word of it is {NAMES[lang]}{spelled}."
 
 def planner_prompt(lang):
     return fill(PLAN, {"target": NAMES[lang], "native": NATIVE[lang],
                        "level.rawValue.uppercased()": LEVEL.upper(), "levelLadder(level)": ladder(LEVEL),
+                       "exampleLines": example_lines(lang),
                        "about.isEmpty": ""})
 
 def run_plan(job):
@@ -362,7 +394,7 @@ def run_judge(job):
     lang, line, own, want = job
     task, ex = LESSON[lang][1][1]
     name = NAMES[lang]
-    system = fill(JUDGE_SYSTEM, {"target": name})
+    system = fill(JUDGE_SYSTEM, {"target": name, "realGoal": ""})  # no real goal: the plain judge
     content = fill(JUDGE_CONTENT, {"challenge.task": task, "challenge.example": ex, "askedWith": ASK[lang],
                                    "line": line,
                                    "ownLanguage": f"\n(They said this in their own language, not in {name}.)" if own else ""})

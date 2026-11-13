@@ -237,7 +237,7 @@ enum TutorPlanner {
           no brackets, no blanks, no placeholders. Spoken, so ALWAYS \
           contracted the way people talk ("I'm", "it's", "I'll", "that's", \
           "don't") — "I will" or "it is" where a speaker would contract is \
-          written English, and they'd be practicing it wrong.
+          written English, and they'd be practicing it wrong.\(exampleLines(targetLanguage))
         \(about.isEmpty ? "" : "\nWhat is known about them: \(about). Context only.")
         Return STRICT JSON only:
         {"topic": true, "title": "...", "title_target": "...", \
@@ -347,6 +347,31 @@ extension TutorPlanner {
     /// The level has to change WHAT is practiced, not the sentence length:
     /// at B a situation means reasons and a follow-up, at C it means
     /// managing the conversation itself.
+    /// French and Spanish only (2026-11-13): an example is a line the learner
+    /// says about THEMSELVES, and in these two it agrees with who they are.
+    /// Without this the planner wrote the masculine every time ("je suis
+    /// coréen", "étudiant", a man's name: 13 of 30 French examples), and the
+    /// "always contracted" rule above came out as spoken spellings in French
+    /// ("J'suis étudiant"). Every other target gets "", so its prompt is
+    /// byte-identical.
+    static func exampleLines(_ targetLanguage: String,
+                             gender: LearnerGender? = LearnerGender.current) -> String {
+        let lang = LanguageCatalog.base(targetLanguage)
+        guard LearnerGender.matters(in: lang) else { return "" }
+        let name = LanguageCatalog.englishName(lang)
+        let who: String
+        switch gender {
+        case .male: who = "they are a man, so it takes the masculine"
+        case .female: who = "they are a woman, so it takes the feminine"
+        case .unsaid, nil:
+            let neutral = lang == "fr" ? "je viens de Corée, not je suis coréen; je fais des études, not je suis étudiant"
+                : "soy de Corea, not soy coreano; estudio, not soy estudiante"
+            who = "their gender isn't known, so write it so that nothing in it shows one: a verb or a noun where an adjective or a job would have to agree (\(neutral)), and no made-up name"
+        }
+        let spelled = lang == "fr" ? ", spelled in full (je suis, never j'suis)" : ""
+        return "\n  In \(name) an example about themselves agrees with who they are: \(who). Every word of it is \(name)\(spelled)."
+    }
+
     static func levelLadder(_ level: CEFRLevel) -> String {
         let band: String
         switch level {
