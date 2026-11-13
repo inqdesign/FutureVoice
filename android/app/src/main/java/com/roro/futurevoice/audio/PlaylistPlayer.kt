@@ -87,7 +87,7 @@ object PlaylistPlayer {
      *  always moves with the voice (karaoke always works). */
     var timings by mutableStateOf<List<WordTiming>>(emptyList()); private set
 
-    var repeatMode by mutableStateOf(RepeatMode.ALL); private set
+    var repeatMode by mutableStateOf(RepeatMode.OFF); private set
     var shuffle by mutableStateOf(false); private set
     var gap by mutableStateOf(Gap.NONE); private set
     /** Playback speed. Time-stretched ([PlaybackParams], pitch kept), so the
@@ -124,7 +124,7 @@ object PlaylistPlayer {
         val c = context.applicationContext
         app = c
         val p = c.getSharedPreferences(PREFS, 0)
-        repeatMode = RepeatMode.entries.firstOrNull { it.raw == p.getString(REPEAT_KEY, null) } ?: RepeatMode.ALL
+        repeatMode = RepeatMode.entries.firstOrNull { it.raw == p.getString(REPEAT_KEY, null) } ?: RepeatMode.OFF
         shuffle = p.getBoolean(SHUFFLE_KEY, false)
         gap = Gap.entries.firstOrNull { it.raw == p.getString(GAP_KEY, null) } ?: Gap.NONE
         followLevelIfUnpicked(c)
