@@ -233,6 +233,7 @@ internal class SpeechListenModel {
 
     /** One stretch of the reading (the phrase drill's "Fluent"). */
     fun playSegment(from: Double, to: Double) {
+        introJob?.cancel(); introJob = null
         val f = file ?: return
         if (!player.isLoaded) player.prepare(f)
         player.playSegment(from, to)
@@ -241,6 +242,7 @@ internal class SpeechListenModel {
     /** Play or pause the whole reading, from where it was (the start again
      *  once it has played to the end). */
     fun toggle() {
+        introJob?.cancel(); introJob = null
         val f = file ?: return
         when {
             player.isPlaying -> player.pause()
@@ -253,7 +255,69 @@ internal class SpeechListenModel {
         }
     }
 
-    fun stop() = player.stop()
+    private val scope = MainScope()
+    private var introJob: Job? = null
+    private var introPlayed = false
+
+    /** How far along the reading is, 0…1. */
+    val progress: Double get() {
+        val total = if (player.duration > 0) player.duration else (text?.duration ?: 0.0)
+        return if (total > 0) min(1.0, player.currentTime / total) else 0.0
+    }
+
+    /** The reading goes on, whole: an intro still fading in keeps playing at
+     *  full volume instead of fading away, a paused one resumes where it was. */
+    fun playOn() {
+        if (phase != Phase.READY) return
+        if (player.isPlaying) {
+            introJob?.cancel(); introJob = null
+            player.fadeVolume(1f, 0.3)
+        } else toggle()
+    }
+
+    /** The challenge page's intro (iOS `playIntro`): the opening rises over a
+     *  couple of seconds and fades away at the end of the first sentence that
+     *  finishes after [seconds]. It PAUSES at the end, not stops: the page's
+     *  Script button is a mini player, and a tap goes on from there. */
+    fun playIntro(seconds: Double = 9.0) {
+        val f = file ?: return
+        if (introPlayed || introJob != null || player.isPlaying) return
+        introPlayed = true
+        player.play(f)
+        if (!player.isPlaying) return
+        player.fadeVolume(0f, 0.0)
+        player.fadeVolume(1f, 2.5)
+        val end = text?.sentenceEnd(seconds) ?: (seconds + 3)
+        introJob = scope.launch {
+            delay((max(1.0, end - 1.2) * 1000).toLong())
+            player.fadeVolume(0f, 1.6)
+            delay(1700)
+            player.pause()
+            player.fadeVolume(1f, 0.0)
+            introJob = null
+        }
+    }
+
+    /** Quietly to a pause, keeping the place (a take or the takes opening over the page). */
+    fun fadeToPause() {
+        introJob?.cancel(); introJob = null
+        if (!player.isPlaying) return
+        player.fadeVolume(0f, 0.4)
+        scope.launch { delay(450); player.pause(); player.fadeVolume(1f, 0.0) }
+    }
+
+    /** Quietly, never cut: leaving the page, or starting a take. */
+    fun fadeOut() {
+        introJob?.cancel(); introJob = null
+        if (!player.isPlaying) { player.stop(); return }
+        player.fadeVolume(0f, 0.5)
+        scope.launch { delay(550); player.stop() }
+    }
+
+    fun stop() {
+        introJob?.cancel(); introJob = null
+        player.stop()
+    }
 }
 
 private fun clock(t: Double): String {

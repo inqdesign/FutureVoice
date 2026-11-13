@@ -267,9 +267,13 @@ internal fun SpeechTabBody(language: String, native: String, level: CefrLevel,
                     SpeechOverallBanner(rows, onClick = onOpenOverall)
                 }
                 // The card carries 6 dp above and below, so 0 here is a 12 dp gap.
-                TwoAcross(live, spacing = 12.dp, rowSpacing = 0.dp) { script, mod ->
-                    SpeechChallengeRow(script, standings[script.id], modifier = mod,
-                        onClick = { onOpenChallenge(script) })
+                // The speech app's card (iOS bf8c67cf, founder: one look in
+                // both apps): the picture on cream, the title, the medal I hold.
+                TwoAcross(live, spacing = 12.dp, rowSpacing = 12.dp) { script, mod ->
+                    ArenaTile(script, standings[script.id],
+                        best = listOfNotNull(standings[script.id]?.myBest, store.best(script.id)).maxOrNull(),
+                        ended = standings[script.id]?.retiredAt != null,
+                        onClick = { onOpenChallenge(script) }, modifier = mod)
                 }
                 Text(stringResource(R.string.everyone_reads_the_same_script_your_best_take_goes_on_the_bo_281410),
                     style = MaterialTheme.typography.bodySmall,
@@ -960,7 +964,11 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
                                 *  prompter: the tutor's model answer for an upcoming goal.
                                 *  Recording it files it under My scripts, where its takes live
                                 *  (iOS 2c8133c8). */
-                               canPractice: Boolean = false) {
+                               canPractice: Boolean = false,
+                               /** A challenge page's fluent reading, shared: it plays on here
+                                *  from where the page's intro paused, and keeps going when the
+                                *  sheet closes (iOS `reading:`). */
+                               reading: SpeechListenModel? = null) {
     val studyShipped = shipped && !studyHere
     var practicing by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -995,10 +1003,10 @@ internal fun SpeechScriptSheet(script: SpeechScript, native: String, onEdited: (
     }
     // A challenge's fluent reading (iOS 01529ba7): played here with the words
     // lighting up, and its breaths and run-together words marked.
-    val listen = remember { SpeechListenModel() }
+    val listen = remember { reading ?: SpeechListenModel() }
     val listenable = remember(shown.id) { com.roro.futurevoice.talk.SpeechListenService.available(shown) }
     LaunchedEffect(shown.id) { if (listenable) listen.load(context, shown) }
-    DisposableEffect(Unit) { onDispose { listen.stop() } }
+    DisposableEffect(Unit) { onDispose { if (reading == null) listen.stop() } }
     SpeechSheet(onDismiss) {
         SheetHeader(stringResource(R.string.script),
             // Edit on the left, Done alone on the right (founder, 2026-10-14).

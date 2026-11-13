@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The challenge cards and page (iOS bf8c67cf). Values are iOS Localizable.xcstrings'. -->
+<resources>
+    <string name="arena_taking_part">%1$d taking part</string>
+    <string name="arena_be_first">Be the first</string>
+    <string name="arena_not_tried">Not tried yet</string>
+    <string name="arena_best">Best %1$d</string>
+    <string name="arena_of">of %1$d</string>
+    <string name="arena_season_record">Season %1$d: %2$d · #%3$d of %4$d</string>
+    <string name="arena_gold_at_90">Gold at 90</string>
+    <string name="arena_gold_won">Gold won</string>
+    <string name="arena_to_bronze">%1$d to bronze</string>
+    <string name="arena_to_silver">%1$d to silver</string>
+    <string name="arena_to_gold">%1$d to gold</string>
+    <string name="arena_tries">%1$d tries</string>
+    <string name="arena_watch_original">Watch the original</string>
+    <string name="arena_how_medals_work">How medals work</string>
+    <string name="arena_bronze">Bronze</string>
+    <string name="arena_silver">Silver</string>
+    <string name="arena_gold">Gold</string>
+    <string name="arena_medal_footer">Your best take on a challenge earns its medal. Everyone who reaches the score gets it.</string>
+    <string name="arena_rank">Rank</string>
+    <string name="arena_rank_body">Your place on the challenge\'s board, by best score. It\'s separate from the medal: gold and 7th place can go together.</string>
+    <string name="arena_takes">Takes</string>
+    <string name="arena_script">Script</string>
+    <string name="arena_practice">Practice</string>
+    <string name="arena_take">Take it on</string>
+    <string name="arena_again">Again</string>
+    <string name="arena_back">Back</string>
+    <string name="arena_more">More</string>
+    <string name="arena_remove_me">Remove me from this board</string>
+    <string name="arena_remove_confirm">Remove your score from this board?</string>
+</resources>

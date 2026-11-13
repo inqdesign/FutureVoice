@@ -1,5 +1,13 @@
 package com.roro.futurevoice.ui.speech
 
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.material.icons.outlined.SmartDisplay
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.outlined.RemoveCircleOutline
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.material.icons.filled.History
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.border
@@ -240,6 +248,15 @@ internal fun SpeechChallengeFace(face: SpeechChallenges.Face, size: androidx.com
 // MARK: - One challenge: its board and the way in
 
 @OptIn(ExperimentalMaterial3Api::class)
+/**
+ * A challenge's page (iOS `SpeechArenaDetail`, bf8c67cf — the speech app's
+ * page, which nawana wears too): the picture across the top, edge to edge,
+ * fading into the page; the kind, the title and my medal under it; what it
+ * is; my best and the next medal; my frozen record from an earlier season; the
+ * board; and the way in at the foot (my takes, the fluent reading as a mini
+ * player, the start button). The fluent reading's opening fades in the first
+ * time a challenge is opened.
+ */
 @Composable
 internal fun SpeechChallengeScreen(
     challengeId: String,
@@ -254,35 +271,60 @@ internal fun SpeechChallengeScreen(
     val challenges = remember { SpeechChallenges.shared(context) }
     val scripts by challenges.scripts.collectAsStateWithLifecycle()
     val standings by challenges.standings.collectAsStateWithLifecycle()
+    val seasonRecords by challenges.seasonRecords.collectAsStateWithLifecycle()
     val script = scripts.firstOrNull { it.id == challengeId }
     val standing = standings[challengeId]
     /** Retired: the board is frozen and nobody can enter. */
     val isPast = standing?.retiredAt != null
     var board by remember { mutableStateOf<List<SpeechChallenges.BoardRow>?>(null) }
-    var loadFailed by remember { mutableStateOf(false) }
-    var refreshing by remember { mutableStateOf(false) }
     var practicing by remember { mutableStateOf(false) }
     var naming by remember { mutableStateOf(false) }
     var startAfterNaming by remember { mutableStateOf(false) }
     var showingScript by remember { mutableStateOf(false) }
     var showingTakes by remember { mutableStateOf(false) }
+    var showingMedals by remember { mutableStateOf(false) }
     val takes by SpeechStore.shared(context).takes.collectAsStateWithLifecycle()
     val takeCount = takes.count { it.scriptId == challengeId }
-    // The bar floats over the board; the board scrolls clear of it.
-    var barHeightPx by remember { mutableStateOf(0) }
-    val density = androidx.compose.ui.platform.LocalDensity.current
+    val storeBest = takes.filter { it.scriptId == challengeId }.maxOfOrNull { it.metrics.overall }
+    val best = listOfNotNull(standing?.myBest, storeBest).maxOrNull()
     var menu by remember { mutableStateOf(false) }
     var confirmRetire by remember { mutableStateOf(false) }
     var confirmWithdraw by remember { mutableStateOf(false) }
+    var shown by remember { mutableStateOf(false) }
+    /** The fluent reading's opening, fading in as the page opens. */
+    val intro = remember { SpeechListenModel() }
+
+    // The page's colours: the system's own, so it follows light or dark mode.
+    val page = AppSurfaces.ground
+    val card = AppSurfaces.card
+    val dim = MaterialTheme.colorScheme.onSurfaceVariant
+    val text = MaterialTheme.colorScheme.onSurface
+    val faint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+    val cta = MaterialTheme.colorScheme.onSurface
+    val ctaText = MaterialTheme.colorScheme.surface
 
     suspend fun reload() {
-        val language = script?.language
-        val list = scope.async { if (language != null) challenges.refresh(language) }
-        val rows = challenges.board(challengeId)
-        list.await()
-        if (rows != null) { board = rows; loadFailed = false } else if (board == null) loadFailed = true
+        challenges.board(challengeId)?.let { board = it }
     }
-    LaunchedEffect(challengeId) { reload() }
+    // The boards load once the page is up.
+    LaunchedEffect(challengeId) {
+        shown = true
+        kotlinx.coroutines.delay(350)
+        reload()
+    }
+    // After the page has opened: a sound under a page still opening reads as
+    // the tap making a noise. Only the first time this challenge is opened.
+    LaunchedEffect(script?.id) {
+        val s = script ?: return@LaunchedEffect
+        if (!com.roro.futurevoice.talk.SpeechListenService.available(s)) return@LaunchedEffect
+        kotlinx.coroutines.delay(600)
+        intro.load(context, s)
+        if (!practicing && !showingScript && !showingTakes && intro.phase == SpeechListenModel.Phase.READY &&
+            IntroMemory.firstOpening(context, s.id)) intro.playIntro()
+    }
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { intro.fadeOut() } }
+    LaunchedEffect(practicing) { if (practicing) intro.fadeToPause() }
+    LaunchedEffect(showingTakes) { if (showingTakes) intro.fadeToPause() }
 
     // Nothing goes on a public board until the learner has seen the name.
     fun start() {
@@ -291,119 +333,168 @@ internal fun SpeechChallengeScreen(
         else practicing = true
     }
 
-    Scaffold(
-        containerColor = AppSurfaces.ground,
-        topBar = {
-            TopAppBar(
-                colors = AppSurfaces.topBarColors(),
-                title = { Text(script?.title.orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null) }
-                },
-                actions = {
-                    Box {
-                        IconButton(onClick = { menu = true }) {
-                            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.more))
-                        }
-                        IosDropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                            IosDropdownMenuItem(text = { Text(stringResource(R.string.name_on_the_board)) },
-                                leadingIcon = { Icon(Icons.Outlined.Badge, null) },
-                                onClick = { menu = false; startAfterNaming = false; naming = true })
-                            if (BillingGate.account?.unlimited == true && !isPast) {
-                                IosDropdownMenuItem(text = { Text(stringResource(R.string.retire_challenge), color = Color(0xFFFF3B30)) },
-                                    leadingIcon = { Icon(Icons.Outlined.Archive, null, tint = Color(0xFFFF3B30)) },
-                                    onClick = { menu = false; confirmRetire = true })
-                            }
-                        }
-                    }
-                },
-            )
-        },
-    ) { padding ->
-        Box(Modifier.fillMaxSize()) {
-        PullToRefreshBox(
-            isRefreshing = refreshing,
-            onRefresh = { scope.launch { refreshing = true; reload(); refreshing = false } },
-            modifier = Modifier.padding(top = padding.calculateTopPadding()).fillMaxSize(),
-        ) {
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp)
-                .padding(bottom = with(density) { barHeightPx.toDp() } + 24.dp)) {
-                FormSection(
-                    stringResource(R.string.leaderboard),
-                    footer = if (isPast) stringResource(R.string.this_challenge_has_ended_these_are_the_final_standings) +
-                            "\n" + stringResource(R.string.speech_keep_practicing)
-                        else stringResource(R.string.camera_on_takes_go_on_the_board_and_your_best_one_stands_the_eff4f3),
-                ) {
-                    val rows = board
-                    when {
-                        rows != null && rows.isEmpty() -> Text(stringResource(R.string.nobody_s_on_this_board_yet_be_the_first),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(16.dp))
-                        rows != null -> {
-                            var previous: Int? = null
-                            rows.forEachIndexed { i, row ->
-                                if (i > 0) FormDivider()
-                                val prev = previous
-                                if (prev != null && row.rank > prev + 1 && row.is_me) {
-                                    Box(Modifier.fillMaxWidth().padding(vertical = 6.dp), contentAlignment = Alignment.Center) {
-                                        Text("…", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                    FormDivider()
-                                }
-                                BoardRow(row)
-                                previous = row.rank
-                            }
-                        }
-                        loadFailed -> Text(stringResource(R.string.the_board_couldn_t_load_pull_to_try_again),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(16.dp))
-                        else -> Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
-                        }
-                    }
-                }
+    val arrive = androidx.compose.animation.core.animateFloatAsState(if (shown) 1f else 0f,
+        androidx.compose.animation.core.spring(dampingRatio = 0.9f, stiffness = 120f), label = "arrive").value
 
-                val best = standing?.myBest
-                val rank = standing?.myRank
-                if (best != null && rank != null) {
-                    FormSection(stringResource(R.string.you)) {
-                        LabeledRow(stringResource(R.string.best)) {
-                            Text("$best", fontWeight = FontWeight.SemiBold, color = scoreColor(best))
+    Box(Modifier.fillMaxSize().background(page)) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 120.dp)) {
+            if (script != null) {
+                // The picture across the top, edge to edge and under the
+                // status bar, on the card's ground; it bleeds into the page.
+                val art = ChallengeArt.image(context, script.id)
+                Box(Modifier.fillMaxWidth().height(480.dp).background(ChallengeArt.paper())) {
+                    if (art != null) {
+                        androidx.compose.foundation.Image(art.asImageBitmap(), null,
+                            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                            alignment = Alignment.TopCenter,
+                            modifier = Modifier.fillMaxSize().padding(top = 36.dp))
+                    }
+                    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
+                        0.56f to page.copy(alpha = 0f), 0.64f to page.copy(alpha = 0.1f), 0.73f to page.copy(alpha = 0.3f),
+                        0.82f to page.copy(alpha = 0.55f), 0.9f to page.copy(alpha = 0.8f), 0.96f to page.copy(alpha = 0.95f),
+                        1f to page)))
+                }
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    challengeCategoryLabel(standing?.category)?.let {
+                        Text(it, style = MaterialTheme.typography.bodyMedium, color = dim)
+                    }
+                    Text(script.title, style = arenaDisplay(32.sp), color = text, textAlign = TextAlign.Center,
+                        maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 20.dp))
+                    best?.let { b -> MedalTier.ofScore(b)?.let { tier ->
+                        // Tap: how medals work.
+                        Box(Modifier.padding(top = 4.dp).clip(CircleShape).clickable { showingMedals = true }) {
+                            MedalBadge(tier, "$b", 52.dp)
                         }
-                        FormDivider()
-                        LabeledRow(stringResource(R.string.place)) {
-                            Text(stringResource(R.string.lld_of_lld_8e05fc, rank, standing.entrants.coerceAtLeast(rank)))
+                    } }
+                }
+                Column(Modifier.padding(horizontal = 16.dp).padding(top = 24.dp), verticalArrangement = Arrangement.spacedBy(28.dp)) {
+                    // What it is.
+                    Column(Modifier.arrives(arrive, 0), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        val introText = standing?.introFor(appLanguageCode())
+                        if (introText != null) Text(introText, style = MaterialTheme.typography.bodyLarge, color = text)
+                        else if (script.summary.isNotEmpty()) Text(script.summary, style = MaterialTheme.typography.bodyLarge, color = text)
+                        val meta = buildList {
+                            add(lengthLabel(com.roro.futurevoice.data.SpeechLibrary.estimatedSeconds(script.body, script.language)))
+                            add(script.genre.title())
+                            standing?.attempts?.takeIf { it > 0 }?.let { add(stringResource(R.string.arena_tries, it)) }
                         }
-                        standing.myAttempts?.let { attempts ->
-                            FormDivider()
-                            // Tapping the count lists them (iOS 2026-10-16).
-                            LabeledRow(stringResource(R.string.takes),
-                                modifier = Modifier.clickable { showingTakes = true }) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("$attempts")
-                                    FormChevron()
+                        Text(meta.joinToString("  ·  "), style = MaterialTheme.typography.bodySmall, color = dim)
+                        standing?.link?.let { link ->
+                            Row(Modifier.clickable {
+                                runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(link))) }
+                            }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Icon(Icons.Outlined.SmartDisplay, null, tint = text, modifier = Modifier.size(20.dp))
+                                Text(stringResource(R.string.arena_watch_original), fontWeight = FontWeight.SemiBold, color = text)
+                            }
+                        }
+                    }
+                    // Me: my best, the next medal, my place.
+                    Column(Modifier.arrives(arrive, 1), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(card).padding(18.dp),
+                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Box(Modifier.clip(CircleShape).clickable { showingMedals = true }) {
+                                MedalBadge(best?.let { MedalTier.ofScore(it) }, best?.toString().orEmpty(), 56.dp)
+                            }
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text(if (best != null) stringResource(R.string.arena_best, best) else stringResource(R.string.arena_not_tried),
+                                    style = arenaDisplay(22.sp), color = text)
+                                Text(nextMedal(best), style = MaterialTheme.typography.bodyMedium, color = dim)
+                            }
+                            standing?.myRank?.let { rank ->
+                                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text("#$rank", style = arenaDisplay(22.sp), color = text)
+                                    Text(stringResource(R.string.arena_of, standing.entrants.takeIf { it > 0 } ?: rank),
+                                        style = MaterialTheme.typography.labelSmall, color = dim)
                                 }
                             }
                         }
-                        FormDivider()
-                        Text(stringResource(R.string.speech_remove_me), color = Color(0xFFFF3B30),
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.fillMaxWidth().clickable { confirmWithdraw = true }
-                                .padding(horizontal = 16.dp, vertical = 12.dp))
+                        // A challenge back from an earlier season keeps my score there, frozen.
+                        seasonRecords[challengeId.lowercase()]?.let { record ->
+                            Text(stringResource(R.string.arena_season_record, record.season, record.score, record.rank, record.entrants),
+                                style = MaterialTheme.typography.bodySmall, color = dim, modifier = Modifier.padding(horizontal = 18.dp))
+                        }
+                    }
+                    // The board.
+                    Column(Modifier.arrives(arrive, 3), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(stringResource(R.string.leaderboard), style = arenaDisplay(24.sp), color = text)
+                        val rows = board
+                        when {
+                            rows != null && rows.isEmpty() -> Text(stringResource(R.string.nobody_s_on_this_board_yet_be_the_first),
+                                style = MaterialTheme.typography.bodyMedium, color = dim)
+                            rows != null -> Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(card)) {
+                                rows.forEach { row -> ArenaBoardLine(row, dim) }
+                            }
+                            else -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp, color = dim)
+                            }
+                        }
+                        Text(stringResource(if (isPast) R.string.this_challenge_has_ended_these_are_the_final_standings
+                            else R.string.camera_on_takes_go_on_the_board_and_your_best_one_stands_the_eff4f3),
+                            style = MaterialTheme.typography.bodySmall, color = faint)
                     }
                 }
             }
         }
-        // The board first; the script and the way in together at the foot,
-        // floating over the board so it shows through as it scrolls under
-        // (iOS 2026-10-17, glass).
+
+        // The way in.
         if (script != null) {
-            ChallengeActionBar(script, intro = standing?.introFor(appLanguageCode()), link = standing?.link, isPast = isPast, hasBest = standing?.myBest != null,
-                takeCount = takeCount,
-                onTakes = { showingTakes = true },
-                onRead = { showingScript = true }, onStart = { start() },
-                modifier = Modifier.align(Alignment.BottomCenter)
-                    .onSizeChanged { barHeightPx = it.height })
+            Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().arrives(arrive, 4)
+                .background(Brush.verticalGradient(0f to page.copy(alpha = 0f), 0.5f to page))
+                .navigationBarsPadding().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box {
+                    Box(Modifier.size(52.dp).clip(CircleShape).background(card).clickable { showingTakes = true },
+                        contentAlignment = Alignment.Center) {
+                        Icon(Icons.Filled.History, stringResource(R.string.arena_takes), tint = text)
+                    }
+                    if (takeCount > 0) {
+                        Text("$takeCount", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = ctaText,
+                            modifier = Modifier.align(Alignment.TopEnd).background(cta, CircleShape).padding(horizontal = 5.dp, vertical = 1.dp))
+                    }
+                }
+                // A mini player: the fluent reading's progress fills a ring
+                // inside the button, and a tap opens the script with the
+                // reading going on from where the intro paused.
+                MiniReadingButton(intro, raised = card, track = MaterialTheme.colorScheme.outlineVariant) {
+                    intro.playOn()
+                    showingScript = true
+                }
+                Box(Modifier.weight(1f).height(52.dp).clip(CircleShape).background(cta).clickable { start() },
+                    contentAlignment = Alignment.Center) {
+                    Text(stringResource(when {
+                        isPast -> R.string.arena_practice
+                        best == null -> R.string.arena_take
+                        else -> R.string.arena_again
+                    }), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = ctaText)
+                }
+            }
         }
+
+        // The page draws its own back and ⋯, solid, so they read on the
+        // picture and on the page alike.
+        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            PageButton(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.arena_back), onBack)
+            Spacer(Modifier.weight(1f))
+            Box {
+                PageButton(Icons.Filled.MoreHoriz, stringResource(R.string.arena_more)) { menu = true }
+                IosDropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    IosDropdownMenuItem(text = { Text(stringResource(R.string.name_on_the_board)) },
+                        leadingIcon = { Icon(Icons.Outlined.Badge, null) },
+                        onClick = { menu = false; startAfterNaming = false; naming = true })
+                    if (standing?.myBest != null) {
+                        IosDropdownMenuItem(text = { Text(stringResource(R.string.arena_remove_me), color = Color(0xFFFF3B30)) },
+                            leadingIcon = { Icon(Icons.Outlined.RemoveCircleOutline, null, tint = Color(0xFFFF3B30)) },
+                            onClick = { menu = false; confirmWithdraw = true })
+                    }
+                    if (BillingGate.account?.unlimited == true && !isPast) {
+                        IosDropdownMenuItem(text = { Text(stringResource(R.string.retire_challenge), color = Color(0xFFFF3B30)) },
+                            leadingIcon = { Icon(Icons.Outlined.Archive, null, tint = Color(0xFFFF3B30)) },
+                            onClick = { menu = false; confirmRetire = true })
+                    }
+                }
+            }
         }
     }
 
@@ -415,8 +506,9 @@ internal fun SpeechChallengeScreen(
         })
     }
     if (showingScript && script != null) {
-        SpeechScriptSheet(script, native, onEdited = {}, onDismiss = { showingScript = false })
+        SpeechScriptSheet(script, native, onEdited = {}, onDismiss = { showingScript = false }, reading = intro)
     }
+    if (showingMedals) MedalGuideSheet(onDismiss = { showingMedals = false })
     if (showingTakes) {
         SpeechTakesPager(scriptId = challengeId, onDismiss = { showingTakes = false })
     }
@@ -434,13 +526,12 @@ internal fun SpeechChallengeScreen(
     }
     if (confirmWithdraw) {
         AlertDialog(onDismissRequest = { confirmWithdraw = false },
-            title = { Text(stringResource(R.string.speech_remove_confirm)) },
-            text = { Text(stringResource(if (isPast) R.string.speech_remove_ended else R.string.speech_remove_live)) },
+            title = { Text(stringResource(R.string.arena_remove_confirm)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmWithdraw = false
                     scope.launch { runCatching { challenges.withdraw(challengeId) }; reload() }
-                }) { Text(stringResource(R.string.speech_remove_me), color = Color(0xFFFF3B30)) }
+                }) { Text(stringResource(R.string.arena_remove_me), color = Color(0xFFFF3B30)) }
             },
             dismissButton = { TextButton(onClick = { confirmWithdraw = false }) { Text(stringResource(R.string.cancel)) } })
     }
@@ -454,6 +545,57 @@ internal fun SpeechChallengeScreen(
                 }) { Text(stringResource(R.string.retire), color = Color(0xFFFF3B30)) }
             },
             dismissButton = { TextButton(onClick = { confirmRetire = false }) { Text(stringResource(R.string.cancel)) } })
+    }
+}
+
+/** Comes in after the hero: a short slide up and a fade, one step later per section. */
+private fun Modifier.arrives(progress: Float, step: Int): Modifier {
+    val p = ((progress * 1.4f) - step * 0.07f).coerceIn(0f, 1f)
+    return this.graphicsLayer { alpha = p; translationY = (1 - p) * 26.dp.toPx() }
+}
+
+/** The next medal to win (iOS `nextMedal`). */
+@Composable
+private fun nextMedal(best: Int?): String {
+    if (best == null) return stringResource(R.string.arena_gold_at_90)
+    if (best >= 90) return stringResource(R.string.arena_gold_won)
+    val next = MedalTier.entries.firstOrNull { it.bar > best } ?: return stringResource(R.string.arena_gold_at_90)
+    return stringResource(when (next) {
+        MedalTier.BRONZE -> R.string.arena_to_bronze
+        MedalTier.SILVER -> R.string.arena_to_silver
+        MedalTier.GOLD -> R.string.arena_to_gold
+    }, next.bar - best)
+}
+
+/** A round button that belongs to the page: solid, no glass. */
+@Composable
+private fun PageButton(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, onClick: () -> Unit) {
+    Box(Modifier.size(44.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.92f)).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center) {
+        Icon(icon, label, tint = Color(0.13f, 0.12f, 0.11f), modifier = Modifier.size(20.dp))
+    }
+}
+
+/** One board line (iOS `boardLine`): the top three on medals. */
+@Composable
+private fun ArenaBoardLine(row: SpeechChallenges.BoardRow, dim: Color) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        val tier = MedalTier.ofRank(row.rank)
+        if (tier != null) MedalBadge(tier, "${row.rank}", 34.dp)
+        else Text("${row.rank}", style = MaterialTheme.typography.bodyMedium, color = dim, textAlign = TextAlign.Center,
+            modifier = Modifier.width(34.dp))
+        SpeechChallengeFace(row.face, 34.dp)
+        Text(row.display_name, fontWeight = if (row.is_me) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1,
+            overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+        // nawana's Core seat rides beside the name.
+        row.core_theme?.let { CoreCubeBadge(it) }
+        if (row.is_me) {
+            Text(stringResource(R.string.you), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold,
+                color = Color(0.86f, 0.71f, 0.4f))
+        }
+        Spacer(Modifier.weight(1f))
+        Text("${row.score}", style = arenaDisplay(20.sp))
     }
 }
 
@@ -1081,7 +1223,7 @@ private val TightText = androidx.compose.ui.text.TextStyle(
 
 /** A challenge's category key, named in the app language; an unknown key draws nothing. */
 @Composable
-private fun challengeCategoryLabel(key: String?): String? = when (key) {
+internal fun challengeCategoryLabel(key: String?): String? = when (key) {
     "show_host" -> stringResource(R.string.speech_category_show_host)
     "famous_speech" -> stringResource(R.string.speech_category_famous_speech)
     "movie_scene" -> stringResource(R.string.speech_category_movie_scene)
@@ -1095,7 +1237,7 @@ private fun challengeCategoryLabel(key: String?): String? = when (key) {
 
 /** The app language as the intro map keys it ("ko", "zh-Hant", "zh-Hans", …). */
 @Composable
-private fun appLanguageCode(): String {
+internal fun appLanguageCode(): String {
     val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
     if (locale.language != "zh") return locale.language
     return if (locale.script == "Hant" || locale.country in setOf("TW", "HK", "MO")) "zh-Hant" else "zh-Hans"

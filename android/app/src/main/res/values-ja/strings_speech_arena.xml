@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The challenge cards and page (iOS bf8c67cf). Values are iOS Localizable.xcstrings'. -->
+<resources>
+    <string name="arena_taking_part">%1$d人が挑戦中</string>
+    <string name="arena_be_first">一番乗りしよう</string>
+    <string name="arena_tries">挑戦%1$d回</string>
+    <string name="arena_watch_original">元の映像を見る</string>
+    <string name="arena_rank">順位</string>
+    <string name="arena_takes">テイク</string>
+    <string name="arena_script">原稿</string>
+    <string name="arena_practice">練習</string>
+    <string name="arena_take">挑戦</string>
+    <string name="arena_again">再挑戦</string>
+    <string name="arena_back">戻る</string>
+    <string name="arena_more">もっと見る</string>
+    <string name="arena_remove_me">このランキングから外す</string>
+    <string name="arena_remove_confirm">このランキングから外しますか？</string>
+</resources>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The challenge cards and page (iOS bf8c67cf). Values are iOS Localizable.xcstrings'. -->
+<resources>
+    <string name="arena_taking_part">%1$d명 도전 중</string>
+    <string name="arena_be_first">첫 도전자 되기</string>
+    <string name="arena_not_tried">아직 안 해봤어요</string>
+    <string name="arena_best">최고 %1$d점</string>
+    <string name="arena_of">%1$d명 중</string>
+    <string name="arena_season_record">시즌 %1$d 기록: %2$d점 · %4$d명 중 %3$d위</string>
+    <string name="arena_gold_at_90">90점이면 금메달</string>
+    <string name="arena_gold_won">금메달 땄어요</string>
+    <string name="arena_to_bronze">동메달까지 %1$d점</string>
+    <string name="arena_to_silver">은메달까지 %1$d점</string>
+    <string name="arena_to_gold">금메달까지 %1$d점</string>
+    <string name="arena_tries">%1$d번 도전</string>
+    <string name="arena_watch_original">원본 영상 보기</string>
+    <string name="arena_how_medals_work">메달 받는 법</string>
+    <string name="arena_bronze">동메달</string>
+    <string name="arena_silver">은메달</string>
+    <string name="arena_gold">금메달</string>
+    <string name="arena_medal_footer">챌린지마다 내 최고 점수로 메달이 정해져요. 점수만 넘으면 누구나 받아요.</string>
+    <string name="arena_rank">순위</string>
+    <string name="arena_rank_body">챌린지 순위표에서 최고 점수로 정해지는 내 자리예요. 메달과는 따로라서, 금메달이어도 7등일 수 있어요.</string>
+    <string name="arena_takes">테이크</string>
+    <string name="arena_script">원고</string>
+    <string name="arena_practice">연습</string>
+    <string name="arena_take">도전</string>
+    <string name="arena_again">다시 도전</string>
+    <string name="arena_back">뒤로</string>
+    <string name="arena_more">더 보기</string>
+    <string name="arena_remove_me">이 순위에서 내리기</string>
+    <string name="arena_remove_confirm">이 순위에서 내릴까요?</string>
+</resources>

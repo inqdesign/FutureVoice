@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The challenge cards and page (iOS bf8c67cf). Values are iOS Localizable.xcstrings'. -->
+<resources>
+    <string name="arena_taking_part">%1$d 人參加</string>
+    <string name="arena_be_first">搶先挑戰</string>
+    <string name="arena_tries">%1$d 次挑戰</string>
+    <string name="arena_watch_original">觀看原始影片</string>
+    <string name="arena_rank">名次</string>
+    <string name="arena_takes">版本</string>
+    <string name="arena_script">講稿</string>
+    <string name="arena_practice">練習</string>
+    <string name="arena_take">挑戰</string>
+    <string name="arena_again">再挑戰</string>
+    <string name="arena_back">返回</string>
+    <string name="arena_more">更多</string>
+    <string name="arena_remove_me">將我從此排名移除</string>
+    <string name="arena_remove_confirm">要從此排名移除嗎？</string>
+</resources>

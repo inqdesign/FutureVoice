@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The challenge cards and page (iOS bf8c67cf). Values are iOS Localizable.xcstrings'. -->
+<resources>
+    <string name="arena_taking_part">%1$d dabei</string>
+    <string name="arena_be_first">Mach den Anfang</string>
+    <string name="arena_watch_original">Original ansehen</string>
+    <string name="arena_rank">Platz</string>
+    <string name="arena_takes">Aufnahmen</string>
+    <string name="arena_script">Skript</string>
+    <string name="arena_practice">Üben</string>
+    <string name="arena_take">Los</string>
+    <string name="arena_again">Noch mal</string>
+    <string name="arena_back">Zurück</string>
+    <string name="arena_more">Mehr</string>
+    <string name="arena_remove_me">Aus dieser Rangliste entfernen</string>
+    <string name="arena_remove_confirm">Deine Punktzahl aus dieser Rangliste entfernen?</string>
+</resources>
