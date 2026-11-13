@@ -138,10 +138,14 @@ struct ConversationView: View {
     @AppStorage(SendToAnswer.key) private var sendToAnswerChoice: Bool?
     /// Send-to-answer: a pause never ends the learner's turn, their Send
     /// does. Read like `coachMode`, for the same captured-closure reason.
+    /// The pronunciation call and a tutor lesson always run on Send
+    /// (founder, 2026-11-13: the tutor should have the pronunciation call's
+    /// reset): a try there is one line to get right, and only a held turn
+    /// can be thrown away and said again.
     private var sendToAnswer: Bool {
         _ = sendToAnswerChoice
         _ = proficiencyRaw
-        return SendToAnswer.isOn || pronThisCall
+        return SendToAnswer.isOn || pronThisCall || tutorThisCall
     }
     /// Watched only to tell a live call when the rung moves (the sheet
     /// writes it) — see the `CallSettingsSheet` presentation.
@@ -3428,7 +3432,7 @@ struct ConversationView: View {
             advanceCoach(afterReply: text, turnId: id)
         }
         realtime.tutorCall = tutorWasOn || tutorThisCall
-        realtime.forceManualTurns = pronThisCall
+        realtime.forceManualTurns = pronThisCall || tutorThisCall
         realtime.callMode = pronThisCall ? "pron" : (tutorThisCall ? "tutor" : "free")
         realtime.openTalk = isFreeMode
         await realtime.connect(

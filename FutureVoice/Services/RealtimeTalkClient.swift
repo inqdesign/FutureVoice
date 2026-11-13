@@ -504,7 +504,8 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// Send-to-answer whatever the setting says — the pronunciation call
     /// (`PronunciationCall`): a learner murmuring along in the background
     /// must not become a judged take and move the call on (founder,
-    /// 2026-11-04). Set by the call screen before `connect`.
+    /// 2026-11-04) — and a tutor lesson, for its reset (2026-11-13). Set by
+    /// the call screen before `connect`, and by `setManualTurns` mid-call.
     var forceManualTurns = false
     /// What kind of call this is — "free" · "tutor" · "pron" — for the
     /// usage page's split (`StartMessage.mode`). Set before `connect`.
@@ -1036,6 +1037,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     func setManualTurns(_ on: Bool) {
         guard !isTornDown else { return }
         if !on { sendPending = false }
+        forceManualTurns = on
         sendControl(["type": "set", "manualTurns": on])
     }
 
@@ -2199,7 +2201,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         // The pronunciation call: the learner repeats the fluent self's own
         // words, which the gateway's echo checks would otherwise drop
         // (`StartMessage.repeatAfterMe`). An older gateway ignores it.
-        if forceManualTurns { payload["repeatAfterMe"] = true }
+        if callMode == "pron" { payload["repeatAfterMe"] = true }
         payload["mode"] = callMode
         if openTalk { payload["openTalk"] = true }
         // Tutor mode is counted from the start (2026-10-25): the tutor talks
