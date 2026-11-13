@@ -6,7 +6,9 @@ import Foundation
 /// assume the language writes spaces. Japanese doesn't, so a whole sentence
 /// was one "word": nothing could be highlighted, no phrase could be matched
 /// and a talk counted as one word a minute. This is the one place that knows
-/// which languages need a segmenter (`JapaneseMorph`) and which just split.
+/// which languages need a segmenter (`JapaneseMorph`, `ChineseMorph`) and
+/// which just split — and, for an unspaced one, WHICH segmenter: every
+/// caller that cuts unspaced text asks here rather than naming one.
 ///
 /// Only for text in the TARGET language — never for chrome or coaching.
 enum WordSplitter {
@@ -19,7 +21,50 @@ enum WordSplitter {
     static func words(_ text: String) -> [String] {
         spaced
             ? text.split(whereSeparator: \.isWhitespace).map(String.init)
-            : JapaneseMorph.segments(in: text)
+            : segments(text)
+    }
+
+    // MARK: - Unspaced languages
+
+    /// Chinese rather than Japanese — the two unspaced targets.
+    static var isChinese: Bool { LanguageCatalog.base(LanguageScope.active) == "zh" }
+
+    /// The segmenter's words of unspaced text, punctuation dropped.
+    static func segments(_ text: String) -> [String] {
+        isChinese ? ChineseMorph.segments(in: text) : JapaneseMorph.segments(in: text)
+    }
+
+    /// Each segment with where it sits in `text`.
+    static func segmentRanges(_ text: String) -> [(surface: String, range: Range<String.Index>)] {
+        isChinese
+            ? ChineseMorph.words(in: text).map { ($0.surface, $0.range) }
+            : JapaneseMorph.words(in: text).map { ($0.surface, $0.range) }
+    }
+
+    /// Words and the punctuation between them; concatenated, the text back.
+    static func displayPieces(_ text: String) -> [JapaneseMorph.Piece] {
+        isChinese ? ChineseMorph.displayPieces(in: text) : JapaneseMorph.displayPieces(in: text)
+    }
+
+    /// Every wordlist headword said in `text`, with its range.
+    static func headwords(in text: String) -> [(headword: String, range: Range<String.Index>)] {
+        isChinese
+            ? ChineseMorph.headwords(in: text, lexicon: CoreVocabulary.set)
+            : JapaneseMorph.headwords(in: text, lexicon: CoreVocabulary.set,
+                                      forms: JapaneseMorph.bundledForms)
+    }
+
+    /// The notebook key of every `displayPieces` piece ("" for none).
+    static func pieceKeys(in text: String) -> [String] {
+        isChinese
+            ? ChineseMorph.pieceKeys(in: text, lexicon: CoreVocabulary.set)
+            : JapaneseMorph.pieceKeys(in: text, lexicon: CoreVocabulary.set,
+                                      forms: JapaneseMorph.bundledForms)
+    }
+
+    /// A particle or filler — grammar, never a word to hint, study or credit.
+    static func isFunctionToken(_ token: String) -> Bool {
+        isChinese ? ChineseMorph.isFunctionToken(token) : JapaneseMorph.isFunctionToken(token)
     }
 
     /// `words(text).count` without building the words: this is asked of
@@ -52,7 +97,7 @@ enum WordSplitter {
         }
         var out: [String] = []
         var leading = ""
-        for piece in JapaneseMorph.displayPieces(in: text) {
+        for piece in displayPieces(text) {
             let t = piece.text.filter { !$0.isWhitespace }
             guard !t.isEmpty else { continue }
             if piece.isWord {
@@ -77,7 +122,7 @@ enum WordSplitter {
     /// One notebook entry or several? A spaced language can hold a two-word
     /// chunk the learner tapped; an unspaced one keys by segment.
     static func isSingleWord(_ text: String) -> Bool {
-        spaced ? !text.contains(" ") : JapaneseMorph.segments(in: text).count <= 1
+        spaced ? !text.contains(" ") : segments(text).count <= 1
     }
 
     /// Leading snippet for a title — the first few words, or the first

@@ -177,6 +177,10 @@ struct ScriptParagraphText: UIViewRepresentable {
                                            forms: JapaneseMorph.bundledForms)
                 .map { ($0.range, $0.headword) }
         }
+        if LanguageCatalog.base(language) == "zh" {
+            return ChineseMorph.headwords(in: text, lexicon: CoreVocabulary.set)
+                .map { ($0.range, $0.headword) }
+        }
         let tokenizer = NLTokenizer(unit: .word)
         tokenizer.string = text
         tokenizer.setLanguage(NLLanguage(rawValue: LanguageCatalog.base(language)))

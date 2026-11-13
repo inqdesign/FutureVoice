@@ -246,7 +246,7 @@ enum LearningPurposeStore {
 /// Speaking exams per target language. A language with none of its own falls
 /// back to OPIc, which is offered in most.
 enum ExamKind: String, CaseIterable, Identifiable {
-    case ielts, toefl, opic, toeicSpeaking, goethe, telc, topik, bjt, dele, siele
+    case ielts, toefl, opic, toeicSpeaking, goethe, telc, topik, bjt, dele, siele, hskk, tsc
     var id: String { rawValue }
 
     var name: String {
@@ -261,6 +261,8 @@ enum ExamKind: String, CaseIterable, Identifiable {
         case .bjt: return "BJT"
         case .dele: return "DELE"
         case .siele: return "SIELE"
+        case .hskk: return "HSKK"
+        case .tsc: return "TSC"
         }
     }
 
@@ -271,6 +273,9 @@ enum ExamKind: String, CaseIterable, Identifiable {
         case "ko": return [.topik, .opic]
         case "ja": return [.opic, .bjt]
         case "es": return [.dele, .siele, .opic]
+        // HSKK is HSK's speaking test; TSC (Test of Spoken Chinese) is the
+        // one Korean companies ask for.
+        case "zh": return [.hskk, .tsc, .opic]
         default:   return [.opic]
         }
     }
@@ -335,6 +340,14 @@ enum ExamTopics {
                     ExamTopic(title: "週末によくすること", part: "Survey"),
                     ExamTopic(title: "よく行くカフェについて", part: "Survey"),
                     ExamTopic(title: "予約が取れなかったときの対応", part: "Role-play"),
+                ]
+            case "zh":
+                return [
+                    ExamTopic(title: "介绍一下你住的房子", part: "Survey"),
+                    ExamTopic(title: "你最近一次旅行", part: "Survey"),
+                    ExamTopic(title: "你周末一般做什么？", part: "Survey"),
+                    ExamTopic(title: "你常去的一家咖啡店", part: "Survey"),
+                    ExamTopic(title: "网上买的东西坏了，打电话给商店", part: "Role-play"),
                 ]
             case "es":
                 return [
@@ -417,6 +430,25 @@ enum ExamTopics {
                 ExamTopic(title: "Llame a un compañero para cambiar el día de una reunión", part: "Tarea 3"),
                 ExamTopic(title: "Cuente una experiencia que le hizo cambiar de opinión", part: "Tarea 4"),
                 ExamTopic(title: "¿Deberían los estudiantes llevar uniforme? Dé su opinión", part: "Tarea 5"),
+            ]
+        case .hskk:
+            return [
+                ExamTopic(title: "你喜欢做什么运动？为什么？", part: "回答问题"),
+                ExamTopic(title: "说说你最好的朋友", part: "回答问题",
+                          points: ["他是谁", "你们怎么认识的", "你们常常一起做什么"]),
+                ExamTopic(title: "你觉得网上购物好不好？", part: "回答问题",
+                          points: ["好处", "坏处", "你自己的看法"]),
+                ExamTopic(title: "说说你去过的一个城市", part: "回答问题"),
+                ExamTopic(title: "你觉得孩子应该从小学外语吗？", part: "回答问题",
+                          points: ["你的看法", "理由", "例子"]),
+            ]
+        case .tsc:
+            return [
+                ExamTopic(title: "请介绍一下你自己", part: "第1部分"),
+                ExamTopic(title: "你平时怎么去公司或学校？", part: "第3部分"),
+                ExamTopic(title: "你最近看的一部电影怎么样？", part: "第4部分"),
+                ExamTopic(title: "你觉得在家工作好还是在公司工作好？", part: "第5部分"),
+                ExamTopic(title: "朋友约你周末见面，可是你有事，请你给他打电话说明情况", part: "第6部分"),
             ]
         }
     }

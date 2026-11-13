@@ -955,8 +955,13 @@ struct WordCard: View {
     /// word that has several: からい・つらい), else the system tokenizer.
     private var subtitle: String {
         let pos = entry?.pos ?? nlPos
-        guard appState.targetLanguage == "ja", let reading = JapaneseMorph.reading(ofHeadword: word)
-        else { return pos ?? " " }
+        let reading: String? = switch appState.targetLanguage {
+        case "ja": JapaneseMorph.reading(ofHeadword: word)
+        // Pinyin under a Chinese headword, for the same reason.
+        case "zh": ChineseMorph.reading(ofHeadword: word)
+        default: nil
+        }
+        guard let reading else { return pos ?? " " }
         return [reading, pos].compactMap { $0 }.joined(separator: " · ")
     }
 

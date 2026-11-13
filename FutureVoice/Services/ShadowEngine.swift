@@ -48,7 +48,7 @@ enum ShadowEngine {
         // Japanese compares by sound: the transcriber picks the script
         // (ナワナ / なわな), so a kana token is keyed in hiragana — the
         // steps still carry what each side wrote.
-        let key: (String) -> String = language.hasPrefix("ja") ? JapaneseMorph.soundSpelling : { $0 }
+        let key: (String) -> String = soundKey(for: language)
         let (matches, steps) = align(targetTokens, learnerTokens, key: key)
         let denom = max(targetTokens.count, learnerTokens.count)
         let raw = style == .syllable
@@ -80,8 +80,7 @@ enum ShadowEngine {
     /// mistake the screen showed and the number forgave, where English
     /// loses ~10 for the same slip. Extra speech is converted to words at the
     /// line's own characters per word, so the denominator is English's
-    /// max(target, learner). Chinese (not selectable) has no segmenter here
-    /// and stays character-scored.
+    /// max(target, learner). Chinese words come from `ChineseMorph`.
     private static func wordCreditRatio(target: String, language: String, steps: [DiffStep],
                                         targetSyllables: Int, learnerSyllables: Int) -> Double {
         let words: [String]
@@ -89,6 +88,8 @@ enum ShadowEngine {
             words = target.split(whereSeparator: \.isWhitespace).map(String.init)
         } else if language.hasPrefix("ja") {
             words = JapaneseMorph.segments(in: target)
+        } else if language.hasPrefix("zh") {
+            words = ChineseMorph.segments(in: target)
         } else {
             words = []
         }
@@ -208,11 +209,20 @@ enum ShadowEngine {
     /// three, inside the last eight heard — the recognizer spaces those its
     /// own way). Digits are spelled out first, as the diff does. False for a
     /// line too short to tell its end from its middle.
+    /// How two tokens are compared: Japanese by sound (the transcriber picks
+    /// the script, ナワナ / なわな, so kana is keyed in hiragana), Chinese by
+    /// Simplified character, everything else as written.
+    private static func soundKey(for language: String) -> (String) -> String {
+        if language.hasPrefix("ja") { return JapaneseMorph.soundSpelling }
+        if language.hasPrefix("zh") { return ChineseMorph.simplified }
+        return { $0 }
+    }
+
     static func heardLineEnd(target: String, heard: String, language: String) -> Bool {
         let style = LanguageCatalog.tokenStyle(language)
         let t = tokenize(expandForDiff(target, language: language), style: .word)
         let h = heardTokens(heard, target: target, targetTokens: t, language: language, style: .word)
-        let key: (String) -> String = language.hasPrefix("ja") ? JapaneseMorph.soundSpelling : { $0 }
+        let key: (String) -> String = soundKey(for: language)
         switch style {
         case .word:
             guard t.count >= 2, h.count >= 2 else { return false }
@@ -558,6 +568,9 @@ enum ShadowEngine {
         // ナワナ. Cut into kana on both sides so the morae line up; the
         // hiragana/katakana difference is left to `analyze`'s key.
         if language.hasPrefix("ja") { return JapaneseMorph.katakana(fromLatinIn: out) }
+        // Chinese: one script on both sides — the recognizer may write 說
+        // where the line has 说, which is not a word the learner got wrong.
+        if language.hasPrefix("zh") { return ChineseMorph.simplified(out) }
 
         guard language.hasPrefix("en") else { return out }
         // Irregulars first, then generic suffixes. "'s"/"'d" are ambiguous
@@ -635,6 +648,16 @@ enum ShadowEngine {
                 "\(g[1]) \(point) " + g[2].map(String.init).joined(separator: " ")
             }
         }
+        if code == "zh", hasDigit {
+            // Mandarin readers and recognizers write numbers either way (3年 /
+            // 三年); spell both sides out so the character diff lines up.
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .spellOut
+            formatter.locale = Locale(identifier: "zh-Hans")
+            out = replace(out, #"\d{1,9}"#) { g in
+                Int(g[0]).flatMap { formatter.string(from: NSNumber(value: $0)) }
+            }
+        }
         guard code == "en" else { return out }
 
         if hasDigit {
@@ -684,10 +707,13 @@ enum ShadowEngine {
                "₩": ("원", "원"), "¥": ("엔", "엔")],
         "ja": ["$": ("ドル", "ドル"), "€": ("ユーロ", "ユーロ"), "£": ("ポンド", "ポンド"),
                "₩": ("ウォン", "ウォン"), "¥": ("円", "円")],
+        "zh": ["$": ("美元", "美元"), "€": ("欧元", "欧元"), "£": ("英镑", "英镑"),
+               "₩": ("韩元", "韩元"), "¥": ("元", "元")],
     ]
     private static let percentWord = ["en": "percent", "de": "prozent", "es": "por ciento",
                                       "ko": "퍼센트", "ja": "パーセント"]
-    private static let decimalWord = ["en": "point", "de": "komma", "es": "coma", "ko": "점", "ja": "点"]
+    private static let decimalWord = ["en": "point", "de": "komma", "es": "coma", "ko": "점", "ja": "点",
+                                      "zh": "点"]
     private static let ordinalWord = ["one": "first", "two": "second", "three": "third", "five": "fifth",
                                       "eight": "eighth", "nine": "ninth", "twelve": "twelfth"]
 

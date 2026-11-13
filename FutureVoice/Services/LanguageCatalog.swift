@@ -108,7 +108,11 @@ enum LanguageCatalog {
         // headwords, grades A/B/C) → A/B/C split by in-grade frequency rank
         // into a1/a2, b1/b2, c1/c2.
         Language(code: "ko", sttLocale: "ko-KR", tokenStyle: .syllable, wordlistResource: "cefr_words_ko"),
-        Language(code: "zh", sttLocale: "zh-CN", tokenStyle: .syllable, wordlistResource: nil),
+        // Simplified Chinese wordlist (2026-11-13): HSK 3.0 (MIT dataset,
+        // pinyin from CC-CEDICT) mapped 1→A1 … 7–9→C1, see
+        // scripts/build-zh-wordlist.py. Speech reaches it through
+        // `ChineseMorph` (no spaces, no inflection, Traditional folded).
+        Language(code: "zh", sttLocale: "zh-CN", tokenStyle: .syllable, wordlistResource: "cefr_words_zh"),
     ]
 
     /// Languages offered as the learner's NATIVE language — what every
@@ -232,6 +236,9 @@ enum LanguageCatalog {
         switch Locale(identifier: code).language.script?.identifier {
         case "Hant" where base(code) == "zh": return "Traditional Chinese"
         case "Hans" where base(code) == "zh": return "Simplified Chinese"
+        // The Chinese TARGET is a bare "zh" and is taught in Simplified; a
+        // prompt told only "Chinese" may write either script.
+        case nil where code == "zh": return "Simplified Chinese"
         default:
             return Locale(identifier: "en").localizedString(forLanguageCode: code)?.capitalized
                 ?? code.uppercased()
@@ -359,6 +366,12 @@ enum LanguageCatalog {
         .a1: 5, .a2: 4, .b1: 3, .b2: 2, .c1: 1
     ]
 
+    /// HSK 3.0 equivalents — the inverse of scripts/build-zh-wordlist.py's
+    /// mapping (1 → A1, 2–3 → A2, 4 → B1, 5–6 → B2, 7–9 → C1).
+    private static let hskByCEFR: [CEFRLevel: String] = [
+        .a1: "1", .a2: "2–3", .b1: "4", .b2: "5–6", .c1: "7–9"
+    ]
+
     /// How a CEFR level should read for a given target language. Internals
     /// stay CEFR everywhere; Korean learners think in TOPIK and Japanese
     /// learners in JLPT, so those labels carry the equivalence alongside.
@@ -371,6 +384,9 @@ enum LanguageCatalog {
         case "ja":
             guard let jlpt = jlptByCEFR[level] else { return cefr }
             return "\(cefr) · JLPT N\(jlpt)"
+        case "zh":
+            guard let hsk = hskByCEFR[level] else { return cefr }
+            return "\(cefr) · HSK \(hsk)"
         default:
             return cefr
         }

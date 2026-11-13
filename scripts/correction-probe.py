@@ -24,7 +24,7 @@ import json, os, re, sys, time, urllib.request, concurrent.futures as cf
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "FutureVoice/Services/ConversationEngine.swift")
 src = open(SRC).read()
-NAMES = {"ko": "Korean", "ja": "Japanese", "de": "German", "en": "English", "es": "Spanish", "fr": "French"}
+NAMES = {"ko": "Korean", "ja": "Japanese", "de": "German", "en": "English", "es": "Spanish", "fr": "French", "zh": "Simplified Chinese"}
 lang = sys.argv[1]
 target_name = NAMES[lang]
 

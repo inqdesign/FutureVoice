@@ -97,6 +97,7 @@ enum PronunciationCourse {
         let consonants = explain("Consonants")
         let vowels = explain("Vowels")
         let flow = explain("Endings and flow")
+        let tones = explain("Tones")
         switch LanguageCatalog.base(language) {
         case "en":
             return [
@@ -237,6 +238,50 @@ enum PronunciationCourse {
                 Chapter(id: "es.vow", icon: "waveform", title: vowels, topics: [
                     Topic(id: "es.vowels", symbol: "a e i o u", examples: "casa · mesa · libro · todo",
                           phonemes: [], english: "the five pure vowels (casa, mesa, todo): short and clean, never glided like English 'o-u' or 'e-i'"),
+                ]),
+            ]
+        case "zh":
+            // zh-CN scores a syllable WITH its tone ("mai 3"), and a wrong
+            // tone only pulls it to the 60s–90s (measured 2026-11-13 with
+            // macOS voices), so tones are judged on the focus words' bar.
+            return [
+                Chapter(id: "zh.tone", icon: "waveform.path", title: tones, topics: [
+                    Topic(id: "zh.t1", symbol: "ā", examples: "妈妈 · 喝 · 书 · 星期天",
+                          phonemes: [], english: "the first tone (mā, shū): high and level, held flat like a note — it does not fall at the end"),
+                    Topic(id: "zh.t2", symbol: "á", examples: "来 · 学 · 茶 · 中国",
+                          phonemes: [], english: "the second tone (lái, xué): rising from the middle to the top, like a surprised 'what?'"),
+                    Topic(id: "zh.t3", symbol: "ǎ", examples: "我 · 买 · 好 · 喜欢",
+                          phonemes: [], english: "the third tone (wǒ, mǎi): low; in speech it mostly stays low and does not rise again unless it ends a phrase"),
+                    Topic(id: "zh.t4", symbol: "à", examples: "去 · 是 · 再见 · 谢谢",
+                          phonemes: [], english: "the fourth tone (qù, shì): falling sharply from the top, short and firm"),
+                    Topic(id: "zh.sandhi", symbol: "ǎ → á", examples: "你好 · 可以 · 很好 · 洗澡",
+                          phonemes: [], english: "two third tones in a row (nǐ hǎo): the first becomes a rising second tone, ní hǎo"),
+                    Topic(id: "zh.yibu", symbol: "一 · 不", examples: "一起 · 一样 · 不是 · 不对",
+                          phonemes: [], english: "一 and 不 change tone: 不 is bú before a fourth tone (bú shì), 一 is yí before a fourth tone (yíyàng) and yì before the others (yìqǐ)"),
+                    Topic(id: "zh.neutral", symbol: "ma", examples: "妈妈 · 朋友 · 东西 · 你们",
+                          phonemes: [], english: "the neutral tone (māma, péngyou): the second syllable short and light, with no tone of its own"),
+                ]),
+                Chapter(id: "zh.cons", icon: "mouth.fill", title: consonants, topics: [
+                    Topic(id: "zh.retro", symbol: "zh ch sh", examples: "知道 · 吃 · 是 · 老师",
+                          phonemes: [], english: "zh, ch, sh (zhīdào, chī, shì): tongue tip curled back toward the roof of the mouth — not z, c, s"),
+                    Topic(id: "zh.flat", symbol: "z c s", examples: "在 · 菜 · 四 · 自己",
+                          phonemes: [], english: "z, c, s (zài, cài, sì): tongue tip flat behind the bottom teeth; c is 'ts' with a puff of air"),
+                    Topic(id: "zh.jqx", symbol: "j q x", examples: "家 · 去 · 谢谢 · 学校",
+                          phonemes: [], english: "j, q, x (jiā, qù, xièxie): tongue flat against the front of the palate, lips spread — not English j/ch/sh"),
+                    Topic(id: "zh.r", symbol: "r", examples: "人 · 热 · 日本 · 认识",
+                          phonemes: [], english: "the Chinese r (rén, rè): like sh with voice, the tongue curled back — not an English r and not l"),
+                    Topic(id: "zh.asp", symbol: "p t k", examples: "朋友 · 他 · 可以 · 怕",
+                          phonemes: [], english: "aspirated p, t, k, q, ch, c (péngyou, tā, kěyǐ): a strong puff of air; b, d, g have none (bù vs pù)"),
+                ]),
+                Chapter(id: "zh.vow", icon: "waveform", title: vowels, topics: [
+                    Topic(id: "zh.u", symbol: "ü", examples: "绿 · 去 · 鱼 · 女",
+                          phonemes: [], english: "ü (lǜ, nǚ, and the u in qù, yú): say 'ee' with the lips rounded tight"),
+                    Topic(id: "zh.e", symbol: "e", examples: "饿 · 喝 · 哥哥 · 车",
+                          phonemes: [], english: "e (è, hē): from the back of the mouth, lips not rounded — between 'uh' and 'o'"),
+                    Topic(id: "zh.i", symbol: "-i", examples: "是 · 四 · 吃 · 字",
+                          phonemes: [], english: "the i after zh/ch/sh/r and z/c/s (shì, sì): a buzzing continuation of the consonant, never 'ee'"),
+                    Topic(id: "zh.n", symbol: "-n · -ng", examples: "人 · 能 · 看 · 忙",
+                          phonemes: [], english: "-n vs -ng (rén/néng, kàn/máng): -n ends at the teeth, -ng at the back of the mouth"),
                 ]),
             ]
         default:

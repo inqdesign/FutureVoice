@@ -327,7 +327,7 @@ enum PronunciationAssessor {
     /// Every target language the app ships has a GA Azure locale.
     static func supports(_ language: String) -> Bool {
         let code = LanguageCatalog.language(language)?.code ?? language
-        return ["en", "de", "ja", "ko", "es"].contains(code)
+        return ["en", "de", "ja", "ko", "es", "zh"].contains(code)
     }
 
     // MARK: - Placing the verdict on a target line

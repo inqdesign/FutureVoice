@@ -473,7 +473,7 @@ enum CarryoverDetector {
     private static func tokens(_ text: String) -> [String] {
         WordSplitter.spaced
             ? normalized(text).split(separator: " ").map(String.init)
-            : JapaneseMorph.segments(in: text).map(normalized).filter { !$0.isEmpty }
+            : WordSplitter.segments(text).map(normalized).filter { !$0.isEmpty }
     }
 
     /// Used ONLY to judge whether an item is too generic to be worth
@@ -484,7 +484,7 @@ enum CarryoverDetector {
     }
 
     private static func isFiller(_ token: String) -> Bool {
-        WordSplitter.spaced ? filler.contains(token) : JapaneseMorph.isFunctionToken(token)
+        WordSplitter.spaced ? filler.contains(token) : WordSplitter.isFunctionToken(token)
     }
 
     /// Grammatical filler — words whose presence says nothing about whether

@@ -1263,8 +1263,7 @@ struct TalkTranscriptView: View {
             for turn in session.turns where turn.role == .fluentSelf {
                 keys[turn.id] = WordSplitter.spaced
                     ? turn.transcript.split(separator: " ").map { VocabStore.lookupKey(for: String($0)) }
-                    : JapaneseMorph.pieceKeys(in: turn.transcript, lexicon: CoreVocabulary.set,
-                                              forms: JapaneseMorph.bundledForms)
+                    : WordSplitter.pieceKeys(in: turn.transcript)
             }
             turnTokenKeys = keys
         }
@@ -1483,7 +1482,7 @@ private struct TranscriptRow: View {
     private var displayPieces: [JapaneseMorph.Piece] {
         WordSplitter.spaced
             ? turn.transcript.split(separator: " ").map { JapaneseMorph.Piece(text: String($0), isWord: true) }
-            : JapaneseMorph.displayPieces(in: turn.transcript)
+            : WordSplitter.displayPieces(turn.transcript)
     }
 
     /// Speaker separation comes from `DialogueLine` — the same component the

@@ -29,6 +29,9 @@ enum SpeechLibrary {
         switch LanguageCatalog.base(language) {
         case "ko": return 263...307
         case "ja": return 280...320
+        // Mandarin, characters a minute: a clear presentation pace, below a
+        // news anchor's ~280.
+        case "zh": return 230...260
         case "de": return 114...131
         case "fr", "es", "it", "pt": return 140...160
         default: return 130...150
@@ -79,6 +82,8 @@ enum SpeechLibrary {
         case "de": return ["äh", "ähm", "öh", "hm", "hmm"]
         case "fr": return ["euh", "heu", "bah"]
         case "es": return ["eh", "em", "este"]
+        // 那个 / 就是 are fillers in speech and words in a script; left out.
+        case "zh": return ["嗯", "呃", "额", "唔"]
         default: return ["um", "uh", "er", "erm", "uhm", "hmm", "mm"]
         }
     }
@@ -113,6 +118,7 @@ enum SpeechLibrary {
         case "ja": suffix = "000000000003"
         case "de": suffix = "000000000004"
         case "es": suffix = "000000000009"
+        case "zh": suffix = "00000000000b"
         default:   suffix = "000000000001"
         }
         return UUID(uuidString: "5BEEC000-0000-4000-8000-\(suffix)")!
@@ -130,6 +136,7 @@ enum SpeechLibrary {
         "ja": "声に出して話そう",
         "de": "Sprecht es laut aus",
         "es": "¿Por qué practicar en voz alta?",
+        "zh": "为什么要大声练？",
     ]
 
     private static let builtInBodies: [String: String] = [
@@ -187,6 +194,17 @@ enum SpeechLibrary {
         Y si te grabas, notas cosas que de otra forma nunca descubrirías: lo rápido que hablas de verdad, cuántas veces dices «eh» o «mmm», y si la voz se te apaga al final de las frases.
 
         Las presentaciones, las entrevistas, incluso una primera conversación con alguien nuevo: todo se vuelve más fácil con práctica. ¿Y el minuto que acabas de pasar leyendo esto en voz alta? Esa fue tu primera repetición.
+        """,
+        "zh": """
+        你有没有过这样的经历？一句话在脑子里明明想得好好的，一说出口就乱了。
+
+        说话是一种技能，不只是知识。单词和语法你都懂，可是如果你的嘴从来没有真正把这句话说过一遍，到了关键时刻，它就会卡住。所以，练习一定要出声。
+
+        大声说出来，也更容易记住。有研究发现，我们对自己说过的话，比只看过的内容记得更牢。
+
+        再给自己录个音听听，你会发现很多平时注意不到的东西：自己说话到底有多快，“嗯”“呃”说了多少次，一句话说到最后，声音是不是越来越小。
+
+        做报告、参加面试，哪怕是第一次跟陌生人聊天，练得越多就越轻松。你刚才大声读完这段话的这一分钟，就是你的第一次练习。
         """,
     ]
 }

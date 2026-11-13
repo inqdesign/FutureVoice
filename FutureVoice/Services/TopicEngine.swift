@@ -625,6 +625,18 @@ private struct FallbackText {
             catchUpBlurb: "Empieza por lo que te ronda la cabeza últimamente.",
             onYourMind: "Algo que te preocupa y que hace tiempo quieres comentar",
             onYourMindBlurb: "Elige algo real sobre lo que de verdad quieras su opinión."),
+        "zh": FallbackText(
+            yourCity: "你住的城市",
+            weekCatchUp: "聊聊近况：朋友问你这周过得怎么样",
+            weekCatchUpBlurb: "别说客套话，从你这周真正做了什么说起。",
+            explainWorkFormat: "跟在%@刚认识的人说说你是做什么的",
+            explainWorkBlurb: "对方很好奇。别用专业术语，说说跟人有关的那部分。",
+            smallProblem: "一个得客气地提出来的小问题",
+            smallProblemBlurb: "工作上或者小区里让你有点烦的一件事。",
+            catchUpWithFormat: "跟%@简单聊聊近况",
+            catchUpBlurb: "从最近心里一直想着的事说起。",
+            onYourMind: "一件一直想找人聊聊的心事",
+            onYourMindBlurb: "挑一件真实的事，是你真的想听听对方看法的。"),
         "ja": FallbackText(
             yourCity: "住んでいる街",
             weekCatchUp: "近況を話す。友達に今週どうだったか聞かれる",

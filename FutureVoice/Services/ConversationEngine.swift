@@ -1786,7 +1786,7 @@ enum ConversationEngine {
         // (reported 2026-10-17 from a weekly test).
         if " \(hay) ".contains(" \(needle) ") { return true }
         let squeezedNeedle = needle.replacingOccurrences(of: " ", with: "")
-        if ["ko", "ja"].contains(LanguageScope.active), !squeezedNeedle.isEmpty,
+        if ["ko", "ja", "zh"].contains(LanguageScope.active), !squeezedNeedle.isEmpty,
            hay.replacingOccurrences(of: " ", with: "").contains(squeezedNeedle) { return true }
         let words = Set(needle.split(separator: " ").map(String.init))
         guard words.count >= 3 else { return false }
@@ -1818,6 +1818,12 @@ enum ConversationEngine {
             // does. Any change of sound survives.
             let left = JapaneseMorph.reading(of: a)
             return !left.isEmpty && left == JapaneseMorph.reading(of: b)
+        }
+        if LanguageScope.active == "zh" {
+            // Same reason: the transcriber picks the characters (說 / 说,
+            // 在 / 再 for the same zài). Compared by pinyin with tones.
+            let left = ChineseMorph.reading(of: a)
+            return !left.isEmpty && left == ChineseMorph.reading(of: b)
         }
         let left = comparable(a)
         return !left.isEmpty && left == comparable(b)
@@ -1983,16 +1989,30 @@ enum ConversationEngine {
             + "\n  the fluent version."
     }
 
-    /// Japanese-only line for both correction prompts: the script is the
-    /// transcriber's. Empty for every other target, so their prompts are
+    /// Japanese and Chinese line for both correction prompts: the script is
+    /// the transcriber's. Empty for every other target, so their prompts are
     /// byte-identical to before.
     static func scriptGuard(_ targetLanguage: String) -> String {
-        guard LanguageCatalog.language(targetLanguage)?.code == "ja" else { return "" }
-        return "\n- ASR SCRIPT GUARD: the recognizer, not the learner, decides kanji"
-            + "\n  or kana and which kanji (分かる / わかる, 下さい / ください,"
-            + "\n  綺麗 / きれい). A suggestion whose only change is how a word is"
-            + "\n  WRITTEN corrects nothing they said. If that is the only change you"
-            + "\n  would make, the line was fine: return null."
+        let base = LanguageCatalog.language(targetLanguage)?.code ?? ""
+        guard base == "ja" || base == "zh" else { return "" }
+        var text = ""
+        if base == "ja" {
+            text = "\n- ASR SCRIPT GUARD: the recognizer, not the learner, decides kanji"
+                + "\n  or kana and which kanji (分かる / わかる, 下さい / ください,"
+                + "\n  綺麗 / きれい). A suggestion whose only change is how a word is"
+                + "\n  WRITTEN corrects nothing they said. If that is the only change you"
+                + "\n  would make, the line was fine: return null."
+        }
+        if base == "zh" {
+            text = "\n- ASR CHARACTER GUARD: the recognizer, not the learner, picks the"
+                + "\n  characters for what it heard: Simplified or Traditional (说 / 說),"
+                + "\n  and which of two words that SOUND the same (在 / 再, 的 / 得 / 地,"
+                + "\n  他 / 她). A suggestion whose only change is a character that is"
+                + "\n  pronounced the same corrects nothing they said. If that is the only"
+                + "\n  change you would make, the line was fine: return null. Write every"
+                + "\n  suggestion in Simplified characters."
+        }
+        return text
     }
 
     /// For a target written without spaces, "multi-word" needs saying in its

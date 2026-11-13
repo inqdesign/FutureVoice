@@ -1503,7 +1503,17 @@ struct VoicePreset: Hashable, Identifiable {
             "FF59babHL8N8gfTgtBMT": "727f663b-0e90-4031-90f2-558b7334425b",  // Carmen (F)
             "L0Dsvb3SLTyegXwtm47J": "e9f0368b-3662-4a01-b037-e13ca5203c74",  // Javier (M)
         ]
-        return ["en": english, "de": german, "ko": korean, "ja": japanese, "es": spanish]
+        // Chinese (2026-11-13): the four Mandarin voices Find people already
+        // casts for zh-Hans profiles (`ProfileVoice`), slot for slot by
+        // gender. Not yet listened to as scene partners.
+        let chinese = [
+            "NDTYOmYEjbDIVCKB35i3": "6eb8965c-e295-47bd-a9e4-3eeebb3abcff",  // Jing (F)
+            "UgBBYS2sOqTuMpoF3BR0": "16212f18-4955-4be9-a6cd-2196ce2c11d1",  // Hao (M)
+            "FF59babHL8N8gfTgtBMT": "bf32f849-7bc9-4b91-8c62-954588efcc30",  // Lan (F)
+            "L0Dsvb3SLTyegXwtm47J": "653b9445-ae0c-4312-a3ce-375504cff31e",  // Liu (M)
+        ]
+        return ["en": english, "de": german, "ko": korean, "ja": japanese, "es": spanish,
+                "zh": chinese]
     }()
 
     /// What the slots spoke as in Korean and Japanese from 2026-09-28 until
@@ -1554,6 +1564,8 @@ struct VoicePreset: Hashable, Identifiable {
                "FF59babHL8N8gfTgtBMT": "陽菜", "L0Dsvb3SLTyegXwtm47J": "健太"],
         "es": ["NDTYOmYEjbDIVCKB35i3": "Carolina", "UgBBYS2sOqTuMpoF3BR0": "Jorge",
                "FF59babHL8N8gfTgtBMT": "Carmen", "L0Dsvb3SLTyegXwtm47J": "Javier"],
+        "zh": ["NDTYOmYEjbDIVCKB35i3": "李静", "UgBBYS2sOqTuMpoF3BR0": "张浩",
+               "FF59babHL8N8gfTgtBMT": "林兰", "L0Dsvb3SLTyegXwtm47J": "刘洋"],
     ]
 
     func name(in language: String) -> String {

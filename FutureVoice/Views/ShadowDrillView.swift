@@ -1277,7 +1277,7 @@ struct ShadowDrillView: View {
         // Japanese words are segments; a particle on its own is no hint.
         let words = WordSplitter.spaced
             ? target.components(separatedBy: .whitespacesAndNewlines)
-            : JapaneseMorph.segments(in: target).filter { !JapaneseMorph.isFunctionToken($0) }
+            : WordSplitter.segments(target).filter { !WordSplitter.isFunctionToken($0) }
         for word in words {
             let w = word.trimmingCharacters(in: .punctuationCharacters)
             guard w.count > 1, seen.insert(w.lowercased()).inserted else { continue }

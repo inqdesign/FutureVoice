@@ -2792,10 +2792,10 @@ struct ConversationView: View {
     nonisolated private static func stitchUnspaced(_ text: String, _ piece: String) -> (String, Int) {
         let minEchoSegments = 6
         let maxEchoSegments = 120
-        let pieceTokens = JapaneseMorph.words(in: piece)
+        let pieceTokens = WordSplitter.segmentRanges(piece)
         guard !pieceTokens.isEmpty else { return (text, 0) }
         guard !text.isEmpty else { return (piece, 0) }
-        let prev = JapaneseMorph.segments(in: text)
+        let prev = WordSplitter.segments(text)
         let cur = pieceTokens.map(\.surface)
         var drop = 0
         let limit = min(prev.count, cur.count, maxEchoSegments)

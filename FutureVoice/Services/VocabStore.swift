@@ -720,9 +720,10 @@ final class VocabStore: ObservableObject {
     /// lexicon hits, because a dictionary form the wordlist can't confirm is
     /// a guess rather than a word to track. Japanese the same, one reason
     /// further: NLTagger has no part of speech for it, so the first filter
-    /// above cannot even be asked.
+    /// above cannot even be asked. Chinese is held to the same line for now:
+    /// a segment off the HSK list is as likely a mis-cut as a word.
     nonisolated static func offListContentWords(in texts: [String]) -> [String: Int] {
-        guard !Self.matchesKorean, !Self.matchesJapanese else { return [:] }
+        guard !Self.matchesKorean, !Self.matchesJapanese, !Self.matchesChinese else { return [:] }
         if Self.matchesSpanish { return spanishOffListContentWords(in: texts) }
         let language = Self.taggerLanguage
         let content: Set<String> = [
@@ -825,6 +826,11 @@ final class VocabStore: ObservableObject {
             return JapaneseMorph.headwords(in: w, lexicon: CoreVocabulary.set,
                                            forms: JapaneseMorph.bundledForms).first?.headword ?? w
         }
+        if Self.matchesChinese {
+            // A Chinese word is its own dictionary form; only the script
+            // (說 → 说) and the erhua (一点 → 一点儿) can differ.
+            return ChineseMorph.headword(of: w, lexicon: CoreVocabulary.set) ?? ChineseMorph.simplified(w)
+        }
         if Self.matchesSpanish {
             // Same rule as the tagger path below, from the bundled table.
             let lemma = SpanishMorph.lemma(of: w)
@@ -869,6 +875,12 @@ final class VocabStore: ObservableObject {
         LanguageCatalog.language(LanguageScope.active)?.code == "ja"
     }
 
+    /// Chinese: no spaces, no inflection — `ChineseMorph` segments and the
+    /// list confirms.
+    nonisolated private static var matchesChinese: Bool {
+        LanguageCatalog.language(LanguageScope.active)?.code == "zh"
+    }
+
     /// Spanish: iOS has no Spanish lemma model, so `SpanishMorph`'s table
     /// stands in for the tagger.
     nonisolated private static var matchesSpanish: Bool {
@@ -892,6 +904,16 @@ final class VocabStore: ObservableObject {
     nonisolated static func lemmas(in texts: [String]) -> Set<String> {
         if Self.matchesKorean { return koreanLemmas(in: texts) }
         if Self.matchesJapanese { return japaneseLemmas(in: texts) }
+        if Self.matchesChinese {
+            // Lexicon hits only, like Japanese and Korean.
+            var out = Set<String>()
+            for text in texts {
+                for hit in ChineseMorph.headwords(in: text, lexicon: CoreVocabulary.set) {
+                    out.insert(hit.headword)
+                }
+            }
+            return out
+        }
         if Self.matchesSpanish { return spanishLemmas(in: texts) }
         let language = Self.taggerLanguage
         var out = Set<String>()

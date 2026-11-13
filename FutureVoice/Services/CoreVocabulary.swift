@@ -129,6 +129,10 @@ enum CoreVocabulary {
                                                      forms: JapaneseMorph.bundledForms).first?.headword
             else { return nil }
             return level(of: head)
+        case "zh":
+            guard let head = ChineseMorph.headwords(in: token, lexicon: set).first?.headword
+            else { return nil }
+            return level(of: head)
         case "es":
             // No lemma model on iOS — the bundled form table instead.
             return level(of: SpanishMorph.lemma(of: token))

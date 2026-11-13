@@ -23,7 +23,7 @@ final class ConversationPromptDumpTests: XCTestCase {
         defer { defaults.set(savedAccent, forKey: VoiceAccentCatalog.storedAccentKey) }
         let url = URL(fileURLWithPath: dir, isDirectory: true)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
-        for lang in ["en", "ko", "ja", "de", "es"] {
+        for lang in ["en", "ko", "ja", "de", "es", "zh"] {
             for level in [CEFRLevel.a1, .a2, .b1] {
                 for first in [false, true] {
                     let prompt = ConversationEngine.conversationSystemPrompt(

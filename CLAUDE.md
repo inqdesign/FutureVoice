@@ -2744,6 +2744,47 @@ and hidden for want of a wordlist. Two facts shaped the rest:
   and `…00a` (ageing), `20261015160000`.
 - Tests: `SpanishTargetTests`.
 
+## Chinese as a TARGET language (2026-11-13)
+
+Simplified only (founder: Korean learners study 간체 with pinyin; Traditional
+is TOCFL/Taiwan). The target code is a bare `zh`; `englishName("zh")` is
+"Simplified Chinese" so no prompt writes Traditional.
+
+- **The pool** (`cefr_words_zh.tsv`, `scripts/build-zh-wordlist.py`): HSK 3.0
+  (GF0025-2021) via drkameleon/complete-hsk-vocabulary (MIT), pinyin from
+  CC-CEDICT as the third column (surname/variant readings dropped, two at
+  most), never CEDICT's glosses. 1 → A1, 2–3 → A2, 4 → B1, 5–6 → B2, 7–9 → C1
+  (HSK's own elementary/intermediate/advanced = CEFR A/B/C), C2 empty.
+  Content words only: pronouns (我们, 怎么样), particles (的 了 吗) and bare
+  numerals are left out. `zh_forms.tsv` maps an erhua-less spelling onto the
+  headword (一点 → 一点儿). Level labels read "B1 · HSK 4".
+- **`ChineseMorph`**: `CFStringTokenizer` (zh-Hans) cuts words the way HSK
+  lists them and returns tone-marked pinyin. Text is folded to Simplified
+  first (ICU Hant-Hans, one UTF-16 unit per character, so ranges map back);
+  the tokenizer reads Traditional one character at a time otherwise. No
+  inflection, so a word is its headword; up to three tokens are joined when
+  the list has the compound. `offListContentWords` is empty, like ja/ko.
+- **`WordSplitter` is the only door** for unspaced text now (`segments`,
+  `segmentRanges`, `displayPieces`, `headwords`, `pieceKeys`,
+  `isFunctionToken`); callers no longer name `JapaneseMorph`.
+- **Characters are the transcriber's**: `saysTheSameThing` compares pinyin
+  WITH tones (說/说, 在/再, 的/得 collapse; 买/卖 doesn't), and both
+  correction prompts carry an ASR CHARACTER GUARD (in `scriptGuard`).
+  `correction-probe.py zh` (69 lines × 2): 1/90 false (跑的 → 跑得, which
+  the code then drops), 0/48 missed. `beginner-probe.py` on Haiku, A2: 0/14
+  multi, 0/14 open.
+- Shadowing folds both sides to Simplified and spells digits in Chinese
+  (3年 = 三年). Presets: the four Mandarin voices Find people already uses,
+  named 李静 · 张浩 · 林兰 · 刘洋 (not yet heard as scene partners; two came
+  out the same size at two speeds, check by ear).
+- **Pronunciation**: Azure zh-CN scores each SYLLABLE with its tone
+  ("mai 3"), but only without `PhonemeAlphabet: IPA`, which returns no
+  phonemes at all (the function skips it for zh-CN). A wrong syllable
+  scores ~4; a wrong TONE only 63–92 and is never flagged (macOS voices,
+  2026-11-13), so the course's tone chapter is judged by the focus-word bar.
+- Exams HSKK, TSC, OPIc. Speech sample `…00b` is in the app only; no
+  challenge row was added. Tests: `ChineseTargetTests`.
+
 ## One line per language, measured (2026-11-06)
 
 The shared prompt rules carry English examples, and the other languages

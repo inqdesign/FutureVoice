@@ -106,6 +106,7 @@ struct StarterSituation: Identifiable, Hashable {
                     "ja": ["こんにちは！初めてですよね？", "はじめまして！よろしくお願いします。"],
                     "de": ["Hallo! Ich glaube, wir kennen uns noch nicht.", "Hallo, freut mich, Sie kennenzulernen!"],
                     "es": ["¡Hola! Creo que todavía no nos conocemos.", "¡Hola! Mucho gusto."],
+                    "zh": ["你好！我们好像还没见过吧？", "你好，很高兴认识你！"],
                 ],
                 learnerSide: "The learner is from another country and is learning this language; they have just met a native speaker for the first time. What they're asked is about themselves — their name, where they're from, whether they work or study and what, how long they've been here, why they're learning the language — and a natural answer gives that fact (as a bracketed example). Asking the same thing back is something a speaker does now and then, not on every answer. They have just met, so the learner speaks in the polite form (German Sie, French vous, Spanish usted, Korean 해요체 -요 endings, Japanese です・ます) whatever form the line uses. That is the ending only: honorifics that raise a person (Korean -(으)시-, Japanese 尊敬語) are for the OTHER person and never go on the learner's own actions — Korean 살았어요, not 사셨어요, even when the question asked 사셨어요."),
             StarterSituation(
@@ -119,6 +120,7 @@ struct StarterSituation: Identifiable, Hashable {
                     "ja": ["こんにちは、ご注文はお決まりですか？", "こんにちは！何にしますか？"],
                     "de": ["Hallo! Was darf's sein?", "Hallo, was hätten Sie gern?"],
                     "es": ["¡Hola! ¿Qué le sirvo?", "¡Hola! ¿Qué va a tomar?"],
+                    "zh": ["你好，想喝点儿什么？", "你好！要点什么？"],
                 ]),
             StarterSituation(
                 id: "order-restaurant", icon: "fork.knife",
@@ -131,6 +133,7 @@ struct StarterSituation: Identifiable, Hashable {
                     "ja": ["こんにちは、お飲み物はどうされますか？", "こんにちは！ご注文はお決まりですか？"],
                     "de": ["Hallo! Darf ich Ihnen schon etwas zu trinken bringen?", "Hallo! Haben Sie schon gewählt?"],
                     "es": ["¡Hola! ¿Le traigo algo de tomar para empezar?", "¡Hola! ¿Ya saben qué van a pedir, o necesitan un momento?"],
+                    "zh": ["你好！先来点儿喝的吗？", "你好！点好了吗，还是再看看？"],
                 ]),
             StarterSituation(
                 id: "ask-directions", icon: "map.fill",
@@ -143,6 +146,7 @@ struct StarterSituation: Identifiable, Hashable {
                     "ja": "すみません、[駅]はどう行けばいいですか？",
                     "de": "Entschuldigung, wie komme ich zum [Bahnhof]?",
                     "es": "Disculpe, ¿cómo llego a la [estación]?",
+                    "zh": "不好意思，请问[火车站]怎么走？",
                 ],
                 learnerFirstMeaning: explain("Excuse me, how do I get to the [station]?")),
             StarterSituation(
@@ -156,6 +160,7 @@ struct StarterSituation: Identifiable, Hashable {
                     "ja": ["こんにちは、何かお探しですか？", "こんにちは！気になるものがあったら声をかけてくださいね。"],
                     "de": ["Hallo! Suchen Sie etwas Bestimmtes?", "Hallo! Kann ich Ihnen helfen?"],
                     "es": ["¡Hola! ¿Busca algo en especial?", "¡Hola! ¿Le puedo ayudar en algo?"],
+                    "zh": ["你好，想找点儿什么？", "你好！随便看看，有需要叫我。"],
                 ]),
             StarterSituation(
                 id: "doctor-appointment", icon: "cross.case.fill",
@@ -168,6 +173,7 @@ struct StarterSituation: Identifiable, Hashable {
                     "ja": ["はい、クリニックです。どうされましたか？", "お電話ありがとうございます。クリニックです。"],
                     "de": ["Arztpraxis, guten Tag! Was kann ich für Sie tun?", "Praxis, hallo! Wie kann ich helfen?"],
                     "es": ["Consultorio, buenos días. ¿En qué le puedo ayudar?", "Hola, consultorio médico. Dígame."],
+                    "zh": ["喂，你好，这里是诊所。请问有什么事？", "您好，诊所。有什么可以帮您的？"],
                 ]),
             StarterSituation(
                 id: "hotel-checkin", icon: "bed.double.fill",
@@ -180,6 +186,7 @@ struct StarterSituation: Identifiable, Hashable {
                     "ja": ["こんにちは、チェックインですか？", "こんにちは！どうされましたか？"],
                     "de": ["Hallo! Möchten Sie einchecken?", "Guten Tag! Wie kann ich Ihnen helfen?"],
                     "es": ["¡Hola! ¿Viene a registrarse?", "¡Buenas tardes! ¿En qué le puedo ayudar?"],
+                    "zh": ["您好，是办理入住吗？", "您好！有什么可以帮您的？"],
                 ]),
             StarterSituation(
                 id: "train-ticket", icon: "tram.fill",
@@ -192,6 +199,7 @@ struct StarterSituation: Identifiable, Hashable {
                     "ja": ["こんにちは、どちらまでですか？", "こんにちは！どうされましたか？"],
                     "de": ["Hallo! Wohin soll's gehen?", "Hallo, was kann ich für Sie tun?"],
                     "es": ["¡Hola! ¿A dónde va?", "Hola, ¿en qué le puedo ayudar?"],
+                    "zh": ["你好，去哪儿？", "您好，请问需要什么帮助？"],
                 ]),
             StarterSituation(
                 id: "make-plans", icon: "person.2.fill",
@@ -204,6 +212,7 @@ struct StarterSituation: Identifiable, Hashable {
                     "ja": ["おー、元気？", "あ、来た来た！最近どう？"],
                     "de": ["Hey! Na, wie geht's?", "Hey, da bist du ja! Was gibt's Neues?"],
                     "es": ["¡Hola! ¿Qué tal todo?", "¡Ey, por fin llegas! ¿Qué hay de nuevo?"],
+                    "zh": ["嘿！最近怎么样？", "哎，你来啦！最近忙什么呢？"],
                 ]),
             StarterSituation(
                 id: "neighbor-small-talk", icon: "house.fill",
@@ -216,6 +225,7 @@ struct StarterSituation: Identifiable, Hashable {
                     "ja": ["あ、こんにちは！お元気ですか？", "どうも、こんにちは！お久しぶりです。"],
                     "de": ["Oh, hallo! Wie geht's Ihnen?", "Hallo! Lange nicht gesehen."],
                     "es": ["¡Ay, hola! ¿Cómo está?", "¡Hola! ¡Cuánto tiempo!"],
+                    "zh": ["哎，你好！最近还好吗？", "你好！好久不见了。"],
                 ]),
         ]
     }

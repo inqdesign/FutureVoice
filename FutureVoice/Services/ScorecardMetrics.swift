@@ -121,7 +121,7 @@ struct ScorecardMetrics: Codable {
     /// "words per minute" can mean without spaces); everything else splits
     /// on non-letters.
     private static func tokens(in text: String) -> [String] {
-        guard WordSplitter.spaced else { return JapaneseMorph.segments(in: text) }
+        guard WordSplitter.spaced else { return WordSplitter.segments(text) }
         return text
             .components(separatedBy: CharacterSet.alphanumerics.inverted)
             .filter { !$0.isEmpty }

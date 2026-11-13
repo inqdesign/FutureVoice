@@ -217,7 +217,11 @@ enum LocalAlignment {
     /// the recognizer each pick a script for a name and rarely the same one
     /// (`JapaneseMorph.soundSpelling`).
     private static func letters(of text: String) -> [String] {
-        JapaneseMorph.soundSpelling(normalized(text)).map(String.init)
+        // Chinese: the characters, folded to Simplified (說 meets 说).
+        if WordSplitter.isChinese {
+            return ChineseMorph.simplified(normalized(text)).map(String.init)
+        }
+        return JapaneseMorph.soundSpelling(normalized(text)).map(String.init)
     }
 
     /// Edit-distance alignment: for each expected word, the index of the
