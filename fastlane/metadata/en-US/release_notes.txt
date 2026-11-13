@@ -1,6 +1,2 @@
 New
-• The day card comes in a tall 9:16 format, with everything you did that day listed line by line.
-• The history button on a speech now opens every take on one page. Swipe to move between them.
-
-Improved
-• In a pronunciation call, every miss now tells you what was off and one thing to change.
+• You can now practice Simplified Chinese and French. Both are still in testing.
