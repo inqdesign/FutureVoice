@@ -117,36 +117,31 @@ struct TodayBookCard: View {
     var personaName: String? = nil
     /// The last mastery event in a talk book; nil before any.
     var lastStudied: Date? = nil
-    /// The page hands over the room it has left, so the card fills it.
-    var minHeight: CGFloat = TodayBookCard.minHeight
+    /// The room the page has left above the tab bar. The card is EXACTLY
+    /// this tall, so its chapter buttons never slide under the tab bar; what
+    /// the book still teaches gives way instead (2026-11-13, founder).
+    var height: CGFloat = TodayBookCard.minHeight
     let open: () -> Void
     let study: (BookPreview.Chapter) -> Void
 
-    static let minHeight: CGFloat = 380
+    /// The floor on a small phone, where the page then scrolls.
+    static let minHeight: CGFloat = 280
 
     private var left: Int { book.total - book.mastered }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 14) {
-                header
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(title)
-                        .font(.title2.weight(.bold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(2)
-                    if let note {
-                        Text(note)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(3)
-                    }
-                }
-                keyRows
-                Spacer(minLength: 0)
+            // The fullest version that fits the room: every row at full
+            // length, then one line a row, then no rows at all.
+            ViewThatFits(in: .vertical) {
+                top(rowLines: nil, noteLines: 3)
+                top(rowLines: 1, noteLines: 3)
+                top(rowLines: 1, noteLines: 2)
+                top(rowLines: 0, noteLines: 2)
             }
             .padding(18)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .clipped()
             .contentShape(Rectangle())
             .onTapGesture(perform: open)
             .accessibilityElement(children: .combine)
@@ -154,10 +149,33 @@ struct TodayBookCard: View {
 
             footer
         }
-        .frame(maxWidth: .infinity, minHeight: minHeight, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .frame(height: height)
         .background(RoundedRectangle(cornerRadius: 24, style: .continuous)
             .fill(Color(.secondarySystemGroupedBackground)))
         .tint(book.tint)
+    }
+
+    /// The book's half of the card. `rowLines` nil = each row at its own
+    /// length, 0 = no rows.
+    private func top(rowLines: Int?, noteLines: Int) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            header
+            VStack(alignment: .leading, spacing: 6) {
+                Text(title)
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                if let note {
+                    Text(note)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(noteLines)
+                }
+            }
+            if rowLines != 0 { keyRows(lines: rowLines) }
+        }
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     // MARK: The book
@@ -245,7 +263,7 @@ struct TodayBookCard: View {
     /// What each chapter still teaches, one line a chapter: the open items
     /// first, so the card shows what finishing this book means.
     @ViewBuilder
-    private var keyRows: some View {
+    private func keyRows(lines: Int?) -> some View {
         let rows = book.chapters.filter { !$0.items.isEmpty }
         if !rows.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
@@ -259,7 +277,7 @@ struct TodayBookCard: View {
                         Text(preview(chapter))
                             .font(.subheadline)
                             .foregroundStyle(done ? .secondary : .primary)
-                            .lineLimit(chapter.kind == .words || chapter.kind == .expressions ? 2 : 4)
+                            .lineLimit(lines ?? (chapter.kind == .words || chapter.kind == .expressions ? 2 : 4))
                         Spacer(minLength: 6)
                         Text("\(chapter.mastered)/\(chapter.items.count)")
                             .font(.caption.monospacedDigit())

@@ -1032,7 +1032,7 @@ struct PracticeTab: View {
         case .scenario(let sc): persona = linkedPersonaName(sc)
         }
         return TodayBookCard(book: book, personaName: persona, lastStudied: lastStudied,
-                             minHeight: todayCardHeight,
+                             height: todayCardHeight,
                              open: {
                                  switch book.source {
                                  case .talk(let s):      openBook(s)
