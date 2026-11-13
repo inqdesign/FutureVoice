@@ -395,6 +395,19 @@ export class CallSession implements DurableObject {
    *  off the front of the second (and of its final) until a final closes it. */
   private discardEpoch = 0
   private discardedInterim = ""
+  /** 2026-11-13, founder: in the pronunciation call the reset button kept
+   *  vanishing and coming back — seven resets in twenty seconds, the old
+   *  words back every time (device log). Three holes: a second reset
+   *  remembered the CUT text, not the transcriber's cumulative line, so
+   *  the line came back whole; the transcriber REVISES what it already
+   *  heard ("heavy" → "having an", an old fragment put in front), which a
+   *  prefix match can't follow; and a word said just before the tap lands
+   *  up to a second after it. So the reset remembers the raw line, cuts
+   *  by alignment (`afterDiscarded`), and whatever arrives within
+   *  `discardGraceMs` of the tap is counted as thrown away too. */
+  private lastInterimRaw = ""
+  private discardedAt = 0
+  private static readonly discardGraceMs = 1000
   private sends = 0
   /** EVERY final is held this long before it becomes a turn — not only
    *  the hanging-word ones. The transcriber's final is not "the learner
@@ -781,9 +794,10 @@ export class CallSession implements DurableObject {
       this.dropSpec()
       this.discardEpoch++
       // The open utterance's words so far: what follows them is the new try.
-      if (this.lastInterimAt > this.lastFinalAt && this.lastInterimText.trim()) {
-        this.discardedInterim = this.lastInterimText
+      if (this.lastInterimAt > this.lastFinalAt && this.lastInterimRaw.trim()) {
+        this.discardedInterim = this.lastInterimRaw
       }
+      this.discardedAt = Date.now()
       this.lastInterimText = ""
       this.emit({ type: "user_partial", text: "" })
       console.log("discard: turn cleared")
@@ -971,16 +985,19 @@ export class CallSession implements DurableObject {
       msg.language || "en",
       {
         onInterim: (raw) => {
+          this.lastInterimRaw = raw
           let text = raw
           if (this.discardedInterim) {
-            const rest = CallSession.afterWords(this.discardedInterim, raw)
-            if (rest === null) {
-              this.discardedInterim = ""
-            } else if (!rest) {
-              return   // still only the words that were thrown away
-            } else {
-              text = rest
+            // Still the moment of the tap: what lands now was said before it.
+            if (Date.now() - this.discardedAt < CallSession.discardGraceMs) {
+              this.discardedInterim = raw
+              return
             }
+            const rest = CallSession.afterDiscarded(this.discardedInterim, raw)
+            if (rest === "") return   // still only the words that were thrown away
+            // Nothing in it matches them: shown as is, and the thrown-away
+            // words stay remembered until the transcriber closes the line.
+            if (rest !== null) text = rest
           }
           this.lastInterimAt = Date.now()
           this.lastInterimText = text
@@ -1039,7 +1056,9 @@ export class CallSession implements DurableObject {
           this.lastFinalAt = Date.now()
           let text = raw
           if (this.discardedInterim) {
-            const rest = CallSession.afterWords(this.discardedInterim, raw)
+            const rest = Date.now() - this.discardedAt < CallSession.discardGraceMs
+              ? ""
+              : CallSession.afterDiscarded(this.discardedInterim, raw)
             this.discardedInterim = ""
             if (rest !== null) {
               if (!rest) {
@@ -1505,24 +1524,37 @@ export class CallSession implements DurableObject {
                     : CallSession.continuationMs)
   }
 
-  /** `text` with `prefix`'s words cut off its front ("" when it is only
-   *  they), or null when it doesn't start with them. Words compared on
-   *  letters alone; the last prefix word may still be growing. */
-  static afterWords(prefix: string, text: string): string | null {
+  /** `text` with the thrown-away words (`old`) cut off: "" when nothing
+   *  new is left, null when nothing in it matches them. Unlike
+   *  `afterWords` it follows a transcriber that revised its line: the old
+   *  words are found in order, earliest first (the new try is usually the
+   *  SAME sentence, read again, and comes after them), a word or two of
+   *  leading residue is passed over, an old word rewritten is skipped, and
+   *  the cut falls after the last old word found. */
+  static afterDiscarded(old: string, text: string): string | null {
     const key = (w: string) => w.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "")
-    const old = prefix.split(/\s+/).map(key).filter(Boolean)
+    const gone = old.split(/\s+/).map(key).filter(Boolean)
     const words = text.split(/\s+/).filter(Boolean)
-    if (old.length === 0) return null
-    let i = 0, matched = 0
-    while (i < words.length && matched < old.length) {
-      const k = key(words[i])
-      if (!k) { i++; continue }
-      const last = matched === old.length - 1
-      if (k !== old[matched] && !(last && k.startsWith(old[matched]))) break
-      matched++; i++
+    const keys = words.map(key)
+    if (gone.length === 0) return null
+    let cursor = 0, last = -1, matched = 0
+    for (let j = 0; j < gone.length; j++) {
+      // The first old word may sit behind residue; after it, two inserted
+      // words at most, or the match would leap into the new try.
+      const limit = matched === 0 ? keys.length : Math.min(keys.length, cursor + 3)
+      const growing = j === gone.length - 1
+      for (let k = cursor; k < limit; k++) {
+        if (!keys[k]) continue
+        if (keys[k] === gone[j] || (growing && keys[k].startsWith(gone[j]))) {
+          last = k; cursor = k + 1; matched++
+          break
+        }
+      }
     }
-    if (matched < old.length) return i === words.length && matched > 0 ? "" : null
-    return words.slice(i).join(" ")
+    if (matched === 0) return null
+    const rest = words.slice(last + 1)
+    if (!rest.some((w) => key(w))) return ""
+    return matched * 2 >= gone.length ? rest.join(" ") : null
   }
 
   /** (Re)start the clock on the held utterance. When it fires the pause was
