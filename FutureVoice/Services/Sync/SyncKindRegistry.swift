@@ -683,6 +683,11 @@ struct DefaultsKind: SyncKindHandler {
         "futurevoice.playlist.repeat",
         "futurevoice.playlist.shuffle",
         "futurevoice.playlist.speed",
+        // The gender a learner's French and Spanish sentences take
+        // (`LearnerGender`), stamped 2 so older builds leave it alone
+        // (`SyncSchema.stamp(for:key:)`).
+        LearnerGender.valueKey,
+        LearnerGender.sourceKey,
     ]
 
     /// A stored value as its own type. `Bool` bridges as a number and a

@@ -954,7 +954,8 @@ enum ConversationEngine {
                                topPatterns: [LearnerPattern], weakVocabAreas: [String],
                                topic: String, persona: UserPersona?, newsFacts: [String],
                                clock: PromptClock?, earlierToday: EarlierToday?,
-                               learnerPicksTopic: Bool, now: Date = Date()) -> String {
+                               learnerPicksTopic: Bool, now: Date = Date(),
+                               gender: LearnerGender? = LearnerGender.current) -> String {
         let languageName = LanguageCatalog.englishName(targetLanguage)
         var about: [String] = []
         if let p = persona {
@@ -983,6 +984,7 @@ enum ConversationEngine {
                 })
             }
         }
+        if let line = genderAboutLine(targetLanguage, gender: gender) { about.append(line) }
         about.append("- Native language: \(LanguageCatalog.englishName(nativeLanguage))")
         about.append("- Their \(languageName) level: \(level.rawValue.uppercased()) (CEFR)")
         let patterns = topPatterns.prefix(3).map { "\($0.mistake) → \($0.correction)" }

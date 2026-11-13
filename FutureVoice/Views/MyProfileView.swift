@@ -36,6 +36,9 @@ struct MyProfileView: View {
     @State private var confirmingWithdraw = false
     @State private var isWorking = false
     @State private var errorText: String?
+    /// `LearnerGender`, mirrored so the picker redraws on a choice.
+    @State private var gender: LearnerGender? = LearnerGender.current
+    @State private var genderSource: LearnerGender.Source? = LearnerGender.source
 
     private var persona: UserPersona? { appState.persona }
 
@@ -46,6 +49,7 @@ struct MyProfileView: View {
     var body: some View {
         Form {
             profileSection
+            if LearnerGender.matters(in: appState.targetLanguage) { genderSection }
             purposeSection
             upcomingSection
             futureSection
@@ -130,6 +134,41 @@ struct MyProfileView: View {
             .buttonStyle(.plain)
         } header: {
             Text("What your fluent self knows about you")
+        }
+    }
+
+    /// The gender French and Spanish sentences take (`LearnerGender`), only
+    /// while one of them is the target. A guess from the voice says so.
+    private var genderSection: some View {
+        Section {
+            Picker(selection: Binding(
+                get: { gender },
+                set: { new in
+                    guard let new else { return }
+                    LearnerGender.set(new, source: .chosen)
+                    gender = new
+                    genderSource = .chosen
+                })
+            ) {
+                if gender == nil { Text(explain(key: "learnerGender.notSet", default: "Not set")).tag(LearnerGender?.none) }
+                Text(explain(key: "learnerGender.male", default: "Male")).tag(LearnerGender?.some(.male))
+                Text(explain(key: "learnerGender.female", default: "Female")).tag(LearnerGender?.some(.female))
+                Text(explain(key: "learnerGender.unsaid", default: "Prefer not to say")).tag(LearnerGender?.some(.unsaid))
+            } label: {
+                Text(explain(key: "learnerGender.title", default: "Gender"))
+            }
+        } footer: {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(String(format: explain("%@ uses it in sentences about you."),
+                            LanguageCatalog.name(appState.targetLanguage, in: UILanguage.chromeLanguage)))
+                if genderSource == .voice {
+                    Text(explain("Guessed from your voice."))
+                }
+            }
+        }
+        .onAppear {
+            gender = LearnerGender.current
+            genderSource = LearnerGender.source
         }
     }
 

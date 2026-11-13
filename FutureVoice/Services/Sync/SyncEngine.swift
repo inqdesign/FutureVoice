@@ -926,7 +926,7 @@ final class SyncEngine: ObservableObject {
                 diff(prepared, handler: handler, lang: lang, index: index, now: now)
                 for entry in index.entries(kind: handler.kind, lang: lang) where entry.needsPush && !entry.frozen {
                     var record = SyncRecord(kind: entry.kind, key: entry.key, lang: entry.lang,
-                                            schema: SyncSchema.stamp(for: entry.kind),
+                                            schema: SyncSchema.stamp(for: entry.kind, key: entry.key),
                                             modifiedAt: entry.observedAt, deletedAt: entry.deletedAt,
                                             systemFields: entry.systemFields)
                     if !entry.isDeleted {

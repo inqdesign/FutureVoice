@@ -180,6 +180,10 @@ struct FutureVoiceApp: App {
                 Analytics.notePerson(appState)
                 // Before the daily call re-arms on a voice that may be gone.
                 appState.checkForReclaimedVoice()
+                // French or Spanish with nothing on file: a guess from the
+                // learner's own recording (`LearnerGender`).
+                LearnerGender.guessFromVoiceIfNeeded(target: appState.targetLanguage,
+                                                     tutorOnly: appState.voiceIsTutorOnly)
                 Task { await appState.makeQueuedVoiceIfReady() }
                 // A voice parked while the app was closed, or one that can
                 // come back now (a purchase made on another device).

@@ -165,6 +165,16 @@ enum SyncSchema {
     static func stamp(for kind: SyncKind) -> Int {
         kind == .speechTake ? 2 : version
     }
+
+    /// Per record, for a single key added to a kind older builds already
+    /// sync. An older build reads only the settings it knows, so a new key
+    /// it pulled would be missing from its next read and tombstoned for every
+    /// device. Stamped 2, older builds freeze it instead: the learner's
+    /// gender setting (2026-11-13).
+    static func stamp(for kind: SyncKind, key: String) -> Int {
+        if kind == .defaults, key == LearnerGender.valueKey || key == LearnerGender.sourceKey { return 2 }
+        return stamp(for: kind)
+    }
 }
 
 /// One record as the transport sees it — the only shape `CKRecord` is ever

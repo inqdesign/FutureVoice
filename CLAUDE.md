@@ -2820,10 +2820,24 @@ the language PRACTISED.
   false before `spokenGrammarGuard` "fr" (it put back the dropped ne), 0/94
   after, 2/26 missed ("Je habite"). With a Korean native, Haiku wrote 5/36
   notes in English; `notesLanguageGuard` now covers fr, 0/48.
-- **The future self's gender** (`frenchGuard`, beside `spanishGuard`, same
-  placement, so NOT in free talk's own prompt, like Spanish): with only "je
-  suis Minji" to go on, Haiku still opens "Enchanté" 4/8 (nearly always
-  before). Open.
+- **The learner's gender, for French and Spanish** (`LearnerGender`, same
+  day, founder). In these two the speaker agrees with themselves (contente,
+  cansada), and the fluent self speaks AS the learner, so its lines are
+  lines they say back. Nothing asks for it. It is guessed from the learner's
+  OWN recording (median pitch < 150 Hz male, > 185 Hz female, nothing in
+  between), never from the voice they picked (founder: a man may pick a
+  female tutor voice), and never for a tutor-only learner. Me → Profile has
+  a Gender row while French or Spanish is the target: Male · Female · Prefer
+  not to say; a choice replaces the guess for good. `genderLine` (call and
+  scene prompts, beside the variety line) and `genderAboutLine` (a fact in
+  free talk's "About them") use it; nothing on file keeps the old
+  neutral-until-shown line byte for byte. A cast person hears it only as how
+  to talk about the learner. Probe, Haiku, beginner calls: with nothing on
+  file "Enchanté" still opened 4/8 first replies to "je suis Minji"; set to
+  female, 15 feminine vs 3 masculine forms in 42 replies. The two defaults
+  keys sync stamped 2 PER KEY (`SyncSchema.stamp(for:key:)`): an older build
+  reads only the keys it knows, so a new key it pulled would be tombstoned
+  for every device. Corrections don't use it yet.
 - Exams DELF / DALF, TCF, TEF, OPIc. Speech challenges `…0f0001` (the
   bundled sample) and `…0f0002` (ageing), `20261113160000`, which also opens
   French Season 1. Pronunciation: Azure fr-FR / fr-CA, a course on u/ou,
