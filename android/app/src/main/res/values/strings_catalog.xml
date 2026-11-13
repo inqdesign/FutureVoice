@@ -217,6 +217,7 @@
     <string name="ai_tutor">"AI tutor"</string>
     <string name="airport_hotel_restaurants">"Airport, hotel, restaurants"</string>
     <string name="all_activity">"All activity"</string>
+    <string name="all_books">"All books"</string>
     <string name="all_caught_up">"All caught up"</string>
     <string name="all_challenges">"All challenges"</string>
     <string name="all_done_you_can_say_it_now">"All done. You can say it now."</string>
@@ -1544,6 +1545,7 @@
     <string name="lld_friends_joined_with_your_code_fe4dfc">"%d friends joined with your code"</string>
     <string name="lld_friends_joined_with_your_code_lld_minutes_are_yours">"%1$d friends joined with your code — %2$d minutes are yours."</string>
     <string name="lld_items">"%d items"</string>
+    <string name="lld_left">"%d left"</string>
     <!-- '%lld lines' -->
     <string name="lld_lines_c4b7ea">"%d lines"</string>
     <!-- '%@ · %lld lines' -->
@@ -3357,6 +3359,7 @@
     <string name="today_s_goal_lld_min">"Today's goal %d min"</string>
     <string name="today_s_plan">"Today's plan"</string>
     <string name="today_s_reading">"Today's reading"</string>
+    <string name="today_s_review">"Today's review"</string>
     <string name="today_try_one_speech">"Today, try one speech."</string>
     <string name="together_for_years">"Together for years"</string>
     <string name="tomorrow">"Tomorrow"</string>

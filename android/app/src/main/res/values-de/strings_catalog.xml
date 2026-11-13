@@ -217,6 +217,7 @@
     <string name="ai_tutor">"KI-Tutor"</string>
     <string name="airport_hotel_restaurants">"Flughafen, Hotel, Restaurants"</string>
     <string name="all_activity">"Alle Aktivitäten"</string>
+    <string name="all_books">"Alle Bücher"</string>
     <string name="all_caught_up">"Alles erledigt"</string>
     <string name="all_challenges">"Alle Challenges"</string>
     <string name="all_done_you_can_say_it_now">"Geschafft. Jetzt kannst du es sagen."</string>
@@ -1540,6 +1541,7 @@
     <string name="lld_friends_joined_with_your_code_fe4dfc">"%d Freunde sind mit deinem Code beigetreten"</string>
     <string name="lld_friends_joined_with_your_code_lld_minutes_are_yours">"%1$d Freunde sind mit deinem Code beigetreten. %2$d Minuten gehören dir."</string>
     <string name="lld_items">"%d"</string>
+    <string name="lld_left">"Noch %d"</string>
     <!-- '%lld lines' -->
     <string name="lld_lines_c4b7ea">"%d Sätze"</string>
     <!-- '%@ · %lld lines' -->
@@ -3348,6 +3350,7 @@
     <string name="today_s_goal_lld_min">"Heutiges Ziel %d Min."</string>
     <string name="today_s_plan">"Heute dran"</string>
     <string name="today_s_reading">"Lesetext für heute"</string>
+    <string name="today_s_review">"Heute wiederholen"</string>
     <string name="today_try_one_speech">"Probier heute eine Rede."</string>
     <string name="together_for_years">"Seit Jahren zusammen"</string>
     <string name="tomorrow">"Morgen"</string>

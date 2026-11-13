@@ -346,6 +346,9 @@ fun RootScreen() {
     /** The sentence-card list (iOS `SentencesView`), and whether the deck
      *  above it was pushed from one of its rows (back, not Done). */
     var showSentences by remember { mutableStateOf(false) }
+    /** Every book by shelf, behind today's review's "N of M" (iOS
+     *  `showingAllBooks`). */
+    var allBooks by remember { mutableStateOf(false) }
     var deckPushed by remember { mutableStateOf(false) }
     val paywalled by BillingGate.showPaywall.collectAsStateWithLifecycle()
     val gateScope = rememberCoroutineScope()
@@ -376,7 +379,7 @@ fun RootScreen() {
     LaunchedEffect(speechPending) {
         if (!speechPending) return@LaunchedEffect
         com.roro.futurevoice.data.PlanReminder.pendingSpeech.value = false
-        showActivity = false; showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
+        showActivity = false; showMe = false; showDeck = false; library = null; showSentences = false; allBooks = false; deckPushed = false
         tab = HomeTab.SPEECH
     }
     // A listening block's reminder or routine line: the player, already
@@ -386,7 +389,7 @@ fun RootScreen() {
     val listenPending by com.roro.futurevoice.data.PlanReminder.pendingListen.collectAsStateWithLifecycle()
     LaunchedEffect(listenPending) {
         if (!listenPending) return@LaunchedEffect
-        showActivity = false; showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
+        showActivity = false; showMe = false; showDeck = false; library = null; showSentences = false; allBooks = false; deckPushed = false
     }
     val deepLink by DeepLinkInbox.pending.collectAsStateWithLifecycle()
     LaunchedEffect(deepLink) {
@@ -451,13 +454,13 @@ fun RootScreen() {
         when (route) {
             // Streak widget: the Talk tab itself, not a page left open over it.
             DeepLinkInbox.WidgetRoute.Talk -> {
-                showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false; detailSessionId = null
+                showMe = false; showDeck = false; library = null; showSentences = false; allBooks = false; deckPushed = false; detailSessionId = null
                 bookScenarioId = null; watchScenarioId = null; shadowLine = null
                 tab = HomeTab.TALK
             }
             is DeepLinkInbox.WidgetRoute.Book -> {
                 tab = HomeTab.PRACTICE
-                showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false; watchScenarioId = null
+                showMe = false; showDeck = false; library = null; showSentences = false; allBooks = false; deckPushed = false; watchScenarioId = null
                 if (route.kind == "watch") bookScenarioId = route.id else detailSessionId = route.id
             }
             // The routine widget: a block's door, the same one its reminder
@@ -470,7 +473,7 @@ fun RootScreen() {
                 // holds only what was snoozed, so a learner with 22 cards
                 // waiting was dealt one (iOS bcddcc40).
                 com.roro.futurevoice.data.StudyPlan.Kind.REVIEW -> {
-                    showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
+                    showMe = false; showDeck = false; library = null; showSentences = false; allBooks = false; deckPushed = false
                     showActivity = false; detailSessionId = null; bookScenarioId = null; watchScenarioId = null
                     tab = HomeTab.PRACTICE
                     val deck = routineDeck(context,
@@ -486,13 +489,13 @@ fun RootScreen() {
                 }
                 com.roro.futurevoice.data.StudyPlan.Kind.WORDS,
                 com.roro.futurevoice.data.StudyPlan.Kind.EXPRESSIONS -> {
-                    showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
+                    showMe = false; showDeck = false; library = null; showSentences = false; allBooks = false; deckPushed = false
                     showActivity = false; detailSessionId = null; bookScenarioId = null; watchScenarioId = null
                     tab = HomeTab.PRACTICE
                     showDueReview = true
                 }
                 com.roro.futurevoice.data.StudyPlan.Kind.TEST -> {
-                    showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
+                    showMe = false; showDeck = false; library = null; showSentences = false; allBooks = false; deckPushed = false
                     showActivity = false; detailSessionId = null; bookScenarioId = null; watchScenarioId = null
                     com.roro.futurevoice.data.WeeklyTestInbox.pending.value = true
                     tab = HomeTab.PRACTICE
@@ -504,7 +507,7 @@ fun RootScreen() {
                 com.roro.futurevoice.data.StudyPlan.Kind.SPEECH ->
                     com.roro.futurevoice.data.PlanReminder.pendingSpeech.value = true
                 com.roro.futurevoice.data.StudyPlan.Kind.SHADOW, null -> {
-                    showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
+                    showMe = false; showDeck = false; library = null; showSentences = false; allBooks = false; deckPushed = false
                     detailSessionId = null; bookScenarioId = null; watchScenarioId = null
                     tab = HomeTab.TALK
                     routineOpens = route.kind
@@ -514,13 +517,13 @@ fun RootScreen() {
             // The tutor bot's Start: the cards it counted as waiting (iOS
             // `.waitingReview`, bcddcc40).
             DeepLinkInbox.WidgetRoute.Waiting -> {
-                showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
+                showMe = false; showDeck = false; library = null; showSentences = false; allBooks = false; deckPushed = false
                 showActivity = false; detailSessionId = null; bookScenarioId = null; watchScenarioId = null
                 tab = HomeTab.PRACTICE
                 routineReview = waitingDeck(context, state.targetLanguage) to emptyList()
             }
             is DeepLinkInbox.WidgetRoute.SpeechChallenge -> {
-                showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
+                showMe = false; showDeck = false; library = null; showSentences = false; allBooks = false; deckPushed = false
                 showActivity = false; detailSessionId = null; bookScenarioId = null; watchScenarioId = null
                 tab = HomeTab.SPEECH
                 speechChallengeId = route.id
@@ -528,7 +531,7 @@ fun RootScreen() {
             DeepLinkInbox.WidgetRoute.FreeTalk -> {
                 tab = HomeTab.TALK
                 gate {
-                    showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false; detailSessionId = null
+                    showMe = false; showDeck = false; library = null; showSentences = false; allBooks = false; deckPushed = false; detailSessionId = null
                     bookScenarioId = null; watchScenarioId = null; shadowLine = null
                     callTopic = ""; callFacts = emptyList(); callBlurb = ""; callScenarioId = null
                     callEntry = DeepLinkInbox.freeTalkEntry ?: com.roro.futurevoice.talk.TalkEntry.WIDGET
@@ -951,7 +954,7 @@ fun RootScreen() {
         val c = goalCall ?: return@LaunchedEffect
         if (state.voiceId == null) return@LaunchedEffect
         com.roro.futurevoice.talk.TutorBot.goalCall = null
-        showMe = false; showDeck = false; library = null; showSentences = false; deckPushed = false
+        showMe = false; showDeck = false; library = null; showSentences = false; allBooks = false; deckPushed = false
         showActivity = false; detailSessionId = null; bookScenarioId = null; watchScenarioId = null
         tab = HomeTab.TALK
         startCall(c.topic, emptyList(), null, null, c.blurb, com.roro.futurevoice.talk.TalkEntry.TUTOR_BOT,
@@ -1161,6 +1164,7 @@ fun RootScreen() {
         if (!overProfile) detailSessionId?.let { add(RootRoute.TalkBook(it)) }
         bookScenarioId?.let { add(RootRoute.ScenarioBook(it)) }
         if (showSentences) add(RootRoute.Sentences)
+        if (allBooks) add(RootRoute.AllBooks)
         library?.let { add(RootRoute.Library(it)) }
         if (showAssessment) add(RootRoute.Assessment)
         if (sayAgainPending) add(RootRoute.SayAgainPick)
@@ -1205,6 +1209,7 @@ fun RootScreen() {
                 is RootRoute.Watch -> watchScenarioId = null
                 RootRoute.Deck -> { showDeck = false; focusCardId = null; deckSessionId = null; deckPushed = false }
                 RootRoute.Sentences -> showSentences = false
+                RootRoute.AllBooks -> allBooks = false
                 is RootRoute.Library -> library = null
                 RootRoute.Assessment -> showAssessment = false
                 RootRoute.Activity -> showActivity = false
@@ -1409,6 +1414,16 @@ fun RootScreen() {
 
         // Under the deck, so a row's card opens over the list and back
         // returns to it (iOS pushes `DrillView(source: .card)`).
+        RootRoute.AllBooks -> AllBooksScreen(
+            language = state.targetLanguage,
+            level = state.level,
+            onOpenScenarioBook = { bookScenarioId = it },
+            onOpenTalk = { detailSessionId = it },
+            onBack = { allBooks = false },
+            onTalkScenario = { sc -> startCall(sc.promptBlurb, emptyList(), sc.id, null,
+                entry = com.roro.futurevoice.talk.TalkEntry.PRACTICE_BOOK) },
+        )
+
         RootRoute.Sentences -> SentencesScreen(
             language = state.targetLanguage,
             onOpenCard = { id -> focusCardId = id; deckPushed = true; showDeck = true },
@@ -1909,6 +1924,7 @@ fun RootScreen() {
             onOpenWordsAll = { library = LibraryKind.WORDS },
             onOpenExpressionsAll = { library = LibraryKind.EXPRESSIONS },
             onOpenSentencesAll = { showSentences = true },
+            onOpenAllBooks = { allBooks = true },
             onOpenDueReview = { showDueReview = true },
             // A book's Grammar chapter: that talk's sentence cards.
             onOpenSessionDeck = { deckSessionId = it; showDeck = true },
@@ -2178,7 +2194,8 @@ internal fun HomeScreen(
     onSwitchLanguage: (String) -> Unit = {},
     onAddLanguage: () -> Unit = {},
     /** Which shelf Practice opens on — the capture harness's seam. */
-    initialPracticeShelf: Shelf = Shelf.STUDYING,
+    /** Today's review's "N of M": every book by shelf, pushed. */
+    onOpenAllBooks: () -> Unit = {},
     /** A root-owned sheet is up — the tab's first-visit guide waits. */
     guideBlocked: Boolean = false,
     /** A Talk-home card's call has just closed (see [CallRoute.fromHomeCard]). */
@@ -2497,7 +2514,7 @@ internal fun HomeScreen(
                     )
 
                     HomeTab.PRACTICE -> PracticeBody(
-                        initialShelf = initialPracticeShelf,
+                        onOpenAllBooks = onOpenAllBooks,
                         level = state.level,
                         language = state.targetLanguage,
                         onOpenDeck = onOpenDeck,
@@ -3792,6 +3809,7 @@ internal sealed interface RootRoute {
     data class TalkBook(val id: String) : RootRoute { override val key = "talk:$id" }
     data class ScenarioBook(val id: String) : RootRoute { override val key = "scenario:$id" }
     data object Sentences : RootRoute { override val key = "sentences" }
+    data object AllBooks : RootRoute { override val key = "allBooks" }
     data class Library(val kind: LibraryKind) : RootRoute { override val key = "library:$kind" }
     data object Assessment : RootRoute { override val key = "assessment" }
     data object SayAgainPick : RootRoute { override val key = "sayAgainPick" }
@@ -3849,7 +3867,7 @@ internal fun rootPushes(from: RootRoute, to: RootRoute, deckPushed: Boolean): Bo
         RootRoute.Deck -> from is RootRoute.TalkBook || (deckPushed && from is RootRoute.Sentences)
         // Practice's library tiles; Progress's latest assessment; the
         // streak's Activity; the finished shelf.
-        RootRoute.Sentences, is RootRoute.Library, RootRoute.ShadowBrowser,
+        RootRoute.Sentences, RootRoute.AllBooks, is RootRoute.Library, RootRoute.ShadowBrowser,
         RootRoute.Assessment, is RootRoute.Finished, RootRoute.Effort -> from is RootRoute.Tabs
         // The streak's Activity, and the effort page's "Calendar and routine".
         RootRoute.Activity -> from is RootRoute.Tabs || from is RootRoute.Effort

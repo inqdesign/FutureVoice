@@ -217,6 +217,7 @@
     <string name="ai_tutor">"AIチューター"</string>
     <string name="airport_hotel_restaurants">"空港、ホテル、レストラン"</string>
     <string name="all_activity">"すべての活動"</string>
+    <string name="all_books">"すべての本"</string>
     <string name="all_caught_up">"全部できました"</string>
     <string name="all_challenges">"すべてのチャレンジ"</string>
     <string name="all_done_you_can_say_it_now">"全部できました。もう言えますね。"</string>
@@ -1543,6 +1544,7 @@
     <string name="lld_friends_joined_with_your_code_fe4dfc">"友達%d人が招待コードで登録しました"</string>
     <string name="lld_friends_joined_with_your_code_lld_minutes_are_yours">"友達%1$d人が招待コードで登録しました。%2$d分が追加されました。"</string>
     <string name="lld_items">"%d個"</string>
+    <string name="lld_left">"残り%d"</string>
     <!-- '%lld lines' -->
     <string name="lld_lines_c4b7ea">"%d文"</string>
     <!-- '%@ · %lld lines' -->
@@ -3352,6 +3354,7 @@
     <string name="today_s_goal_lld_min">"今日の目標 %d分"</string>
     <string name="today_s_plan">"今日やること"</string>
     <string name="today_s_reading">"今日のリーディング"</string>
+    <string name="today_s_review">"今日の復習"</string>
     <string name="today_try_one_speech">"今日はスピーチを1つやってみましょう。"</string>
     <string name="together_for_years">"付き合って長い"</string>
     <string name="tomorrow">"明日"</string>

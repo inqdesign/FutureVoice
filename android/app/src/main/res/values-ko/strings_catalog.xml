@@ -217,6 +217,7 @@
     <string name="ai_tutor">"AI 튜터"</string>
     <string name="airport_hotel_restaurants">"공항, 호텔, 식당"</string>
     <string name="all_activity">"전체 활동"</string>
+    <string name="all_books">"전체 복습 자료"</string>
     <string name="all_caught_up">"다 끝냈어요"</string>
     <string name="all_challenges">"모든 챌린지"</string>
     <string name="all_done_you_can_say_it_now">"다 했어요. 이제 말할 수 있어요."</string>
@@ -1543,6 +1544,7 @@
     <string name="lld_friends_joined_with_your_code_fe4dfc">"친구 %d명이 내 코드로 가입했어요"</string>
     <string name="lld_friends_joined_with_your_code_lld_minutes_are_yours">"친구 %1$d명이 내 코드로 가입했어요. %2$d분이 들어왔어요."</string>
     <string name="lld_items">"%d개"</string>
+    <string name="lld_left">"%d개 남음"</string>
     <!-- '%lld lines' -->
     <string name="lld_lines_c4b7ea">"%d문장"</string>
     <!-- '%@ · %lld lines' -->
@@ -3352,6 +3354,7 @@
     <string name="today_s_goal_lld_min">"오늘 목표 %d분"</string>
     <string name="today_s_plan">"오늘 할 일"</string>
     <string name="today_s_reading">"오늘의 읽기"</string>
+    <string name="today_s_review">"오늘의 복습"</string>
     <string name="today_try_one_speech">"오늘은 스피치 하나 해 봐요."</string>
     <string name="together_for_years">"오래 사귐"</string>
     <string name="tomorrow">"내일"</string>

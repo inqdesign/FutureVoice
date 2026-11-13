@@ -185,10 +185,12 @@ object CapturePractice {
             return
         }
         // A shelf card opens its book through the shared push host (tap one
-        // on the emulator to see the transition, or swipe from the edge).
+        // on the emulator to see the transition, or swipe from the edge). A
+        // shelf other than Studying is a page of All books (iOS b43651fa).
         var page by androidx.compose.runtime.remember {
             androidx.compose.runtime.mutableStateOf<com.roro.futurevoice.ui.RootRoute>(
-                com.roro.futurevoice.ui.RootRoute.Tabs)
+                if (shelf == Shelf.STUDYING) com.roro.futurevoice.ui.RootRoute.Tabs
+                else com.roro.futurevoice.ui.RootRoute.AllBooks)
         }
         val stack = if (page == com.roro.futurevoice.ui.RootRoute.Tabs) listOf(page)
             else listOf(com.roro.futurevoice.ui.RootRoute.Tabs, page)
@@ -201,9 +203,14 @@ object CapturePractice {
                 is com.roro.futurevoice.ui.RootRoute.ScenarioBook -> com.roro.futurevoice.ui.ScenarioBookScreen(
                     scenarioId = p.id, language = lang(c), onWatch = {}, onShadow = {},
                     onBack = { page = com.roro.futurevoice.ui.RootRoute.Tabs })
+                com.roro.futurevoice.ui.RootRoute.AllBooks -> com.roro.futurevoice.ui.AllBooksScreen(
+                    language = lang(c), level = level(c), initialShelf = shelf,
+                    onOpenTalk = { page = com.roro.futurevoice.ui.RootRoute.TalkBook(it) },
+                    onOpenScenarioBook = { page = com.roro.futurevoice.ui.RootRoute.ScenarioBook(it) },
+                    onBack = { page = com.roro.futurevoice.ui.RootRoute.Tabs })
                 else ->
                     com.roro.futurevoice.ui.HomeScreen(state = state, onStartCall = { _, _, _, _ -> }, onOpenMe = {},
-                        tab = tab, onTabChange = { tab = it }, initialPracticeShelf = shelf,
+                        tab = tab, onTabChange = { tab = it }, onOpenAllBooks = { page = com.roro.futurevoice.ui.RootRoute.AllBooks },
                         onOpenFinished = { finished = it },
                         onOpenTalk = { page = com.roro.futurevoice.ui.RootRoute.TalkBook(it) },
                         onOpenBook = { page = com.roro.futurevoice.ui.RootRoute.ScenarioBook(it) })

@@ -217,6 +217,7 @@
     <string name="ai_tutor">"AI 导师"</string>
     <string name="airport_hotel_restaurants">"机场、酒店、餐厅"</string>
     <string name="all_activity">"所有活动"</string>
+    <string name="all_books">"所有的书"</string>
     <string name="all_caught_up">"都完成了"</string>
     <string name="all_challenges">"所有挑战"</string>
     <string name="all_done_you_can_say_it_now">"全部完成，现在你会说了。"</string>
@@ -1543,6 +1544,7 @@
     <string name="lld_friends_joined_with_your_code_fe4dfc">"%d位朋友用你的邀请码加入了"</string>
     <string name="lld_friends_joined_with_your_code_lld_minutes_are_yours">"%1$d位朋友用你的邀请码加入了，%2$d分钟已经入帐。"</string>
     <string name="lld_items">"%d 个"</string>
+    <string name="lld_left">"还剩 %d 个"</string>
     <!-- '%lld lines' -->
     <string name="lld_lines_c4b7ea">"%d 句"</string>
     <!-- '%@ · %lld lines' -->
@@ -3352,6 +3354,7 @@
     <string name="today_s_goal_lld_min">"今日目标%d分钟"</string>
     <string name="today_s_plan">"今天的计划"</string>
     <string name="today_s_reading">"今日阅读"</string>
+    <string name="today_s_review">"今天的复习"</string>
     <string name="today_try_one_speech">"今天试试做一次演讲。"</string>
     <string name="together_for_years">"在一起很多年"</string>
     <string name="tomorrow">"明天"</string>

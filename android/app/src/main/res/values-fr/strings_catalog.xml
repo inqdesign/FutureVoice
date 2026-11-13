@@ -217,6 +217,7 @@
     <string name="ai_tutor">"Tuteur IA"</string>
     <string name="airport_hotel_restaurants">"Aéroport, hôtel, restaurants"</string>
     <string name="all_activity">"Toute l’activité"</string>
+    <string name="all_books">"Tous les carnets"</string>
     <string name="all_caught_up">"Tout est à jour"</string>
     <string name="all_challenges">"Tous les défis"</string>
     <string name="all_done_you_can_say_it_now">"C’est fait. Tu sais le dire maintenant."</string>
@@ -1540,6 +1541,7 @@
     <string name="lld_friends_joined_with_your_code_fe4dfc">"%d amis se sont inscrits avec ton code"</string>
     <string name="lld_friends_joined_with_your_code_lld_minutes_are_yours">"%1$d amis se sont inscrits avec ton code. %2$d minutes sont à toi."</string>
     <string name="lld_items">"%d"</string>
+    <string name="lld_left">"Reste : %d"</string>
     <!-- '%lld lines' -->
     <string name="lld_lines_c4b7ea">"%d phrases"</string>
     <!-- '%@ · %lld lines' -->
@@ -3348,6 +3350,7 @@
     <string name="today_s_goal_lld_min">"Objectif du jour %d min"</string>
     <string name="today_s_plan">"Programme du jour"</string>
     <string name="today_s_reading">"La lecture du jour"</string>
+    <string name="today_s_review">"Révision du jour"</string>
     <string name="today_try_one_speech">"Aujourd’hui, essaie un discours."</string>
     <string name="together_for_years">"Ensemble depuis des années"</string>
     <string name="tomorrow">"Demain"</string>

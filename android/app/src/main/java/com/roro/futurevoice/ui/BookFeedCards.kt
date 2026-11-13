@@ -2,20 +2,26 @@ package com.roro.futurevoice.ui
 
 import android.content.Context
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.MarkChatRead
+import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -28,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -124,6 +131,9 @@ data class ReviewShelfData(
     val finished: List<BookPreview> = emptyList(),
     /** Each talk book's mastered / total — the shelf cards' strip. */
     val talkProgress: Map<String, Pair<Int, Int>> = emptyMap(),
+    /** Each talk book's last mastery event — today's card says when it was
+     *  last worked (iOS `talkSnapshots[id]?.lastStudiedAt`). */
+    val talkLastStudied: Map<String, Long> = emptyMap(),
     val stats: LibraryStats = LibraryStats(),
 )
 
@@ -198,6 +208,7 @@ suspend fun loadReviewShelves(context: Context, language: String, level: CefrLev
         feed = feed,
         finished = finished,
         talkProgress = snapshots.mapNotNull { (id, snap) -> snap?.let { id to (it.masteredCount to it.totalCount) } }.toMap(),
+        talkLastStudied = snapshots.mapNotNull { (id, snap) -> snap?.lastStudiedAt?.let { id to it } }.toMap(),
         stats = stats,
     )
 }
@@ -294,5 +305,199 @@ private fun LibraryTile(icon: ImageVector, value: String, title: String, onClick
         Text(title, style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
             overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** A book's whole: every item in its chapters, and how many are mastered. */
+val BookPreview.total: Int get() = chapters.sumOf { it.items.size }
+val BookPreview.masteredCount: Int get() = chapters.sumOf { it.mastered }
+
+/** The card's floor on a small phone, where the page then scrolls (iOS
+ *  `TodayBookCard.minHeight`). */
+val TodayBookCardMinHeight = 280.dp
+
+/**
+ * Today's review, one book at a time (iOS `TodayBookCard`, 2026-11-11,
+ * founder: "one card, and they finish them one by one; swipe sideways for the
+ * next book; a bigger card with the key things from the talk's summary; a tap
+ * opens the book"). The top is the book — where it came from, its title, the
+ * summary's one line, and what it still teaches per chapter — and opens its
+ * page. Under it: how much is left, and the four chapter buttons.
+ */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+fun TodayBookCard(
+    book: BookPreview,
+    title: String,
+    /** The source and the card's one fact: "Free talk · 2 hours ago". */
+    meta: String,
+    /** The summary's one line: how the talk went, or what the situation is. */
+    note: String?,
+    icon: ImageVector?,
+    photo: androidx.compose.ui.graphics.ImageBitmap? = null,
+    initials: String? = null,
+    score: Int? = null,
+    /** The room the page has left above the tab bar. The card is EXACTLY
+     *  this tall, so its chapter buttons never slide under the tab bar; what
+     *  the book still teaches gives way instead (2026-11-13, founder). */
+    height: androidx.compose.ui.unit.Dp = TodayBookCardMinHeight,
+    onOpen: () -> Unit,
+    onLongPress: () -> Unit,
+    onStudy: (BookPreview.Chapter) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val left = book.total - book.masteredCount
+    Column(
+        modifier.fillMaxWidth()
+            .height(height)
+            .clip(ContinuousShape(24.dp))
+            .background(AppSurfaces.card)
+            .combinedClickable(onClick = onOpen, onLongClick = onLongPress),
+    ) {
+        // The fullest version that fits the room: every row at full length,
+        // then one line a row, then no rows (iOS `ViewThatFits`).
+        Box(Modifier.fillMaxWidth().weight(1f).clipToBounds().padding(18.dp)) {
+            FirstThatFits(
+                { TodayTop(book, title, meta, note, icon, photo, initials, score, rowLines = null, noteLines = 3) },
+                { TodayTop(book, title, meta, note, icon, photo, initials, score, rowLines = 1, noteLines = 3) },
+                { TodayTop(book, title, meta, note, icon, photo, initials, score, rowLines = 1, noteLines = 2) },
+                { TodayTop(book, title, meta, note, icon, photo, initials, score, rowLines = 0, noteLines = 2) },
+            )
+        }
+        when {
+            // A talk whose chapters could not be derived yet.
+            book.chapters.isEmpty() -> androidx.compose.foundation.layout.Box(
+                Modifier.fillMaxWidth().padding(bottom = 24.dp), contentAlignment = Alignment.Center) {
+                androidx.compose.material3.CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+            }
+            book.total == 0 -> Row(
+                Modifier.padding(start = 18.dp, end = 18.dp, bottom = 18.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Icon(Icons.Filled.PlayCircleOutline, contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                Text(stringResource(R.string.replay_anytime), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            else -> Column {
+                Column(Modifier.padding(start = 18.dp, end = 18.dp, bottom = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    LinearProgressIndicator(
+                        progress = { if (book.total == 0) 0f else book.masteredCount / book.total.toFloat() },
+                        color = if (left == 0) Books.mastery else book.tint,
+                        trackColor = com.roro.futurevoice.ui.brand.iosFill(),
+                        strokeCap = StrokeCap.Round,
+                        gapSize = 0.dp,
+                        drawStopIndicator = {},
+                        modifier = Modifier.fillMaxWidth().height(4.dp),
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.lld_left, left), style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                        Text(stringResource(R.string.lld_lld_mastered, book.masteredCount, book.total),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                BookChapterButtons(book, onStudy)
+            }
+        }
+    }
+}
+
+/** The book's half of today's card. `rowLines` null = each row at its own
+ *  length, 0 = no rows. */
+@Composable
+private fun TodayTop(
+    book: BookPreview, title: String, meta: String, note: String?, icon: ImageVector?,
+    photo: androidx.compose.ui.graphics.ImageBitmap?, initials: String?, score: Int?,
+    rowLines: Int?, noteLines: Int,
+) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            com.roro.futurevoice.ui.brand.BookIconDisc(accent = book.tint, photo = photo) {
+                when {
+                    initials != null -> Text(initials, style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold, color = book.tint)
+                    icon != null -> Icon(icon, contentDescription = null, tint = book.tint,
+                        modifier = Modifier.size(22.dp))
+                }
+            }
+            Text(meta, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            score?.let {
+                androidx.compose.foundation.layout.Box(
+                    Modifier.size(34.dp).border(2.dp, MaterialTheme.colorScheme.outlineVariant, androidx.compose.foundation.shape.CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("$it", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(20.dp))
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
+                maxLines = 2, overflow = TextOverflow.Ellipsis)
+            note?.let {
+                Text(it, style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = noteLines, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        // What each chapter still teaches, one line a chapter: the open
+        // items first, so the card shows what finishing this book means.
+        val rows = book.chapters.filter { it.items.isNotEmpty() }
+        if (rows.isNotEmpty() && rowLines != 0) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                rows.forEach { chapter ->
+                    val done = chapter.mastered == chapter.items.size
+                    val short = chapter.kind == BookPreview.Kind.WORDS ||
+                        chapter.kind == BookPreview.Kind.EXPRESSIONS
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Icon(if (done) Icons.Filled.CheckCircle else chapter.kind.icon, contentDescription = null,
+                            tint = if (done) Books.mastery else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 1.dp).size(18.dp))
+                        Text(chapterPreview(chapter), style = MaterialTheme.typography.bodyMedium,
+                            color = if (done) MaterialTheme.colorScheme.onSurfaceVariant
+                            else MaterialTheme.colorScheme.onSurface,
+                            maxLines = rowLines ?: if (short) 2 else 4, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f))
+                        Text("${chapter.mastered}/${chapter.items.size}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** The first of [variants] whose natural height fits the room, else the last
+ *  (SwiftUI's `ViewThatFits(in: .vertical)`). */
+@Composable
+private fun FirstThatFits(vararg variants: @Composable () -> Unit) {
+    androidx.compose.ui.layout.SubcomposeLayout { constraints ->
+        val loose = constraints.copy(minHeight = 0, maxHeight = androidx.compose.ui.unit.Constraints.Infinity)
+        var chosen: androidx.compose.ui.layout.Placeable? = null
+        for ((i, v) in variants.withIndex()) {
+            val p = subcompose(i, v).map { it.measure(loose) }.maxByOrNull { it.height } ?: continue
+            chosen = p
+            if (p.height <= constraints.maxHeight) break
+        }
+        val p = chosen
+        layout(p?.width ?: 0, minOf(p?.height ?: 0, constraints.maxHeight)) { p?.place(0, 0) }
+    }
+}
+
+private fun chapterPreview(chapter: BookPreview.Chapter): String {
+    val texts = chapter.toStudy.map { it.text }
+    return when (chapter.kind) {
+        BookPreview.Kind.WORDS -> texts.take(8).joinToString(" · ")
+        BookPreview.Kind.EXPRESSIONS -> texts.take(4).joinToString(" · ")
+        BookPreview.Kind.GRAMMAR, BookPreview.Kind.SHADOW -> texts.take(2).joinToString("\n")
     }
 }

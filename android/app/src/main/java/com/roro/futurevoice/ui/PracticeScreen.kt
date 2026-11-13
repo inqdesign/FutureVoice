@@ -34,6 +34,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.material.icons.filled.Newspaper
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
@@ -92,16 +103,65 @@ import com.roro.futurevoice.ui.brand.DayCardData
 import com.roro.futurevoice.talk.Scenario
 import com.roro.futurevoice.talk.Session
 
+/** Everything the Review tab and All books read, one pass per language and
+ *  store revision. */
+private data class ReviewBooks(
+    val data: ReviewShelfData? = null,
+    val talks: List<Session> = emptyList(),
+    /** Finished books. They keep their progress and can come back. */
+    val archivedTalks: List<Session> = emptyList(),
+    val scenarios: List<Scenario> = emptyList(),
+    val archivedScenarios: List<Scenario> = emptyList(),
+    /** Podcast episodes the learner copied into their books — the Listen
+     *  shelf, kept off the Watch one. */
+    val listenBooks: List<Scenario> = emptyList(),
+    val archivedListenBooks: List<Scenario> = emptyList(),
+    val counterparts: Map<String, String> = emptyMap(),
+)
+
+@Composable
+private fun rememberReviewBooks(language: String, level: CefrLevel): ReviewBooks {
+    val context = LocalContext.current
+    val revision by StoreEvents.revision.collectAsStateWithLifecycle()
+    var books by remember { mutableStateOf(ReviewBooks()) }
+    LaunchedEffect(language, revision) {
+        // The shelves first: their pass writes each scene book's mastery
+        // (`ScenarioMastery`), which the scenario cards then read.
+        val data = withContext(Dispatchers.Default) {
+            runCatching { loadReviewShelves(context, language, level) }.getOrNull()
+        }
+        val allScenarios = ScenarioStore.shared(context).load(language).filter { it.isMeeting != true }
+        val allTalks = SessionStore.shared(context).load(language).filter { it.summary != null }
+            .sortedByDescending { it.startedAt }
+        books = ReviewBooks(
+            data = data,
+            talks = allTalks.filter { it.archivedAt == null },
+            archivedTalks = allTalks.filter { it.archivedAt != null },
+            scenarios = allScenarios.filter { it.archivedAt == null && !it.isPodcastBook }
+                .sortedByDescending { it.createdAt },
+            archivedScenarios = allScenarios.filter { it.archivedAt != null && !it.isPodcastBook },
+            listenBooks = allScenarios.filter { it.archivedAt == null && it.isPodcastBook }
+                .sortedByDescending { it.createdAt },
+            archivedListenBooks = allScenarios.filter { it.archivedAt != null && it.isPodcastBook }
+                .sortedByDescending { it.createdAt },
+            counterparts = runCatching {
+                com.roro.futurevoice.data.CounterpartStore.shared(context).load().associate { it.id to it.name }
+            }.getOrDefault(emptyMap()),
+        )
+    }
+    return books
+}
+
 /**
  * Practice — the REVIEW home (`PracticeTab`'s spine). Everything here came out
  * of an activity; nothing is born on this screen. Hosted by the tab shell, so
  * no Scaffold of its own — the week's things (put off, the week, the tests)
  * are in the tab's HEADER (`ReviewHeaderActions`).
  *
- * The Studying page is BOOK-FIRST (iOS `790099d`, 2026-10-03): the four lists
- * on top as one row of tiles, then every unfinished book newest first, each
- * the shelves' own card with four chapter buttons under it. The old Today card
- * is gone — what a day asks for is the routine's.
+ * Today's review, one book at a time (iOS `b43651fa`, 2026-11-11, founder):
+ * the four lists on top, then one big card per unfinished book, newest first,
+ * swiped sideways. "N of M" at the section's right opens All books — the
+ * shelves the chips used to carry.
  */
 @Composable
 fun PracticeBody(
@@ -125,52 +185,19 @@ fun PracticeBody(
      *  `DrillView(source: .session)`). */
     onOpenSessionDeck: (String) -> Unit = { onOpenDeck() },
     nativeLanguage: String = "en",
-    /** Which shelf the page opens on (iOS `PracticeTab(initialShelf:)`). */
-    initialShelf: Shelf = Shelf.STUDYING,
+    /** The shelves, as a pushed page (iOS `showingAllBooks`). */
+    onOpenAllBooks: () -> Unit = {},
     /** A scenario card's long-press "Talk now" (iOS `scenarioCard` context
      *  menu) — a metered launch, so the host runs it through the gate. */
     onTalkScenario: ((Scenario) -> Unit)? = null,
 ) {
     val context = LocalContext.current
-    val revision by StoreEvents.revision.collectAsStateWithLifecycle()
-    var scenarios by remember { mutableStateOf<List<Scenario>>(emptyList()) }
     val scope = rememberCoroutineScope()
-    var talks by remember { mutableStateOf<List<Session>>(emptyList()) }
-    /** Finished books. They keep their progress and can come back. */
-    var archivedTalks by remember { mutableStateOf<List<Session>>(emptyList()) }
-    var archivedScenarios by remember { mutableStateOf<List<Scenario>>(emptyList()) }
-    /** Podcast episodes the learner copied into their books — the Listen
-     *  shelf, kept off the Watch one. */
-    var listenBooks by remember { mutableStateOf<List<Scenario>>(emptyList()) }
-    var archivedListenBooks by remember { mutableStateOf<List<Scenario>>(emptyList()) }
-    /** The feed, the finished shelf, each talk's strip and the library counts —
-     *  one curriculum pass, off the main thread. */
-    var data by remember { mutableStateOf<ReviewShelfData?>(null) }
-    var counterparts by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    val books = rememberReviewBooks(language, level)
+    val d = books.data
+    val feed = d?.feed.orEmpty()
     /** A chapter's word/expression deck, over the tab (iOS's sheet). */
     var chapterDeck by remember { mutableStateOf<Pair<String, List<StudyDeckItem>>?>(null) }
-
-    LaunchedEffect(language, revision) {
-        // The shelves first: their pass writes each scene book's mastery
-        // (`ScenarioMastery`), which the scenario cards below then read.
-        data = withContext(Dispatchers.Default) {
-            runCatching { loadReviewShelves(context, language, level) }.getOrNull()
-        }
-        val allScenarios = ScenarioStore.shared(context).load(language).filter { it.isMeeting != true }
-        scenarios = allScenarios.filter { it.archivedAt == null && !it.isPodcastBook }.sortedByDescending { it.createdAt }
-        archivedScenarios = allScenarios.filter { it.archivedAt != null && !it.isPodcastBook }
-        listenBooks = allScenarios.filter { it.archivedAt == null && it.isPodcastBook }.sortedByDescending { it.createdAt }
-        archivedListenBooks = allScenarios.filter { it.archivedAt != null && it.isPodcastBook }
-            .sortedByDescending { it.createdAt }
-        val allTalks = SessionStore.shared(context).load(language).filter { it.summary != null }
-            .sortedByDescending { it.startedAt }
-        talks = allTalks.filter { it.archivedAt == null }
-        archivedTalks = allTalks.filter { it.archivedAt != null }
-        counterparts = runCatching {
-            com.roro.futurevoice.data.CounterpartStore.shared(context).load().associate { it.id to it.name }
-        }.getOrDefault(emptyMap())
-    }
-    val talkProgress = data?.talkProgress.orEmpty()
 
     fun study(chapter: BookPreview.Chapter, book: BookPreview) {
         val items = chapter.toStudy
@@ -192,155 +219,100 @@ fun PracticeBody(
         }
     }
 
-    @Composable
-    fun card(book: BookPreview, tall: Boolean, modifier: Modifier = Modifier) {
-        book.session?.let {
-            TalkCard(it, onOpenTalk, progress = if (tall) talkProgress[it.id] else null,
-                tall = tall, modifier = modifier)
-        }
-        book.scenario?.let {
-            ScenarioCard(it, onOpenScenarioBook, onTalk = onTalkScenario,
-                personaName = it.counterpartId?.let(counterparts::get),
-                tall = tall, modifier = modifier)
-        }
-    }
+    // The card runs down to the tab bar instead of leaving the page's foot
+    // empty: the page's height, less what sits above the card.
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    var viewport by remember { mutableStateOf(0) }
+    var aboveCard by remember { mutableStateOf(0) }
+    val bottomRoom = IosTabBarClearance + androidx.compose.foundation.layout.WindowInsets.navigationBars
+        .asPaddingValues().calculateBottomPadding()
+    val cardHeight = if (viewport > 0 && aboveCard > 0) with(density) {
+        maxOf(TodayBookCardMinHeight, (viewport - aboveCard).toDp() - 8.dp - 14.dp - bottomRoom)
+    } else TodayBookCardMinHeight
+    val pager = androidx.compose.foundation.pager.rememberPagerState { feed.size }
 
-    fun count(s: Shelf): Int? = when (s) {
-        Shelf.STUDYING -> data?.feed?.size?.takeIf { it > 0 }
-        Shelf.TALK -> talks.size.takeIf { it > 0 }
-        Shelf.WATCH -> scenarios.size.takeIf { it > 0 }
-        Shelf.LISTEN -> listenBooks.size.takeIf { it > 0 }
-        Shelf.FINISHED -> data?.finished?.size?.takeIf { it > 0 }
-    }
-    // The shelves are PAGES (iOS: a paging ScrollView under the chip bar):
-    // swipe sideways between them, or tap a chip.
-    val pager = androidx.compose.foundation.pager.rememberPagerState(
-        initialPage = initialShelf.ordinal) { Shelf.entries.size }
-    ChipPager(
-        state = pager,
-        chip = { i, selected, onClick ->
-            val s = Shelf.entries[i]
-            // Neutral for every shelf (iOS `912d6f4`): the page keeps colour
-            // for its progress bars alone.
-            com.roro.futurevoice.ui.brand.IosChip(
-                label = stringResource(s.labelRes),
-                count = count(s),
-                selected = selected,
-                onClick = onClick)
-        },
-    ) { page ->
-        when (Shelf.entries[page]) {
-            Shelf.STUDYING -> {
-                val d = data
-                val st = d?.stats ?: LibraryStats()
-                // Dimmed only while there is nothing anywhere (iOS cd867a2b).
-                val bare = d != null && d.feed.isEmpty() &&
-                    st.words + st.expressions + st.sentences + st.shadow == 0
-                Box(Modifier.alpha(if (bare) 0.45f else 1f)) {
-                    LibraryTiles(
-                        stats = st,
-                        onWords = onOpenWordsAll,
-                        onExpressions = onOpenExpressionsAll,
-                        onSentences = onOpenSentencesAll,
-                        onShadowing = onShadowAll,
-                    )
-                }
-                // No weekly test banner here (iOS 4f706d92, 2026-10-19): the
-                // test lives inside the week's report — its deck ends on the
-                // test card — and the quick quiz on Talk checks what is being
-                // studied any time.
-                d?.feed?.forEach { book ->
-                    // The shelf's own card, with its chapter buttons under it
-                    // on the same ground.
-                    Column(Modifier.fillMaxWidth().clip(ContinuousShape(18.dp)).background(AppSurfacesCard())) {
-                        card(book, tall = false)
-                        BookChapterButtons(book) { chapter -> study(chapter, book) }
-                    }
-                }
-                if (d != null && d.feed.isEmpty()) {
-                    FirstBookPlaceholder {
-                        DeepLinkInbox.requestFreeTalk(com.roro.futurevoice.talk.TalkEntry.PRACTICE_EMPTY)
-                    }
-                }
+    Column(
+        Modifier.fillMaxSize()
+            .onSizeChanged { viewport = it.height }
+            .verticalScroll(rememberScrollState())
+            .padding(top = 8.dp),
+    ) {
+        Column(
+            Modifier.onSizeChanged { aboveCard = it.height },
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            val st = d?.stats ?: LibraryStats()
+            // Dimmed only while there is nothing anywhere (iOS cd867a2b).
+            val bare = d != null && feed.isEmpty() &&
+                st.words + st.expressions + st.sentences + st.shadow == 0
+            Box(Modifier.padding(horizontal = 20.dp).padding(bottom = 6.dp).alpha(if (bare) 0.45f else 1f)) {
+                LibraryTiles(
+                    stats = st,
+                    onWords = onOpenWordsAll,
+                    onExpressions = onOpenExpressionsAll,
+                    onSentences = onOpenSentencesAll,
+                    onShadowing = onShadowAll,
+                )
             }
-
-            Shelf.TALK -> {
-                // Two columns, as iOS's `LazyVGrid` — a full-width card per
-                // talk made the shelf a list of banners.
-                BookGrid(talks) { t, m ->
-                    TalkCard(t, onOpenTalk, progress = talkProgress[t.id], modifier = m,
-                        onArchive = { id, on -> scope.launch {
-                            SessionStore.shared(context).setArchived(id, on, language); StoreEvents.bump() } },
-                        onDelete = { id -> scope.launch {
-                            SessionStore.shared(context).delete(id, language); StoreEvents.bump() } })
-                }
-                ArchiveSection(archivedTalks.isNotEmpty()) {
-                    archivedTalks.forEach {
-                        TalkCard(it, onOpenTalk,
-                            onArchive = { id, on -> scope.launch {
-                                SessionStore.shared(context).setArchived(id, on, language); StoreEvents.bump() } },
-                            onDelete = { id -> scope.launch {
-                                SessionStore.shared(context).delete(id, language); StoreEvents.bump() } })
-                    }
-                }
-            }
-            Shelf.WATCH -> {
-                BookGrid(scenarios) { sc, m ->
-                    ScenarioCard(sc, onOpenScenarioBook, onTalk = onTalkScenario, modifier = m,
-                        personaName = sc.counterpartId?.let(counterparts::get),
-                        onArchive = { id, on -> scope.launch {
-                            ScenarioStore.shared(context).setArchived(id, on, language); StoreEvents.bump() } },
-                        onDelete = { id -> scope.launch {
-                            ScenarioStore.shared(context).delete(id, language); StoreEvents.bump() } })
-                }
-                ArchiveSection(archivedScenarios.isNotEmpty()) {
-                    archivedScenarios.forEach {
-                        ScenarioCard(it, onOpenScenarioBook, onTalk = onTalkScenario,
-                            personaName = it.counterpartId?.let(counterparts::get),
-                            onArchive = { id, on -> scope.launch {
-                                ScenarioStore.shared(context).setArchived(id, on, language); StoreEvents.bump() } },
-                            onDelete = { id -> scope.launch {
-                                ScenarioStore.shared(context).delete(id, language); StoreEvents.bump() } })
-                    }
-                }
-            }
-            Shelf.LISTEN -> {
-                if (listenBooks.isEmpty() && archivedListenBooks.isEmpty()) {
-                    Text(stringResource(R.string.podcast_listen_shelf_empty),
+            // The section's right side opens everything there is to review:
+            // the shelves, by the chips this tab used to carry.
+            Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.today_s_review), style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                val allBooks = stringResource(R.string.all_books)
+                Row(
+                    Modifier.clip(ContinuousShape(8.dp)).clickable(onClick = onOpenAllBooks)
+                        .semantics { contentDescription = allBooks }
+                        .padding(horizontal = 4.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(if (feed.isEmpty()) allBooks
+                        else stringResource(R.string.lld_of_lld, pager.currentPage + 1, feed.size),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                BookGrid(listenBooks) { sc, m ->
-                    ScenarioCard(sc, onOpenScenarioBook, modifier = m,
-                        onArchive = { id, on -> scope.launch {
-                            ScenarioStore.shared(context).setArchived(id, on, language); StoreEvents.bump() } },
-                        onDelete = { id -> scope.launch {
-                            ScenarioStore.shared(context).delete(id, language); StoreEvents.bump() } })
-                }
-                ArchiveSection(archivedListenBooks.isNotEmpty()) {
-                    archivedListenBooks.forEach {
-                        ScenarioCard(it, onOpenScenarioBook,
-                            onArchive = { id, on -> scope.launch {
-                                ScenarioStore.shared(context).setArchived(id, on, language); StoreEvents.bump() } },
-                            onDelete = { id -> scope.launch {
-                                ScenarioStore.shared(context).delete(id, language); StoreEvents.bump() } })
-                    }
-                }
-            }
-            // Books with every item mastered, as a shelf of their own (iOS
-            // 2026-10-03 — it was a page behind a header seal). The same cards
-            // as every shelf, most recently finished first.
-            Shelf.FINISHED -> {
-                val books = data?.finished.orEmpty()
-                if (data != null && books.isEmpty()) {
-                    Text(stringResource(R.string.master_every_word_and_line_in_a_book_from_a_talk_or_a_scene_ade546),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                } else {
-                    BookGrid(books) { b, m -> card(b, tall = true, modifier = m) }
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
                 }
             }
         }
+        Spacer(Modifier.height(14.dp))
+        // No weekly test banner here (iOS 4f706d92, 2026-10-19): the test
+        // lives inside the week's report.
+        if (d != null && feed.isEmpty()) {
+            Box(Modifier.padding(horizontal = 20.dp)) {
+                FirstBookPlaceholder {
+                    DeepLinkInbox.requestFreeTalk(com.roro.futurevoice.talk.TalkEntry.PRACTICE_EMPTY)
+                }
+            }
+        } else if (feed.isNotEmpty()) {
+            // One book fills the page; the next one's edge shows at the right,
+            // so the row reads as something to swipe.
+            androidx.compose.foundation.pager.HorizontalPager(
+                state = pager,
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                    start = 20.dp, end = if (feed.size > 1) 38.dp else 20.dp),
+                pageSpacing = 10.dp,
+                verticalAlignment = Alignment.Top,
+                key = { feed[it].id },
+            ) { i ->
+                TodayCard(feed[i], books, cardHeight,
+                    onOpenTalk = onOpenTalk, onOpenScenarioBook = onOpenScenarioBook,
+                    onTalkScenario = onTalkScenario,
+                    onStudy = { chapter -> study(chapter, feed[i]) },
+                    onArchiveTalk = { id -> scope.launch {
+                        SessionStore.shared(context).setArchived(id, true, language); StoreEvents.bump() } },
+                    onDeleteTalk = { id -> scope.launch {
+                        SessionStore.shared(context).delete(id, language); StoreEvents.bump() } },
+                    onArchiveScenario = { id -> scope.launch {
+                        ScenarioStore.shared(context).setArchived(id, true, language); StoreEvents.bump() } },
+                    onDeleteScenario = { id -> scope.launch {
+                        ScenarioStore.shared(context).delete(id, language); StoreEvents.bump() } })
+            }
+        }
+        // Room to scroll the card's foot up past the floating bar.
+        Spacer(Modifier.height(bottomRoom))
     }
 
     chapterDeck?.let { (title, items) ->
@@ -359,6 +331,283 @@ fun PracticeBody(
         }
     }
 }
+
+/** One book of today's review: the big card, its tap, and the same
+ *  archive / delete menu the shelves' cards carry (iOS `todayCard`). */
+@Composable
+private fun TodayCard(
+    book: BookPreview,
+    books: ReviewBooks,
+    minHeight: androidx.compose.ui.unit.Dp,
+    onOpenTalk: (String) -> Unit,
+    onOpenScenarioBook: (String) -> Unit,
+    onTalkScenario: ((Scenario) -> Unit)?,
+    onStudy: (BookPreview.Chapter) -> Unit,
+    onArchiveTalk: (String) -> Unit,
+    onDeleteTalk: (String) -> Unit,
+    onArchiveScenario: (String) -> Unit,
+    onDeleteScenario: (String) -> Unit,
+) {
+    var menu by remember { mutableStateOf(false) }
+    val t = book.session
+    val sc = book.scenario
+    Box {
+        if (t != null) {
+            val last = listOfNotNull(books.data?.talkLastStudied?.get(t.id), t.endedAt, t.startedAt).max()
+            TodayBookCard(
+                book = book,
+                title = t.displayTitle ?: stringResource(R.string.conversation),
+                meta = "${talkOrigin(t)} · ${Recency.label(last)}",
+                note = t.summary?.let { s ->
+                    s.scorecard?.topLine?.trim().orEmpty().ifEmpty { s.overallNote.trim() }
+                }?.takeIf { it.isNotEmpty() },
+                icon = Icons.Filled.Forum,
+                score = t.summary?.scorecard?.overall?.takeIf { !t.isPractice },
+                height = minHeight,
+                onOpen = { onOpenTalk(t.id) },
+                onLongPress = { menu = true },
+                onStudy = onStudy,
+            )
+            BookMenu(menu, { menu = false }, listOf(
+                Triple(stringResource(R.string.archive), Icons.Filled.Inventory2, { onArchiveTalk(t.id) }),
+                Triple(stringResource(R.string.delete), Icons.Filled.Delete, { onDeleteTalk(t.id) }),
+            ))
+        } else if (sc != null) {
+            val personaName = sc.counterpartId?.let(books.counterparts::get)
+            val photo = if (personaName != null) rememberPersonPhoto(sc.counterpartId) else null
+            val role = sc.role.trim().takeIf { it.isNotEmpty() }
+            TodayBookCard(
+                book = book,
+                title = sc.cardTitle,
+                meta = listOfNotNull(scenarioOrigin(sc), personaName ?: role).joinToString(" · "),
+                note = (if (sc.cardTitle != sc.environment) sc.environment else sc.brief?.summary)
+                    ?.trim()?.takeIf { it.isNotEmpty() },
+                icon = when {
+                    sc.isPodcastBook -> categoryIcon(sc.category)
+                    sc.isTopic == true -> Icons.Filled.Newspaper
+                    else -> Symbols.icon(sc.categoryIcon)
+                },
+                photo = photo,
+                initials = personaName?.takeIf { photo == null }?.let(::initials),
+                height = minHeight,
+                onOpen = { onOpenScenarioBook(sc.id) },
+                onLongPress = { menu = true },
+                onStudy = onStudy,
+            )
+            BookMenu(menu, { menu = false }, listOfNotNull(
+                onTalkScenario?.let { Triple(stringResource(R.string.talk_now), Icons.Filled.Mic, { it(sc) }) },
+                Triple(stringResource(R.string.archive), Icons.Filled.Inventory2, { onArchiveScenario(sc.id) }),
+                Triple(stringResource(R.string.delete), Icons.Filled.Delete, { onDeleteScenario(sc.id) }),
+            ))
+        }
+    }
+}
+
+/**
+ * Every book by shelf — Studying · Talk · Watch · Listen · Finished, each with
+ * its archive (iOS `allBooksPage`). The Review tab's chips until 2026-11-11;
+ * now one page behind today's review's "N of M".
+ */
+@Composable
+fun AllBooksScreen(
+    language: String,
+    level: CefrLevel,
+    onOpenScenarioBook: (String) -> Unit,
+    onOpenTalk: (String) -> Unit,
+    onBack: () -> Unit,
+    initialShelf: Shelf = Shelf.STUDYING,
+    onTalkScenario: ((Scenario) -> Unit)? = null,
+) {
+    NavPageBackHandler(onBack = onBack)
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val books = rememberReviewBooks(language, level)
+    val data = books.data
+    val talkProgress = data?.talkProgress.orEmpty()
+    val talks = books.talks
+    val scenarios = books.scenarios
+    val listenBooks = books.listenBooks
+    val counterparts = books.counterparts
+
+    @Composable
+    fun card(book: BookPreview, modifier: Modifier = Modifier) {
+        book.session?.let { TalkCard(it, onOpenTalk, progress = talkProgress[it.id], modifier = modifier) }
+        book.scenario?.let {
+            ScenarioCard(it, onOpenScenarioBook, onTalk = onTalkScenario,
+                personaName = it.counterpartId?.let(counterparts::get), modifier = modifier)
+        }
+    }
+
+    fun count(s: Shelf): Int? = when (s) {
+        Shelf.STUDYING -> data?.feed?.size?.takeIf { it > 0 }
+        Shelf.TALK -> talks.size.takeIf { it > 0 }
+        Shelf.WATCH -> scenarios.size.takeIf { it > 0 }
+        Shelf.LISTEN -> listenBooks.size.takeIf { it > 0 }
+        Shelf.FINISHED -> data?.finished?.size?.takeIf { it > 0 }
+    }
+
+    @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+    androidx.compose.material3.Scaffold(
+        topBar = {
+            androidx.compose.material3.CenterAlignedTopAppBar(
+                colors = com.roro.futurevoice.ui.brand.AppSurfaces.topBarColors(),
+                title = { Text(stringResource(R.string.all_books), style = MaterialTheme.typography.titleMedium) },
+                navigationIcon = {
+                    androidx.compose.material3.IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                    }
+                },
+            )
+        },
+        containerColor = com.roro.futurevoice.ui.brand.AppSurfaces.ground,
+    ) { padding ->
+      Box(Modifier.padding(top = padding.calculateTopPadding()).fillMaxSize()) {
+        // The shelves are PAGES (iOS: a paging ScrollView under the chip bar):
+        // swipe sideways between them, or tap a chip.
+        val pager = androidx.compose.foundation.pager.rememberPagerState(
+            initialPage = initialShelf.ordinal) { Shelf.entries.size }
+        ChipPager(
+            state = pager,
+            chip = { i, selected, onClick ->
+                val s = Shelf.entries[i]
+                // Neutral for every shelf (iOS `912d6f4`): the page keeps colour
+                // for its progress bars alone.
+                com.roro.futurevoice.ui.brand.IosChip(
+                    label = stringResource(s.labelRes),
+                    count = count(s),
+                    selected = selected,
+                    onClick = onClick)
+            },
+        ) { page ->
+            when (Shelf.entries[page]) {
+                // Every unfinished book, newest first — today's review as a shelf.
+                Shelf.STUDYING -> {
+                    val feed = data?.feed.orEmpty()
+                    if (data != null && feed.isEmpty()) {
+                        Text(stringResource(R.string.finish_a_talk_and_it_lands_here_as_a_book_replay_it_pick_up_f70da1),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else {
+                        BookGrid(feed) { b, m -> card(b, m) }
+                    }
+                }
+                Shelf.TALK -> {
+                    // Two columns, as iOS's `LazyVGrid` — a full-width card per
+                    // talk made the shelf a list of banners.
+                    BookGrid(talks) { t, m ->
+                        TalkCard(t, onOpenTalk, progress = talkProgress[t.id], modifier = m,
+                            onArchive = { id, on -> scope.launch {
+                                SessionStore.shared(context).setArchived(id, on, language); StoreEvents.bump() } },
+                            onDelete = { id -> scope.launch {
+                                SessionStore.shared(context).delete(id, language); StoreEvents.bump() } })
+                    }
+                    ArchiveSection(books.archivedTalks.isNotEmpty()) {
+                        books.archivedTalks.forEach {
+                            TalkCard(it, onOpenTalk,
+                                onArchive = { id, on -> scope.launch {
+                                    SessionStore.shared(context).setArchived(id, on, language); StoreEvents.bump() } },
+                                onDelete = { id -> scope.launch {
+                                    SessionStore.shared(context).delete(id, language); StoreEvents.bump() } })
+                        }
+                    }
+                }
+                Shelf.WATCH -> {
+                    BookGrid(scenarios) { sc, m ->
+                        ScenarioCard(sc, onOpenScenarioBook, onTalk = onTalkScenario, modifier = m,
+                            personaName = sc.counterpartId?.let(counterparts::get),
+                            onArchive = { id, on -> scope.launch {
+                                ScenarioStore.shared(context).setArchived(id, on, language); StoreEvents.bump() } },
+                            onDelete = { id -> scope.launch {
+                                ScenarioStore.shared(context).delete(id, language); StoreEvents.bump() } })
+                    }
+                    ArchiveSection(books.archivedScenarios.isNotEmpty()) {
+                        books.archivedScenarios.forEach {
+                            ScenarioCard(it, onOpenScenarioBook, onTalk = onTalkScenario,
+                                personaName = it.counterpartId?.let(counterparts::get),
+                                onArchive = { id, on -> scope.launch {
+                                    ScenarioStore.shared(context).setArchived(id, on, language); StoreEvents.bump() } },
+                                onDelete = { id -> scope.launch {
+                                    ScenarioStore.shared(context).delete(id, language); StoreEvents.bump() } })
+                        }
+                    }
+                }
+                Shelf.LISTEN -> {
+                    if (listenBooks.isEmpty() && books.archivedListenBooks.isEmpty()) {
+                        Text(stringResource(R.string.podcast_listen_shelf_empty),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    BookGrid(listenBooks) { sc, m ->
+                        ScenarioCard(sc, onOpenScenarioBook, modifier = m,
+                            onArchive = { id, on -> scope.launch {
+                                ScenarioStore.shared(context).setArchived(id, on, language); StoreEvents.bump() } },
+                            onDelete = { id -> scope.launch {
+                                ScenarioStore.shared(context).delete(id, language); StoreEvents.bump() } })
+                    }
+                    ArchiveSection(books.archivedListenBooks.isNotEmpty()) {
+                        books.archivedListenBooks.forEach {
+                            ScenarioCard(it, onOpenScenarioBook,
+                                onArchive = { id, on -> scope.launch {
+                                    ScenarioStore.shared(context).setArchived(id, on, language); StoreEvents.bump() } },
+                                onDelete = { id -> scope.launch {
+                                    ScenarioStore.shared(context).delete(id, language); StoreEvents.bump() } })
+                        }
+                    }
+                }
+                // Books with every item mastered, as a shelf of their own (iOS
+                // 2026-10-03). The same cards as every shelf, most recently
+                // finished first.
+                Shelf.FINISHED -> {
+                    val finished = data?.finished.orEmpty()
+                    if (data != null && finished.isEmpty()) {
+                        Text(stringResource(R.string.master_every_word_and_line_in_a_book_from_a_talk_or_a_scene_ade546),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else {
+                        BookGrid(finished) { b, m -> card(b, m) }
+                    }
+                }
+            }
+        }
+      }
+    }
+}
+
+/** A talk's source line — "Free talk", "News · Tutor", "Practice call"
+ *  (iOS `OriginTag(session:)`). */
+@Composable
+private fun talkOrigin(t: Session): String {
+    val source = when (t.origin?.name?.lowercase()) {
+        "news" -> stringResource(R.string.news)
+        "scenario" -> stringResource(R.string.scenarios)
+        else -> stringResource(R.string.free_talk)
+    }
+    // A coach-mode call says so in place of "Free talk" (after "News" /
+    // "Scenario"). A practice call (`Session.coached` — tutor mode, or
+    // coach mode before 2026-10-14) carries no score, so it is named
+    // that (iOS `OriginTag`). A tutor call scored on its final check
+    // (`Turn.tutorRole`) says "Tutor"; one that never reached the
+    // check is a practice call.
+    val coached = t.turns.any { it.coachLine != null }
+    val tutored = t.turns.any { it.tutorRole != null }
+    if (!t.isPractice && !coached && !tutored) return source
+    val coach = stringResource(when {
+        t.isPractice -> R.string.practice_call
+        tutored -> R.string.tutor
+        else -> R.string.coach_mode
+    })
+    return when (t.origin?.name?.lowercase()) {
+        "news", "scenario" -> "$source · $coach"
+        else -> coach
+    }
+}
+
+/** A scene book's source: the podcast episode it was copied from, News, or
+ *  Scenario (iOS `OriginTag(scenario:)`). */
+@Composable
+private fun scenarioOrigin(sc: Scenario): String =
+    sc.podcast?.let { "${stringResource(R.string.nawana_podcast)} · EP ${it.number}" }
+        ?: stringResource(if (sc.isTopic == true) R.string.news else R.string.scenario)
 
 @Composable
 private fun AppSurfacesCard() = com.roro.futurevoice.ui.brand.AppSurfaces.card
@@ -413,31 +662,7 @@ private fun TalkCard(t: Session, onOpen: (String) -> Unit,
         title = t.displayTitle ?: stringResource(R.string.conversation),
         // iOS `bubble.left.and.bubble.right.fill` — two bubbles, a conversation.
         icon = Icons.Filled.Forum,
-        origin = run {
-            val source = when (t.origin?.name?.lowercase()) {
-                "news" -> stringResource(R.string.news)
-                "scenario" -> stringResource(R.string.scenarios)
-                else -> stringResource(R.string.free_talk)
-            }
-            // A coach-mode call says so in place of "Free talk" (after "News" /
-            // "Scenario"). A practice call (`Session.coached` — tutor mode, or
-            // coach mode before 2026-10-14) carries no score, so it is named
-            // that (iOS `OriginTag`). A tutor call scored on its final check
-            // (`Turn.tutorRole`) says "Tutor"; one that never reached the
-            // check is a practice call.
-            val coached = t.turns.any { it.coachLine != null }
-            val tutored = t.turns.any { it.tutorRole != null }
-            if (!t.isPractice && !coached && !tutored) return@run source
-            val coach = stringResource(when {
-                t.isPractice -> R.string.practice_call
-                tutored -> R.string.tutor
-                else -> R.string.coach_mode
-            })
-            when (t.origin?.name?.lowercase()) {
-                "news", "scenario" -> "$source · $coach"
-                else -> coach
-            }
-        },
+        origin = talkOrigin(t),
         accent = if (t.origin?.name?.lowercase() == "news") Books.topics else Books.talks,
         // WHEN it was last worked, said as recency — it keeps advancing as
         // the book is studied, which a fixed date does not. It rides after
@@ -485,8 +710,7 @@ private fun ScenarioCard(sc: Scenario, onOpen: (String) -> Unit,
         // The source, then WHO the scene is with, on one line — "Scenario ·
         // Sarah" (iOS `OriginTag(scenario:).with(partnerLabel)`, 2026-10-16).
         // A Listen book is the podcast episode it was copied from.
-        origin = sc.podcast?.let { "${stringResource(R.string.nawana_podcast)} · EP ${it.number}" }
-            ?: stringResource(if (sc.isTopic == true) R.string.news else R.string.scenario),
+        origin = scenarioOrigin(sc),
         accent = if (sc.isPodcastBook) Books.podcasts else Books.scenarios,
         detail = personaName ?: sc.role.trim().takeIf { it.isNotEmpty() },
         progressLabel = if (!tall) null
