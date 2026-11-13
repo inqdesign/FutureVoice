@@ -118,7 +118,7 @@ final class PlaylistPlayer: ObservableObject {
 
     private init() {
         let d = UserDefaults.standard
-        repeatMode = RepeatMode(rawValue: d.string(forKey: Self.repeatKey) ?? "") ?? .all
+        repeatMode = RepeatMode(rawValue: d.string(forKey: Self.repeatKey) ?? "") ?? .off
         shuffle = d.bool(forKey: Self.shuffleKey)
         gap = Gap(rawValue: d.string(forKey: Self.gapKey) ?? "") ?? .none
         let saved = d.float(forKey: Self.speedKey)
