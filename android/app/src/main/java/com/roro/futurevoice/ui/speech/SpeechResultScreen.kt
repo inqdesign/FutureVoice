@@ -65,6 +65,8 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.runtime.DisposableEffect
@@ -320,17 +322,28 @@ internal suspend fun saveVideoToGallery(context: Context, file: File): Boolean =
  *  was skipped — iOS `SpeechMarkedScript`. [held] and [pauses] are by the
  *  script word's index across paragraphs: seconds a word was held longer than
  *  the native reading, and seconds of a stop after it where the native reading
- *  has none (Season 2 takes only). */
+ *  has none (Season 2 takes only). [sounds]: the sounds in a word Azure scored
+ *  under the price list's bar (scoring 8), a dotted purple underline with the
+ *  sounds written small after the word; a tap opens [onSound]. A tap on a held
+ *  word or a stop opens [onMark] (the phrase drill). [current] is the word
+ *  being heard while the take plays, behind a yellow highlighter. */
 @Composable
 internal fun MarkedScript(paragraphs: List<List<SpeechAnalyzer.ScriptMark>>, language: String,
-                          held: Map<Int, Double> = emptyMap(), pauses: Map<Int, Double> = emptyMap()) {
+                          held: Map<Int, Double> = emptyMap(), pauses: Map<Int, Double> = emptyMap(),
+                          onMark: ((com.roro.futurevoice.talk.SpeechPhraseMark) -> Unit)? = null,
+                          sounds: Map<Int, List<com.roro.futurevoice.talk.SpeechReading.WeakSound>> = emptyMap(),
+                          onSound: ((Int) -> Unit)? = null,
+                          current: Int? = null) {
     val red = Color(0xFFFF3B30)
-    val orange = Color(0xFFFF9500)
+    val rhythmColor = speechPartColor(com.roro.futurevoice.talk.SpeechReadingScore.Part.RHYTHM)
+    val pauseColor = speechPartColor(com.roro.futurevoice.talk.SpeechReadingScore.Part.PAUSES)
+    val soundColor = speechPartColor(com.roro.futurevoice.talk.SpeechReadingScore.Part.PRONUNCIATION)
     val gap = if (LanguageCatalog.writesSpaces(language)) " " else ""
     val seconds = stringResource(R.string.speech_seconds)
     fun label(s: Double) = seconds.format("%.1f".format(java.util.Locale.US, s))
     fun note(color: Color) = SpanStyle(color = color, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
         baselineShift = BaselineShift(0.5f))
+    val density = androidx.compose.ui.platform.LocalDensity.current
     SelectionContainer {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             var first = 0
@@ -338,22 +351,47 @@ internal fun MarkedScript(paragraphs: List<List<SpeechAnalyzer.ScriptMark>>, lan
                 if (line.isEmpty()) return@forEach
                 val start = first
                 first += line.size
-                Text(buildAnnotatedString {
+                // Where each dotted (weak-sound) word sits in the paragraph's text.
+                val dotted = mutableListOf<IntRange>()
+                val text = buildAnnotatedString {
                     line.forEachIndexed { i, mark ->
                         if (i > 0) append(gap)
-                        val heldFor = held[start + i]
+                        val index = start + i
+                        val heldFor = held[index]
+                        val weak = if (mark.op == ShadowScore.DiffOp.MATCH || mark.op == ShadowScore.DiffOp.INS) sounds[index] else null
                         val wordColor = if (mark.op == ShadowScore.DiffOp.DEL || mark.op == ShadowScore.DiffOp.SUB) red else Color.Unspecified
                         val decoration = when (mark.op) {
                             ShadowScore.DiffOp.DEL -> TextDecoration.LineThrough
                             ShadowScore.DiffOp.SUB -> TextDecoration.Underline
                             else -> null
                         }
-                        withStyle(SpanStyle(color = wordColor, textDecoration = decoration,
-                            background = if (heldFor != null) orange.copy(alpha = 0.25f) else Color.Unspecified)) {
-                            append(mark.word)
+                        // A highlighter behind the word, never a weight: bold made
+                        // the word wider and the line rewrapped as the reading moved.
+                        val background = when {
+                            current == index -> Color.Yellow.copy(alpha = 0.45f)
+                            heldFor != null -> rhythmColor.copy(alpha = 0.22f)
+                            else -> Color.Unspecified
                         }
+                        val link = when {
+                            heldFor != null && onMark != null -> androidx.compose.ui.text.LinkAnnotation.Clickable("held$index") {
+                                onMark(com.roro.futurevoice.talk.SpeechPhraseMark(index, com.roro.futurevoice.talk.SpeechPhraseMark.Kind.HELD, heldFor))
+                            }
+                            weak != null && onSound != null -> androidx.compose.ui.text.LinkAnnotation.Clickable("sound$index") { onSound(index) }
+                            else -> null
+                        }
+                        val wordStart = length
+                        val style = SpanStyle(color = wordColor, textDecoration = decoration, background = background)
+                        if (link != null) withLink(link) { withStyle(style) { append(mark.word) } }
+                        else withStyle(style) { append(mark.word) }
+                        if (weak != null) dotted += wordStart until length
                         if (heldFor != null) {
-                            withStyle(note(if (wordColor == red) red else orange)) { append(" " + label(heldFor)) }
+                            withStyle(note(if (wordColor == red) red else rhythmColor)) { append(" " + label(heldFor)) }
+                        }
+                        if (weak != null) {
+                            // Phoneme names come in IPA for English only; elsewhere
+                            // the underline alone marks the word.
+                            val names = weak.map { it.phoneme }.filter { it.isNotEmpty() }
+                            if (names.isNotEmpty()) withStyle(note(soundColor)) { append(" " + names.joinToString(" ")) }
                         }
                         val heard = mark.heard
                         if (mark.op == ShadowScore.DiffOp.SUB && !heard.isNullOrEmpty()) {
@@ -361,9 +399,39 @@ internal fun MarkedScript(paragraphs: List<List<SpeechAnalyzer.ScriptMark>>, lan
                                 baselineShift = BaselineShift(0.5f))) { append(" " + heard) }
                         }
                         mark.added.forEach { extra -> withStyle(note(red)) { append(" +$extra") } }
-                        pauses[start + i]?.let { s -> withStyle(note(orange)) { append(" ⏸︎" + label(s)) } }
+                        pauses[index]?.let { s ->
+                            val stop = note(pauseColor).let {
+                                if (onMark != null) it.copy(background = pauseColor.copy(alpha = 0.25f)) else it
+                            }
+                            if (onMark != null) {
+                                withLink(androidx.compose.ui.text.LinkAnnotation.Clickable("stop$index") {
+                                    onMark(com.roro.futurevoice.talk.SpeechPhraseMark(index, com.roro.futurevoice.talk.SpeechPhraseMark.Kind.STOP, s))
+                                }) { withStyle(stop) { append(" ⏸︎" + label(s)) } }
+                            } else {
+                                withStyle(stop) { append(" ⏸︎" + label(s)) }
+                            }
+                        }
                     }
-                }, style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 30.sp))
+                }
+                var layout by remember(text) { mutableStateOf<androidx.compose.ui.text.TextLayoutResult?>(null) }
+                Text(text, style = MaterialTheme.typography.bodyLarge.copy(lineHeight = 30.sp),
+                    onTextLayout = { layout = it },
+                    modifier = Modifier.drawBehind {
+                        val l = layout ?: return@drawBehind
+                        val effect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(2f * density.density, 2.5f * density.density))
+                        for (r in dotted) {
+                            if (r.isEmpty()) continue
+                            val l0 = l.getLineForOffset(r.first)
+                            val l1 = l.getLineForOffset(r.last)
+                            for (ln in l0..l1) {
+                                val x0 = if (ln == l0) l.getHorizontalPosition(r.first, true) else l.getLineLeft(ln)
+                                val x1 = if (ln == l1) l.getHorizontalPosition(r.last + 1, true) else l.getLineRight(ln)
+                                val y = l.getLineBaseline(ln) + 3f * density.density
+                                drawLine(soundColor, Offset(x0, y), Offset(x1, y), strokeWidth = 1.5f * density.density,
+                                    pathEffect = effect)
+                            }
+                        }
+                    })
             }
         }
     }

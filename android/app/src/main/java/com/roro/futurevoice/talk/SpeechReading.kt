@@ -36,7 +36,7 @@ import kotlin.math.truncate
  * counts.
  */
 object SpeechReading {
-    const val VERSION = 7
+    const val VERSION = 8
     /** A take with `scoring` at or above this was scored against a reference
      *  (iOS compares with `SpeechScoreV4.version`). */
     const val READING_SCORING_FROM = 4
@@ -105,7 +105,7 @@ object SpeechReading {
     fun score(take: Map<Int, Timed>, reference: Map<Int, Timed>, script: List<String>,
               stops: List<SpeechDelivery.Stop>, slips: Int?, scriptTokens: Int?, missed: List<String>,
               soundAccuracy: Int?, weakest: List<SpeechDelivery.Sound>,
-              coverage: Double, gender: String): SpeechReadingScore? {
+              coverage: Double, gender: String, weakSounds: Int? = null): SpeechReadingScore? {
         val both = take.keys.filter { reference[it] != null }.sorted()
         if (both.size < 20) return null
         val refSum = both.sumOf { reference.getValue(it).duration }
@@ -153,6 +153,7 @@ object SpeechReading {
             extraPauses = extra.sortedByDescending { it.seconds },
             held = held, missed = missed.take(5),
             weakest = if (parts.pronunciation < 100) weakest.filter { it.score < 80 }.take(3) else emptyList(),
+            weakSounds = weakSounds, scriptWords = scriptTokens,
         )
     }
 
@@ -169,6 +170,66 @@ object SpeechReading {
         )
 
     private fun percent(value: Double): Int = round(min(100.0, max(0.0, value))).toInt()
+
+    /** A sound Azure scored under the price list's bar, where it was said. */
+    data class WeakSound(val phoneme: String, val score: Int)
+
+    /**
+     * Every weak sound, laid on the script token it was said in (iOS
+     * 2026-11-13, founder: 35 sounds cost points and none showed on the
+     * script). Pieces overlap by two words at their starts, so a word assessed
+     * twice counts ONCE, its first reading: the count the price list charges
+     * and the marks on the script are the same set.
+     */
+    fun weakSounds(pieces: List<PronunciationResult>, script: String,
+                   fluent: List<SpeechReference.Word>? = null): Map<Int, List<WeakSound>> {
+        val bar = SpeechReadingScore.Price.WEAK_SOUND_BELOW
+        val spared = fluentLowSounds(fluent, script)
+        val out = LinkedHashMap<Int, List<WeakSound>>()
+        for ((t, word) in judgedWords(pieces, script)) {
+            val weak = word.phonemes.mapNotNull { p ->
+                val a = p.accuracy ?: return@mapNotNull null
+                if (a >= bar || spared[t]?.contains(p.phoneme) == true) null else WeakSound(p.phoneme, a)
+            }
+            if (weak.isNotEmpty()) out[t] = weak
+        }
+        return out
+    }
+
+    /** The fluent reading's sounds that the same assessment scores under this,
+     *  by script token (iOS 2026-11-13: the reading says "nyu" in newspapers,
+     *  and the dictionary wants "noo"). A learner who says such a sound like
+     *  the reading is never charged for it. 60 is a choice, not a measurement. */
+    const val FLUENT_SOUND_BAR = 60
+
+    fun fluentLowSounds(fluent: List<SpeechReference.Word>?, script: String): Map<Int, Set<String>> {
+        if (fluent == null || fluent.none { it.ph != null }) return emptyMap()
+        val tokens = SpeechDelivery.referenceTokens(script).map { it.core }
+        val match = SpeechDelivery.align(fluent.map { SpeechDelivery.core(it.w) }, tokens)
+        val out = HashMap<Int, MutableSet<String>>()
+        fluent.forEachIndexed { i, word ->
+            val t = match[i] ?: return@forEachIndexed
+            val ph = word.ph ?: return@forEachIndexed
+            val low = ph.filter { it.a < FLUENT_SOUND_BAR }.map { it.p }.toSet()
+            if (low.isNotEmpty()) out.getOrPut(t) { mutableSetOf() }.addAll(low)
+        }
+        return out
+    }
+
+    /** Each script token's assessed word, its FIRST reading where pieces
+     *  overlap: what [weakSounds] counts from, and what the sounds sheet shows
+     *  a tapped word with. */
+    fun judgedWords(pieces: List<PronunciationResult>, script: String): Map<Int, PronunciationResult.Word> {
+        val tokens = SpeechDelivery.referenceTokens(script).map { it.core }
+        val words = pieces.flatMap { p -> p.words.filter { it.isJudged } }
+        val match = SpeechDelivery.align(words.map { SpeechDelivery.core(it.word) }, tokens)
+        val out = LinkedHashMap<Int, PronunciationResult.Word>()
+        words.forEachIndexed { i, word ->
+            val t = match[i] ?: return@forEachIndexed
+            if (out[t] == null) out[t] = word
+        }
+        return out
+    }
 
     fun pearson(x: List<Double>, y: List<Double>): Double? {
         if (x.size != y.size || x.size < 4) return null
@@ -208,6 +269,15 @@ data class SpeechReadingScore(
     val held: List<Held>,
     val missed: List<String>,
     val weakest: List<SpeechDelivery.Sound>,
+    /** Sounds Azure scored under [Price.WEAK_SOUND_BELOW] (scoring 8). Null on
+     *  earlier takes, or when nothing was assessed. */
+    val weakSounds: Int? = null,
+    /** The script's words, for the words left unread (scoring 8). */
+    val scriptWords: Int? = null,
+    /** "listen": measured against the one listening reading (iOS 2026-11-13).
+     *  Null: the male/female pair, which a challenge take is re-judged off
+     *  when its result is opened ([SpeechReadingRejudge]). */
+    val reference: String? = null,
 ) {
     @Serializable
     data class Parts(val speed: Int, val rhythm: Int, val pauses: Int, val accuracy: Int, val pronunciation: Int) {
@@ -238,10 +308,71 @@ data class SpeechReadingScore(
         val index: Int? = null,
     )
 
-    val isPerfect: Boolean get() = parts.all.all { it.second == 100 } && coverage >= 0.999
+    // MARK: The price list (scoring 8, iOS 2026-11-13)
+    //
+    // Founder: "start at 100, and every mistake counts". The relative prices
+    // come from 138 human readings; `submit_speech_reading_take_v8` recomputes
+    // the same total from the same counts: change a price here and there
+    // together.
+    object Price {
+        const val STOP = 1.0              // a stop inside a sentence the native reading doesn't make
+        const val WORD = 1.0              // a word changed, missed or added, or left unread at the end
+        // A sound Azure scores under WEAK_SOUND_BELOW: 0.4, the calibration's
+        // own ratio to a word.
+        const val SOUND = 0.4
+        const val WEAK_SOUND_BELOW = 40
+        const val RHYTHM_PER_POINT = 0.5  // per 0.01 of rhythm below RHYTHM_BAR
+        const val RHYTHM_BAR = 90         // r × 100: natives sit around 93
+        const val SPEED_PER_POINT = 1.0   // per point of pace below SPEED_BAR
+        const val SPEED_BAR = 85          // % of the native reading's pace: natives median 91
+    }
+
+    /** [count]: how many (stops, words, sounds) or how far below the bar
+     *  (rhythm, pace). */
+    data class Deduction(val part: Part, val count: Int, val points: Double)
+
+    /** The rhythm and pace as the price list reads them: whole points. */
+    val rhythmPoint: Int get() = SpeechReading.round(rhythm * 100).toInt()
+    val speedPoint: Int get() = if (speed > 0) SpeechReading.round(100 * min(speed, 1 / speed)).toInt() else 0
+    /** Words the reading never reached (it stopped early). */
+    val unreadWords: Int get() {
+        val w = scriptWords ?: return 0
+        return max(0, SpeechReading.round((1 - min(1.0, coverage)) * w).toInt())
+    }
+
+    /** Every line of the receipt, in the order the page lists them: from the
+     *  whole reading down to a single sound. Empty before scoring 8. */
+    val deductions: List<Deduction> get() {
+        if (version < 8) return emptyList()
+        val words = slips + unreadWords
+        val sounds = weakSounds ?: 0
+        val r = max(0, Price.RHYTHM_BAR - rhythmPoint)
+        val s = max(0, Price.SPEED_BAR - speedPoint)
+        return listOf(
+            Deduction(Part.SPEED, s, s * Price.SPEED_PER_POINT),
+            Deduction(Part.RHYTHM, r, r * Price.RHYTHM_PER_POINT),
+            Deduction(Part.PAUSES, extraPauses.size, extraPauses.size * Price.STOP),
+            Deduction(Part.ACCURACY, words, words * Price.WORD),
+            Deduction(Part.PRONUNCIATION, sounds, sounds * Price.SOUND),
+        )
+    }
+
+    val lost: Double get() = deductions.sumOf { it.points }
+
+    fun areaLeft(d: Deduction): Double = max(0.0, AREA_SHARE - d.points)
+
+    /** An area's score out of 100. */
+    fun areaScore(d: Deduction): Int = SpeechReading.round(areaLeft(d) * 100 / AREA_SHARE).toInt()
+
+    val isPerfect: Boolean get() =
+        if (version >= 8) lost == 0.0 else parts.all.all { it.second == 100 } && coverage >= 0.999
 
     val total: Int get() {
         if (isPerfect) return 100
+        if (version >= 8) {
+            val left = deductions.sumOf { areaLeft(it) }
+            return min(99, max(0, SpeechReading.round(left).toInt()))
+        }
         val mean = parts.all.sumOf { it.second } / 5.0
         // Stopping early scales everything but accuracy — as the older scoring did.
         val scaled = mean * (0.2 + 0.8 * min(1.0, coverage))
@@ -249,13 +380,23 @@ data class SpeechReadingScore(
     }
 
     /** The part that cost the most, to work on next; null on a perfect take. */
-    val focus: Part? get() = if (isPerfect) null else parts.all.minByOrNull { it.second }?.first
+    val focus: Part? get() = when {
+        isPerfect -> null
+        version >= 8 -> deductions.minByOrNull { areaLeft(it) }?.part
+        else -> parts.all.minByOrNull { it.second }?.first
+    }
 
     val level: SpeechReadingLevel get() = SpeechReadingLevel.of(total)
 
     companion object {
         /** A narrator's level, part by part. */
         const val BAR = 95
+        /** Each area holds 20 of the 100 points (iOS 2026-11-13, founder: "each
+         *  area scored, so what's weak shows at a glance"). An area's score is
+         *  what is left of its 20, out of 100; it stops at 0, so the total is
+         *  always the five areas' average. `submit_speech_reading_take_v8`
+         *  adds the same shares. */
+        const val AREA_SHARE = 20.0
     }
 }
 
@@ -279,7 +420,14 @@ enum class SpeechReadingLevel(val floor: Int) {
  *  (`speech-reference` edge function). */
 @Serializable
 data class SpeechReference(val version: Int, val male: List<Word>, val female: List<Word>) {
-    @Serializable data class Word(val w: String, val s: Int, val e: Int)
+    @Serializable data class Word(
+        val w: String, val s: Int, val e: Int,
+        /** The fluent reading's own sounds with their scores (the listening
+         *  reading only, iOS 2026-11-13). Null on scoring references. */
+        val ph: List<Sound>? = null,
+    ) {
+        @Serializable data class Sound(val p: String, val a: Int)
+    }
 
     fun words(gender: String): List<Word> = if (gender == "female") female else male
 }
@@ -324,5 +472,47 @@ object SpeechReferenceService {
                 reference
             }
         }.getOrNull()
+    }
+}
+
+/**
+ * Re-judges a challenge take scored against the old male/female pair against
+ * the one listening reading (iOS `SpeechReadingRejudge`, 2026-11-13, founder:
+ * "re-judge the earlier attempts if we can"). Everything it needs is on the
+ * take: the assessed pieces with their word timings, the transcript, the
+ * recording.
+ */
+object SpeechReadingRejudge {
+    fun needs(take: com.roro.futurevoice.data.SpeechTake): Boolean {
+        val r = take.metrics.reading ?: return false
+        return r.version >= 8 && r.reference == null && !take.assessments.isNullOrEmpty()
+    }
+
+    /** The re-judged take, saved; null when it didn't need it or couldn't be. */
+    suspend fun run(context: Context, take: com.roro.futurevoice.data.SpeechTake,
+                    script: com.roro.futurevoice.data.SpeechScript): com.roro.futurevoice.data.SpeechTake? {
+        if (!needs(take) || !SpeechListenService.available(script)) return null
+        val fluent = SpeechListenService.reading(context, script) ?: return null
+        val starts = take.assessmentStartsMs
+        val pieces = take.assessments.orEmpty().mapIndexed { i, result ->
+            SpeechDelivery.Piece("", result, starts?.getOrNull(i) ?: 0)
+        }
+        val audio = com.roro.futurevoice.data.SpeechStore.mediaFile(context, take.audioFilename)
+        var metrics = take.metrics
+        val (delivered, scored) = withContext(Dispatchers.Default) {
+            SpeechDelivery.measure(pieces, script.language, audio) to
+                SpeechAnalyzer.analyze(script.body, take.transcript, script.language, null, metrics.pronunciation)
+        }
+        metrics = metrics.copy(slips = scored.slips, scriptTokens = scored.scriptTokens)
+        val reference = SpeechReference(2, fluent.words, fluent.words)
+        val reading = com.roro.futurevoice.ui.speech.SpeechTakeSession.reading(
+            pieces, reference, script.body, metrics, delivered, fluent.words)
+            ?.copy(gender = fluent.gender, reference = "listen") ?: return null
+        val store = com.roro.futurevoice.data.SpeechStore.shared(context)
+        val saved = withContext(Dispatchers.Main) {
+            store.update(take.id) { it.copy(metrics = metrics.copy(reading = reading, overall = reading.total)) }
+        } ?: return null
+        com.roro.futurevoice.core.Analytics.capture("speech_take_rejudged", mapOf("overall" to reading.total))
+        return saved
     }
 }

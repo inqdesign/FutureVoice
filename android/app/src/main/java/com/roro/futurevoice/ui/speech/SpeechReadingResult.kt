@@ -464,24 +464,39 @@ private val HANDLE_HEIGHT = 25.dp
 
 /** The parts of the score, what the sheet shows before it is opened. A take
  *  from before Season 2's scoring has no parts of its own, so it shows the
- *  sub-scores its old total was made of — iOS `scoreTiles`. */
+ *  sub-scores its old total was made of — iOS `scoreTiles`. A price-list take
+ *  (scoring 8) shows each area out of 100, in the receipt's order, its colour
+ *  on a dot by the name. */
 @Composable
-private fun scoreTiles(m: com.roro.futurevoice.data.SpeechMetrics): List<Pair<String, Int>> {
-    m.reading?.let { r -> return r.parts.all.map { (part, score) -> stringResource(partTitle(part)) to score } }
-    val tiles = mutableListOf(stringResource(R.string.accuracy) to m.accuracy)
-    m.pronunciation?.let { tiles += stringResource(R.string.pronunciation) to it }
-    tiles += stringResource(R.string.pace) to m.paceScore
-    tiles += stringResource(R.string.pauses) to m.pauseScore
-    tiles += stringResource(R.string.fillers) to m.fillerScore
-    tiles += stringResource(R.string.steady_voice) to m.steadiness
+private fun scoreTiles(m: com.roro.futurevoice.data.SpeechMetrics): List<Triple<String, Int, Color?>> {
+    m.reading?.let { r ->
+        if (r.version >= 8) return r.deductions.map { Triple(stringResource(partTitle(it.part)), r.areaScore(it), speechPartColor(it.part)) }
+        return r.parts.all.map { (part, score) -> Triple(stringResource(partTitle(part)), score, null) }
+    }
+    val tiles = mutableListOf<Triple<String, Int, Color?>>(Triple(stringResource(R.string.accuracy), m.accuracy, null))
+    m.pronunciation?.let { tiles += Triple(stringResource(R.string.pronunciation), it, null) }
+    tiles += Triple(stringResource(R.string.pace), m.paceScore, null)
+    tiles += Triple(stringResource(R.string.pauses), m.pauseScore, null)
+    tiles += Triple(stringResource(R.string.fillers), m.fillerScore, null)
+    tiles += Triple(stringResource(R.string.steady_voice), m.steadiness, null)
     return tiles
 }
 
+/** One colour per area of the price list, the same on the tiles, the receipt
+ *  and the marked script (iOS `SpeechReadingScore.Part.color`). */
+internal fun speechPartColor(part: SpeechReadingScore.Part): Color = when (part) {
+    SpeechReadingScore.Part.PAUSES -> Color(0xFFFF9500)
+    SpeechReadingScore.Part.ACCURACY -> Color(0xFFFF3B30)
+    SpeechReadingScore.Part.PRONUNCIATION -> Color(0xFFAF52DE)
+    SpeechReadingScore.Part.RHYTHM -> Color(0xFF007AFF)
+    SpeechReadingScore.Part.SPEED -> Color(0xFF30B0C7)
+}
+
 @Composable
-private fun ScoreStrip(tiles: List<Pair<String, Int>>) {
+private fun ScoreStrip(tiles: List<Triple<String, Int, Color?>>) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 14.dp),
         horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.Top) {
-        tiles.forEach { (title, score) ->
+        tiles.forEach { (title, score, area) ->
             val color = scoreColor(score)
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -489,8 +504,11 @@ private fun ScoreStrip(tiles: List<Pair<String, Int>>) {
                 LinearProgressIndicator(progress = { score.coerceIn(0, 100) / 100f }, color = color,
                     trackColor = MaterialTheme.colorScheme.outlineVariant,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp))
-                Text(title, style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    if (area != null) Box(Modifier.size(6.dp).background(area, CircleShape))
+                    Text(title, style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
             }
         }
     }
@@ -537,6 +555,21 @@ private fun Details(take: SpeechTake, script: SpeechScript, r: SpeechReadingScor
 
     if (r != null) ReadingSection(r) else MeasuredSection(take, script)
 
+    // Scored against the old pair: judged again against the one reading, and
+    // a camera take goes back on the board with it (iOS cddddcc0). Then the
+    // fluent reading's sounds: a price-list take scored before they were kept
+    // loses what it counted for sounds the reading itself says the same way.
+    val context = LocalContext.current
+    var fluentWords by remember(take.id) { mutableStateOf<List<com.roro.futurevoice.talk.SpeechReference.Word>?>(null) }
+    LaunchedEffect(take.id) {
+        com.roro.futurevoice.talk.SpeechReadingRejudge.run(context, take, script)?.let { judged ->
+            SpeechChallenges.shared(context).enter(judged, script,
+                recordedOnCamera = judged.videoFilename != null || judged.prompter != null)
+        }
+        fluentWords = spareFluentSounds(context, take, script)
+    }
+    var soundFocus by remember(take.id) { mutableStateOf<Int?>(null) }
+
     var marks by remember(take.id) { mutableStateOf<Pair<Boolean, List<List<SpeechAnalyzer.ScriptMark>>?>>(false to null) }
     LaunchedEffect(take.id) {
         val made = withContext(Dispatchers.Default) {
@@ -548,10 +581,17 @@ private fun Details(take: SpeechTake, script: SpeechScript, r: SpeechReadingScor
     if (paragraphs != null) {
         if (r != null) {
             val (held, pauses) = remember(paragraphs, r) { readingTiming(r, paragraphs) }
-            FormSection(stringResource(R.string.script)) {
-                MarkedScript(paragraphs, script.language, held, pauses)
+            val sounds = remember(paragraphs, r, fluentWords, take.assessments) {
+                if (r.version >= 8) soundsByWord(take, script.body, paragraphs, fluentWords) else emptyMap()
             }
-            Legend()
+            FormSection(stringResource(R.string.script)) {
+                MarkedScript(paragraphs, script.language, held, pauses,
+                    sounds = sounds, onSound = { soundFocus = it })
+            }
+            if (r.version >= 8) PriceListLegend() else Legend()
+            soundFocus?.let { focus ->
+                SpeechSoundsSheet(take, script, paragraphs, fluentWords, focus, onDismiss = { soundFocus = null })
+            }
         } else {
             FormSection(stringResource(R.string.script),
                 footer = if (take.metrics.missed.isNotEmpty()) stringResource(R.string.red_skipped_or_read_differently_the_small_red_words_are_what_c3dcaa) else null) {
@@ -592,7 +632,8 @@ private fun Disclosure(title: String, open: Boolean, toggle: () -> Unit) {
 
 @Composable
 private fun ReadingSection(r: SpeechReadingScore) {
-    val footer = listOf(
+    val footer = listOfNotNull(
+        if (r.version >= 8) stringResource(R.string.speech8_footer) else null,
         stringResource(R.string.speech_names_for_fun),
         stringResource(R.string.speech_native_average, SpeechReading.NATIVE_AVERAGE),
         stringResource(R.string.speech_like_karaoke),
@@ -619,7 +660,20 @@ private fun ReadingSection(r: SpeechReadingScore) {
                 Text(stringResource(R.string.speech_narrator_read), color = GREEN)
             }
         }
-        SpeechReadingScore.Part.entries.forEach { part ->
+        if (r.version >= 8) {
+            // The receipt (scoring 8): every area what it counted and what is left.
+            r.deductions.forEach { d ->
+                FormDivider()
+                ReceiptRow(d, r)
+            }
+            FormDivider()
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.speech8_total), style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Text("${r.total}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            }
+        } else SpeechReadingScore.Part.entries.forEach { part ->
             FormDivider()
             Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -707,4 +761,244 @@ internal fun readingTiming(r: SpeechReadingScore, marks: List<List<SpeechAnalyze
         pauses[w] = p.seconds
     }
     return held to pauses
+}
+
+/** "6.5", "4": points without a needless ".0" (iOS `points`). */
+private fun points(value: Double): String =
+    if (value == SpeechReading.round(value)) "${value.toInt()}" else "%.1f".format(Locale.US, value)
+
+/** One line of the receipt: the area, what it counted, what is left of it. */
+@Composable
+private fun ReceiptRow(d: SpeechReadingScore.Deduction, r: SpeechReadingScore) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(partIcon(d.part), null, tint = speechPartColor(d.part), modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(14.dp))
+            Text(stringResource(partTitle(d.part)), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            if (d.points > 0) {
+                Text("−" + points(kotlin.math.min(d.points, SpeechReadingScore.AREA_SHARE)),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.width(8.dp))
+            }
+            Text("${r.areaScore(d)}", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold,
+                color = scoreColor(r.areaScore(d)))
+        }
+        Text(receiptDetail(d, r), style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun receiptDetail(d: SpeechReadingScore.Deduction, r: SpeechReadingScore): String = when (d.part) {
+    SpeechReadingScore.Part.PAUSES ->
+        if (d.count == 0) stringResource(R.string.speech8_no_stops)
+        else stringResource(R.string.speech8_stops_mid, d.count, extraPauseList(r.extraPauses))
+    SpeechReadingScore.Part.ACCURACY -> if (d.count == 0) stringResource(R.string.speech8_every_word) else {
+        val unread = r.unreadWords
+        val changed = d.count - unread
+        val parts = mutableListOf<String>()
+        if (changed > 0) parts += stringResource(R.string.speech8_changed, changed)
+        if (unread > 0) parts += stringResource(R.string.speech8_not_reached, unread)
+        if (r.missed.isNotEmpty()) parts += quoted(r.missed)
+        parts.joinToString(" · ")
+    }
+    SpeechReadingScore.Part.PRONUNCIATION -> when {
+        r.weakSounds == null -> stringResource(R.string.speech8_sounds_unchecked)
+        d.count == 0 -> stringResource(R.string.speech8_no_wrong_sounds)
+        else -> stringResource(R.string.speech8_sounds_wrong, d.count) +
+            (if (r.weakest.isEmpty()) "" else " · " + soundsList(r.weakest))
+    }
+    SpeechReadingScore.Part.RHYTHM ->
+        stringResource(R.string.speech8_rhythm, "%.2f".format(Locale.US, r.rhythm)) +
+            (if (r.held.isEmpty()) "" else " · " + stringResource(R.string.speech8_held, heldList(r.held)))
+    SpeechReadingScore.Part.SPEED -> stringResource(R.string.speech8_pace_pct, r.speedPoint)
+}
+
+/** One colour per area, the same on the tiles, the receipt and here. */
+@Composable
+private fun PriceListLegend() {
+    val orange = stringResource(R.string.speech8_orange)
+    val red = stringResource(R.string.speech8_red)
+    val purple = stringResource(R.string.speech8_purple)
+    val blue = stringResource(R.string.speech8_blue)
+    val text = stringResource(R.string.speech8_legend, orange, red, purple, blue)
+    val colored = listOf(orange to speechPartColor(SpeechReadingScore.Part.PAUSES),
+        red to speechPartColor(SpeechReadingScore.Part.ACCURACY),
+        purple to speechPartColor(SpeechReadingScore.Part.PRONUNCIATION),
+        blue to speechPartColor(SpeechReadingScore.Part.RHYTHM))
+    Text(buildAnnotatedString {
+        var at = 0
+        for ((part, color) in colored) {
+            val found = text.indexOf(part, at)
+            if (found < 0) continue
+            append(text.substring(at, found))
+            withStyle(SpanStyle(color = color)) { append(part) }
+            at = found + part.length
+        }
+        append(text.substring(at))
+    }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 7.dp))
+}
+
+/** By the script's written word: a token-indexed map moved onto the words that
+ *  own the tokens (a hyphenated word owns two). */
+private fun <T> byWrittenWord(marks: List<List<SpeechAnalyzer.ScriptMark>>, tokens: Map<Int, T>,
+                              merge: (T, T) -> T): Map<Int, T> {
+    val wordOfToken = HashMap<Int, Int>()
+    var t = 0
+    marks.flatten().forEachIndexed { w, mark ->
+        repeat(SpeechDelivery.referenceTokens(mark.word).size) { wordOfToken[t] = w; t++ }
+    }
+    val out = LinkedHashMap<Int, T>()
+    for ((token, value) in tokens) {
+        val w = wordOfToken[token] ?: continue
+        out[w] = out[w]?.let { merge(it, value) } ?: value
+    }
+    return out
+}
+
+/** The weak sounds of a take, by the script's written word (iOS `soundsByWord`). */
+internal fun soundsByWord(take: SpeechTake, script: String, marks: List<List<SpeechAnalyzer.ScriptMark>>,
+                          fluent: List<com.roro.futurevoice.talk.SpeechReference.Word>?):
+    Map<Int, List<SpeechReading.WeakSound>> {
+    val pieces = take.assessments
+    if (pieces.isNullOrEmpty()) return emptyMap()
+    return byWrittenWord(marks, SpeechReading.weakSounds(pieces, script, fluent)) { a, b -> a + b }
+}
+
+/** Loads the fluent reading's sounds and, on a price-list take scored before
+ *  they were kept, takes off what it counted for sounds the reading itself
+ *  says the same way (this phone's copy; a board entry stands until a better
+ *  take) — iOS `spareFluentSounds`. */
+private suspend fun spareFluentSounds(context: android.content.Context, take: SpeechTake,
+                                      script: SpeechScript): List<com.roro.futurevoice.talk.SpeechReference.Word>? {
+    val r = take.metrics.reading ?: return null
+    val pieces = take.assessments
+    if (r.version < 8 || pieces.isNullOrEmpty()) return null
+    val fluent = com.roro.futurevoice.talk.SpeechListenService.words(context, script) ?: return null
+    val count = withContext(Dispatchers.Default) {
+        SpeechReading.weakSounds(pieces, script.body, fluent).values.sumOf { it.size }
+    }
+    if (count != r.weakSounds) {
+        SpeechStore.shared(context).update(take.id) { current ->
+            val reading = current.metrics.reading ?: return@update current
+            val next = reading.copy(weakSounds = count)
+            current.copy(metrics = current.metrics.copy(reading = next, overall = next.total))
+        }
+    }
+    return fluent
+}
+
+/**
+ * The sounds behind the purple marks (iOS `SpeechSoundsSheet`): the tapped
+ * word's sounds first, then the pronunciation area and every counted sound in
+ * reading order. Azure's full report stays one tap further.
+ */
+@Composable
+private fun SpeechSoundsSheet(take: SpeechTake, script: SpeechScript, marks: List<List<SpeechAnalyzer.ScriptMark>>,
+                              fluent: List<com.roro.futurevoice.talk.SpeechReference.Word>?, initialFocus: Int,
+                              onDismiss: () -> Unit) {
+    var focus by remember { mutableStateOf(initialFocus) }
+    var showingFull by remember { mutableStateOf(false) }
+    val words = remember(marks) { marks.flatten().map { it.word } }
+    val spared = remember(marks, fluent) {
+        byWrittenWord(marks, SpeechReading.fluentLowSounds(fluent, script.body)) { a, b -> a + b }
+    }
+    val judged = remember(marks, take.assessments) {
+        byWrittenWord(marks, SpeechReading.judgedWords(take.assessments.orEmpty(), script.body)) { a, _ -> a }
+    }
+    val bar = SpeechReadingScore.Price.WEAK_SOUND_BELOW
+    val purple = speechPartColor(SpeechReadingScore.Part.PRONUNCIATION)
+    val counted = judged.keys.sorted().mapNotNull { w ->
+        val weak = judged.getValue(w).phonemes.filter {
+            (it.accuracy ?: 100) < bar && spared[w]?.contains(it.phoneme) != true
+        }
+        if (weak.isEmpty()) null else w to weak
+    }
+    val total = counted.sumOf { it.second.size }
+    SpeechSheet(onDismiss) {
+        SheetHeader(stringResource(R.string.pronunciation),
+            trailing = { IosGlassTextButton(stringResource(R.string.done), onClick = onDismiss, bold = true) })
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)
+            .padding(bottom = 32.dp)) {
+            judged[focus]?.let { word ->
+                FormSection("“${words.getOrNull(focus) ?: word.word}”", footer = stringResource(R.string.speech8_sound_rule)) {
+                    word.phonemes.forEachIndexed { i, p ->
+                        if (i > 0) FormDivider()
+                        SoundRow(p, spared = spared[focus]?.contains(p.phoneme) == true, bar = bar, purple = purple)
+                    }
+                }
+            }
+            FormSection(null) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.GraphicEq, null, tint = purple, modifier = Modifier.size(22.dp))
+                    Spacer(Modifier.width(14.dp))
+                    Text(stringResource(R.string.pronunciation), style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.weight(1f))
+                    val r = take.metrics.reading
+                    val d = r?.deductions?.firstOrNull { it.part == SpeechReadingScore.Part.PRONUNCIATION }
+                    if (r != null && d != null) {
+                        Text("${r.areaScore(d)}", style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold, color = scoreColor(r.areaScore(d)))
+                    }
+                }
+                FormDivider()
+                Text(stringResource(R.string.speech8_sounds_counted, total), color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp))
+            }
+            if (counted.isNotEmpty()) {
+                FormSection(stringResource(R.string.speech8_counted_sounds)) {
+                    counted.forEachIndexed { i, (w, weak) ->
+                        if (i > 0) FormDivider()
+                        Row(Modifier.fillMaxWidth()
+                            .background(if (w == focus) Color.Yellow.copy(alpha = 0.2f) else Color.Transparent)
+                            .clickable { focus = w }.padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Text(words.getOrNull(w).orEmpty(), modifier = Modifier.weight(1f))
+                            Text(weak.joinToString(" · ") { "${it.phoneme.ifEmpty { "·" }} ${it.accuracy ?: 0}" },
+                                style = MaterialTheme.typography.bodyMedium, color = purple)
+                        }
+                    }
+                }
+            }
+            if (!take.assessments.isNullOrEmpty()) {
+                FormSection(null, footer = stringResource(R.string.speech8_full_footer)) {
+                    Text(stringResource(R.string.speech8_full_assessment), color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.fillMaxWidth().clickable { showingFull = true }.padding(16.dp))
+                }
+            }
+        }
+    }
+    if (showingFull) {
+        com.roro.futurevoice.ui.PronunciationDetailSheet(take.assessments.orEmpty(), script.language,
+            onDismiss = { showingFull = false })
+    }
+}
+
+@Composable
+private fun SoundRow(p: com.roro.futurevoice.talk.PronunciationResult.Phoneme, spared: Boolean, bar: Int, purple: Color) {
+    val score = p.accuracy ?: 0
+    val low = (p.accuracy ?: 100) < bar
+    val isCounted = low && !spared
+    val heard = p.heard?.firstOrNull()?.takeIf { it.phoneme != p.phoneme && it.score >= 50 }?.phoneme
+    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(p.phoneme.ifEmpty { "·" }, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
+        if (heard != null) {
+            Text(stringResource(R.string.speech8_sounded_like, heard), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Spacer(Modifier.weight(1f))
+        if (spared && low) {
+            Text(stringResource(R.string.speech8_fluent_too), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.End,
+                modifier = Modifier.weight(2f, fill = false))
+        } else if (isCounted) {
+            Text(stringResource(R.string.speech8_counted), style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.SemiBold, color = purple)
+        }
+        Text("$score", color = if (isCounted) purple else MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }

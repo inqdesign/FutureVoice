@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Season 2 price list and areas (iOS 01529ba7, cddddcc0). Values are iOS Localizable.xcstrings'. -->
+<resources>
+    <string name="speech8_total">Total</string>
+    <string name="speech8_footer">Each area is 20 of the 100 points, and the total is their average. Every mistake costs points from its area: −1 for each point of pace under 85, −0.5 for each point of rhythm under 90, −1 a stop mid-sentence, −1 a word, −0.4 a sound. An area stops at 0.</string>
+    <string name="speech8_no_stops">No stops where the native reading runs on</string>
+    <string name="speech8_stops_mid">%1$d stops mid-sentence: %2$s</string>
+    <string name="speech8_every_word">Every word as written</string>
+    <string name="speech8_changed">%1$d changed, missed or added</string>
+    <string name="speech8_not_reached">%1$d not reached</string>
+    <string name="speech8_sounds_unchecked">Sounds weren\'t checked on this take</string>
+    <string name="speech8_no_wrong_sounds">No clearly wrong sounds</string>
+    <string name="speech8_sounds_wrong">%1$d sounds wrong</string>
+    <string name="speech8_rhythm">Rhythm %1$s (native readers about 0.93)</string>
+    <string name="speech8_held">held: %1$s</string>
+    <string name="speech8_pace_pct">%1$d%% of the native reading\'s pace</string>
+    <string name="speech8_legend">%1$s ⏸︎: a stop mid-sentence · %2$s: a word changed, missed or added · %3$s dotted: a sound said wrong · %4$s: a word held too long</string>
+    <string name="speech8_orange">Orange</string>
+    <string name="speech8_red">Red</string>
+    <string name="speech8_purple">Purple</string>
+    <string name="speech8_blue">Blue</string>
+    <string name="speech8_sound_rule">A sound under 40 counts, −0.4 each.</string>
+    <string name="speech8_sounds_counted">%1$d sounds counted</string>
+    <string name="speech8_counted_sounds">Counted sounds</string>
+    <string name="speech8_full_assessment">Full assessment</string>
+    <string name="speech8_full_footer">Every word and sound with its score.</string>
+    <string name="speech8_sounded_like">sounded like %1$s</string>
+    <string name="speech8_fluent_too">The fluent reading says it this way too · not counted</string>
+    <string name="speech8_counted">counted</string>
+</resources>

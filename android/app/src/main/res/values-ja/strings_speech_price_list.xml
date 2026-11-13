@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Season 2 price list and areas (iOS 01529ba7, cddddcc0). Values are iOS Localizable.xcstrings'. -->
+<resources>
+    <string name="speech8_total">合計</string>
+    <string name="speech8_every_word">すべて台本どおり</string>
+    <string name="speech8_no_wrong_sounds">はっきり誤った音はありません</string>
+    <string name="speech8_orange">オレンジ</string>
+    <string name="speech8_red">赤</string>
+</resources>

@@ -83,7 +83,7 @@ object SpeechAnalyzer {
             coverage = coverage,
             scoring = if (pronunciation == null) SCORING_WITHOUT_PRONUNCIATION else SCORING_VERSION,
             pronunciation = pronunciation,
-            slips = slips(diff.steps, language),
+            slips = slips(diff.steps, language, properNames(script)),
             scriptTokens = diff.targetTokenCount,
         )
     }
@@ -94,7 +94,39 @@ object SpeechAnalyzer {
      * the filler count's), between the first and the last word read as
      * written. Stopping early is coverage's.
      */
-    fun slips(steps: List<ShadowScore.DiffStep>, language: String): Int {
+    /**
+     * Names in the script (a capital letter not at a sentence's start), in the
+     * diff's lower case (iOS 2026-11-13). A transcriber spells a name its own
+     * way (Wylder / Wilder) and the reader said it right, so a name read
+     * "differently" is never a slip. Unspaced scripts have no capitals and get
+     * none.
+     */
+    fun properNames(script: String): Set<String> {
+        val out = mutableSetOf<String>()
+        var sentenceStart = true
+        for (token in script.split(Regex("\\s+")).filter { it.isNotEmpty() }) {
+            val core = token.trim { isPunctuationOrSymbol(it) }
+            val first = core.firstOrNull()
+            if (!sentenceStart && first != null && first.isUpperCase() && core != "I" &&
+                !core.startsWith("I'") && !core.startsWith("I’")) {
+                core.lowercase().split(Regex("[^\\p{L}\\p{N}']+")).filter { it.isNotEmpty() }.forEach { out += it }
+            }
+            val tail = token.trimEnd { it in "\"'”’)]»" }
+            sentenceStart = tail.lastOrNull()?.let { it in ".!?…:" } ?: false
+        }
+        return out
+    }
+
+    /** Swift's `.punctuationCharacters.union(.symbols)`. */
+    private fun isPunctuationOrSymbol(c: Char): Boolean = when (Character.getType(c).toByte()) {
+        Character.CONNECTOR_PUNCTUATION, Character.DASH_PUNCTUATION, Character.START_PUNCTUATION,
+        Character.END_PUNCTUATION, Character.INITIAL_QUOTE_PUNCTUATION, Character.FINAL_QUOTE_PUNCTUATION,
+        Character.OTHER_PUNCTUATION, Character.MATH_SYMBOL, Character.CURRENCY_SYMBOL,
+        Character.MODIFIER_SYMBOL, Character.OTHER_SYMBOL -> true
+        else -> false
+    }
+
+    fun slips(steps: List<ShadowScore.DiffStep>, language: String, names: Set<String> = emptySet()): Int {
         val first = steps.indexOfFirst { it.op == ShadowScore.DiffOp.MATCH }
         val last = steps.indexOfLast { it.op == ShadowScore.DiffOp.MATCH }
         if (first < 0 || first >= last) return 0
@@ -102,7 +134,7 @@ object SpeechAnalyzer {
         return steps.subList(first, last + 1).count { step ->
             when (step.op) {
                 ShadowScore.DiffOp.MATCH -> false
-                ShadowScore.DiffOp.SUB, ShadowScore.DiffOp.DEL -> true
+                ShadowScore.DiffOp.SUB, ShadowScore.DiffOp.DEL -> (step.target ?: "").lowercase() !in names
                 ShadowScore.DiffOp.INS -> (step.learner ?: "").lowercase() !in fillerWords
             }
         }

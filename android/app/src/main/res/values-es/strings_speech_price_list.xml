@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Season 2 price list and areas (iOS 01529ba7, cddddcc0). Values are iOS Localizable.xcstrings'. -->
+<resources>
+    <string name="speech8_total">Total</string>
+    <string name="speech8_every_word">Cada palabra tal como está escrita</string>
+    <string name="speech8_no_wrong_sounds">Ningún sonido claramente mal</string>
+    <string name="speech8_orange">Naranja</string>
+    <string name="speech8_red">Rojo</string>
+</resources>

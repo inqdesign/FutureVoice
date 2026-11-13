@@ -6,6 +6,7 @@ import com.roro.futurevoice.core.Config
 import com.roro.futurevoice.net.Edge
 import com.roro.futurevoice.net.EdgeError
 import com.roro.futurevoice.talk.SpeechReading
+import com.roro.futurevoice.talk.SpeechReadingScore
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.CoroutineScope
@@ -92,6 +93,12 @@ class SpeechChallenges private constructor(private val context: Context) {
     @Serializable
     data class SeasonStatus(val season: Int, val min_scoring: Int, val is_open: Boolean, val ended: Boolean)
 
+    /** My score on a challenge as a past season froze it (iOS 01529ba7: English
+     *  Season 1's challenges went live again in Season 2, their old results
+     *  kept apart so Season 1's standings never move). */
+    @Serializable
+    data class SeasonRecord(val challenge_id: String, val season: Int, val score: Int, val rank: Int, val entrants: Int)
+
     @Serializable
     data class BoardRow(
         val rank: Int,
@@ -171,6 +178,9 @@ class SpeechChallenges private constructor(private val context: Context) {
     /** The loaded language's seasons; empty from a server without them. */
     private val _seasons = MutableStateFlow<List<SeasonStatus>>(emptyList())
     val seasons: StateFlow<List<SeasonStatus>> = _seasons
+    /** By challenge id: my frozen score from an earlier season of it. */
+    private val _seasonRecords = MutableStateFlow<Map<String, SeasonRecord>>(emptyMap())
+    val seasonRecords: StateFlow<Map<String, SeasonRecord>> = _seasonRecords
     /** By take id. In memory: the page that matters is the one the take
      *  opens on; later visits read the standing instead. */
     private val _entries = MutableStateFlow<Map<String, Entry>>(emptyMap())
@@ -228,6 +238,7 @@ class SpeechChallenges private constructor(private val context: Context) {
         _overall.value = null
         _overallSeason.value = null
         _seasons.value = emptyList()
+        _seasonRecords.value = emptyMap()
         val cache = runCatching {
             StoreJson.json.decodeFromString(Cache.serializer(), cacheFile(language).readText())
         }.getOrNull()
@@ -267,6 +278,11 @@ class SpeechChallenges private constructor(private val context: Context) {
             rpc("speech_season_status", buildJsonObject { put("p_language", language) }))
     }.getOrDefault(emptyList())
 
+    private suspend fun mySeasonRecords(language: String): List<SeasonRecord> = runCatching {
+        Edge.json.decodeFromString(ListSerializer(SeasonRecord.serializer()),
+            rpc("my_speech_season_records", buildJsonObject { put("p_language", language) }))
+    }.getOrDefault(emptyList())
+
     /** The list that knows seasons, or the old one from a server without it. */
     private suspend fun listRows(language: String): List<ListRow> {
         val serializer = ListSerializer(ListRow.serializer())
@@ -282,13 +298,16 @@ class SpeechChallenges private constructor(private val context: Context) {
 
     suspend fun refresh(language: String) {
         loadCache(language)
-        val (statuses, rows) = coroutineScope {
+        val (statuses, rows, frozen) = coroutineScope {
             val status = async { seasonStatus(language) }
+            val records = async { mySeasonRecords(language) }
             val list = runCatching { listRows(language) }.getOrNull()
-            status.await() to list
+            Triple(status.await(), list, records.await())
         }
         if (rows == null || loadedLanguage != language) return
         _seasons.value = statuses
+        _seasonRecords.value = frozen.groupBy { it.challenge_id.lowercase() }
+            .mapValues { (_, list) -> list.maxBy { it.season } }
         if (statuses.isNotEmpty()) {
             SpeechReading.setSeasonOpen(context,
                 statuses.any { it.is_open && it.min_scoring >= SpeechReading.READING_SCORING_FROM }, language)
@@ -471,7 +490,10 @@ class SpeechChallenges private constructor(private val context: Context) {
     private suspend fun submitReading(take: SpeechTake, challengeId: String, name: String) {
         val r = take.metrics.reading ?: run { setEntry(take.id, Entry.Failed); return }
         try {
-            val raw = rpc("submit_speech_reading_take", buildJsonObject {
+            // The price list (scoring 8): the server recomputes the total from
+            // the same counts (`submit_speech_reading_take_v8`, iOS 01529ba7).
+            val counts = r.deductions.associate { it.part to it.count }
+            val raw = rpc(if (r.version >= 8) "submit_speech_reading_take_v8" else "submit_speech_reading_take", buildJsonObject {
                 put("p_challenge", challengeId)
                 put("p_display_name", name)
                 put("p_avatar", avatarPayload(context))
@@ -484,6 +506,13 @@ class SpeechChallenges private constructor(private val context: Context) {
                 put("p_coverage", r.coverage)
                 put("p_seconds", maxOf(1, take.durationSeconds.roundToInt()))
                 put("p_scoring", take.metrics.scoring ?: SpeechReading.VERSION)
+                if (r.version >= 8) {
+                    put("p_stops", counts[SpeechReadingScore.Part.PAUSES] ?: 0)
+                    put("p_words", counts[SpeechReadingScore.Part.ACCURACY] ?: 0)
+                    put("p_sounds", counts[SpeechReadingScore.Part.PRONUNCIATION] ?: 0)
+                    put("p_rhythm_point", r.rhythmPoint)
+                    put("p_speed_point", r.speedPoint)
+                }
             })
             apply(raw, take, challengeId, r.total)
         } catch (e: Exception) {

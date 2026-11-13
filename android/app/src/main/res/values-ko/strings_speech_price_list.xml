@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Season 2 price list and areas (iOS 01529ba7, cddddcc0). Values are iOS Localizable.xcstrings'. -->
+<resources>
+    <string name="speech8_total">합계</string>
+    <string name="speech8_footer">다섯 영역이 100점 중 20점씩을 맡고, 총점은 다섯 영역의 평균이에요. 실수 하나마다 그 영역에서 점수가 깎여요. 속도가 85에서 1 모자랄 때마다 −1, 리듬이 90에서 1 모자랄 때마다 −0.5, 문장 중간 멈춤 −1, 단어 −1, 소리 −0.4. 한 영역은 0점 아래로 내려가지 않아요.</string>
+    <string name="speech8_no_stops">원어민이 이어 읽는 곳에서 멈추지 않았어요</string>
+    <string name="speech8_stops_mid">문장 중간에서 %1$d번 멈춤: %2$s</string>
+    <string name="speech8_every_word">모든 단어를 대본대로</string>
+    <string name="speech8_changed">%1$d개 바꿔 읽거나 빠뜨리거나 더 읽음</string>
+    <string name="speech8_not_reached">%1$d개는 끝까지 못 읽음</string>
+    <string name="speech8_sounds_unchecked">이번 테이크는 소리를 확인하지 못했어요</string>
+    <string name="speech8_no_wrong_sounds">확실히 틀린 소리 없음</string>
+    <string name="speech8_sounds_wrong">틀린 소리 %1$d개</string>
+    <string name="speech8_rhythm">리듬 %1$s (원어민은 0.93 안팎)</string>
+    <string name="speech8_held">길게 끈 단어: %1$s</string>
+    <string name="speech8_pace_pct">원어민 낭독 속도의 %1$d%%</string>
+    <string name="speech8_legend">%1$s ⏸︎: 문장 중간 멈춤 · %2$s: 바꿔 읽거나 빠뜨리거나 더 읽은 단어 · %3$s 점선: 틀린 소리 · %4$s: 너무 길게 끈 단어</string>
+    <string name="speech8_orange">주황</string>
+    <string name="speech8_red">빨강</string>
+    <string name="speech8_purple">보라</string>
+    <string name="speech8_blue">파랑</string>
+    <string name="speech8_sound_rule">40점 아래인 소리가 하나에 −0.4씩 깎여요.</string>
+    <string name="speech8_sounds_counted">깎인 소리 %1$d개</string>
+    <string name="speech8_counted_sounds">깎인 소리</string>
+    <string name="speech8_full_assessment">전체 평가 보기</string>
+    <string name="speech8_full_footer">모든 단어와 소리의 점수를 볼 수 있어요.</string>
+    <string name="speech8_sounded_like">%1$s처럼 들림</string>
+    <string name="speech8_fluent_too">원어민 낭독도 이렇게 읽어요 · 안 깎임</string>
+    <string name="speech8_counted">깎임</string>
+</resources>

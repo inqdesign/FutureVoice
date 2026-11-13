@@ -125,6 +125,13 @@ class SpeechTakeSession(
         if (SpeechReading.isActive(context, script.language))
             scope.async { SpeechReferenceService.fetch(context, script.body, script.language) }
         else null
+    /** The listening reading's words with its sounds: THE reference since iOS
+     *  cddddcc0, and a sound it says off the dictionary is never charged
+     *  ([SpeechReading.fluentLowSounds]). */
+    private val fluentTask: Deferred<com.roro.futurevoice.talk.SpeechListenAudio?>? =
+        if (SpeechReading.isActive(context, script.language))
+            scope.async { com.roro.futurevoice.talk.SpeechListenService.reading(context, script) }
+        else null
 
     init {
         camera.frameHandler = { bmp, rotation, width -> composer.append(bmp, rotation, width) }
@@ -437,8 +444,15 @@ class SpeechTakeSession(
         // ready) the take keeps the scoring it already has.
         if (SpeechReading.isActive(context, script.language)) {
             val delivered = delivery.await()
-            val reference = withTimeoutOrNull(45_000) { referenceTask?.await() }
-            val reading = reference?.let { reading(assessed, it, script.body, metrics, delivered) }
+            // THE reference is the one reading the learner hears (karaoke: its
+            // tempo, rhythm and pauses are the target), in whatever voice the
+            // challenge was given (iOS cddddcc0). A script with no such reading
+            // (the learner's own) keeps the pair.
+            val fluent = withTimeoutOrNull(20_000) { fluentTask?.await() }
+            val single = fluent?.let { SpeechReference(2, it.words, it.words) }
+            val paired = if (single == null) withTimeoutOrNull(45_000) { referenceTask?.await() } else null
+            var reading = (single ?: paired)?.let { reading(assessed, it, script.body, metrics, delivered, fluent?.words) }
+            if (reading != null && fluent != null) reading = reading.copy(gender = fluent.gender, reference = "listen")
             if (reading != null) {
                 metrics = metrics.copy(reading = reading, overall = reading.total, scoring = SpeechReading.VERSION)
             }
@@ -449,6 +463,7 @@ class SpeechTakeSession(
             transcript = transcript, metrics = metrics, coaching = null,
             pronunciationWords = pronunciation?.second,
             assessments = prons.ifEmpty { null },
+            assessmentStartsMs = if (assessed.size == prons.size && prons.isNotEmpty()) assessed.map { it.startMs } else null,
         )
         store.save(take)
         PronunciationLedger.shared(context).record(prons, id, "speech", script.language)
@@ -763,7 +778,8 @@ class SpeechTakeSession(
          *  timed from its own start, so no pause is measured across pieces)
          *  and the reference in the reader's gender, told by the voice's pitch. */
         fun reading(pieces: List<SpeechDelivery.Piece>, reference: SpeechReference, script: String,
-                    metrics: SpeechMetrics, delivery: SpeechDelivery): SpeechReadingScore? {
+                    metrics: SpeechMetrics, delivery: SpeechDelivery,
+                    fluent: List<SpeechReference.Word>? = null): SpeechReadingScore? {
             val scriptTokens = SpeechDelivery.referenceTokens(script)
             val tokens = scriptTokens.map { it.core }
             val take = pieces.flatMap { piece ->
@@ -781,6 +797,8 @@ class SpeechTakeSession(
                 slips = metrics.slips, scriptTokens = metrics.scriptTokens, missed = metrics.missed,
                 soundAccuracy = delivery.soundAccuracy, weakest = delivery.weakest,
                 coverage = metrics.coverage ?: 1.0, gender = gender,
+                weakSounds = if (pieces.isEmpty()) null
+                    else SpeechReading.weakSounds(pieces.map { it.result }, script, fluent).values.sumOf { it.size },
             )
         }
 

@@ -131,6 +131,11 @@ data class SpeechTake(
      *  can show every word and sound of the take. Null on takes made before
      *  it or not assessed (iOS 53ec4f49). */
     val assessments: List<com.roro.futurevoice.talk.PronunciationResult>? = null,
+    /** Where each of [assessments] begins in the take's audio, in ms (iOS
+     *  2026-11-13): their words are timed from the piece's own start, and the
+     *  phrase drill plays the learner's own phrase back. Null on takes made
+     *  before it (the drill then plays only the fluent reading). */
+    val assessmentStartsMs: List<Int>? = null,
     /** How the script moved during the take. Set: [videoFilename] is the
      *  camera alone and the script is drawn when it is wanted. Null on earlier
      *  takes, whose video has the script burned into it (iOS 85fca8ba). */
@@ -140,6 +145,15 @@ data class SpeechTake(
      *  here takes scored 7 were still made with the script in the picture, so
      *  only the record says it. */
     val videoIsCameraOnly: Boolean get() = prompter != null
+
+    /** A price-list take shows the total its price list gives TODAY: the
+     *  stored `overall` was written with the prices of the day it was read
+     *  (iOS `withCurrentPrices`). Read-time only. */
+    val withCurrentPrices: SpeechTake get() {
+        val r = metrics.reading ?: return this
+        if (r.version < 8 || metrics.overall == r.total) return this
+        return copy(metrics = metrics.copy(overall = r.total))
+    }
 }
 
 /**
@@ -443,7 +457,7 @@ class SpeechStore private constructor(private val context: Context) {
         _scripts.value = listOfNotNull(SpeechLibrary.builtIn(language)) +
             saved.filter { !it.isBuiltIn }.sortedByDescending { it.createdAt }
         _takes.value = runCatching { StoreJson.json.decodeFromString(takeList, takesFile().readText()) }
-            .getOrDefault(emptyList()).sortedByDescending { it.createdAt }
+            .getOrDefault(emptyList()).map { it.withCurrentPrices }.sortedByDescending { it.createdAt }
     }
 
     fun reloadIfLanguageChanged() {
