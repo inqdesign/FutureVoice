@@ -155,11 +155,11 @@
     <string name="guide_up_and_down_changes_the_time">"Hoch und runter ändert die Uhrzeit, zur Seite den Tag."</string>
     <string name="guide_set_it_once_it_repeats">"Einmal festlegen, jede Woche wieder"</string>
     <string name="guide_the_same_plan_comes_back_every">"Derselbe Plan kommt jede Woche wieder. Lass einen Tag leer, um zu ruhen."</string>
-    <string name="guide_done_it_all_it_turns_green">"Alles erledigt? Dann wird es grün"</string>
+    <string name="guide_did_any_of_it_it_turns_green">"Etwas gemacht? Dann wird es grün"</string>
     <string name="guide_each_date_at_the_top_shows">"Jedes Datum oben zeigt, wie der Tag gelaufen ist."</string>
-    <string name="guide_green_you_did_it_all">"Grün: alles geschafft"</string>
-    <string name="guide_everything_planned_for_that_day_is">"Alles, was für den Tag geplant war, ist erledigt. Deine Serie wächst um einen Tag."</string>
-    <string name="guide_today_fills_as_you_go">"Heute füllt sich nach und nach"</string>
+    <string name="guide_green_you_did_some_of_it">"Grün: etwas davon geschafft"</string>
+    <string name="guide_one_thing_from_that_days_plan_is">"Eine Sache aus dem Tagesplan reicht. Deine Serie wächst um einen Tag."</string>
+    <string name="guide_the_time_is_up_to_you">"Die Uhrzeit ist egal"</string>
     <string name="guide_any_time_that_day_counts_the">"Jede Uhrzeit an dem Tag zählt. Die Zeiten sind ein Plan, keine Frist."</string>
     <string name="guide_an_empty_day_is_a_rest">"Ein leerer Tag ist ein Ruhetag – deine Serie reißt nicht."</string>
     <string name="guide_heres_how_this_tab_helps">"So hilft dir dieser Tab"</string>

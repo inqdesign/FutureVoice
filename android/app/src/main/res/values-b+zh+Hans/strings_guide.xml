@@ -155,11 +155,11 @@
     <string name="guide_up_and_down_changes_the_time">"上下拖动改时间，左右拖动改星期。"</string>
     <string name="guide_set_it_once_it_repeats">"设定一次，每周重复"</string>
     <string name="guide_the_same_plan_comes_back_every">"同一个计划每周都会重复。想休息的日子就留空。"</string>
-    <string name="guide_done_it_all_it_turns_green">"全部完成？就会变绿"</string>
+    <string name="guide_did_any_of_it_it_turns_green">"做了一项？就会变绿"</string>
     <string name="guide_each_date_at_the_top_shows">"顶部每个日期都显示那天完成得怎么样。"</string>
-    <string name="guide_green_you_did_it_all">"绿色：全部完成"</string>
-    <string name="guide_everything_planned_for_that_day_is">"当天计划的全部完成，连续记录加一天。"</string>
-    <string name="guide_today_fills_as_you_go">"今天越做越满"</string>
+    <string name="guide_green_you_did_some_of_it">"绿色：做了其中一项"</string>
+    <string name="guide_one_thing_from_that_days_plan_is">"当天计划里做一项就行，连续记录加一天。"</string>
+    <string name="guide_the_time_is_up_to_you">"什么时候做都行"</string>
     <string name="guide_any_time_that_day_counts_the">"当天任何时间完成都算。时间只是计划，不是截止。"</string>
     <string name="guide_an_empty_day_is_a_rest">"空着的日子是休息日，不会中断连续记录。"</string>
     <string name="guide_heres_how_this_tab_helps">"这个页面能帮你什么"</string>

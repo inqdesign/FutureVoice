@@ -155,11 +155,11 @@
     <string name="guide_up_and_down_changes_the_time">"Up and down changes the time, sideways changes the day."</string>
     <string name="guide_set_it_once_it_repeats">"Set it once, it repeats"</string>
     <string name="guide_the_same_plan_comes_back_every">"The same plan comes back every week. Leave a day empty to rest."</string>
-    <string name="guide_done_it_all_it_turns_green">"Done it all? It turns green"</string>
+    <string name="guide_did_any_of_it_it_turns_green">"Did any of it? It turns green"</string>
     <string name="guide_each_date_at_the_top_shows">"Each date at the top shows how that day went."</string>
-    <string name="guide_green_you_did_it_all">"Green: you did it all"</string>
-    <string name="guide_everything_planned_for_that_day_is">"Everything planned for that day is done. Your streak grows by one."</string>
-    <string name="guide_today_fills_as_you_go">"Today fills as you go"</string>
+    <string name="guide_green_you_did_some_of_it">"Green: you did some of it"</string>
+    <string name="guide_one_thing_from_that_days_plan_is">"One thing from that day's plan is enough. Your streak grows by one."</string>
+    <string name="guide_the_time_is_up_to_you">"The time is up to you"</string>
     <string name="guide_any_time_that_day_counts_the">"Any time that day counts. The times are a plan, not a deadline."</string>
     <string name="guide_an_empty_day_is_a_rest">"An empty day is a rest day, so it doesn't break your streak."</string>
     <string name="guide_heres_how_this_tab_helps">"Here's how this tab helps"</string>

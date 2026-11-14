@@ -155,11 +155,11 @@
     <string name="guide_up_and_down_changes_the_time">"Arriba y abajo cambia la hora; a los lados, el día."</string>
     <string name="guide_set_it_once_it_repeats">"Lo defines una vez y se repite"</string>
     <string name="guide_the_same_plan_comes_back_every">"El mismo plan vuelve cada semana. Deja un día vacío para descansar."</string>
-    <string name="guide_done_it_all_it_turns_green">"¿Lo hiciste todo? Se pone verde"</string>
+    <string name="guide_did_any_of_it_it_turns_green">"¿Hiciste algo? Se pone verde"</string>
     <string name="guide_each_date_at_the_top_shows">"Cada fecha de arriba muestra cómo fue ese día."</string>
-    <string name="guide_green_you_did_it_all">"Verde: lo hiciste todo"</string>
-    <string name="guide_everything_planned_for_that_day_is">"Hiciste todo lo planeado para ese día. Tu racha suma uno."</string>
-    <string name="guide_today_fills_as_you_go">"Hoy se llena sobre la marcha"</string>
+    <string name="guide_green_you_did_some_of_it">"Verde: hiciste algo del plan"</string>
+    <string name="guide_one_thing_from_that_days_plan_is">"Basta con una cosa de lo planeado ese día. Tu racha suma uno."</string>
+    <string name="guide_the_time_is_up_to_you">"La hora la eliges tú"</string>
     <string name="guide_any_time_that_day_counts_the">"Vale cualquier hora de ese día. Las horas son un plan, no una fecha límite."</string>
     <string name="guide_an_empty_day_is_a_rest">"Un día vacío es de descanso, así que no rompe tu racha."</string>
     <string name="guide_heres_how_this_tab_helps">"Así te ayuda esta pestaña"</string>

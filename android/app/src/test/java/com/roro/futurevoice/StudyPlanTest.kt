@@ -314,24 +314,26 @@ class StudyPlanTest {
         val later = PromiseJudge.carryingKept(PromiseLedger.Entry(5, 3), raised, now + 60_000)
         assertEquals(now, later.keptAt)
         // A day never finished is still judged by its plan.
-        val short = PromiseJudge.carryingKept(PromiseLedger.Entry(4, 3), PromiseLedger.Entry(3, 2), now)
+        val short = PromiseJudge.carryingKept(PromiseLedger.Entry(4, 0, touched = 0), PromiseLedger.Entry(3, 0, touched = 0), now)
         assertFalse(short.kept)
         assertNull(short.keptAt)
     }
 
-    /** Every block started keeps the day (iOS 2026-10-11). */
+    /** One block started keeps the day (iOS 2026-11-14). */
     @Test
-    fun everyBlockStartedKeepsTheDay() {
-        assertTrue(PromiseLedger.Entry(planned = 2, done = 1, touched = 2).kept)
-        assertFalse(PromiseLedger.Entry(planned = 2, done = 1, touched = 1).kept)
-        assertFalse(PromiseLedger.Entry(planned = 2, done = 1).kept)
+    fun oneBlockStartedKeepsTheDay() {
+        assertTrue(PromiseLedger.Entry(planned = 2, done = 0, touched = 1).kept)
+        assertFalse(PromiseLedger.Entry(planned = 2, done = 0, touched = 0).kept)
+        assertTrue(PromiseLedger.Entry(planned = 3, done = 1).kept)
+        assertFalse(PromiseLedger.Entry(planned = 3, done = 0).kept)
+        assertFalse(PromiseLedger.Entry(planned = 0, done = 0).kept)
     }
 
     /** Old missed days are revived only under the same plan, never downgraded. */
     @Test
     fun oldMissedDayIsRevivedOnlyUnderTheSamePlan() {
-        val old = PromiseLedger.Entry(planned = 3, done = 2)
-        assertTrue(PromiseJudge.rejudged(old, PromiseLedger.Entry(3, 2, touched = 3), 1L).kept)
+        val old = PromiseLedger.Entry(planned = 3, done = 0)
+        assertTrue(PromiseJudge.rejudged(old, PromiseLedger.Entry(3, 0, touched = 1), 1L).kept)
         assertFalse(PromiseJudge.rejudged(old, PromiseLedger.Entry(4, 4, touched = 4), 1L).kept)
         assertTrue(PromiseJudge.rejudged(PromiseLedger.Entry(2, 2), PromiseLedger.Entry(2, 0, touched = 0), 1L).kept)
     }
@@ -339,7 +341,7 @@ class StudyPlanTest {
     /** A day missed only for its weekly test is kept again under rule 3. */
     @Test
     fun dayMissedOnlyForTheWeeklyTestIsRevived() {
-        val old = PromiseLedger.Entry(planned = 2, done = 1, touched = 1, rule = 2)
+        val old = PromiseLedger.Entry(planned = 2, done = 0, touched = 0, rule = 2)
         val revived = PromiseJudge.rejudged(old, PromiseLedger.Entry(1, 1, touched = 1), 1L, exempt = 1)
         assertTrue(revived.kept)
         assertEquals(3, revived.rule)

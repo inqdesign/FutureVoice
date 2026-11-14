@@ -31,10 +31,11 @@ object PromiseLedger {
          */
         val keptAt: Long? = null,
         /**
-         * Blocks with ANY progress that day. A day is kept when every block
-         * was at least started (iOS 2026-10-11, founder: a whole day of study
-         * broke the streak because one word block ended at 9 of 10). [done]
-         * still counts finished blocks. Null on older entries; reads as [done].
+         * Blocks with ANY progress that day. A day is kept when ONE block was
+         * started (iOS 2026-11-14, founder: lower the bar; every block started
+         * from 2026-10-11, every block finished before). [done] still counts
+         * finished blocks. Null on older entries; reads as [done]. The counts
+         * are that day's own, so every day on file reads the new bar, upward.
          */
         val touched: Int? = null,
         /**
@@ -45,12 +46,13 @@ object PromiseLedger {
     ) {
         /** Nothing was planned that day: a rest day. */
         val isRest: Boolean get() = planned == 0 && keptAt == null
-        val kept: Boolean get() = keptAt != null || (planned > 0 && (touched ?: done) >= planned)
+        val kept: Boolean get() = keptAt != null || (planned > 0 && (touched ?: done) >= 1)
     }
 
     /**
-     * The rule [PromiseJudge] writes today: every block the LEARNER placed
-     * was started. The weekly test is not one of them (2026-10-13).
+     * The rule [PromiseJudge] writes today: the blocks the LEARNER placed,
+     * without the weekly test (2026-10-13). Not bumped for the one-block bar
+     * (2026-11-14): [Entry.kept] reads it straight off the counts.
      */
     const val CURRENT_RULE = 3
 

@@ -155,11 +155,11 @@
     <string name="guide_up_and_down_changes_the_time">"上下にドラッグすると時間が、横にドラッグすると曜日が変わります。"</string>
     <string name="guide_set_it_once_it_repeats">"一度決めれば毎週くり返します"</string>
     <string name="guide_the_same_plan_comes_back_every">"毎週同じ計画がくり返されます。休みたい曜日は空けておきましょう。"</string>
-    <string name="guide_done_it_all_it_turns_green">"全部やると緑になります"</string>
+    <string name="guide_did_any_of_it_it_turns_green">"ひとつでもやると緑になります"</string>
     <string name="guide_each_date_at_the_top_shows">"上の日付ごとに、その日の結果が表示されます。"</string>
-    <string name="guide_green_you_did_it_all">"緑：全部やった日"</string>
-    <string name="guide_everything_planned_for_that_day_is">"その日の計画を全部やりました。連続記録が1日のびます。"</string>
-    <string name="guide_today_fills_as_you_go">"今日は、やるほど満ちていきます"</string>
+    <string name="guide_green_you_did_some_of_it">"緑：ひとつでもやった日"</string>
+    <string name="guide_one_thing_from_that_days_plan_is">"その日の計画のうち、ひとつで大丈夫。連続記録が1日のびます。"</string>
+    <string name="guide_the_time_is_up_to_you">"時間はいつでも"</string>
     <string name="guide_any_time_that_day_counts_the">"その日のうちにやれば大丈夫。時間は締め切りではなく計画です。"</string>
     <string name="guide_an_empty_day_is_a_rest">"何も入れていない日は休みの日なので、連続記録は途切れません。"</string>
     <string name="guide_heres_how_this_tab_helps">"このタブでできること"</string>

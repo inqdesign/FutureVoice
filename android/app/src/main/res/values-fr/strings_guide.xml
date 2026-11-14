@@ -155,11 +155,11 @@
     <string name="guide_up_and_down_changes_the_time">"Vers le haut ou le bas, l’heure change ; sur le côté, le jour."</string>
     <string name="guide_set_it_once_it_repeats">"Une fois réglé, il se répète"</string>
     <string name="guide_the_same_plan_comes_back_every">"Le même plan revient chaque semaine. Laisse un jour vide pour te reposer."</string>
-    <string name="guide_done_it_all_it_turns_green">"Tout fait ? Ça passe au vert"</string>
+    <string name="guide_did_any_of_it_it_turns_green">"Une chose de faite ? Ça passe au vert"</string>
     <string name="guide_each_date_at_the_top_shows">"Chaque date en haut montre comment s’est passée la journée."</string>
-    <string name="guide_green_you_did_it_all">"Vert : tout est fait"</string>
-    <string name="guide_everything_planned_for_that_day_is">"Tout ce qui était prévu ce jour-là est fait. Ta série augmente d’un jour."</string>
-    <string name="guide_today_fills_as_you_go">"Aujourd’hui se remplit au fil de la journée"</string>
+    <string name="guide_green_you_did_some_of_it">"Vert : une partie est faite"</string>
+    <string name="guide_one_thing_from_that_days_plan_is">"Une seule chose prévue ce jour-là suffit. Ta série augmente d’un jour."</string>
+    <string name="guide_the_time_is_up_to_you">"L’heure, c’est toi qui vois"</string>
     <string name="guide_any_time_that_day_counts_the">"N’importe quel moment de la journée compte. Les horaires sont un plan, pas une échéance."</string>
     <string name="guide_an_empty_day_is_a_rest">"Un jour vide est un jour de repos : il ne casse pas ta série."</string>
     <string name="guide_heres_how_this_tab_helps">"Ce que cet onglet t’apporte"</string>

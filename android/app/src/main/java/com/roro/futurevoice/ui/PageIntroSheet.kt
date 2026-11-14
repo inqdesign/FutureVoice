@@ -437,9 +437,9 @@ private fun GuidePage(page: Page, i: Int) {
                     c(R.string.guide_hold_and_drag_to_move, R.string.guide_up_and_down_changes_the_time),
                     c(R.string.guide_set_it_once_it_repeats, R.string.guide_the_same_plan_comes_back_every)),
             ) { RoutineTimelineMock() }
-            else -> ScreenPage(R.string.guide_done_it_all_it_turns_green, R.string.guide_each_date_at_the_top_shows,
-                listOf(c(R.string.guide_green_you_did_it_all, R.string.guide_everything_planned_for_that_day_is),
-                    c(R.string.guide_today_fills_as_you_go, R.string.guide_any_time_that_day_counts_the)),
+            else -> ScreenPage(R.string.guide_did_any_of_it_it_turns_green, R.string.guide_each_date_at_the_top_shows,
+                listOf(c(R.string.guide_green_you_did_some_of_it, R.string.guide_one_thing_from_that_days_plan_is),
+                    c(R.string.guide_the_time_is_up_to_you, R.string.guide_any_time_that_day_counts_the)),
                 note = R.string.guide_an_empty_day_is_a_rest,
             ) { RoutineDaysMock() }
         }

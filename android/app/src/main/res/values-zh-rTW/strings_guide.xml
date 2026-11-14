@@ -155,11 +155,11 @@
     <string name="guide_up_and_down_changes_the_time">"上下拖曳改時間，左右拖曳改星期。"</string>
     <string name="guide_set_it_once_it_repeats">"設定一次，每週重複"</string>
     <string name="guide_the_same_plan_comes_back_every">"同樣的計畫每週都會重複。想休息的日子就留空。"</string>
-    <string name="guide_done_it_all_it_turns_green">"全部做完會變綠色"</string>
+    <string name="guide_did_any_of_it_it_turns_green">"做一項就會變綠色"</string>
     <string name="guide_each_date_at_the_top_shows">"上方每個日期都會顯示那天的狀況。"</string>
-    <string name="guide_green_you_did_it_all">"綠色：全部完成的日子"</string>
-    <string name="guide_everything_planned_for_that_day_is">"當天排的都做完了，連續紀錄多一天。"</string>
-    <string name="guide_today_fills_as_you_go">"今天越做越滿"</string>
+    <string name="guide_green_you_did_some_of_it">"綠色：做了其中一項的日子"</string>
+    <string name="guide_one_thing_from_that_days_plan_is">"當天排的做一項就好，連續紀錄多一天。"</string>
+    <string name="guide_the_time_is_up_to_you">"什麼時候做都可以"</string>
     <string name="guide_any_time_that_day_counts_the">"當天做完就好。時間是計畫，不是截止期限。"</string>
     <string name="guide_an_empty_day_is_a_rest">"沒排計畫的日子是休息日，連續紀錄不會中斷。"</string>
     <string name="guide_heres_how_this_tab_helps">"這個分頁能幫你什麼"</string>

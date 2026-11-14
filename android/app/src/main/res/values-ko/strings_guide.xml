@@ -155,11 +155,11 @@
     <string name="guide_up_and_down_changes_the_time">"위아래로 끌면 시간이, 옆으로 끌면 요일이 바뀌어요."</string>
     <string name="guide_set_it_once_it_repeats">"한 번 정하면 매주 반복돼요"</string>
     <string name="guide_the_same_plan_comes_back_every">"같은 계획이 매주 돌아와요. 쉬고 싶은 요일은 비워 두세요."</string>
-    <string name="guide_done_it_all_it_turns_green">"다 하면 초록이 돼요"</string>
+    <string name="guide_did_any_of_it_it_turns_green">"하나라도 하면 초록이 돼요"</string>
     <string name="guide_each_date_at_the_top_shows">"위쪽 날짜마다 그날 어땠는지가 보여요."</string>
-    <string name="guide_green_you_did_it_all">"초록: 다 한 날"</string>
-    <string name="guide_everything_planned_for_that_day_is">"그날 계획을 전부 했어요. 연속 기록이 하루 늘어요."</string>
-    <string name="guide_today_fills_as_you_go">"오늘은 할수록 차올라요"</string>
+    <string name="guide_green_you_did_some_of_it">"초록: 하나라도 한 날"</string>
+    <string name="guide_one_thing_from_that_days_plan_is">"그날 계획 중 하나만 해도 돼요. 연속 기록이 하루 늘어요."</string>
+    <string name="guide_the_time_is_up_to_you">"시간은 상관없어요"</string>
     <string name="guide_any_time_that_day_counts_the">"그날 안에만 하면 돼요. 시간은 마감이 아니라 계획이에요."</string>
     <string name="guide_an_empty_day_is_a_rest">"비워 둔 날은 쉬는 날이라 연속 기록이 끊기지 않아요."</string>
     <string name="guide_heres_how_this_tab_helps">"이 탭이 도와주는 것"</string>
