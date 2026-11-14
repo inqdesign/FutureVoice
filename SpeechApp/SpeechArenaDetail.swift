@@ -85,6 +85,10 @@ struct ChallengeCardFace: View {
     var figureHeight: CGFloat? = nil
     var titleSize: CGFloat = 17
     var titleLines: Int = 2
+    /// One of the learner's own scripts (2026-11-13, founder: My scripts
+    /// wears the challenge cards): its kind drawn where a challenge has its
+    /// picture, and its length where a challenge says who is on it.
+    var mine: Bool = false
 
     @ObservedObject private var challenges = SpeechChallenges.shared
 
@@ -99,13 +103,19 @@ struct ChallengeCardFace: View {
                     .scaledToFit()
                     .frame(maxWidth: .infinity, maxHeight: figureHeight ?? .infinity)
                     .frame(height: figureHeight)
+            } else if mine {
+                Image(systemName: script.genre.symbol)
+                    .font(.system(size: large ? 84 : 52, weight: .light))
+                    .foregroundStyle(ChallengeArt.inkText.opacity(0.7))
+                    .frame(maxWidth: .infinity, maxHeight: figureHeight ?? .infinity)
+                    .frame(height: figureHeight)
             } else {
                 Spacer(minLength: 0)
             }
             VStack(spacing: large ? 6 : 3) {
                 // The category as an eyebrow over the title (2026-11-13,
                 // founder). Every card keeps its line, so titles stay level.
-                Text(SpeechChallengeCategory.label(category) ?? " ")
+                eyebrow
                     .font((large ? Font.caption : .caption2).weight(.semibold))
                     .tracking(0.6)
                     .textCase(.uppercase)
@@ -121,8 +131,23 @@ struct ChallengeCardFace: View {
                     .minimumScaleFactor(0.8)
                     .frame(maxWidth: .infinity)
             }
-            crowd
+            if mine {
+                Text(SpeechFormat.length(SpeechLibrary.estimatedSeconds(script.body, language: script.language)))
+                    .font((large ? Font.footnote : .caption2).monospacedDigit())
+                    .foregroundStyle(ChallengeArt.inkText.opacity(0.5))
+                    .lineLimit(1)
+                    .frame(height: large ? 22 : 16)
+            } else {
+                crowd
+            }
         }
+    }
+
+    private var eyebrow: Text {
+        if mine {
+            return script.isBuiltIn ? Text("Sample") : Text(verbatim: script.genre.title)
+        }
+        return Text(verbatim: SpeechChallengeCategory.label(category) ?? " ")
     }
 
     /// Who is on it, quietly (2026-11-13, founder: "minimal, but say how many

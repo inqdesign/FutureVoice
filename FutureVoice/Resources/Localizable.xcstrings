@@ -184404,6 +184404,23 @@
         }
       }
     },
+    "Your own script, scored like a challenge" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your own script, scored like a challenge"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 원고도 챌린지처럼 점수를 받아요"
+          }
+        }
+      }
+    },
     "Your own situation" : {
       "localizations" : {
         "de" : {

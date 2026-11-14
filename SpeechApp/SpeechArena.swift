@@ -1005,9 +1005,10 @@ struct ArenaTile: View {
     let best: Int?
     let tries: Int
     let ended: Bool
+    var mine: Bool = false
 
     var body: some View {
-        ChallengeCardFace(script: script, category: category, titleSize: 17)
+        ChallengeCardFace(script: script, category: category, titleSize: 17, mine: mine)
             .padding(.top, 20)
             .padding(.horizontal, 10)
             .padding(.bottom, 14)

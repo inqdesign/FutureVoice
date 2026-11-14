@@ -282,18 +282,18 @@ struct SpeechTab: View {
             if ownScripts.isEmpty {
                 SpeechScriptsEmptyState(onWrite: { startNew(.write) },
                                         onOwn: { startNew(.own) })
-                    .padding(16)
-                    .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemGroupedBackground)))
             } else {
                 LazyVGrid(columns: columns, spacing: 12) {
                     ForEach(ownScripts) { script in
                         Button {
                             practicing = script
                         } label: {
-                            SpeechScriptCard(script: script, best: store.best(for: script.id))
-                                .frame(maxHeight: .infinity, alignment: .top)
+                            // The challenge card (2026-11-13, founder).
+                            ArenaTile(script: script, category: nil, best: store.best(for: script.id),
+                                      tries: 0, ended: false, mine: true)
                         }
                         .buttonStyle(.plain)
+                        .contentShape(.contextMenuPreview, RoundedRectangle(cornerRadius: 30, style: .continuous))
                         // A card has no swipe: its actions are a long press
                         // on the phone and a right-click on the Mac.
                         .contextMenu {
@@ -369,7 +369,9 @@ struct SpeechTab: View {
             // (2026-11-13, founder: native components only).
             .noBarShade(fixedPage == .challenges ? [] : .top)
             .tabBarBand()
-            .background { if fixedPage == .challenges { Arena.background } else { Color(.systemGroupedBackground).ignoresSafeArea() } }
+            // Both tabs on the dark stage, My scripts too since its cards are
+            // the challenge cards (2026-11-13, founder).
+            .background { Arena.background }
             #else
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
             #endif
@@ -449,7 +451,7 @@ struct SpeechTab: View {
             }
         }
         #if SPEECH_APP
-        .arenaScheme(fixedPage == .challenges)
+        .arenaScheme(true)
         #endif
         .onAppear {
             store.reloadIfLanguageChanged()
@@ -544,48 +546,80 @@ struct SpeechTab: View {
     }
 }
 
-/// "My scripts" before there are any: what the section is for, and the two
-/// ways to fill it.
+/// "My scripts" before there are any (2026-11-13, founder: the page was
+/// underwhelming): the cream card today's challenge wears, the kinds of
+/// script drawn as its picture, and the two ways to fill the page.
 struct SpeechScriptsEmptyState: View {
     var onWrite: () -> Void
     var onOwn: () -> Void
 
     var body: some View {
-        // The buttons sit in the TEXT column, the icon's column left empty
-        // below it; stacked, so neither label is cut and both are one size.
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: "doc.badge.plus")
-                .font(.title2)
-                .foregroundStyle(.tint)
-                .frame(width: 32)
-            VStack(alignment: .leading, spacing: 14) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Write your first script")
-                        .font(.body.weight(.semibold))
-                    Text("Choose a topic and AI writes it for your level, or paste a text of your own.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+        VStack(spacing: 10) {
+            figure
+                .frame(height: 170)
+            Text("My scripts")
+                .font(.caption.weight(.semibold))
+                .tracking(0.6)
+                .textCase(.uppercase)
+                .foregroundStyle(ChallengeArt.inkText.opacity(0.45))
+            Text("Your own script, scored like a challenge")
+                .font(Arena.display(26))
+                .foregroundStyle(ChallengeArt.inkText)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("Choose a topic and AI writes it for your level, or paste a text of your own.")
+                .font(.subheadline)
+                .foregroundStyle(ChallengeArt.inkText.opacity(0.65))
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            VStack(spacing: 10) {
+                Button(action: onWrite) {
+                    Label("Write with AI", systemImage: "sparkles")
+                        .foregroundStyle(ChallengeArt.buttonText)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Capsule().fill(ChallengeArt.buttonFill))
                 }
-                VStack(spacing: 8) {
-                    Button(action: onWrite) {
-                        Label("Write with AI", systemImage: "sparkles")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .accentProminent()
-                    Button(action: onOwn) {
-                        Label("Add my own script", systemImage: "pencil.line")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
+                Button(action: onOwn) {
+                    Label("Add my own script", systemImage: "pencil.line")
+                        .foregroundStyle(ChallengeArt.inkText)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Capsule().strokeBorder(ChallengeArt.inkText.opacity(0.25), lineWidth: 1.5))
                 }
-                .labelStyle(.titleAndIcon)
-                .font(.subheadline.weight(.semibold))
-                .controlSize(.large)
-                .buttonBorderShape(.capsule)
-                .lineLimit(1)
+            }
+            .buttonStyle(.plain)
+            .font(.headline)
+            .lineLimit(1)
+            .padding(.top, 10)
+        }
+        .padding(22)
+        .frame(maxWidth: .infinity)
+        .background(RoundedRectangle(cornerRadius: 44, style: .continuous).fill(ChallengeArt.paper))
+    }
+
+    /// The kinds of script, scattered like a still life.
+    private var figure: some View {
+        let marks: [(SpeechGenre, CGFloat, CGFloat, CGFloat, Double)] = [
+            (.explainer, -0.27, -0.20, 46, 0.75),
+            (.news, 0.02, -0.30, 38, 0.55),
+            (.product, 0.29, -0.12, 44, 0.7),
+            (.person, -0.10, 0.20, 50, 0.8),
+            (.own, 0.20, 0.26, 38, 0.6),
+            (.briefing, -0.37, 0.22, 30, 0.45),
+        ]
+        return GeometryReader { geo in
+            ZStack {
+                ForEach(marks.indices, id: \.self) { i in
+                    let m = marks[i]
+                    Image(systemName: m.0.symbol)
+                        .font(.system(size: m.3, weight: .light))
+                        .foregroundStyle(ChallengeArt.inkText.opacity(m.4))
+                        .position(x: geo.size.width * (0.5 + m.1), y: geo.size.height * (0.5 + m.2))
+                }
             }
         }
-        .padding(.vertical, 8)
+        .accessibilityHidden(true)
     }
 }
 
