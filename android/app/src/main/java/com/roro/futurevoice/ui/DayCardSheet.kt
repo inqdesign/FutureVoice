@@ -59,7 +59,6 @@ import com.roro.futurevoice.data.DayCardStore
 import com.roro.futurevoice.ui.brand.DayCard
 import com.roro.futurevoice.ui.brand.DayCardData
 import com.roro.futurevoice.ui.brand.DayCardFormat
-import com.roro.futurevoice.ui.brand.FutureselfTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -92,7 +91,6 @@ fun DayCardSheet(data: DayCardData, onDismiss: () -> Unit) {
         context.getSharedPreferences("futurevoice", 0)
             .getString("futurevoice.nativeLanguage", null) ?: "en"
     }
-    val theme = FutureselfTheme.stored(context).ordinal
     LaunchedEffect(data.date) { photo = DayCardStore.photo(context, data.date) }
 
     // The full-size shot, not `TakePicturePreview` — that one hands back the
@@ -256,7 +254,7 @@ fun DayCardSheet(data: DayCardData, onDismiss: () -> Unit) {
                     ) {
                         DayCard(
                             data = data.copy(topics = listOfNotNull(headline.takeIf { it.isNotBlank() })),
-                            photo = photo?.asImageBitmap(), format = format, theme = theme,
+                            photo = photo?.asImageBitmap(), format = format,
                             modifier = Modifier.layout { measurable, constraints ->
                                 val placeable = measurable.measure(
                                     androidx.compose.ui.unit.Constraints.fixed(pxW, pxH))

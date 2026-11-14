@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -22,7 +20,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -102,8 +99,7 @@ private val PAPER = Color(252 / 255f, 251 / 255f, 248 / 255f)
 
 /**
  * The day's card: the place photo full-bleed, the day's topic in the pixel
- * face, talk and study minutes, then the call pill (in the learner's own
- * Futureself theme) stamped with the date, and the URL. Nothing else — a
+ * face, talk and study minutes, the nawana mark with the date, and the URL. Nothing else — a
  * card that has to be READ isn't a card.
  *
  * It is an exported PICTURE, not app chrome, so it wears the brand (ink,
@@ -118,7 +114,6 @@ fun DayCard(
     photo: ImageBitmap?,
     modifier: Modifier = Modifier,
     format: DayCardFormat = DayCardFormat.FEED,
-    theme: Int = 0,
 ) {
     // A picture of fixed size, so its type is pinned as iOS pins Dynamic Type
     // on `DayCardView.render`: at a 1.3 font the numbers row ran together
@@ -126,7 +121,7 @@ fun DayCard(
     val d = androidx.compose.ui.platform.LocalDensity.current
     androidx.compose.runtime.CompositionLocalProvider(
         androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(d.density, 1f),
-    ) { DayCardBody(data, photo, modifier, format, theme) }
+    ) { DayCardBody(data, photo, modifier, format) }
 }
 
 @Composable
@@ -135,12 +130,11 @@ private fun DayCardBody(
     photo: ImageBitmap?,
     modifier: Modifier,
     format: DayCardFormat,
-    theme: Int,
 ) {
     val isFeed = format != DayCardFormat.SQUARE
     val isStory = format == DayCardFormat.STORY
     val margin = if (isFeed) 24.dp else 21.dp
-    // Top: the date pill and the streak. Bottom: the headline, then the day's
+    // Top: the mark, then the date and the streak. Bottom: the headline, then the day's
     // list at the left with the day's total at the right, then the name. The
     // photo keeps the middle (iOS `DayCardView`, 2026-11-10).
     Box(modifier.size(format.width.dp, format.height.dp).background(INK)) {
@@ -167,12 +161,19 @@ private fun DayCardBody(
                     bottom = if (isStory) 44.dp else if (isFeed) 22.dp else 18.dp),
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                DatePill(data.date, theme, isFeed)
+                // The mark alone, small, at the top left; the date is plain
+                // text (no mosaic behind it since iOS 2026-11-13).
+                NawanaMark(Modifier.size(if (isFeed) 18.dp else 16.dp), PAPER)
                 Spacer(Modifier.weight(1f))
-                if (data.streakDays > 0) {
-                    val streak = "${data.streakDays} day streak"
-                    Text(streak, color = PAPER, style = DisplayFace.style(streak,
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    val date = SimpleDateFormat("MMM d", Locale.US).format(Date(data.date))
+                    Text(date, color = PAPER, style = DisplayFace.style(date,
                         TextStyle(fontSize = (if (isFeed) 10.7f else 9.7f).sp)))
+                    if (data.streakDays > 0) {
+                        Text("${data.streakDays} day streak".uppercase(), color = PAPER.copy(alpha = 0.72f),
+                            style = TextStyle(fontSize = (if (isFeed) 7.3f else 6.7f).sp, letterSpacing = 1.sp,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace))
+                    }
                 }
             }
             Spacer(Modifier.weight(1f))
@@ -246,26 +247,18 @@ private fun DayCardBody(
 @Composable
 private fun Rule() = Box(Modifier.fillMaxWidth().height(0.5.dp).background(PAPER.copy(alpha = 0.28f)))
 
-/**
- * The call screen's pill, shrunk to a badge and carrying the DATE — the
- * thing the learner talked to, stamped with the day. Quiet on purpose: low
- * drive and a steep colour falloff leave most cells dark so the date reads
- * and the theme shows as an accent, not a flood. Dark palette whatever the
- * phone's mode: the card's ground is ink.
- */
+/** The nawana mark (iOS `NawanaMark`): five rects on a 1024 grid. */
 @Composable
-private fun DatePill(date: Long, theme: Int, isFeed: Boolean) {
-    val w = if (isFeed) 88.dp else 80.dp
-    val h = if (isFeed) 32.dp else 29.dp
-    Box(Modifier.width(w).height(h).clip(RoundedCornerShape(percent = 50)),
-        contentAlignment = Alignment.Center) {
-        FutureselfPixels(
-            modifier = Modifier.fillMaxSize(), theme = theme,
-            mode = FutureselfMode.SPEAKING, level = 0.42f, time = 3.2f,
-            cell = 6.4f * 3f, colourFalloff = 1.25f, maxStep = 3, dark = true)
-        Box(Modifier.fillMaxSize().background(INK.copy(alpha = 0.18f)))
-        val text = SimpleDateFormat("MMM d", Locale.US).format(Date(date))
-        Text(text, color = PAPER, style = DisplayFace.style(text,
-            TextStyle(fontSize = (if (isFeed) 10.7f else 9.7f).sp)))
+private fun NawanaMark(modifier: Modifier, color: Color) {
+    androidx.compose.foundation.Canvas(modifier) {
+        val k = size.width / 1024f
+        listOf(
+            floatArrayOf(290f, 237f, 410f, 100f), floatArrayOf(186f, 337f, 104f, 349f),
+            floatArrayOf(700f, 337f, 104f, 349f), floatArrayOf(290f, 686f, 410f, 100f),
+            floatArrayOf(806f, 686f, 95f, 100f),
+        ).forEach { r ->
+            drawRect(color, topLeft = androidx.compose.ui.geometry.Offset(r[0] * k, r[1] * k),
+                size = androidx.compose.ui.geometry.Size(r[2] * k, r[3] * k))
+        }
     }
 }

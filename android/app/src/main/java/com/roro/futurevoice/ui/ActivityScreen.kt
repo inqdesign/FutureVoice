@@ -87,7 +87,6 @@ import com.roro.futurevoice.ui.brand.ContinuousShape
 import com.roro.futurevoice.ui.brand.DayCard
 import com.roro.futurevoice.ui.brand.DayCardData
 import com.roro.futurevoice.ui.brand.DayCardFormat
-import com.roro.futurevoice.ui.brand.FutureselfTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
@@ -516,14 +515,13 @@ private fun DayJournal(context: Context, day: Long, seconds: Int, talks: List<Se
     }
     val study = card.studyMinutes
     if (seconds == 0 && talks.isEmpty() && shadowed == 0 && reviewed == 0 && study == 0) return
-    val theme = FutureselfTheme.stored(context).ordinal
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         Box(Modifier.size(PREVIEW_WIDTH, PREVIEW_WIDTH * 5 / 4).clip(ContinuousShape(10.dp)).clickable(onClick = onShare),
             contentAlignment = Alignment.Center) {
             Box(Modifier.requiredSize(DayCardFormat.FEED.width.dp, DayCardFormat.FEED.height.dp)
                 .scale(PREVIEW_WIDTH / DayCardFormat.FEED.width.dp)) {
-                DayCard(card, photo, theme = theme)
+                DayCard(card, photo)
             }
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
