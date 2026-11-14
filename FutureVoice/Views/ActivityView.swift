@@ -179,7 +179,7 @@ struct ActivityView: View {
     }
 
     /// The first visit explains the page's marks — a green day is a rule
-    /// (every block of that day's routine done), not something anyone can
+    /// (one block of that day's routine started), not something anyone can
     /// read off the colour. A beat late, so the page is seen arriving first.
     private func offerIntro() {
         #if DEBUG

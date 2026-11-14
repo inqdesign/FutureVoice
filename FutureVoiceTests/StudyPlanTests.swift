@@ -396,17 +396,17 @@ final class StudyPlanTests: XCTestCase {
         let later = PromiseJudge.carryingKept(.init(planned: 5, done: 3), from: raised,
                                               now: now.addingTimeInterval(60))
         XCTAssertEqual(later.keptAt, now)
-        // A day never finished is still judged by its plan.
-        let short = PromiseJudge.carryingKept(.init(planned: 4, done: 3),
-                                              from: .init(planned: 3, done: 2), now: now)
+        // A day nothing was started on is still missed.
+        let short = PromiseJudge.carryingKept(.init(planned: 4, done: 0, touched: 0),
+                                              from: .init(planned: 3, done: 0, touched: 0), now: now)
         XCTAssertFalse(short.kept)
         XCTAssertNil(short.keptAt)
     }
 
-    /// A day is kept when every block was STARTED (2026-10-11: a whole day of
-    /// study broke the streak because a word block ended at 9 of 10).
+    /// A day is kept when ONE block was started (2026-11-14; every block
+    /// started from 2026-10-11, when a word block at 9 of 10 broke a streak).
     @MainActor
-    func testEveryBlockStartedKeepsTheDay() {
+    func testOneBlockStartedKeepsTheDay() {
         let day = Date()
         let talk = StudyPlan.Occurrence(kind: .talk, start: day, amount: 10, source: .template(UUID()), remind: false)
         let words = StudyPlan.Occurrence(kind: .words, start: day.addingTimeInterval(3600), amount: 10,
@@ -419,16 +419,22 @@ final class StudyPlanTests: XCTestCase {
                                     touched: p.values.filter { $0 > 0 }.count)
         XCTAssertEqual(e.done, 1)
         XCTAssertTrue(e.kept)
-        // A block never touched still misses the day.
-        XCTAssertFalse(PromiseLedger.Entry(planned: 2, done: 1, touched: 1).kept)
+        // One of two blocks started is enough; none is a missed day.
+        XCTAssertTrue(PromiseLedger.Entry(planned: 2, done: 0, touched: 1).kept)
+        XCTAssertFalse(PromiseLedger.Entry(planned: 2, done: 0, touched: 0).kept)
+        // Entries from before `touched` read their finished count.
+        XCTAssertTrue(PromiseLedger.Entry(planned: 3, done: 1).kept)
+        XCTAssertFalse(PromiseLedger.Entry(planned: 3, done: 0).kept)
+        // Nothing planned is rest, never kept.
+        XCTAssertFalse(PromiseLedger.Entry(planned: 0, done: 0).kept)
     }
 
     /// Days settled under the old rule are judged again, upward only.
     @MainActor
     func testOldMissedDayIsRevivedOnlyUnderTheSamePlan() {
         let now = Date()
-        let old = PromiseLedger.Entry(planned: 3, done: 2)
-        let revived = PromiseJudge.rejudged(old, fresh: .init(planned: 3, done: 2, touched: 3), now: now)
+        let old = PromiseLedger.Entry(planned: 3, done: 0)
+        let revived = PromiseJudge.rejudged(old, fresh: .init(planned: 3, done: 0, touched: 1), now: now)
         XCTAssertTrue(revived.kept)
         XCTAssertEqual(revived.rule, PromiseLedger.currentRule)
         // The plan has changed since: the old verdict stands.
@@ -445,7 +451,7 @@ final class StudyPlanTests: XCTestCase {
     @MainActor
     func testDayMissedOnlyForTheWeeklyTestIsRevived() {
         let now = Date()
-        let old = PromiseLedger.Entry(planned: 2, done: 1, touched: 1, rule: 2)
+        let old = PromiseLedger.Entry(planned: 2, done: 0, touched: 0, rule: 2)
         let revived = PromiseJudge.rejudged(old, fresh: .init(planned: 1, done: 1, touched: 1),
                                             exempt: 1, now: now)
         XCTAssertTrue(revived.kept)

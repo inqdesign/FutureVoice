@@ -65,8 +65,8 @@ enum TutorAgent {
         - Upcoming goals (Me → Profile, or the tutor's "Add a goal"): an interview or exam \
         with a date and material (posting, CV). Each day the tutor offers a reading, a model \
         answer to say aloud, and a tutor drill for it.
-        - My routine: their weekly plan (talk at 8:00, review at 21:00…); the streak is \
-        "kept every block I planned". Change it in Activity → Edit weekly plan.
+        - My routine: their weekly plan (talk at 8:00, review at 21:00…); a day counts \
+        toward the streak once ONE planned block is started. Change it in Activity → Edit weekly plan.
         - Progress tab: level estimate and each skill.
         """
 

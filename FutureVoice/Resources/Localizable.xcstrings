@@ -62344,6 +62344,52 @@
         }
       }
     },
+    "Did any of it? It turns green" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Etwas gemacht? Dann wird es grün"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Hiciste algo? Se pone verde"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une chose de faite ? Ça passe au vert"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ひとつでもやると緑になります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "하나라도 하면 초록이 돼요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "做了一项？就会变绿"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "做一項就會變綠色"
+          }
+        }
+      }
+    },
     "Done reading" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -68305,6 +68351,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "當天排的都做完了，連續紀錄多一天。"
+          }
+        }
+      }
+    },
+    "One thing from that day's plan is enough. Your streak grows by one." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Sache aus dem Tagesplan reicht. Deine Serie wächst um einen Tag."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Basta con una cosa de lo planeado ese día. Tu racha suma uno."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une seule chose prévue ce jour-là suffit. Ta série augmente d’un jour."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "その日の計画のうち、ひとつで大丈夫。連続記録が1日のびます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그날 계획 중 하나만 해도 돼요. 연속 기록이 하루 늘어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当天计划里做一项就行，连续记录加一天。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "當天排的做一項就好，連續紀錄多一天。"
           }
         }
       }
@@ -78415,6 +78507,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "綠色：全部完成的日子"
+          }
+        }
+      }
+    },
+    "Green: you did some of it" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grün: etwas davon geschafft"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verde: hiciste algo del plan"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vert : une partie est faite"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "緑：ひとつでもやった日"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "초록: 하나라도 한 날"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "绿色：做了其中一项"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "綠色：做了其中一項的日子"
           }
         }
       }
@@ -158276,6 +158414,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "今天越做越滿"
+          }
+        }
+      }
+    },
+    "The time is up to you" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Uhrzeit ist egal"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La hora la eliges tú"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’heure, c’est toi qui vois"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "時間はいつでも"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "시간은 상관없어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "什么时候做都行"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "什麼時候做都可以"
           }
         }
       }

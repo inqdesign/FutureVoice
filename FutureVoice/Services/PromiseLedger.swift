@@ -23,11 +23,13 @@ final class PromiseLedger: @unchecked Sendable {
         /// (2026-10-07 — a 5-minute talk added at night turned a finished
         /// day grey). Optional, so entries on disk from before decode.
         var keptAt: Date? = nil
-        /// Blocks with ANY progress that day. A day is kept when every block
-        /// was at least started (2026-10-11, founder: a whole day of study
-        /// broke the streak because one word block ended at 9 of 10). `done`
-        /// still counts finished blocks — it is what the day's ring shows.
-        /// nil on entries written before the rule; they read as `done`.
+        /// Blocks with ANY progress that day. A day is kept when ONE block
+        /// was started (2026-11-14, founder: lower the bar; it was every
+        /// block started from 2026-10-11, and every block finished before
+        /// that). `done` still counts finished blocks — it is what the
+        /// day's ring shows. nil on entries written before 2026-10-11; they
+        /// read as `done`. The counts are that day's own, so the new bar
+        /// reads every day on file with no rejudging, and only upward.
         var touched: Int? = nil
         /// The keep rule the entry was judged by; nil = finish-every-block,
         /// 2 = every block started, 3 = the same without the weekly test.
@@ -35,11 +37,12 @@ final class PromiseLedger: @unchecked Sendable {
         /// Nothing was planned that day: a rest day — it neither counts nor
         /// breaks the streak.
         var isRest: Bool { planned == 0 && keptAt == nil }
-        var kept: Bool { keptAt != nil || (planned > 0 && (touched ?? done) >= planned) }
+        var kept: Bool { keptAt != nil || (planned > 0 && (touched ?? done) >= 1) }
     }
 
-    /// The rule `PromiseJudge` writes today: every block the LEARNER placed
-    /// was started. The weekly test is not one of them (2026-10-13).
+    /// The rule `PromiseJudge` writes today: the blocks the LEARNER placed,
+    /// without the weekly test (2026-10-13). Not bumped for the one-block bar
+    /// (2026-11-14): `kept` reads it straight off the counts.
     static let currentRule = 3
 
     private let lock = NSLock()

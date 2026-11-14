@@ -762,10 +762,12 @@ its own branch so the founder picks the build it ships in.
   chip, widget, day card, Activity), whose RULE is per learner:
   `StudyPlan.streakSince` nil → a day counts when they studied at all
   (`PracticeStats.activeDays`, the old rule, where everyone starts — the
-  seeded plan never sets it); set → from that day a day counts only when
-  every block planned for it was at least STARTED, and a day with nothing
-  planned is a REST day that neither counts nor breaks. **Started, not
-  finished** (2026-10-11, founder: a whole day of talks, say-it-again and
+  seeded plan never sets it); set → from that day a day counts once ONE
+  block planned for it was STARTED (2026-11-14, founder: lower the bar;
+  `Entry.kept` is `touched >= 1`, read off each day's own frozen counts, so
+  every day on file was re-read upward with no rejudging), and a day with
+  nothing planned is a REST day that neither counts nor breaks. **Before
+  that: every block started, not finished** (2026-10-11, founder: a whole day of talks, say-it-again and
   shadowing broke the streak because a word block ended at 9 of 10 — and
   the ring read 90% while the verdict read "missed"): `Entry.touched`
   counts blocks with any progress and decides `kept`; `done` still counts

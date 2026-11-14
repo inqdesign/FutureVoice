@@ -571,12 +571,12 @@ struct PageIntroSheet: View {
                 ]) { RoutineTimelineMock() }
         case (.routine, _):
             IntroScreenPage(
-                title: explain("Done it all? It turns green"),
+                title: explain("Did any of it? It turns green"),
                 subtitle: explain("Each date at the top shows how that day went."),
                 callouts: [
-                    .init(title: explain("Green: you did it all"),
-                          detail: explain("Everything planned for that day is done. Your streak grows by one.")),
-                    .init(title: explain("Today fills as you go"),
+                    .init(title: explain("Green: you did some of it"),
+                          detail: explain("One thing from that day's plan is enough. Your streak grows by one.")),
+                    .init(title: explain("The time is up to you"),
                           detail: explain("Any time that day counts. The times are a plan, not a deadline.")),
                 ],
                 note: explain("An empty day is a rest day, so it doesn't break your streak.")) { RoutineDaysMock() }
