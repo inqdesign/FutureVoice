@@ -1,1 +1,1 @@
-parler,apprendre,conversation,prononciation,shadowing,allemand,japonais,coréen,espagnol,oral,voix
+conversation,prononciation,shadowing,allemand,japonais,coréen,espagnol,chinois,oral,cours,langues,IA

@@ -1,1 +1,1 @@
-english,spanish,german,french,japanese,korean,conversation,shadowing,pronunciation,practice,fluent
+learn,practice,talk,english,spanish,german,french,japanese,korean,chinese,conversation,pronunciation

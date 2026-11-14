@@ -1,1 +1,1 @@
-aprender,hablar,conversación,pronunciación,shadowing,alemán,japonés,coreano,francés,italiano,voz
+hablar,conversación,pronunciación,shadowing,alemán,japonés,coreano,francés,chino,tutor,practicar
