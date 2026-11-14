@@ -1,4 +1,14 @@
 -- ---------------------------------------------------------------------------
+-- 2026-11-04: written as 20261022120000, the same version as
+-- 20261022120000_speech_challenge_cabin_announcement, which was the one
+-- recorded — so this file NEVER RAN in production (no
+-- billing_config.trial_talk_seconds, no trial_talk_seconds()). Harmless so
+-- far: no row is trialing and the store trial is off (2026-11-03), but
+-- `billing-switch.py trial-minutes` fails until it is applied. Renamed to its
+-- own version; NOT applied yet — it rewrites four live billing functions from
+-- their definitions, so apply it deliberately, not as part of this fix.
+-- ---------------------------------------------------------------------------
+-- ---------------------------------------------------------------------------
 -- The trial's talk time as a SETTING (2026-10-22).
 --
 -- Founder: "5 free minutes, then a trial with 60 minutes — and the trial's
