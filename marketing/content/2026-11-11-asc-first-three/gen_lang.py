@@ -132,6 +132,8 @@ def grey_cards(img, x_probe=None, min_h=None):
 
 def face_crop(img):
     """The tutor's face button on the Talk tab (bottom right), as a circle."""
+    if android:
+        return (889, 1999, 134)         # measured on the Pixel 9 capture (1080x2424)
     iw, ih = size(img)
     s = iw / 402
     return (328 * s, 728 * s, 55 * s)
@@ -191,8 +193,9 @@ def s04():
     k = sw / 1320                          # card rects measured on a 1320-wide capture
     c1 = [v * k for v in (48, 610, 594, 900)]
     c2 = [v * k for v in (678, 1546, 594, 900)]
-    if C.get("speech_cards"):
-        c1, c2 = C["speech_cards"]
+    if android:                         # Pixel 9: the movie-scene card and the podcast card
+        c1, c2 = (53, 568, 471, 722), (556, 1314, 471, 716)
+        k = 0.82
     return (title(C["s04"]) + stage(SCRIPT
             + cut_px(live, 190, 1652, 863, 890, 130, cam_y, cam_w, 62, "box-shadow:0 40px 100px rgba(0,0,0,.20)", sw=1242)
             + cut_px(sp, *c1, 40, cam_y - 150, 290, 86 * k, "transform:rotate(-5deg)", sw=sw)
@@ -202,7 +205,7 @@ def s04():
 def s08():
     iw, _ = size("composer-box")
     k = iw / 402                       # the box, in points on a 402-pt screen
-    box = (8 * k, 655 * k, 396 * k, 815 * k)
+    box = (32, 1982, 1048, 2318) if android else (8 * k, 655 * k, 396 * k, 815 * k)
     return (title(C["s08"], size=130) + stage(phone("watchtab-sky", 170, 700, 980)
             + card_px("composer-box", box, 50, 2240, 1220, pad=10)))
 

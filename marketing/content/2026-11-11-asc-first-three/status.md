@@ -42,3 +42,7 @@ Output: E-latest/E1–E3.png, E_sheet.jpg, gen_e.py. Copy provisional. Nothing u
   for ko en-GB en-US ja zh-Hans zh-Hant es-ES es-MX fr-FR de-DE.
 - 11-14: Android (Play, 7 languages) in progress: emulator captures, then `gen_lang.py <lang> --android acap/<lang>`
   (9:16 page, 1080x1920) into the Android repo's fastlane folders, then `play-listing.py --send --images`.
+- 11-14: Google Play done. sets/android/<lang> (en ko ja zh-TW zh-CN es fr, 1080x1920, shots 1–8: Play takes 8),
+  copied into the Android repo's fastlane folders (fc6677a9 on feat/android) and sent with
+  `play-listing.py --send --images` ("Committed"; text unchanged). Shows after Google's review.
+  iOS capture seeds committed (d3295496), Android capture modes 5ccbe5da.
