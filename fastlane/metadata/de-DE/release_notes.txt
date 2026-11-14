@@ -1,6 +1,4 @@
 Neu
-• Die Tageskarte gibt es jetzt im Hochformat 9:16, mit allem, was du an dem Tag gemacht hast, Zeile für Zeile.
-• Der Verlauf einer Rede zeigt jetzt alle Aufnahmen auf einer Seite. Wische, um zu wechseln.
-
-Verbessert
-• Im Aussprache-Gespräch erfährst du bei jedem Fehler, was anders klang und was du ändern kannst.
+• Du kannst jetzt auch Chinesisch (vereinfacht) und Französisch üben. Beides ist noch in der Testphase.
+• Die Ergebnisse der Rede-Challenges zeigen jetzt fünf Werte: Sprechtempo, Rhythmus, Pausen, Genauigkeit und Aussprache. Falsche Laute sind direkt im Skript markiert.
+• Im Ergebnis hörst du deine Aufnahme und die deines fließenden Ichs direkt nebeneinander.

@@ -1,6 +1,4 @@
 Novedades
-• La tarjeta del día ahora tiene un formato vertical 9:16, con todo lo que hiciste ese día, línea por línea.
-• El historial de un discurso abre todas tus tomas en una sola página. Desliza para pasar de una a otra.
-
-Mejoras
-• En la llamada de pronunciación, cada fallo te dice qué sonó distinto y una cosa que cambiar.
+• Ya puedes practicar chino simplificado y francés. Los dos siguen en pruebas.
+• Los resultados de los retos de discurso muestran cinco notas: velocidad al hablar, ritmo, pausas, precisión y pronunciación. Los sonidos que fallaste se marcan en el guion.
+• En los resultados puedes escuchar tu lectura y la de tu yo del futuro, una al lado de la otra.

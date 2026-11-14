@@ -1,6 +1,4 @@
 Nouveautés
-• La carte du jour existe maintenant en format vertical 9:16, avec tout ce que tu as fait ce jour-là, ligne par ligne.
-• L’historique d’un discours ouvre toutes tes prises sur une seule page. Balaie pour passer de l’une à l’autre.
-
-Améliorations
-• Dans l’appel de prononciation, chaque erreur te dit ce qui sonnait différemment et une chose à changer.
+• Tu peux maintenant pratiquer le chinois simplifié et le français. Les deux sont encore en test.
+• Les résultats des défis de discours affichent cinq notes : vitesse de parole, rythme, pauses, précision et prononciation. Les sons ratés sont marqués directement sur le texte.
+• Sur l’écran des résultats, écoute ta lecture et celle de ton futur moi côte à côte.
