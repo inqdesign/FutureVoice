@@ -29,3 +29,16 @@ Output: E-latest/E1–E3.png, E_sheet.jpg, gen_e.py. Copy provisional. Nothing u
 - 11-14: 02 retitled (founder: the point is copying yourself, not natives): 원어민 흉내 말고 / 유창한 나를 따라 해요.
 - 11-14: founder approved 02's wording: 원어민 흉내 말고 / 유창한 나를 따라 해요.
 - 11-14: founder: keep the live store opener (hand photo) as 01, replace the rest; shadowing in place of pronunciation (07, scored take captured with a temporary DEBUG seed, reverted).
+- 11-14: committed 77732a4e. ASC: created version 1.3.4 (PREPARE_FOR_SUBMISSION); ko APP_IPHONE_67 (1320×2868) + APP_IPHONE_65 (1242×2688) replaced with the 10 new shots. Goes live with 1.3.4's approval.
+- 11-14 (founder: "own this, finish until all screens are updated"): the G design in every other language.
+  `gen_lang.py <lang> [--ipad|--android]` builds the ten from raw captures; copy per language in `copy_lang.py`
+  (written in each language). Raw iPhone/iPad captures: `cap.sh <lang> <locale>` in the session scratchpad,
+  from the Debug build with new staged screens (`-capture call-seed-fix|call-seed-coach`, `-shadowResult 1`,
+  texts in `CaptureCallSeed.swift`). Out: sets/ios/<lang> (en ja zh-Hans zh-Hant es fr de, 1320x2868),
+  sets/ipad/<lang> (those + ko, 2064x2752: one headline over one full iPad screen; the app's iPad layouts are sparse).
+  English keeps the live hand opener (en 01); other languages open on the future-self + language-row design.
+- 11-14: NOT uploaded yet. Apple locks screenshots while 1.3.4 is waiting for review (409 STATE_ERROR).
+  When the next version exists: `python3 asc_upload.py <version>` (dry run) then `--send`: iPhone 6.9/6.5 + iPad 13
+  for ko en-GB en-US ja zh-Hans zh-Hant es-ES es-MX fr-FR de-DE.
+- 11-14: Android (Play, 7 languages) in progress: emulator captures, then `gen_lang.py <lang> --android acap/<lang>`
+  (9:16 page, 1080x1920) into the Android repo's fastlane folders, then `play-listing.py --send --images`.
