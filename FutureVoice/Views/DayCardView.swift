@@ -200,10 +200,6 @@ struct DayCardView: View {
     let data: DayCardData
     let photo: UIImage?
     var format: DayCardFormat = .feed
-    /// The learner's Futureself theme — read straight from defaults, because
-    /// this view is also drawn by an `ImageRenderer` with no environment.
-    var theme: Int = UserDefaults.standard.integer(forKey: "futureselfTheme")
-
     private let ink = Color(red: 20 / 255, green: 19 / 255, blue: 16 / 255)
     private let paper = Color(red: 252 / 255, green: 251 / 255, blue: 248 / 255)
 
@@ -236,10 +232,20 @@ struct DayCardView: View {
 
             VStack(alignment: .leading, spacing: 0) {
                 HStack {
-                    datePill
+                    // The mark alone, small, at the top left; the date is
+                    // plain text (no mosaic behind it since 2026-11-13).
+                    NawanaMark().fill(paper).frame(width: isFeed ? 18 : 16, height: isFeed ? 18 : 16)
                     Spacer()
-                    if data.streakDays > 0 {
-                        Text(verbatim: "\(data.streakDays) day streak").brandPixel(isFeed ? 10.7 : 9.7)
+                    VStack(alignment: .trailing, spacing: 3) {
+                        Text(data.date.formatted(.dateTime.month(.abbreviated).day().locale(Locale(identifier: "en"))))
+                            .brandPixel(isFeed ? 10.7 : 9.7)
+                        if data.streakDays > 0 {
+                            Text(verbatim: "\(data.streakDays) day streak")
+                                .font(.system(size: isFeed ? 7.3 : 6.7, design: .monospaced))
+                                .tracking(1)
+                                .textCase(.uppercase)
+                                .opacity(0.72)
+                        }
                     }
                 }
                 Spacer(minLength: 8)
@@ -304,28 +310,6 @@ struct DayCardView: View {
                 .textCase(.uppercase)
                 .opacity(0.72)
         }
-    }
-
-    /// The call screen's pill, shrunk to a badge and carrying the DATE: the
-    /// mosaic at a 6.4 pt cell keeps its five rows, capsule-clipped with the
-    /// hairline rim, in the learner's Futureself theme — the thing they
-    /// talked to, stamped with the day. Dark palette: the card's ground is
-    /// ink whatever the phone's mode. A light veil keeps the date legible
-    /// over the brightest cells; the name is only in the footer's URL now.
-    private var datePill: some View {
-        ZStack {
-            // Quiet on purpose: a badge, not the call in full voice — low
-            // drive and a steep colour falloff leave most cells dark so the
-            // date reads and the theme shows as an accent, not a flood.
-            FutureselfPixels(theme: theme, mode: .speaking, level: 0.42, time: 3.2,
-                             cell: 6.4, colourFalloff: 1.25, maxStep: 3, dark: true)
-            ink.opacity(0.18)
-            Text(data.date.formatted(.dateTime.month(.abbreviated).day().locale(Locale(identifier: "en"))))
-                .brandPixel(isFeed ? 10.7 : 9.7)
-        }
-        .frame(width: isFeed ? 88 : 80, height: isFeed ? 32 : 29)
-        .clipShape(Capsule())
-        .overlay(Capsule().strokeBorder(paper.opacity(0.28), lineWidth: 0.5))
     }
 
     private var footer: some View {
