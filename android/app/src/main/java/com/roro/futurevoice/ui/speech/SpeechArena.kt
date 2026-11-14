@@ -9,6 +9,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -255,7 +256,12 @@ internal fun arenaDisplay(size: TextUnit) = androidx.compose.ui.text.TextStyle(
 @Composable
 internal fun ChallengeCardFace(script: SpeechScript, category: String?, standing: SpeechChallenges.Standing?,
                                figureHeight: Dp? = null, titleSize: TextUnit = 17.sp, titleLines: Int = 2,
-                               modifier: Modifier = Modifier) {
+                               modifier: Modifier = Modifier,
+                               /** One of the learner's own scripts (iOS 2026-11-13, founder: My
+                                *  scripts wears the challenge cards): its kind drawn where a
+                                *  challenge has its picture, and its length where a challenge
+                                *  says who is on it. */
+                               mine: Boolean = false) {
     val context = LocalContext.current
     val large = titleSize.value > 24
     val art = ChallengeArt.image(context, script.id)
@@ -264,13 +270,22 @@ internal fun ChallengeCardFace(script: SpeechScript, category: String?, standing
         if (art != null) {
             Image(art.asImageBitmap(), null, contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxWidth().then(if (figureHeight != null) Modifier.height(figureHeight) else Modifier.weight(1f)))
+        } else if (mine) {
+            Box(Modifier.fillMaxWidth().then(if (figureHeight != null) Modifier.height(figureHeight) else Modifier.weight(1f)),
+                contentAlignment = Alignment.Center) {
+                androidx.compose.material3.Icon(script.genre.icon(), contentDescription = null,
+                    tint = ChallengeArt.INK_TEXT.copy(alpha = 0.7f), modifier = Modifier.size(if (large) 84.dp else 52.dp))
+            }
         } else {
             Spacer(if (figureHeight != null) Modifier.height(figureHeight) else Modifier.weight(1f))
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(if (large) 6.dp else 3.dp)) {
             // The category as an eyebrow over the title. Every card keeps its
             // line, so titles stay level.
-            Text((challengeCategoryLabel(category) ?: " ").uppercase(),
+            val eyebrow = if (mine) {
+                if (script.isBuiltIn) stringResource(R.string.sample) else script.genre.title()
+            } else challengeCategoryLabel(category) ?: " "
+            Text(eyebrow.uppercase(),
                 style = (if (large) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelSmall)
                     .copy(letterSpacing = 0.6.sp),
                 fontWeight = FontWeight.SemiBold, color = ChallengeArt.INK_TEXT.copy(alpha = 0.45f), maxLines = 1)
@@ -279,7 +294,16 @@ internal fun ChallengeCardFace(script: SpeechScript, category: String?, standing
                 textAlign = TextAlign.Center, maxLines = titleLines, overflow = TextOverflow.Ellipsis,
                 minLines = titleLines, modifier = Modifier.fillMaxWidth())
         }
-        Crowd(standing, large)
+        if (mine) {
+            Box(Modifier.height(if (large) 22.dp else 16.dp), contentAlignment = Alignment.Center) {
+                Text(lengthLabel(com.roro.futurevoice.data.SpeechLibrary.estimatedSeconds(script.body, script.language)),
+                    style = (if (large) MaterialTheme.typography.bodySmall else MaterialTheme.typography.labelSmall)
+                        .copy(fontFeatureSettings = "tnum"),
+                    color = ChallengeArt.INK_TEXT.copy(alpha = 0.5f), maxLines = 1)
+            }
+        } else {
+            Crowd(standing, large)
+        }
     }
 }
 
@@ -322,15 +346,18 @@ private fun CardLeaderFace(face: SpeechChallenges.Face, size: Dp, modifier: Modi
 
 /** One challenge in the grid (iOS `ArenaTile`): the figure filling the card,
  *  the title under it, and the medal I hold. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 internal fun ArenaTile(script: SpeechScript, standing: SpeechChallenges.Standing?, best: Int?, ended: Boolean,
-                       onClick: () -> Unit, modifier: Modifier = Modifier) {
+                       onClick: () -> Unit, modifier: Modifier = Modifier,
+                       mine: Boolean = false, onLongClick: (() -> Unit)? = null) {
     Box(modifier.alpha(if (ended) 0.75f else 1f)) {
         ChallengeCardFace(script, standing?.category, standing, titleSize = 17.sp,
             modifier = Modifier.fillMaxWidth().aspectRatio(0.66f)
                 .clip(RoundedCornerShape(30.dp)).background(ChallengeArt.paper())
-                .clickable(onClick = onClick)
-                .padding(top = 20.dp, start = 10.dp, end = 10.dp, bottom = 14.dp))
+                .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+                .padding(top = 20.dp, start = 10.dp, end = 10.dp, bottom = 14.dp),
+            mine = mine)
         if (best != null) {
             val tier = MedalTier.ofScore(best)
             Box(Modifier.align(Alignment.TopEnd).padding(8.dp)) {

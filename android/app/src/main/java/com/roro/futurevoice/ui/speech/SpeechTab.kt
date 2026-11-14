@@ -6,7 +6,11 @@ import android.content.Context
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,7 +50,6 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.Newspaper
-import androidx.compose.material.icons.outlined.NoteAdd
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -215,13 +218,11 @@ internal fun SpeechTabBody(language: String, native: String, level: CefrLevel,
                 // the first one) lives on the other tab, so for most learners
                 // this starts empty and says what goes here.
                 if (ownScripts.isEmpty()) {
-                    Box(Modifier.fillMaxWidth().clip(ContinuousShape(18.dp)).background(AppSurfaces.card)) {
-                        SpeechScriptsEmptyState(
-                            onWrite = { startNewScript(scope, SpeechTabRequests.Kind.WRITE) },
-                            onOwn = { startNewScript(scope, SpeechTabRequests.Kind.OWN) })
-                    }
+                    SpeechScriptsEmptyState(
+                        onWrite = { startNewScript(scope, SpeechTabRequests.Kind.WRITE) },
+                        onOwn = { startNewScript(scope, SpeechTabRequests.Kind.OWN) })
                 } else {
-                    TwoAcross(ownScripts, spacing = 12.dp) { script, mod ->
+                    TwoAcross(ownScripts, spacing = 12.dp, rowSpacing = 12.dp) { script, mod ->
                         val best = takes.filter { it.scriptId == script.id }.maxOfOrNull { it.metrics.overall }
                         SpeechScriptCard(script, best, mod,
                             onClick = { practicing = script },
@@ -365,47 +366,18 @@ private fun <T> TwoAcross(items: List<T>, spacing: androidx.compose.ui.unit.Dp,
     }
 }
 
-/** One of the learner's own scripts as a card, the challenge card's anatomy
- *  (iOS `SpeechScriptCard`): the genre in a tinted disc, the best score
- *  top-right, the title, one quiet line at the foot. Its actions are a long
+/** One of the learner's own scripts as a card: the challenge card (iOS
+ *  `ArenaTile(mine: true)`, 2026-11-13, founder). Its actions are a long
  *  press. */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SpeechScriptCard(script: SpeechScript, best: Int?, modifier: Modifier,
                              onClick: () -> Unit, onEdit: (() -> Unit)?,
                              onPublish: (() -> Unit)?, onDelete: (() -> Unit)?) {
-    val accent = MaterialTheme.colorScheme.primary
     var menu by remember { mutableStateOf(false) }
     val hasMenu = onEdit != null || onPublish != null || onDelete != null
     Box(modifier) {
-        Column(
-            Modifier.fillMaxWidth().fillMaxHeight().heightIn(min = 170.dp)
-                .clip(ContinuousShape(18.dp))
-                .background(AppSurfaces.card)
-                .combinedClickable(onClick = onClick, onLongClick = if (hasMenu) ({ menu = true }) else null)
-                .padding(18.dp),
-        ) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-                com.roro.futurevoice.ui.brand.BookIconDisc(accent = accent) {
-                    Icon(script.genre.icon(), contentDescription = null, tint = accent,
-                        modifier = Modifier.size(22.dp))
-                }
-                Spacer(Modifier.weight(1f))
-                if (best != null) {
-                    Text("$best", style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold, color = scoreColor(best))
-                }
-            }
-            Text(script.title, style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold, maxLines = 3, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 14.dp))
-            Spacer(Modifier.height(16.dp))
-            Spacer(Modifier.weight(1f))
-            val length = lengthLabel(SpeechLibrary.estimatedSeconds(script.body, script.language))
-            val kind = if (script.isBuiltIn) stringResource(R.string.sample) else script.genre.title()
-            Text("$length · $kind", style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
+        ArenaTile(script, standing = null, best = best, ended = false, onClick = onClick,
+            mine = true, onLongClick = if (hasMenu) ({ menu = true }) else null)
         com.roro.futurevoice.ui.brand.IosDropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
             onEdit?.let { act ->
                 com.roro.futurevoice.ui.brand.IosDropdownMenuItem(
@@ -439,37 +411,67 @@ private fun startNewScript(scope: kotlinx.coroutines.CoroutineScope, kind: Speec
     }
 }
 
-/** "My scripts" before there are any: what the section is for, and the two
- *  ways to fill it — iOS `SpeechScriptsEmptyState`. */
+/** "My scripts" before there are any (iOS `SpeechScriptsEmptyState`,
+ *  2026-11-13, founder: the page was underwhelming): the cream card today's
+ *  challenge wears, the kinds of script drawn as its picture, and the two
+ *  ways to fill the page. */
 @Composable
 private fun SpeechScriptsEmptyState(onWrite: () -> Unit, onOwn: () -> Unit) {
-    // The buttons sit in the TEXT column, the icon's column left empty below
-    // it; stacked, so neither label is cut and both are one size.
-    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.Top) {
-        Icon(Icons.Outlined.NoteAdd, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
-        Spacer(Modifier.width(12.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(stringResource(R.string.write_your_first_script), style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold)
-                Text(stringResource(R.string.choose_a_topic_and_ai_writes_it_for_your_level_or_paste_a_te_d4a75b),
-                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    val ink = ChallengeArt.INK_TEXT
+    Column(
+        Modifier.fillMaxWidth().clip(ContinuousShape(44.dp)).background(ChallengeArt.paper()).padding(22.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        ScriptKindsFigure(Modifier.fillMaxWidth().height(170.dp))
+        Text(stringResource(R.string.my_scripts).uppercase(),
+            style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 0.6.sp),
+            fontWeight = FontWeight.SemiBold, color = ink.copy(alpha = 0.45f))
+        Text(stringResource(R.string.your_own_script_scored_like_a_challenge), style = arenaDisplay(26.sp),
+            color = ink, textAlign = TextAlign.Center)
+        Text(stringResource(R.string.choose_a_topic_and_ai_writes_it_for_your_level_or_paste_a_te_d4a75b),
+            style = MaterialTheme.typography.bodyMedium, color = ink.copy(alpha = 0.65f), textAlign = TextAlign.Center)
+        Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.fillMaxWidth().clip(CircleShape).background(ink).clickable(onClick = onWrite)
+                    .padding(vertical = 16.dp),
+                horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.AutoAwesome, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(R.string.write_with_ai), style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1)
             }
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                IosButton(onClick = onWrite, modifier = Modifier.fillMaxWidth()) {
-                    Icon(Icons.Filled.AutoAwesome, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.write_with_ai), fontWeight = FontWeight.SemiBold, maxLines = 1)
-                }
-                IosButton(onClick = onOwn, modifier = Modifier.fillMaxWidth(),
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                        contentColor = MaterialTheme.colorScheme.primary)) {
-                    Icon(Icons.Outlined.EditNote, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(R.string.add_my_own_script), fontWeight = FontWeight.SemiBold, maxLines = 1)
-                }
+            Row(Modifier.fillMaxWidth().clip(CircleShape).border(1.5.dp, ink.copy(alpha = 0.25f), CircleShape)
+                    .clickable(onClick = onOwn).padding(vertical = 16.dp),
+                horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.EditNote, null, tint = ink, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(R.string.add_my_own_script), style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold, color = ink, maxLines = 1)
             }
+        }
+    }
+}
+
+/** The kinds of script, scattered like a still life. */
+@Composable
+private fun ScriptKindsFigure(modifier: Modifier) {
+    // (kind, x, y as a share of the box from its centre, size, opacity)
+    val marks = listOf(
+        listOf(SpeechGenre.EXPLAINER, -0.27f, -0.20f, 46f, 0.75f),
+        listOf(SpeechGenre.NEWS, 0.02f, -0.30f, 38f, 0.55f),
+        listOf(SpeechGenre.PRODUCT, 0.29f, -0.12f, 44f, 0.7f),
+        listOf(SpeechGenre.PERSON, -0.10f, 0.20f, 50f, 0.8f),
+        listOf(SpeechGenre.OWN, 0.20f, 0.26f, 38f, 0.6f),
+        listOf(SpeechGenre.BRIEFING, -0.37f, 0.22f, 30f, 0.45f),
+    )
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier) {
+        marks.forEach { m ->
+            val size = (m[3] as Float).dp
+            Icon((m[0] as SpeechGenre).icon(), contentDescription = null,
+                tint = ChallengeArt.INK_TEXT.copy(alpha = m[4] as Float),
+                modifier = Modifier.size(size).offset(
+                    x = maxWidth * (0.5f + m[1] as Float) - size / 2,
+                    y = maxHeight * (0.5f + m[2] as Float) - size / 2))
         }
     }
 }
