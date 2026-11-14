@@ -588,10 +588,17 @@ class SpeechChallenges private constructor(private val context: Context) {
         }
     }
 
+    /** The caller's token; a signed-out capture run reads the boards as the
+     *  public would (capture build only, `SpeechCaptureFlags.anonymousReads`). */
+    private suspend fun readToken(): String =
+        if (com.roro.futurevoice.capture.flags.SpeechCaptureFlags.anonymousReads)
+            runCatching { auth.accessToken() }.getOrElse { Config.supabaseAnonKey }
+        else auth.accessToken()
+
     private suspend fun rpc(name: String, body: JsonObject): String = withContext(Dispatchers.IO) {
         val request = Request.Builder()
             .url("${Config.supabaseUrl.trimEnd('/')}/rest/v1/rpc/$name")
-            .header("Authorization", "Bearer ${auth.accessToken()}")
+            .header("Authorization", "Bearer ${readToken()}")
             .header("apikey", Config.supabaseAnonKey)
             .post(body.toString().toRequestBody("application/json".toMediaType()))
             .build()

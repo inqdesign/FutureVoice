@@ -38,7 +38,39 @@ object CaptureShadow {
         "shadow-result" to { _ -> Result(pending = false, timed = true) },
         "shadow-result-pending" to { _ -> Result(pending = true, timed = true) },
         "shadow-words-only" to { _ -> Result(pending = false, timed = false) },
+        // Store screenshots (iOS `-shadowResult 1`): a scored take heard as
+        // "…taking time…" (the "the" dropped), the coach's three lines in the
+        // app language (`CaptureStoreTexts`), no earlier takes.
+        "shadow-store" to { c -> StoreResult(c) },
     )
+
+    @Composable
+    private fun StoreResult(c: Context) {
+        val t = CaptureStoreTexts.texts(c.getSharedPreferences("futurevoice", 0)
+            .getString("futurevoice.nativeLanguage", null)
+            ?: com.roro.futurevoice.data.LanguageCatalog.defaultNative())
+        val turn = CaptureSeed.shadowTurn
+        val words = com.roro.futurevoice.data.WordSplitter.timingWords(turn.transcript, "en")
+        val target = words.mapIndexed { i, w -> com.roro.futurevoice.talk.WordTiming(w, i * 330, (i + 1) * 330 - 50) }
+        val said = "I really appreciate you taking time to help me."
+        // A few words in late: the coach has something to say (a take at
+        // 90+ gets "Nailed it" and no coaching, as on a real take).
+        val late = mapOf(2 to -220, 4 to 380, 5 to 420, 6 to 360, 8 to 330)
+        val learner = com.roro.futurevoice.data.WordSplitter.timingWords(said, "en").mapIndexed { i, w ->
+            val k = if (i >= 5) i + 1 else i   // "the" was never said
+            val s = 250 + k * 330 + (late[i] ?: 0)
+            com.roro.futurevoice.talk.WordTiming(w, s, s + 280)
+        }
+        com.roro.futurevoice.ui.ShadowScreen(
+            line = turn.transcript, voiceId = "", targetLanguage = "en", turnId = turn.id, onBack = {},
+            seed = com.roro.futurevoice.ui.ShadowSeed(
+                targetTimings = target, learnerText = said, learnerTimings = learner,
+                learnerDurationMs = 3_650, coachPending = false,
+                pronunciation = t.shadowPronunciation, pacing = t.shadowPacing, fix = t.shadowFix,
+                past = emptyList(),
+            ),
+        )
+    }
 
     /**
      * A finished take on the capture line: one word said differently, two

@@ -37,4 +37,8 @@ object SpeechCaptureFlags {
      *  editor with this draft. */
     @Volatile var voiceoverOn: Boolean = false
     @Volatile var ownDraft: String? = null
+
+    /** Read the challenge lists and boards with the public key when signed
+     *  out, so a capture run shows the live challenges (store screenshots). */
+    @Volatile var anonymousReads: Boolean = false
 }

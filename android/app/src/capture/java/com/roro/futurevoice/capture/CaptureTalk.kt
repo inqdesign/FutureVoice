@@ -132,6 +132,16 @@ object CaptureTalk {
         "call-meter-low" to { ctx -> CallMeter(ctx, minutes = 2) },
         "call-goals" to { ctx -> CallGoals(ctx) },
         "call-coach" to { ctx -> CallCoach(ctx) },
+        // Store screenshots (iOS `call-seed-fix` / `call-seed-coach`): the
+        // real call screen with a staged talk on it, explained in the app
+        // language (`CaptureStoreTexts`).
+        "call-seed-fix" to { ctx -> CallSeed(ctx, fix = true) },
+        "call-seed-coach" to { ctx -> CallSeed(ctx, fix = false) },
+        // Store screenshots: the Talk home with today's ring two-thirds full
+        // (6:40 of 10 min) and nothing over it; and the tutor's chat open
+        // over it, an exam and an interview ahead.
+        "store-tabs" to { ctx -> StoreHome(ctx, chat = false) },
+        "store-tutor" to { ctx -> StoreHome(ctx, chat = true) },
         "first-call-check" to { ctx -> FirstCallCheckShot(ctx, hard = false) },
         "first-call-check-hard" to { ctx -> FirstCallCheckShot(ctx, hard = true) },
         "first-call-setup" to { ctx -> FirstCallSetupShot(ctx) },
@@ -412,6 +422,140 @@ object CaptureTalk {
             goalsUsed = setOf("next"),
             titleRes = R.string.lets_talk,
         ), seed = { com.roro.futurevoice.talk.CoachMode.setChoice(context, true) })
+    }
+
+    private fun nativeOf(context: Context) = context.getSharedPreferences("futurevoice", 0)
+        .getString("futurevoice.nativeLanguage", null) ?: LanguageCatalog.defaultNative()
+
+    /**
+     * iOS `applyCaptureSeed`: "fix" is a tutor call two challenges in, the
+     * learner's line with its correction, the tutor's answer, the call paused
+     * at 3:01; "coach" is free talk listening, three lines, the "try saying"
+     * above the pill, at 2:14.
+     */
+    @Composable
+    private fun CallSeed(context: Context, fix: Boolean) {
+        val t = CaptureStoreTexts.texts(nativeOf(context))
+        val now = remember { System.currentTimeMillis() }
+        val goals = listOf(
+            TalkGoalItem("strength", "strength", isWord = true),
+            TalkGoalItem("come up", "come up", isWord = false),
+            TalkGoalItem("in one go", "in one go", isWord = false),
+        )
+        if (fix) {
+            val lesson = com.roro.futurevoice.talk.TutorLesson(
+                id = "capture-store-lesson", title = t.lesson,
+                titleTarget = "Introducing yourself in a job interview", language = "en",
+                challenges = t.goals.mapIndexed { i, g ->
+                    com.roro.futurevoice.talk.TutorLesson.Challenge(id = "capture-store-goal-$i",
+                        goal = g, task = g, example = "", doneAt = if (i < 2) now else null)
+                },
+                createdAt = now)
+            val said = "My background in problem solving helps me handle unexpected situation calmly."
+            val learner = user(said, 1).copy(suggestion = TurnSuggestion(
+                alternative = "My background in problem solving helps me stay calm when unexpected situations come up.",
+                reason = t.reason,
+                fixes = listOf(TurnFix(was = "helps me handle unexpected situation calmly",
+                    now = "helps me handle unexpected situations calmly", why = t.why)),
+            ))
+            Call(context, TalkCaptureFlags.CallPreview(
+                TalkUiState(
+                    phase = TalkPhase.PAUSED,
+                    pausedForIdle = true,
+                    turns = listOf(
+                        fluent("Nice! And how would your strengths help you in this job?", 0),
+                        learner,
+                        fluent("Ah, so close, and the idea really comes across. We'd say: \"My background in problem-solving helps me stay calm when unexpected situations come up.\"", 2),
+                    ),
+                    tutorOn = true,
+                    tutorLesson = lesson,
+                ),
+                goals = goals, goalsUsed = setOf("come up"), clockSeconds = 181,
+                // The corrected line is the point of the shot: whole on screen.
+                revealTurnId = learner.id,
+            ), seed = {
+                com.roro.futurevoice.talk.CoachMode.setChoice(context, false)
+                com.roro.futurevoice.talk.TutorMode.set(context, true)
+            })
+        } else {
+            Call(context, TalkCaptureFlags.CallPreview(
+                TalkUiState(
+                    phase = TalkPhase.LISTENING,
+                    level = 0.3f,
+                    turns = listOf(
+                        fluent("Hey! How's your week going so far?", 0),
+                        user("Pretty busy, but in a good way.", 1),
+                        fluent("Busy in a good way is the best kind. So what are you working on these days?", 2),
+                    ),
+                    coachReply = com.roro.futurevoice.talk.CoachReply(
+                        say = "I'm working on [an AI project] right now, and it's going really well.",
+                        meaning = t.coachMeaning, turnId = "capture-turn-2"),
+                ),
+                goals = goals, goalsUsed = emptySet(), clockSeconds = 134,
+            ), seed = {
+                com.roro.futurevoice.talk.CoachMode.setChoice(context, true)
+                com.roro.futurevoice.talk.TutorMode.set(context, false)
+            })
+        }
+    }
+
+    /**
+     * The Talk home for the store: today's ring at 6:40 of the 10-minute
+     * goal, the tutor's daily note already seen (it would cover the ring),
+     * a routine for every day of the week. [chat] opens the tutor's chat over
+     * it, an exam and a job interview ahead (titles in the app language).
+     */
+    @Composable
+    private fun StoreHome(context: Context, chat: Boolean) {
+        TalkCaptureFlags.headerAccount = headerAccount("tabs")
+        TalkCaptureFlags.discoverTab = null
+        var state by remember { mutableStateOf<AppState?>(null) }
+        Seeded(work = {
+            seedHome(context, "store-home")
+            val lang = LanguageScope.active(context)
+            val want = 400 - TalkTimeLog.secondsToday(context)
+            if (want > 0) TalkTimeLog.add(context, want, lang)
+            val day = com.roro.futurevoice.data.StudyPlan.dayKey(System.currentTimeMillis())
+            context.getSharedPreferences("futurevoice", 0).edit()
+                .putString("futurevoice.tutorBot.noteDay", day)
+                .putBoolean(com.roro.futurevoice.talk.TutorBot.INTRO_SEEN_KEY, true).commit()
+            if (chat) {
+                // Today's plan in the chat reads the routine. (Not on the
+                // home shot: its talk today would fill the ring past 6:40.)
+                CaptureSeed.once("store-routine") { CaptureRoutine.seedStoreWeek(context) }
+                val t = CaptureStoreTexts.texts(nativeOf(context))
+                val dayMs = 86_400_000L
+                val today = com.roro.futurevoice.data.StudyPlan.startOfDay(System.currentTimeMillis())
+                val store = com.roro.futurevoice.data.UpcomingGoalStore
+                store.ensureLoaded(context)
+                store.goals.filter { it.id.startsWith("capture-store-") }.forEach { g ->
+                    if (g.title != t.examTitle && g.title != t.interviewTitle) store.delete(context, g.id)
+                }
+                store.save(context, com.roro.futurevoice.data.UpcomingGoal(
+                    id = "capture-store-interview", kind = com.roro.futurevoice.data.UpcomingGoal.Kind.INTERVIEW,
+                    title = t.interviewTitle, date = today + 9 * dayMs, language = lang))
+                store.save(context, com.roro.futurevoice.data.UpcomingGoal(
+                    id = "capture-store-exam", kind = com.roro.futurevoice.data.UpcomingGoal.Kind.EXAM,
+                    title = t.examTitle, date = today + 23 * dayMs, language = lang))
+            }
+            state = appState(context)
+        }) {
+            var tab by remember { mutableStateOf(HomeTab.TALK) }
+            state?.let { s ->
+                // The chat is a page sheet; RootScreen hosts those over the
+                // tabs, so the capture hosts it the same way.
+                val page by com.roro.futurevoice.ui.TabPageSheet.current
+                com.roro.futurevoice.ui.IosSheetHost(
+                    presented = page != null, onDismiss = {},
+                    background = {
+                        HomeScreen(state = s, onStartCall = { _, _, _, _ -> }, onOpenMe = {},
+                            tab = tab, onTabChange = { tab = it })
+                        if (chat) com.roro.futurevoice.ui.TutorChatView(s, onDismiss = {})
+                    },
+                    sheet = { page?.content?.invoke() },
+                )
+            }
+        }
     }
 
     /** iOS `first-call-setup`: the before-first-call sheet, on A2. */

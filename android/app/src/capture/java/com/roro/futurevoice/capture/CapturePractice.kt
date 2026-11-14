@@ -244,7 +244,26 @@ object CapturePractice {
             var s = CaptureSeed.talkDetailSession
             // iOS: the "-mid"/"-low" variants blank the UPPER sections so a
             // screenshot reaches the lower ones.
-            if (variant.isNotEmpty()) {
+            if (variant == "store") {
+                val t = CaptureStoreTexts.book(c.getSharedPreferences("futurevoice", 0)
+                    .getString("futurevoice.nativeLanguage", null)
+                    ?: com.roro.futurevoice.data.LanguageCatalog.defaultNative())
+                val card = CaptureSeed.sampleScorecard.copy(
+                    vocabulary = CaptureSeed.sampleScorecard.vocabulary.copy(note = t.vocabulary),
+                    grammar = CaptureSeed.sampleScorecard.grammar.copy(note = t.grammar),
+                    expressiveness = CaptureSeed.sampleScorecard.expressiveness.copy(note = t.expressiveness),
+                    fluency = CaptureSeed.sampleScorecard.fluency.copy(note = t.fluency),
+                    pronunciation = CaptureSeed.sampleScorecard.pronunciation?.copy(note = t.pronunciation),
+                    topLine = t.top)
+                fun reason(r: String) = when (r) { "past tense" -> t.pastTense; "article + plural" -> t.articlePlural; else -> r }
+                s = s.copy(
+                    turns = s.turns.map { turn -> turn.suggestion?.let { g ->
+                        turn.copy(suggestion = g.copy(reason = reason(g.reason))) } ?: turn },
+                    summary = s.summary?.copy(scorecard = card, overallNote = t.top,
+                        phrasesUsed = s.summary!!.phrasesUsed.map { it.copy(reason = reason(it.reason)) },
+                        grammarIssues = s.summary!!.grammarIssues.map {
+                            it.copy(note = if (it.note == "past tense needed") t.pastTense else reason(it.note)) }))
+            } else if (variant.isNotEmpty()) {
                 s = s.copy(summary = s.summary?.copy(scorecard = null, overallNote = ""))
             }
             if (variant == "low") {
@@ -459,6 +478,8 @@ object CapturePractice {
         },
 
         "talkdetail" to talkDetail(null),
+        // Store screenshots: the same book, its coaching in the app language.
+        "talkdetail-store" to talkDetail(null, "store"),
         "talkdetail-mid" to talkDetail(null, "mid"),
         "talkdetail-low" to talkDetail(null, "low"),
         "talkdetail-words" to talkDetail("WORDS"),

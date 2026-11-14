@@ -187,7 +187,11 @@ object CaptureSpeech {
         "speech-study-off", "speech-study-on", "speech-study-card", "speech-voiceover",
         "speech-composer-voiceover", "speech-own-voiceover",
     ).associateWith { studyMode(it) } + mapOf(
-        "speech" to { ctx -> CaptureTalk.TabShot(ctx, HomeTab.SPEECH) { seed(ctx) } },
+        "speech" to { ctx -> CaptureTalk.TabShot(ctx, HomeTab.SPEECH) {
+            // The live challenges, read as the public would.
+            SpeechCaptureFlags.anonymousReads = true
+            seed(ctx)
+        } },
         "speech-composer" to { ctx ->
             Seeded(ctx) {
                 SpeechComposerSheet(LanguageScope.active(ctx), native(ctx), CefrLevel.B1, onWritten = {}, onDismiss = {})

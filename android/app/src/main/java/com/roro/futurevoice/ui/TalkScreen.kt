@@ -52,6 +52,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.gestures.scrollBy
 import com.roro.futurevoice.ui.brand.IosButton as Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
@@ -684,6 +685,24 @@ fun TalkScreen(
             if (followBottom) listState.requestScrollToItem(0)
         }
     }
+    // Capture build only: a staged call whose lines run taller than the
+    // screen is shown with [revealTurnId]'s line whole at the top, the newest
+    // one running on under the bar (the store screenshots).
+    val revealTurnId = preview?.revealTurnId
+    if (revealTurnId != null) {
+        val topPadPx = with(LocalDensity.current) { 16.dp.roundToPx() }
+        LaunchedEffect(revealTurnId) {
+            repeat(30) {
+                kotlinx.coroutines.delay(100)
+                val info = listState.layoutInfo
+                val item = info.visibleItemsInfo.firstOrNull { it.key == revealTurnId }
+                if (item == null) { followBottom = false; listState.scrollBy(300f); return@repeat }
+                val over = item.offset + item.size - (info.viewportEndOffset - topPadPx)
+                if (over > 0) { followBottom = false; listState.scrollBy(over.toFloat()) }
+                return@LaunchedEffect
+            }
+        }
+    }
 
     var confirmingDiscard by remember { mutableStateOf(false) }
     if (confirmingDiscard) {
@@ -836,7 +855,7 @@ fun TalkScreen(
                         // It freezes while paused and stops once wrapped up.
                         val elapsed by produceState(0L, state.phase) {
                             while (state.phase != TalkPhase.ENDED) {
-                                value = vm.elapsedSeconds()
+                                value = preview?.clockSeconds ?: vm.elapsedSeconds()
                                 kotlinx.coroutines.delay(1000)
                             }
                         }
@@ -1393,7 +1412,7 @@ fun TalkScreen(
     if (islandOn) {
         val elapsed by produceState(0L, state.phase) {
             while (state.phase != TalkPhase.ENDED) {
-                value = vm.elapsedSeconds()
+                value = preview?.clockSeconds ?: vm.elapsedSeconds()
                 kotlinx.coroutines.delay(1000)
             }
             value = 0L

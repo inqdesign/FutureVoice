@@ -29,6 +29,12 @@ object TalkCaptureFlags {
          *  `call-coach` / `call-focus` with `Text("Let's talk")` /
          *  `Text("Free talk")` as the principal item, no level line). */
         val titleRes: Int? = null,
+        /** The call's clock, in seconds (iOS `meter.clock.add`, the store
+         *  screenshots' staged calls). Null: the meter's own, as always. */
+        val clockSeconds: Long? = null,
+        /** A line to show whole at the top when the staged lines run taller
+         *  than the screen (the feed is bottom-anchored). */
+        val revealTurnId: String? = null,
     )
 
     @JvmField var callPreview: CallPreview? = null
