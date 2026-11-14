@@ -112,7 +112,7 @@ object CaptureStoreTexts {
                 shadowFix = "再跟讀一次「taking the time」。",
                 examTitle = "雅思口說 7分", interviewTitle = "外商面試")
             language.startsWith("es") -> Texts(
-                lesson = "Entrevista de trabajo",
+                lesson = "Entrevista",
                 goals = listOf("Di a qué te dedicas", "Di por qué te postulaste", "Di cómo tus fortalezas encajan en el puesto"),
                 reason = "«Stay calm when… come up» suena más natural, y situation va en plural.",
                 why = "Situation es contable: va en plural.",
@@ -122,7 +122,7 @@ object CaptureStoreTexts {
                 shadowFix = "Repite solo «taking the time» una vez más.",
                 examTitle = "IELTS Speaking 7.0", interviewTitle = "Entrevista en una empresa internacional")
             language.startsWith("fr") -> Texts(
-                lesson = "Entretien d’embauche",
+                lesson = "Entretien",
                 goals = listOf("Dire ce que tu fais", "Dire pourquoi tu postules", "Dire en quoi tes points forts collent au poste"),
                 reason = "«${nb}Stay calm when… come up$nb» sonne plus naturel, et situation prend le pluriel.",
                 why = "Situation est dénombrable$nb: il faut le pluriel.",
@@ -132,7 +132,7 @@ object CaptureStoreTexts {
                 shadowFix = "Répète juste «${nb}taking the time$nb» encore une fois.",
                 examTitle = "IELTS Speaking 7.0", interviewTitle = "Entretien dans une boîte internationale")
             language.startsWith("de") -> Texts(
-                lesson = "Vorstellungsgespräch",
+                lesson = "Jobinterview",
                 goals = listOf("Sagen, was du machst", "Sagen, warum du dich bewirbst", "Sagen, warum deine Stärken passen"),
                 reason = "„Stay calm when … come up“ klingt natürlicher, und situation steht im Plural.",
                 why = "Situation ist zählbar, also Plural.",
