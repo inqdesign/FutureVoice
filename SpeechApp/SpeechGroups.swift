@@ -17,38 +17,6 @@ final class SpeechGroups: ObservableObject {
         let is_creator: Bool
     }
 
-    struct Leader: Decodable, Hashable, Identifiable {
-        let rank: Int
-        let display_name: String
-        let avatar: String?
-        let score: Int
-        let challenges: Int
-        let is_me: Bool
-        var id: String { "\(rank)-\(display_name)-\(is_me)" }
-
-        /// The same shape the public boards draw, so the podium is shared.
-        var row: SpeechChallenges.BoardRow {
-            SpeechChallenges.BoardRow(rank: rank, display_name: shownName, score: score,
-                                      is_me: is_me, avatar: avatar)
-        }
-        var shownName: String { display_name.isEmpty ? explain("Member") : display_name }
-    }
-
-    struct BoardRow: Decodable, Hashable, Identifiable {
-        let rank: Int
-        let display_name: String
-        let avatar: String?
-        let score: Int
-        let attempts: Int
-        let is_me: Bool
-        var id: String { "\(rank)-\(display_name)-\(is_me)" }
-        var row: SpeechChallenges.BoardRow {
-            SpeechChallenges.BoardRow(rank: rank,
-                                      display_name: display_name.isEmpty ? explain("Member") : display_name,
-                                      score: score, is_me: is_me, avatar: avatar)
-        }
-    }
-
     /// One of a group's challenges: a public one hung on it, or a member's own
     /// script posted there.
     struct Item: Decodable, Hashable, Identifiable {
@@ -69,11 +37,85 @@ final class SpeechGroups: ObservableObject {
         var isPick: Bool { kind == "pick" }
     }
 
+    /// The group's one challenge (2026-11-14, founder): the round running, or
+    /// the last one that ended, with its winner. A round's best score takes
+    /// that challenge's card when time is up.
+    struct Round: Decodable, Hashable, Identifiable {
+        let id: UUID
+        let kind: String
+        let script_id: UUID
+        let title: String
+        let genre: String
+        let body: String
+        let summary: String
+        let target_seconds: Int
+        let set_by: String
+        let set_by_me: Bool
+        let started_at: Date
+        let ends_at: Date
+        let ended: Bool
+        let winner_name: String?
+        let winner_avatar: String?
+        let winner_score: Int?
+        let winner_is_me: Bool
+
+        var isGroupScript: Bool { kind == "script" }
+        var setByName: String { set_by.isEmpty ? explain("Member") : set_by }
+        var winnerFace: SpeechChallenges.Face? {
+            guard winner_score != nil else { return nil }
+            return .init(display_name: winner_name ?? "?", avatar: winner_avatar)
+        }
+    }
+
+    /// One member in the running round; `score` nil is "not started".
+    struct RoundRow: Decodable, Hashable, Identifiable {
+        let rank: Int?
+        let display_name: String
+        let avatar: String?
+        let score: Int?
+        let attempts: Int
+        let is_me: Bool
+        var id: String { "\(display_name)-\(is_me)-\(rank ?? 0)-\(avatar?.count ?? 0)" }
+        var shownName: String { display_name.isEmpty ? explain("Member") : display_name }
+        var face: SpeechChallenges.Face { .init(display_name: shownName, avatar: avatar) }
+    }
+
+    /// The group's ranking: how many cards a member holds, and which.
+    struct Holder: Decodable, Hashable, Identifiable {
+        struct Won: Decodable, Hashable, Identifiable {
+            let round_id: UUID
+            let script_id: UUID
+            let kind: String
+            let title: String
+            let score: Int?
+            var id: UUID { round_id }
+        }
+        let rank: Int
+        let display_name: String
+        let avatar: String?
+        let cards: Int
+        let won: [Won]
+        let is_me: Bool
+        var id: String { "\(display_name)-\(is_me)-\(rank)-\(avatar?.count ?? 0)" }
+        var shownName: String { display_name.isEmpty ? explain("Member") : display_name }
+        var face: SpeechChallenges.Face { .init(display_name: shownName, avatar: avatar) }
+    }
+
     @Published private(set) var groups: [Group] = []
     /// The group the Challenges tab is looking at; nil is everyone.
     @Published private(set) var selectedId: UUID?
-    @Published private(set) var leaders: [Leader]?
     @Published private(set) var items: [Item]?
+    @Published private(set) var round: Round?
+    /// False until the group's round has been read once (nil round is "none set").
+    @Published private(set) var roundLoaded = false
+    @Published private(set) var roundBoard: [RoundRow]?
+    @Published private(set) var holders: [Holder]?
+
+    /// The round still running, if its script is this one.
+    func runningRound(for scriptId: UUID) -> Round? {
+        guard let round, !round.ended, round.script_id == scriptId else { return nil }
+        return round
+    }
 
     var selected: Group? { groups.first { $0.id == selectedId } }
 
@@ -91,16 +133,35 @@ final class SpeechGroups: ObservableObject {
     func select(_ id: UUID?) {
         guard selectedId != id else { return }
         selectedId = id
-        leaders = nil
-        items = nil
+        clearSelected()
         UserDefaults.standard.set(id?.uuidString, forKey: Self.selectedKey)
         Task { await refreshSelected() }
     }
 
+    private func clearSelected() {
+        items = nil
+        round = nil
+        roundLoaded = false
+        roundBoard = nil
+        holders = nil
+    }
+
     /// The group's own scripts, as the prompter and the take pages look them up.
     func script(id: UUID) -> SpeechScript? {
+        if let round, round.isGroupScript, round.script_id == id {
+            return Self.script(round, language: LanguageScope.active)
+        }
         guard let item = items?.first(where: { $0.id == id && !$0.isPick }) else { return nil }
         return Self.script(item, language: LanguageScope.active)
+    }
+
+    static func script(_ round: Round, language: String) -> SpeechScript {
+        SpeechScript(id: round.script_id, title: round.title,
+                     genre: SpeechGenre(rawValue: round.genre) ?? .explainer,
+                     topic: "", body: round.body, summary: round.summary,
+                     keyTerms: [], sources: [], language: language,
+                     targetSeconds: round.target_seconds, createdAt: round.started_at,
+                     isBuiltIn: false)
     }
 
     static func script(_ item: Item, language: String) -> SpeechScript {
@@ -115,6 +176,9 @@ final class SpeechGroups: ObservableObject {
     // MARK: - Reading
 
     func refresh(language: String) async {
+        #if DEBUG
+        if seedDemo() { return }
+        #endif
         struct Params: Encodable { let p_language: String }
         guard let rows: [Group] = try? await SupabaseProvider.shared
             .rpc("my_speech_groups", params: Params(p_language: language))
@@ -131,39 +195,54 @@ final class SpeechGroups: ObservableObject {
 
     func refreshSelected() async {
         guard let id = selectedId else { return }
+        #if DEBUG
+        if UserDefaults.standard.string(forKey: "speechGroupDemo") != nil { return }
+        #endif
         struct Params: Encodable { let p_group: UUID }
-        async let leaderRows: [Leader]? = try? SupabaseProvider.shared
-            .rpc("speech_group_leaders", params: Params(p_group: id))
+        async let roundRows: [Round]? = try? SupabaseProvider.shared
+            .rpc("speech_group_round", params: Params(p_group: id))
+            .execute()
+            .value
+        async let holderRows: [Holder]? = try? SupabaseProvider.shared
+            .rpc("speech_group_cards", params: Params(p_group: id))
             .execute()
             .value
         async let itemRows: [Item]? = try? SupabaseProvider.shared
             .rpc("speech_group_challenges", params: Params(p_group: id))
             .execute()
             .value
-        let (l, i) = await (leaderRows, itemRows)
+        let (r, h, i) = await (roundRows, holderRows, itemRows)
         guard selectedId == id else { return }
-        if let l { leaders = l }
+        if let r {
+            round = r.first
+            roundLoaded = true
+        }
+        if let h { holders = h }
         if let i { items = i }
-    }
-
-    func board(group: UUID, script: UUID) async -> [BoardRow]? {
-        struct Params: Encodable { let p_group: UUID; let p_script: UUID }
-        return try? await SupabaseProvider.shared
-            .rpc("speech_group_board", params: Params(p_group: group, p_script: script))
-            .execute()
-            .value
+        if let current = round, !current.ended {
+            struct BoardParams: Encodable { let p_round: UUID }
+            let rows: [RoundRow]? = try? await SupabaseProvider.shared
+                .rpc("speech_group_round_board", params: BoardParams(p_round: current.id))
+                .execute()
+                .value
+            guard selectedId == id, round?.id == current.id else { return }
+            if let rows { roundBoard = rows }
+        } else {
+            roundBoard = nil
+        }
     }
 
     // MARK: - Joining
 
     enum GroupError: LocalizedError {
-        case noSuchGroup, full, tooMany, notSubscribed, other
+        case noSuchGroup, full, tooMany, notSubscribed, roundRunning, other
         var errorDescription: String? {
             switch self {
             case .noSuchGroup: return explain("No group has that code. Check it and try again.")
             case .full: return explain("That group is full.")
             case .tooMany: return explain("You're in as many groups as you can be.")
             case .notSubscribed: return explain("Posting your own script comes with a plan.")
+            case .roundRunning: return explain("The group already has a challenge running.")
             case .other: return explain("That didn't go through. Try again.")
             }
         }
@@ -173,6 +252,7 @@ final class SpeechGroups: ObservableObject {
             if text.contains("GROUP_FULL") { return .full }
             if text.contains("TOO_MANY_GROUPS") { return .tooMany }
             if text.contains("NOT_SUBSCRIBED") { return .notSubscribed }
+            if text.contains("ROUND_RUNNING") { return .roundRunning }
             return .other
         }
     }
@@ -221,43 +301,49 @@ final class SpeechGroups: ObservableObject {
 
     // MARK: - Group challenges
 
-    func pick(_ challenge: UUID) async throws {
+    /// Sets the group's next challenge for so many days.
+    func start(scriptId: UUID, days: Int) async throws {
         guard let group = selectedId else { return }
-        struct Params: Encodable { let p_group: UUID; let p_challenge: UUID }
+        struct Params: Encodable { let p_group: UUID; let p_script: UUID; let p_days: Int }
         do {
             try await SupabaseProvider.shared
-                .rpc("pick_speech_group_challenge", params: Params(p_group: group, p_challenge: challenge))
+                .rpc("start_speech_group_round", params: Params(p_group: group, p_script: scriptId, p_days: days))
                 .execute()
         } catch { throw GroupError.from(error) }
-        Analytics.capture("speech_group_pick", [:])
+        Analytics.capture("speech_group_round_started", ["days": days])
         await refreshSelected()
     }
 
-    func post(_ script: SpeechScript) async throws {
+    /// Ends the running round early, with no card.
+    func cancelRound() async {
         guard let group = selectedId else { return }
+        struct Params: Encodable { let p_group: UUID }
+        _ = try? await SupabaseProvider.shared
+            .rpc("cancel_speech_group_round", params: Params(p_group: group))
+            .execute()
+        Analytics.capture("speech_group_round_cancelled", [:])
+        await refreshSelected()
+    }
+
+    /// Posts one of my scripts to the group and returns its id there.
+    func post(_ script: SpeechScript) async throws -> UUID {
+        guard let group = selectedId else { throw GroupError.other }
         struct Params: Encodable {
             let p_group: UUID; let p_title: String; let p_genre: String
             let p_body: String; let p_summary: String; let p_target_seconds: Int
         }
+        let id: UUID
         do {
-            try await SupabaseProvider.shared
+            id = try await SupabaseProvider.shared
                 .rpc("post_speech_group_script",
                      params: Params(p_group: group, p_title: script.title, p_genre: script.genre.rawValue,
                                     p_body: script.body, p_summary: script.summary,
                                     p_target_seconds: script.targetSeconds))
                 .execute()
+                .value
         } catch { throw GroupError.from(error) }
         Analytics.capture("speech_group_post", [:])
-        await refreshSelected()
-    }
-
-    func remove(_ item: Item) async {
-        guard let group = selectedId else { return }
-        struct Params: Encodable { let p_group: UUID; let p_id: UUID }
-        _ = try? await SupabaseProvider.shared
-            .rpc("remove_speech_group_challenge", params: Params(p_group: group, p_id: item.id))
-            .execute()
-        await refreshSelected()
+        return id
     }
 
     // MARK: - Scores
@@ -294,10 +380,50 @@ final class SpeechGroups: ObservableObject {
         }
     }
 
+    #if DEBUG
+    /// `-speechGroupDemo running|ended|empty`: a made-up group, for captures
+    /// before the server has rounds.
+    private func seedDemo() -> Bool {
+        guard let mode = UserDefaults.standard.string(forKey: "speechGroupDemo") else { return false }
+        let live = SpeechChallenges.shared.live + SpeechChallenges.shared.past
+        guard let first = live.first else { return true }
+        let group = Group(id: UUID(uuidString: "00000000-0000-0000-0000-00000000D3E0")!,
+                          name: "Morning Readers", invite_code: "K7MPQ2", members: 5, is_creator: true)
+        groups = [group]
+        selectedId = group.id
+        let ended = mode == "ended"
+        round = mode == "empty" ? nil : Round(
+            id: UUID(), kind: "challenge", script_id: first.id, title: first.title, genre: first.genre.rawValue,
+            body: "", summary: first.summary, target_seconds: first.targetSeconds,
+            set_by: "Mina", set_by_me: false,
+            started_at: Date().addingTimeInterval(-5 * 86_400),
+            ends_at: ended ? Date().addingTimeInterval(-86_400) : Date().addingTimeInterval(2 * 86_400 + 3_600),
+            ended: ended, winner_name: ended ? "Mina" : nil, winner_avatar: nil,
+            winner_score: ended ? 91 : nil, winner_is_me: false)
+        roundLoaded = true
+        roundBoard = ended ? nil : [
+            RoundRow(rank: 1, display_name: "Mina", avatar: nil, score: 91, attempts: 5, is_me: false),
+            RoundRow(rank: 2, display_name: "Eunggyu", avatar: nil, score: 88, attempts: 3, is_me: true),
+            RoundRow(rank: 3, display_name: "Junho", avatar: nil, score: 74, attempts: 1, is_me: false),
+            RoundRow(rank: nil, display_name: "Sara", avatar: nil, score: nil, attempts: 0, is_me: false),
+            RoundRow(rank: nil, display_name: "Leo", avatar: nil, score: nil, attempts: 0, is_me: false),
+        ]
+        func won(_ n: Int) -> [Holder.Won] {
+            live.prefix(n).map { Holder.Won(round_id: UUID(), script_id: $0.id, kind: "challenge", title: $0.title, score: 90) }
+        }
+        holders = [
+            Holder(rank: 1, display_name: "Junho", avatar: nil, cards: 3, won: won(3), is_me: false),
+            Holder(rank: 2, display_name: "Mina", avatar: nil, cards: ended ? 3 : 2, won: won(ended ? 3 : 2), is_me: false),
+            Holder(rank: 3, display_name: "Eunggyu", avatar: nil, cards: 1, won: won(1), is_me: true),
+            Holder(rank: 4, display_name: "Sara", avatar: nil, cards: 0, won: [], is_me: false),
+        ]
+        return true
+    }
+    #endif
+
     func forget() {
         groups = []
-        leaders = nil
-        items = nil
+        clearSelected()
         selectedId = nil
         UserDefaults.standard.removeObject(forKey: Self.selectedKey)
     }

@@ -89,6 +89,9 @@ struct ChallengeCardFace: View {
     /// wears the challenge cards): its kind drawn where a challenge has its
     /// picture, and its length where a challenge says who is on it.
     var mine: Bool = false
+    /// Who is on the public board. Off on a group's card: in a group the
+    /// standings are the group's.
+    var showsCrowd: Bool = true
 
     @ObservedObject private var challenges = SpeechChallenges.shared
 
@@ -137,7 +140,7 @@ struct ChallengeCardFace: View {
                     .foregroundStyle(ChallengeArt.inkText.opacity(0.5))
                     .lineLimit(1)
                     .frame(height: large ? 22 : 16)
-            } else {
+            } else if showsCrowd {
                 crowd
             }
         }
@@ -218,7 +221,6 @@ struct SpeechArenaDetail: View {
     @ObservedObject private var store = SpeechStore.shared
     #if SPEECH_APP
     @ObservedObject private var groups = SpeechGroups.shared
-    @State private var groupBoard: [SpeechGroups.BoardRow]?
     #endif
     @ObservedObject private var gate = BillingGate.shared
     @Environment(\.dismiss) private var dismiss
@@ -254,8 +256,9 @@ struct SpeechArenaDetail: View {
                     }
                     .arrives(shown, step: 1)
                     #if SPEECH_APP
-                    if let group = groups.selected {
-                        groupSection(group).arrives(shown, step: 2)
+                    // The group's standings, while this is its running round.
+                    if let group = groups.selected, let round = groups.runningRound(for: script.id) {
+                        groupSection(group, round: round).arrives(shown, step: 2)
                     }
                     #endif
                     everyone.arrives(shown, step: 3)
@@ -506,22 +509,61 @@ struct SpeechArenaDetail: View {
     // MARK: Boards
 
     #if SPEECH_APP
-    private func groupSection(_ group: SpeechGroups.Group) -> some View {
+    private func groupSection(_ group: SpeechGroups.Group, round: SpeechGroups.Round) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(group.name).font(Arena.display(24))
-            if let groupBoard {
-                if groupBoard.isEmpty {
-                    Text("Nobody in the group has read this yet.").font(.subheadline).foregroundStyle(Look.dim)
-                } else {
-                    VStack(spacing: 0) {
-                        ForEach(groupBoard) { row in boardLine(row.row) }
-                    }
-                    .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Look.card))
+            HStack(alignment: .firstTextBaseline) {
+                Text(group.name).font(Arena.display(24))
+                Spacer()
+                Label(SpeechGroupTime.left(until: round.ends_at), systemImage: "clock")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Look.dim)
+            }
+            if let rows = groups.roundBoard {
+                VStack(spacing: 0) {
+                    ForEach(rows) { row in groupLine(row) }
                 }
+                .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Look.card))
             } else {
                 HStack { Spacer(); ProgressView().tint(Look.dim); Spacer() }
             }
+            Text("Takes made before the deadline count, camera on or off. The best score then takes the card.")
+                .font(.footnote)
+                .foregroundStyle(Look.faint)
         }
+    }
+
+    private func groupLine(_ row: SpeechGroups.RoundRow) -> some View {
+        HStack(spacing: 12) {
+            Group {
+                if let rank = row.rank, let tier = MedalTier(rank: rank) {
+                    MedalBadge(tier: tier, label: "\(rank)", size: 34)
+                } else {
+                    Text(verbatim: row.rank.map { "\($0)" } ?? "–")
+                        .font(.subheadline.monospacedDigit())
+                        .foregroundStyle(Look.dim)
+                }
+            }
+            .frame(width: 34)
+            SpeechChallengeFace(face: row.face, size: 34)
+                .opacity(row.score == nil ? 0.5 : 1)
+            Text(row.shownName)
+                .font(.body.weight(row.is_me ? .semibold : .regular))
+                .foregroundStyle(row.score == nil ? Look.dim : .primary)
+                .lineLimit(1)
+            if row.is_me {
+                Text("You").font(.caption.weight(.semibold)).foregroundStyle(Arena.gold)
+            }
+            Spacer()
+            if let score = row.score {
+                Text(verbatim: "\(score)")
+                    .font(Arena.display(20))
+                    .monospacedDigit()
+            } else {
+                Text("Not started").font(.footnote).foregroundStyle(Look.dim)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
     #endif
 
@@ -677,8 +719,8 @@ struct SpeechArenaDetail: View {
     private func reload() async {
         async let rows = challenges.board(script.id)
         #if SPEECH_APP
-        if let group = groups.selected {
-            groupBoard = await groups.board(group: group.id, script: script.id)
+        if groups.runningRound(for: script.id) != nil {
+            await groups.refreshSelected()
         }
         #endif
         if let rows = await rows { board = rows }

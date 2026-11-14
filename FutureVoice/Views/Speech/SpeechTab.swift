@@ -44,6 +44,7 @@ struct SpeechTab: View {
     @ObservedObject private var groups = SpeechGroups.shared
     @State private var creatingGroup = false
     @State private var joiningGroup = false
+    @State private var leavingGroup = false
     #else
     private var showsNewScript: Bool { true }
     private var shownPage: Page { page }
@@ -226,10 +227,7 @@ struct SpeechTab: View {
         let group = groups.selected
         if let group {
             // One of my groups: its leaders and its own challenges first.
-            SpeechGroupSection(group: group,
-                               tried: every.filter(hasTried).count,
-                               total: every.count,
-                               takesThisWeek: takesThisWeek)
+            SpeechGroupSection(group: group)
         } else {
             SpeechChallengeHero(overall: challenges.overall,
                                 tried: every.filter(hasTried).count,
@@ -384,7 +382,7 @@ struct SpeechTab: View {
                              : Text(title))
             .toolbarTitleMenu {
                 if fixedPage == .challenges {
-                    SpeechGroupMenuItems(creating: $creatingGroup, joining: $joiningGroup)
+                    SpeechGroupMenuItems(creating: $creatingGroup, joining: $joiningGroup, leaving: $leavingGroup)
                 }
             }
             #else
@@ -477,6 +475,12 @@ struct SpeechTab: View {
         }
         .sheet(isPresented: $joiningGroup) {
             SpeechGroupJoinSheet()
+        }
+        .confirmationDialog(Text("Leave \(groups.selected?.name ?? "")?"),
+                            isPresented: $leavingGroup, titleVisibility: .visible) {
+            Button("Leave the group", role: .destructive) {
+                if let id = groups.selected?.id { Task { await groups.leave(id) } }
+            }
         }
         #endif
         .onChange(of: appState.pendingSpeechChallenge, initial: true) { _, _ in openLinkedChallenge() }

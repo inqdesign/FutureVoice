@@ -584,22 +584,26 @@ struct SpeechArenaHome: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 30) {
-            if Self.capture == nil {
-                // Mine first: a medal a day, the streak, my place.
-                ArenaMedalCalendar(byDay: byDay, best: best,
-                                   rank: challenges.overall?.first(where: \.is_me)?.rank,
-                                   medals: medals, streak: streak)
-            }
-            // Then today's challenge and every challenge (2026-11-13,
-            // founder: the podium lives on Ranking).
             if let group = groups.selected {
-                SpeechGroupSection(group: group, tried: every.filter(hasTried).count,
-                                   total: every.count, takesThisWeek: 0)
-            } else if Self.capture != "grid", let today = challenges.live.first {
-                ArenaTicket(script: today, category: challenges.standings[today.id]?.category,
-                            best: best(today), tries: tries(today), zoom: zoom)
+                // A group plays one challenge at a time (2026-11-14,
+                // founder); the medal week and every challenge stay on
+                // Everyone.
+                SpeechGroupSection(group: group)
+            } else {
+                if Self.capture == nil {
+                    // Mine first: a medal a day, the streak, my place.
+                    ArenaMedalCalendar(byDay: byDay, best: best,
+                                       rank: challenges.overall?.first(where: \.is_me)?.rank,
+                                       medals: medals, streak: streak)
+                }
+                // Then today's challenge and every challenge (2026-11-13,
+                // founder: the podium lives on Ranking).
+                if Self.capture != "grid", let today = challenges.live.first {
+                    ArenaTicket(script: today, category: challenges.standings[today.id]?.category,
+                                best: best(today), tries: tries(today), zoom: zoom)
+                }
+                allChallenges
             }
-            allChallenges
         }
         .onAppear {
             MedalScene.warm(scale: displayScale)
@@ -1036,61 +1040,6 @@ struct ArenaTile: View {
     }
 }
 
-#if SPEECH_APP
-/// A group's race: everyone's total as a bar, and how far to the one ahead.
-struct ArenaRace: View {
-    let leaders: [SpeechGroups.Leader]
-    var openMembers: () -> Void
-
-    var body: some View {
-        let top = leaders.map(\.score).max() ?? 1
-        let me = leaders.first(where: \.is_me)
-        let ahead = me.flatMap { m in leaders.last(where: { $0.score > m.score }) }
-        Button(action: openMembers) {
-            VStack(alignment: .leading, spacing: 14) {
-                Text("Who's on top?").font(Arena.display(26))
-                ForEach(leaders.prefix(5)) { leader in
-                    HStack(spacing: 10) {
-                        if let tier = MedalTier(rank: leader.rank) {
-                            MedalBadge(tier: tier, label: "\(leader.rank)", size: 30)
-                        } else {
-                            Text(verbatim: "\(leader.rank)").font(.subheadline.monospacedDigit()).frame(width: 30)
-                                .foregroundStyle(Arena.dim)
-                        }
-                        Text(leader.is_me ? explain("Me") : leader.shownName)
-                            .font(.subheadline.weight(leader.is_me ? .semibold : .regular))
-                            .frame(width: 64, alignment: .leading)
-                            .lineLimit(1)
-                        GeometryReader { geo in
-                            let share = top > 0 ? CGFloat(leader.score) / CGFloat(top) : 0
-                            Capsule()
-                                .fill(leader.is_me ? Color(red: 0.88, green: 0.55, blue: 0.4) : Color.white.opacity(leader.rank == 1 ? 0.85 : 0.35))
-                                .frame(width: max(44, geo.size.width * share))
-                                .overlay(alignment: .trailing) {
-                                    Text(verbatim: "\(leader.score)")
-                                        .font(.footnote.weight(.semibold).monospacedDigit())
-                                        .foregroundStyle(.black)
-                                        .padding(.trailing, 10)
-                                }
-                        }
-                        .frame(height: 28)
-                    }
-                }
-                if let me, let ahead {
-                    Text("\(ahead.score - me.score) to pass \(ahead.shownName)")
-                        .font(.subheadline)
-                        .foregroundStyle(Arena.dim)
-                } else if me?.rank == 1 {
-                    Text("You're on top").font(.subheadline).foregroundStyle(Arena.dim)
-                }
-            }
-            .padding(20)
-            .background(RoundedRectangle(cornerRadius: 32, style: .continuous).fill(Arena.card))
-        }
-        .buttonStyle(.plain)
-    }
-}
-#endif
 
 extension View {
     /// The Challenges tab is a dark stage whatever the phone's mode.

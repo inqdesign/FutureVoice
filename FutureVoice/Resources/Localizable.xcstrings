@@ -53,6 +53,16 @@
         }
       }
     },
+    "%@ takes the card" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 님이 카드를 가져가요"
+          }
+        }
+      }
+    },
     "%lld challenges" : {
       "localizations" : {
         "en" : {
@@ -149,6 +159,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld 个挑战"
+          }
+        }
+      }
+    },
+    "%lld days left" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld일 남았어요"
+          }
+        }
+      }
+    },
+    "%lld hours left" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld시간 남았어요"
           }
         }
       }
@@ -287,6 +317,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%2$lld 題中已完成 %1$lld 題"
+          }
+        }
+      }
+    },
+    "1 day left" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "하루 남았어요"
+          }
+        }
+      }
+    },
+    "1 hour left" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1시간 남았어요"
+          }
+        }
+      }
+    },
+    "1 week" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1주"
+          }
+        }
+      }
+    },
+    "2 weeks" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2주"
           }
         }
       }
@@ -521,6 +591,46 @@
         }
       }
     },
+    "Cancel the challenge" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "취소하기"
+          }
+        }
+      }
+    },
+    "Cancel this challenge" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "챌린지 취소하기"
+          }
+        }
+      }
+    },
+    "Cancel this challenge? Nobody gets the card." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 챌린지를 취소할까요? 카드는 아무도 못 받아요."
+          }
+        }
+      }
+    },
+    "Cards won" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모은 카드"
+          }
+        }
+      }
+    },
     "Could pass for a local" : {
       "localizations" : {
         "de" : {
@@ -563,6 +673,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "還以為是當地人"
+          }
+        }
+      }
+    },
+    "Deadline" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "마감"
+          }
+        }
+      }
+    },
+    "Ended %@" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@에 끝났어요"
+          }
+        }
+      }
+    },
+    "Ends %@" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@에 끝나요"
           }
         }
       }
@@ -761,6 +901,16 @@
         }
       }
     },
+    "Leave %@" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 나가기"
+          }
+        }
+      }
+    },
     "Made it through immigration" : {
       "localizations" : {
         "de" : {
@@ -945,12 +1095,72 @@
         }
       }
     },
+    "Next challenge" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음 챌린지"
+          }
+        }
+      }
+    },
+    "No cards yet" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 카드가 없어요"
+          }
+        }
+      }
+    },
+    "Nobody read it, so no card this time." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아무도 안 읽어서 이번엔 카드가 없어요."
+          }
+        }
+      }
+    },
+    "Not started" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 안 읽었어요"
+          }
+        }
+      }
+    },
     "On nawana already? Sign in the same way and your plan comes with you." : {
       "localizations" : {
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "나와나를 쓰고 있다면 같은 방법으로 로그인하세요. 요금제도 그대로예요."
+          }
+        }
+      }
+    },
+    "Only this group sees it." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 그룹 사람들만 봐요."
+          }
+        }
+      }
+    },
+    "Pick one challenge and a deadline, and read it together. The best score when time is up takes the card." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "챌린지 하나랑 마감을 정하고 다 같이 읽어요. 마감 때 점수가 제일 높은 사람이 카드를 가져가요."
           }
         }
       }
@@ -1261,6 +1471,46 @@
         }
       }
     },
+    "Set by %@" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 님이 정했어요"
+          }
+        }
+      }
+    },
+    "Set by you" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내가 정했어요"
+          }
+        }
+      }
+    },
+    "Set the first challenge" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "첫 챌린지 정하기"
+          }
+        }
+      }
+    },
+    "Set the next challenge" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음 챌린지 정하기"
+          }
+        }
+      }
+    },
     "Set your name" : {
       "localizations" : {
         "ko" : {
@@ -1321,12 +1571,42 @@
         }
       }
     },
+    "Takes made before the deadline count, camera on or off. The best score then takes the card." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "마감 전에 읽은 건 카메라를 켜든 끄든 다 들어가요. 마감 때 최고 점수가 카드를 가져가요."
+          }
+        }
+      }
+    },
+    "The group already has a challenge running." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그룹에 이미 진행 중인 챌린지가 있어요."
+          }
+        }
+      }
+    },
     "The same plan works in nawana and here." : {
       "localizations" : {
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "나와나와 여기서 같은 요금제를 써요."
+          }
+        }
+      }
+    },
+    "This group's scripts" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 그룹 원고"
           }
         }
       }
@@ -1619,6 +1899,26 @@
         }
       }
     },
+    "Write a script under My scripts first, then pick it here." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 원고에서 먼저 쓰고 여기서 골라요."
+          }
+        }
+      }
+    },
+    "Write our own" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "직접 쓰기"
+          }
+        }
+      }
+    },
     "Written by you" : {
       "localizations" : {
         "ko" : {
@@ -1825,6 +2125,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "그룹이 꽉 찼어요."
+          }
+        }
+      }
+    },
+    "You take the card" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카드는 내 거예요"
           }
         }
       }
