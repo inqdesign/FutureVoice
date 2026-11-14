@@ -1832,6 +1832,23 @@ struct ShadowDrillView: View {
             targetDurationMs = words.count * per
             if words.count >= 5 { selectedWordRange = 2...4 }   // show a loop region
             phase = .idle
+            // `-shadowResult 1`: a scored take (store screenshots), its
+            // feedback in the app language (`CaptureCallSeed`).
+            if UserDefaults.standard.bool(forKey: "shadowResult") {
+                selectedWordRange = nil
+                attemptTargetText = turn.transcript
+                attemptTargetDurationMs = targetDurationMs
+                let t = CaptureCallSeed.texts(for: appState.nativeLanguage)
+                Task { @MainActor in
+                    await analyze(finalText: "I really appreciate you taking time to help me.")
+                    coachPending = false
+                    usedRoughTranscript = false
+                    lastAttemptDurationMs = 3650
+                    feedback?.pronunciation = t.shadowPronunciation
+                    feedback?.pacing = t.shadowPacing
+                    feedback?.fix = t.shadowFix
+                }
+            }
             return
         }
         #endif

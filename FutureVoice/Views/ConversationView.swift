@@ -1071,6 +1071,10 @@ struct ConversationView: View {
                 phoneCallActive = true
                 islandExpanded = !pronThisCall
                 #if DEBUG
+                if let seed = DebugCapture.callSeed {
+                    applyCaptureSeed(seed)
+                    return
+                }
                 // `-trialhandoff normal|close`: the free pool runs out and the
                 // summary is closed with Done (`endAndClose`, what its
                 // onDismiss runs); `close` also taps ✕ inside the account
@@ -1413,6 +1417,9 @@ struct ConversationView: View {
             }
             .task { refreshDashboard() }
             .task {
+                #if DEBUG
+                if DebugCapture.callSeed != nil { return }
+                #endif
                 goalItems = pickGoalItems()
                 coachExtras = TalkGoalPicker.coachExtras(excluding: Set(goalItems.map(\.key)))
                 await loadGrammarFocus()
@@ -6841,6 +6848,68 @@ struct ConversationView: View {
     private var tutorInFinalCheck: Bool {
         tutorThisCall && tutorLesson?.inFinalCheck == true
     }
+
+    #if DEBUG
+    /// Store screenshots: a staged talk on the real screen (`DebugCapture.callSeed`).
+    private func applyCaptureSeed(_ seed: String) {
+        let t = CaptureCallSeed.texts(for: appState.nativeLanguage)
+        let now = Date()
+        islandExpanded = false
+        meter.clock.add(seed == "fix" ? 181 : 134)
+        goalItems = [
+            TalkGoalItem(key: "strength", text: "strength", isWord: true),
+            TalkGoalItem(key: "come up", text: "come up", isWord: false),
+            TalkGoalItem(key: "in one go", text: "in one go", isWord: false),
+        ]
+        if seed == "fix" {
+            tutorThisCall = true
+            tutorWasOn = true
+            usedGoalKeys = ["come up"]
+            tutorLesson = TutorLesson(
+                id: UUID(), title: t.lesson, titleTarget: "Introducing yourself in a job interview",
+                language: "en",
+                challenges: t.goals.enumerated().map { i, g in
+                    TutorLesson.Challenge(id: UUID(), goal: g, task: g, example: "",
+                                          doneAt: i < 2 ? now : nil, line: nil)
+                },
+                createdAt: now)
+            let said = "My background in problem solving helps me handle unexpected situation calmly."
+            turns = [
+                Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
+                     transcript: "Nice! And how would your strengths help you in this job?",
+                     durationMs: 3000, timestamp: now),
+                Turn(id: UUID(), role: .user, audioURL: nil, transcript: said, durationMs: 5000,
+                     timestamp: now,
+                     suggestion: TurnSuggestion(
+                        alternative: "My background in problem solving helps me stay calm when unexpected situations come up.",
+                        reason: t.reason,
+                        fixes: [TurnFix(was: "helps me handle unexpected situation calmly",
+                                        now: "helps me handle unexpected situations calmly", why: t.why)])),
+                Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
+                     transcript: "Ah, so close, and the idea really comes across. We'd say: \"My background in problem-solving helps me stay calm when unexpected situations come up.\"",
+                     durationMs: 6000, timestamp: now),
+            ]
+            phoneCallActive = false
+            isPausedForIdle = true
+        } else {
+            coachReply = CoachReply(say: "I'm working on [an AI project] right now, and it's going really well.",
+                                    meaning: t.coachMeaning, turnId: UUID())
+            turns = [
+                Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
+                     transcript: "Hey! How's your week going so far?",
+                     durationMs: 2000, timestamp: now),
+                Turn(id: UUID(), role: .user, audioURL: nil,
+                     transcript: "Pretty busy, but in a good way.",
+                     durationMs: 2000, timestamp: now),
+                Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
+                     transcript: "Busy in a good way is the best kind. So what are you working on these days?",
+                     durationMs: 4000, timestamp: now),
+            ]
+            phoneCallActive = true
+            phase = .listening
+        }
+    }
+    #endif
 
     private func sendTutorSystem() {
         guard RealtimeMode.isEnabled, phoneCallActive else { return }

@@ -75,6 +75,10 @@ enum DebugCapture {
     /// raises it on appear, since a screenshot run can't tap the button.
     static var previewCallSettings = false
 
+    /// `call-seed-fix` / `call-seed-coach`: the REAL call screen with a staged
+    /// conversation on it (store screenshots). Nil = a normal call.
+    static var callSeed: String?
+
     /// Which item kind a freshly built weekly test opens on, so each kind's
     /// screen can be photographed. nil = the engine's own order.
     static var weeklyTestKind: WeeklyTestItem.Kind?
@@ -1664,6 +1668,13 @@ enum DebugCapture {
             // speaks, and the FIRST CALL prompt block is what would run from
             // the learner's first answer on.
             once("first-call") { seedUnmetPersona(into: appState) }
+            return AnyView(ConversationView().environmentObject(appState))
+        case "call-seed-fix", "call-seed-coach":
+            // The real call screen (header island, chips, lesson strip, pill)
+            // with a staged talk on it; `ConversationView` reads the seed on
+            // appear and never opens a line. The tutor's lesson and the
+            // correction are in the app language (`CaptureCallSeed`).
+            callSeed = String(name.dropFirst("call-seed-".count))
             return AnyView(ConversationView().environmentObject(appState))
         case "call-settings":
             // The same real call screen as `first-call`, with the settings
