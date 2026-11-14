@@ -5,7 +5,7 @@
 # Copy is written per language in COPY below, not translated from the Korean.
 import os, sys, shutil, subprocess
 from PIL import Image
-from copy_lang import COPY, LANGS_ROW
+from copy_lang import COPY, LANGS_ROW, MEET
 OUT = os.path.dirname(os.path.abspath(__file__))
 SCR = "/private/tmp/claude-502/-Users-eunggyuelee-FutureVoice/28555fe9-7198-4899-99bf-1aa90e91e314/scratchpad/asc"
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
@@ -56,7 +56,8 @@ p{{position:absolute;left:90px;right:90px;text-align:center;font-size:54px;line-
 """
 # Headlines never wrap and never overflow: each shrinks until its widest line fits.
 FIT = """<script>for(const h of document.querySelectorAll('h1')){let s=parseFloat(getComputedStyle(h).fontSize);
-while(h.scrollWidth>h.clientWidth+1&&s>60){s-=2;h.style.fontSize=s+'px'}}</script>"""
+while(h.scrollWidth>h.clientWidth+1&&s>60){s-=2;h.style.fontSize=s+'px'}}
+for(const b of document.querySelectorAll('.rc b')){let s=46;while(b.scrollWidth>b.clientWidth+1&&s>28){s-=1;b.style.fontSize=s+'px'}}</script>"""
 
 
 def phone(img, x, y, w, extra=""):
@@ -158,10 +159,34 @@ def s01():
     return title(C["s01"], size=124) + f'<div class="langrow" style="top:{580 - LIFT}px">{row}</div>' + stage(phone("tabs", 170, 760, 980))
 
 
+ILL = OUT + "/ill"
+MEET_CSS = """<style>
+.rc{position:absolute;width:560px;height:250px;border-radius:48px;background:#fff;box-shadow:0 24px 70px rgba(0,0,0,.13)}
+.rc img{position:absolute;bottom:22px}
+.rc .tx{position:absolute;top:44px;right:30px;width:310px}
+.rc small{display:block;font-size:32px;font-weight:700;color:#8E8E93;margin-bottom:8px;white-space:nowrap}
+.rc b{display:block;font-size:46px;font-weight:800;line-height:1.22;color:#111;letter-spacing:-0.02em;white-space:nowrap}
+</style>"""
+
+
+def meet_card(i, x, y, scale=1.0):
+    """One of the four reasons, with its drawing (gpt-image-2, the speech challenge pictures' style)."""
+    pic = ["shadow", "fix", "calm", "goal"][i]
+    tag, text = MEET[lang][1][i]
+    w, hh = Image.open(f"{ILL}/{pic}_a.png").size
+    k = min((300 if pic == "calm" else 330) / hh, 180 / w)
+    iw, ih = w * k, hh * k
+    return (f'<div class="rc" style="left:{x}px;top:{y}px;transform:scale({scale});transform-origin:0 0">'
+            f'<img src="file://{ILL}/{pic}_a.png" style="left:{24 + (180 - iw) / 2}px;height:{ih}px">'
+            f'<div class="tx"><small>{tag}</small><b>{text}</b></div></div>')
+
+
 def s02():
-    return (title(C["s02"], size=122) + sub(C["s02sub"], 530)
-            + stage(phone("voice-recording", 40, 860, 820, "transform:rotate(-5deg)")
-                    + phone("voice-meet", 460, 960, 820, "transform:rotate(4deg)")))
+    """Meet the fluent you (founder, 11-15): the real meet screen and four reasons around it."""
+    return (title(MEET[lang][0]) + MEET_CSS
+            + stage(phone("voice-meet", 170, 700, 980)
+                    + meet_card(0, 30, 1180) + meet_card(1, 730, 1560)
+                    + meet_card(2, 30, 1990) + meet_card(3, 730, 2380)))
 
 
 def s03():
@@ -223,7 +248,9 @@ def tablet(img, t, subline=None):
             f'<div class="sc" style="border-radius:{90 - p}px"><img src="{src(img)}"></div></div>')
 
 
-IPAD_SHOTS = [("01", lambda: tablet("tabs", C["s01"])), ("02", lambda: tablet("voice-meet", C["s02"], C["s02sub"])),
+IPAD_SHOTS = [("01", lambda: tablet("tabs", C["s01"])), ("02", lambda: tablet("voice-meet", MEET[lang][0]) + MEET_CSS
+                     + meet_card(0, 40, 1150, 1.25) + meet_card(1, 1320, 1550, 1.25)
+                     + meet_card(2, 40, 1950, 1.25) + meet_card(3, 1320, 2350, 1.25)),
               ("03", lambda: tablet("tutor", C["s03"], C["s03sub"])), ("04", lambda: tablet("speech", C["s04"])),
               ("05", lambda: tablet("fix", C["s05"])), ("06", lambda: tablet("coach", C["s06"])),
               ("07", lambda: tablet("shadow", C["s07"])), ("08", lambda: tablet("watchtab-sky", C["s08"])),

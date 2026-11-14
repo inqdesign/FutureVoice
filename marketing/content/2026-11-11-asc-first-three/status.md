@@ -46,3 +46,8 @@ Output: E-latest/E1–E3.png, E_sheet.jpg, gen_e.py. Copy provisional. Nothing u
   copied into the Android repo's fastlane folders (fc6677a9 on feat/android) and sent with
   `play-listing.py --send --images` ("Committed"; text unchanged). Shows after Google's review.
   iOS capture seeds committed (d3295496), Android capture modes 5ccbe5da.
+- 11-15: shot 02 is now "meet the fluent you" (founder): the real meet screen at the same size as every other phone,
+  four reasons around it (shadowing, correction, comfort, goal) each with a drawing (gpt-image-2 in the speech
+  challenge pictures' style, ill/). Cards written per language (copy_lang.MEET). Replaced in every set; Play sent
+  again (fa114500 on feat/android). The Korean iPhone set on 1.3.4 still has the old 02: Apple locks it in review;
+  asc_upload.py puts the new one on the next version with everything else.

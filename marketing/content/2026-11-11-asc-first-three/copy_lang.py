@@ -107,6 +107,19 @@ COPY = {
         s10=("Deine eigene Routine,", "jeden Tag."),
     ),
 }
+MEET = {
+    "ko": (("유창해진 나를", "만나요"), [('쉐도잉', '내 목소리라<br>그대로 따라 해요'), ('교정', '틀린 말은<br>바로 고쳐 줘요'), ('안정감', '상대가 나라서<br>창피하지 않아요'), ('목표', '되고 싶은 내가<br>눈앞에 있어요')]),
+    "en": (("Meet the fluent", "you"), [('Shadowing', "It's your voice,<br>so just copy it"), ('Correction', 'Slips get fixed<br>right away'), ('Comfort', "It's you, so<br>nothing to fear"), ('Goal', 'Who you want to be,<br>right there')]),
+    "ja": (("流暢になった自分に", "会おう"), [('シャドーイング', '自分の声だから<br>そのまままねできる'), ('添削', 'まちがいは<br>その場で直る'), ('安心', '相手は自分だから<br>恥ずかしくない'), ('目標', 'なりたい自分が<br>目の前にいる')]),
+    "zh-Hans": (("和流利的自己", "见面"), [('跟读', '是你的声音<br>直接跟着说'), ('纠错', '说错了<br>马上帮你改'), ('安心', '对面是自己<br>不用难为情'), ('目标', '想成为的自己<br>就在眼前')]),
+    "zh-Hant": (("和流利的自己", "見面"), [('跟讀', '是你的聲音<br>直接跟著說'), ('糾錯', '說錯了<br>馬上幫你改'), ('安心', '對面是自己<br>不用不好意思'), ('目標', '想成為的自己<br>就在眼前')]),
+    "es": (("Conoce a tu yo", "fluido"), [('Repetir', 'Es tu voz:<br>solo imítala'), ('Corrección', 'Tus errores,<br>corregidos al momento'), ('Confianza', 'Eres tú:<br>sin vergüenza'), ('Meta', 'Quien quieres ser,<br>frente a ti')]),
+    "fr": (("Rencontre ton moi", "fluide"), [('Répéter', 'C’est ta voix :<br>imite-la'), ('Correction', 'Tes fautes,<br>corrigées aussitôt'), ('Confiance', 'C’est toi :<br>aucune gêne'), ('Objectif', 'Qui tu veux être,<br>juste là')]),
+    "de": (("Triff dein", "fließendes Ich"), [('Nachsprechen', 'Deine Stimme:<br>einfach nachsprechen'), ('Korrektur', 'Fehler werden<br>sofort korrigiert'), ('Sicherheit', 'Du bist es selbst:<br>nichts ist peinlich'), ('Ziel', 'Wer du sein willst,<br>direkt vor dir')]),
+}
+
 # Play's folder names for the same languages.
 COPY["zh-CN"] = COPY["zh-Hans"]
 COPY["zh-TW"] = COPY["zh-Hant"]
+MEET["zh-CN"] = MEET["zh-Hans"]
+MEET["zh-TW"] = MEET["zh-Hant"]
