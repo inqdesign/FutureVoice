@@ -300,9 +300,10 @@ object SpeechLibrary {
             "de" -> "000000000004"
             "es" -> "000000000009"
             "fr" -> "0000000f0001"
-            // iOS writes it "…00b" and keeps it as a UUID, whose string is
-            // upper case — the id a take on either platform points at.
-            "zh" -> "00000000000B"
+            // iOS's id, upper case like a UUID's string. It was …00000000000B
+            // (2026-11-13), the English "Nervous?" challenge's id; moved
+            // 2026-11-15 with its server row.
+            "zh" -> "0000000B0001"
             else -> "000000000001"
         }
         return "5BEEC000-0000-4000-8000-$suffix"
