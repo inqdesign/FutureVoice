@@ -112,4 +112,5 @@
         <item>The next round is the real one.</item>
         <item>Practice pays off.</item>
     </string-array>
+    <string name="speech_rank_of">#%1$d of %2$d</string>
 </resources>

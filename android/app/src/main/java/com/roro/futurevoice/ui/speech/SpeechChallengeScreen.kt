@@ -942,6 +942,102 @@ internal fun SpeechOverallScreen(language: String, onBack: () -> Unit) {
     }
 }
 
+/** "Season N records" (iOS f1b76a39, `SpeechSeasonRecordsView`): the link
+ *  opened All challenges, which held only Season 2's cards. English Season 1's
+ *  challenges went live again in Season 2 on 2026-11-13, so nothing of that
+ *  season is "past": its record is the frozen final standings and the
+ *  learner's own frozen score on each challenge. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun SpeechSeasonRecordsScreen(language: String, season: Int,
+                                       onOpen: (SpeechScript) -> Unit, onBack: () -> Unit) {
+    NavPageBackHandler(onBack = onBack)
+    val context = LocalContext.current
+    val challenges = remember { SpeechChallenges.shared(context) }
+    val scripts by challenges.scripts.collectAsStateWithLifecycle()
+    val standings by challenges.standings.collectAsStateWithLifecycle()
+    val seasonRecords by challenges.seasonRecords.collectAsStateWithLifecycle()
+    var rows by remember { mutableStateOf<List<SpeechChallenges.BoardRow>?>(null) }
+    var refreshing by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    suspend fun load() {
+        if (challenges.seasons.value.isEmpty()) challenges.refresh(language)
+        rows = challenges.overallBoard(language, season, limit = 50) ?: rows ?: emptyList()
+    }
+    LaunchedEffect(language, season) { load() }
+    // My frozen scores of this season, the best place first.
+    val mine = seasonRecords.values
+        .filter { it.season == season && challenges.script(it.challenge_id) != null }
+        .sortedWith(compareBy<SpeechChallenges.SeasonRecord> { it.rank }.thenByDescending { it.score })
+    // Challenges retired inside this season (none for English Season 1).
+    val retired = scripts.filter { standings[it.id]?.retiredAt != null && standings[it.id]?.season == season }
+    Scaffold(
+        containerColor = AppSurfaces.ground,
+        topBar = {
+            TopAppBar(
+                colors = AppSurfaces.topBarColors(),
+                title = { Text(stringResource(R.string.speech_season_records, season)) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null) }
+                },
+            )
+        },
+    ) { padding ->
+        PullToRefreshBox(
+            isRefreshing = refreshing,
+            onRefresh = { scope.launch { refreshing = true; load(); refreshing = false } },
+            modifier = Modifier.padding(padding).fillMaxSize(),
+        ) {
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
+                FormSection(stringResource(R.string.speech_final_standings),
+                    footer = stringResource(R.string.speech_season_over)) {
+                    val shown = rows
+                    if (shown == null) {
+                        Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(Modifier.size(24.dp))
+                        }
+                    } else {
+                        shown.forEachIndexed { i, row ->
+                            if (i > 0) FormDivider()
+                            BoardRow(row)
+                        }
+                    }
+                }
+                if (mine.isNotEmpty()) {
+                    FormSection(stringResource(R.string.challenges)) {
+                        mine.forEachIndexed { i, record ->
+                            if (i > 0) FormDivider()
+                            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Text(challenges.script(record.challenge_id)?.title.orEmpty(), maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyLarge,
+                                    modifier = Modifier.weight(1f))
+                                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text(stringResource(R.string.speech_rank_of, record.rank, record.entrants),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("${record.score}", style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold, color = scoreColor(record.score))
+                                }
+                            }
+                        }
+                    }
+                }
+                if (retired.isNotEmpty()) {
+                    FormSection(null, footer = stringResource(R.string.ended_challenges_keep_their_final_standings)) {
+                        retired.forEachIndexed { i, script ->
+                            if (i > 0) FormDivider()
+                            PastChallengeRow(script, standings[script.id], onClick = { onOpen(script) })
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Every challenge, live and past
 
 @OptIn(ExperimentalMaterial3Api::class)

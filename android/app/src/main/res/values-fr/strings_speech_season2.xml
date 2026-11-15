@@ -112,4 +112,5 @@
         <item>La prochaine sera la bonne.</item>
         <item>L’entraînement finit toujours par payer.</item>
     </string-array>
+    <string name="speech_rank_of">Rang %1$d sur %2$d</string>
 </resources>

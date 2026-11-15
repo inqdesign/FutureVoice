@@ -284,6 +284,8 @@ fun RootScreen() {
     /** Every challenge, live and past — pushed from the Speech tab. */
     var showSpeechChallenges by remember { mutableStateOf(false) }
     var showSpeechOverall by remember { mutableStateOf(false) }
+    /** "Season N records" — pushed from the Speech tab's header (iOS f1b76a39). */
+    var speechSeasonRecords by remember { mutableStateOf<Int?>(null) }
     var showDueReview by remember { mutableStateOf(false) }
     /** Progress's effort page (iOS `EffortDetailView`, pushed from the card). */
     var showEffort by remember { mutableStateOf(false) }
@@ -1200,6 +1202,7 @@ fun RootScreen() {
         speechChallengeId?.let { add(RootRoute.SpeechChallenge(it)) }
         if (showSpeechChallenges) add(RootRoute.SpeechChallenges)
         if (showSpeechOverall) add(RootRoute.SpeechOverall)
+        speechSeasonRecords?.let { add(RootRoute.SpeechSeasonRecords(it)) }
         if (!showMe) {
             if (showPublicIntro) add(RootRoute.PublicIntro)
             if (showPrivacy) add(RootRoute.Privacy)
@@ -1237,6 +1240,7 @@ fun RootScreen() {
                 is RootRoute.SpeechChallenge -> speechChallengeId = null
                 RootRoute.SpeechChallenges -> showSpeechChallenges = false
                 RootRoute.SpeechOverall -> showSpeechOverall = false
+                is RootRoute.SpeechSeasonRecords -> speechSeasonRecords = null
                 RootRoute.PublicIntro -> {
                     showPublicIntro = false
                     if (introEditFromPreview && app.needsIntroDecision()) showIntroPreview = true
@@ -1683,6 +1687,13 @@ fun RootScreen() {
             onBack = { showSpeechOverall = false },
         )
 
+        is RootRoute.SpeechSeasonRecords -> com.roro.futurevoice.ui.speech.SpeechSeasonRecordsScreen(
+            language = state.targetLanguage,
+            season = r.season,
+            onOpen = { speechChallengeId = it.id },
+            onBack = { speechSeasonRecords = null },
+        )
+
         RootRoute.ShadowBrowser -> ShadowBrowserScreen(
             language = state.targetLanguage,
             // iOS presents the drill as a sheet OVER the list: closing it
@@ -1932,6 +1943,7 @@ fun RootScreen() {
             onOpenSpeechChallenge = { speechChallengeId = it.id },
             onOpenAllSpeechChallenges = { showSpeechChallenges = true },
             onOpenSpeechOverall = { showSpeechOverall = true },
+            onOpenSpeechSeasonRecords = { speechSeasonRecords = it },
             // The dictionaries. Until now the library had no in-app entrance
             // at all — only the widget's deep link reached it.
             onOpenWordsAll = { library = LibraryKind.WORDS },
@@ -2199,6 +2211,7 @@ internal fun HomeScreen(
     onOpenSpeechChallenge: (com.roro.futurevoice.data.SpeechScript) -> Unit = {},
     onOpenAllSpeechChallenges: () -> Unit = {},
     onOpenSpeechOverall: () -> Unit = {},
+    onOpenSpeechSeasonRecords: (Int) -> Unit = {},
     onOpenWordsAll: () -> Unit = {},
     onOpenExpressionsAll: () -> Unit = {},
     onOpenSentencesAll: () -> Unit = {},
@@ -2507,6 +2520,7 @@ internal fun HomeScreen(
                         onOpenChallenge = onOpenSpeechChallenge,
                         onOpenAllChallenges = onOpenAllSpeechChallenges,
                         onOpenOverall = onOpenSpeechOverall,
+                        onOpenSeasonRecords = onOpenSpeechSeasonRecords,
                     )
 
                     // Watch: simulate the situation BEFORE it happens. Scenarios
@@ -3843,6 +3857,7 @@ internal sealed interface RootRoute {
     data class SpeechChallenge(val id: String) : RootRoute { override val key = "speechChallenge:$id" }
     data object SpeechChallenges : RootRoute { override val key = "speechChallenges" }
     data object SpeechOverall : RootRoute { override val key = "speechOverall" }
+    data class SpeechSeasonRecords(val season: Int) : RootRoute { override val key = "speechSeasonRecords:$season" }
     data object PublicIntro : RootRoute { override val key = "publicIntro" }
     data object Privacy : RootRoute { override val key = "privacy" }
     data class MyProfile(val sheet: Boolean) : RootRoute {
@@ -3887,10 +3902,13 @@ internal fun rootPushes(from: RootRoute, to: RootRoute, deckPushed: Boolean): Bo
         // Talk's "Find a topic" pushes the topics page.
         RootRoute.Topics -> from is RootRoute.Tabs
         // The Speech tab's challenge rows push the board.
-        is RootRoute.SpeechChallenge -> from is RootRoute.Tabs || from is RootRoute.SpeechChallenges
+        is RootRoute.SpeechChallenge -> from is RootRoute.Tabs || from is RootRoute.SpeechChallenges ||
+            from is RootRoute.SpeechSeasonRecords
         RootRoute.SpeechChallenges -> from is RootRoute.Tabs
         // The Speech tab's overall banner pushes the overall board.
         RootRoute.SpeechOverall -> from is RootRoute.Tabs
+        // The header's "Season N records" pushes that season's page.
+        is RootRoute.SpeechSeasonRecords -> from is RootRoute.Tabs
         // Find people's own-people rows push the person.
         is RootRoute.Person -> from is RootRoute.People
         // Inside the Me sheet: Usage, Privacy, the public intro; inside

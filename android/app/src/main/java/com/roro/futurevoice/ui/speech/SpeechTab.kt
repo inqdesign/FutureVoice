@@ -175,7 +175,8 @@ internal fun SpeechHeaderAction() {
 internal fun SpeechTabBody(language: String, native: String, level: CefrLevel,
                            onOpenChallenge: (SpeechScript) -> Unit = {},
                            onOpenAllChallenges: () -> Unit = {},
-                           onOpenOverall: () -> Unit = {}) {
+                           onOpenOverall: () -> Unit = {},
+                           onOpenSeasonRecords: (Int) -> Unit = {}) {
     val context = LocalContext.current
     val store = remember { SpeechStore.shared(context) }
     val challenges = remember { com.roro.futurevoice.data.SpeechChallenges.shared(context) }
@@ -259,7 +260,7 @@ internal fun SpeechTabBody(language: String, native: String, level: CefrLevel,
                             Text(stringResource(R.string.speech_season_records, ended),
                                 style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.clickable(onClick = onOpenAllChallenges))
+                                modifier = Modifier.clickable { onOpenSeasonRecords(ended) })
                         }
                     }
                 }

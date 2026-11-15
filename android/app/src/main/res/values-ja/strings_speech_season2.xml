@@ -112,4 +112,5 @@
         <item>次が本番です。</item>
         <item>練習は裏切りません。</item>
     </string-array>
+    <string name="speech_rank_of">%2$d人中 %1$d位</string>
 </resources>

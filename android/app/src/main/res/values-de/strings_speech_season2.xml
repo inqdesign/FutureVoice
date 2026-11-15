@@ -112,4 +112,5 @@
         <item>Die nächste Runde ist die echte.</item>
         <item>Übung zahlt sich aus.</item>
     </string-array>
+    <string name="speech_rank_of">Platz %1$d von %2$d</string>
 </resources>

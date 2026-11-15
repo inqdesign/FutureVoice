@@ -112,4 +112,5 @@
         <item>다음 판이 진짜예요.</item>
         <item>연습은 배신 안 해요.</item>
     </string-array>
+    <string name="speech_rank_of">%2$d명 중 %1$d위</string>
 </resources>

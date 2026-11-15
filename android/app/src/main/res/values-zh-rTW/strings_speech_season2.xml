@@ -112,4 +112,5 @@
         <item>下一次才是真的。</item>
         <item>練習不會騙人。</item>
     </string-array>
+    <string name="speech_rank_of">%2$d 人中第 %1$d 名</string>
 </resources>
