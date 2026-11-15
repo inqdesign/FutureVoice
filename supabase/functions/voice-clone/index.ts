@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
   // target: the read-aloud script is written in it.
   const clip = incoming.getAll("files").find((v): v is File => v instanceof File)
   if (!clip) return errorResponse(400, "no recording in files")
-  // The app says what the take was read in (builds from 2026-11-15). The
+  // The app sends the target language (builds from 2026-11-15). The
   // profile is only the fallback for older builds: a NEW account's row still
   // holds the column default `en` at this moment (the setup is mirrored after
   // the session exists), so every new voice was made as English whatever was

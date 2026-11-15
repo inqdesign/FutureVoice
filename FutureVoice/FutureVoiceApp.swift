@@ -1738,12 +1738,12 @@ final class AppState: ObservableObject {
         StudyWidgetRefresher.refresh()   // blank the home-screen widgets too
     }
 
-    /// The language the sample was read in, for the clone: what this take
-    /// says, else what the last take said, else the target (the script's
-    /// default when the native one wasn't picked).
-    private func cloneSampleLanguage(_ scriptLanguage: String?) -> String {
-        let code = scriptLanguage ?? cloneScriptLanguage ?? targetLanguage
-        return LanguageCatalog.language(code)?.code ?? code
+    /// The language the clone is registered in at Cartesia: the TARGET, the
+    /// language it will speak — never the script read (most takes are read
+    /// in the native language, and every English learner's voice has been
+    /// made as `en` from such a take; that stays exactly as it was).
+    private var cloneLanguage: String {
+        LanguageCatalog.language(targetLanguage)?.code ?? targetLanguage
     }
 
     /// Clone (or re-clone) the voice from a recorded sample WAV. Normalizes the
@@ -1783,7 +1783,7 @@ final class AppState: ObservableObject {
                 // Never put a language in it: one clone speaks all of them.
                 name: voiceDisplayName,
                 sampleAudioURLs: [normalized],
-                language: cloneSampleLanguage(scriptLanguage)
+                language: cloneLanguage
             )
         } catch where error.isVoiceLimitReached && pendingDeleteVoiceId != nil {
             // The account's voice slots are full AND this user is re-recording,
@@ -1796,7 +1796,7 @@ final class AppState: ObservableObject {
             do {
                 newId = try await VoiceClient.shared.cloneVoice(
                     name: voiceDisplayName, sampleAudioURLs: [normalized],
-                    language: cloneSampleLanguage(scriptLanguage))
+                    language: cloneLanguage)
             } catch {
                 reportCloneFailure(error, isFirstClone: isFirstClone, afterReclaim: true)
                 throw error

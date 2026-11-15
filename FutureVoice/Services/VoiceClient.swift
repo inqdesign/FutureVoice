@@ -65,10 +65,10 @@ final class VoiceClient {
     ///   - description: optional human description
     ///   (cleaned on the phone first — `VoiceDenoiser`)
     /// - Returns: the new Cartesia voice id.
-    ///   - language: the language the sample was READ in. Sent because the
-    ///     server can't know it: until 2026-11-15 it read the profile, which a
-    ///     new account hasn't written yet at the clone, so every new voice was
-    ///     made as English whatever was read.
+    ///   - language: the target language, the one the clone will speak. Sent
+    ///     because the server can't know it: until 2026-11-15 it read the
+    ///     profile, which a new account hasn't written yet at the clone, so
+    ///     every new voice was made as English whatever was learned.
     func cloneVoice(name: String, sampleAudioURLs: [URL], description: String? = nil,
                     language: String? = nil) async throws -> String {
         let url = functionsBaseURL.appendingPathComponent("voice-clone")
