@@ -717,6 +717,96 @@ struct SpeechChallengeListView: View {
     }
 }
 
+// MARK: - A season that ended
+
+/// "Season N records" (2026-11-15, founder: the link opened All challenges,
+/// which held only Season 2's cards). English Season 1's challenges went live
+/// again in Season 2 on 2026-11-13, so nothing of that season is "past" any
+/// more: its record is the frozen final standings and the learner's own
+/// frozen score on each challenge (`my_speech_season_records`).
+struct SpeechSeasonRecordsView: View {
+    let season: Int
+    @EnvironmentObject private var appState: AppState
+    @ObservedObject private var challenges = SpeechChallenges.shared
+    @State private var rows: [SpeechChallenges.BoardRow]?
+
+    /// My frozen scores of this season, the best place first.
+    private var mine: [SpeechChallenges.SeasonRecord] {
+        challenges.seasonRecords.values
+            .filter { $0.season == season && challenges.script(id: $0.challenge_id) != nil }
+            .sorted { ($0.rank, -$0.score) < ($1.rank, -$1.score) }
+    }
+
+    /// Challenges retired inside this season (none for English Season 1).
+    private var retired: [SpeechScript] {
+        challenges.past.filter { challenges.season(of: $0.id) == season }
+    }
+
+    var body: some View {
+        List {
+            Section {
+                if let rows {
+                    ForEach(rows) { row in
+                        if row.rank <= 3 { SpeechPodiumRow(row: row) } else { SpeechOverallRow(row: row) }
+                    }
+                } else {
+                    HStack { Spacer(); ProgressView(); Spacer() }
+                }
+            } header: {
+                Text("Final standings")
+            } footer: {
+                Text("This season has ended. These are the final standings.")
+            }
+            if !mine.isEmpty {
+                Section("Challenges") {
+                    ForEach(mine, id: \.challenge_id) { record in
+                        HStack(spacing: 10) {
+                            Text(challenges.script(id: record.challenge_id)?.title ?? "")
+                                .lineLimit(1)
+                            Spacer()
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text("#\(record.rank) of \(record.entrants)")
+                                    .font(.subheadline.monospacedDigit())
+                                    .foregroundStyle(.secondary)
+                                Text(verbatim: "\(record.score)")
+                                    .font(.headline.monospacedDigit())
+                                    .foregroundStyle(SpeechScoreColor.color(record.score))
+                            }
+                        }
+                    }
+                }
+            }
+            if !retired.isEmpty {
+                Section {
+                    ForEach(retired) { script in
+                        NavigationLink {
+                            SpeechArenaDetail(script: script).environmentObject(appState)
+                        } label: {
+                            Text(script.title).lineLimit(1)
+                        }
+                    }
+                } footer: {
+                    Text("Ended challenges keep their final standings.")
+                }
+            }
+        }
+        .navigationTitle("Season \(season) records")
+        .navigationBarTitleDisplayMode(.inline)
+        .hidesTabBar()
+        .refreshable { await load() }
+        .task { await load() }
+    }
+
+    private func load() async {
+        if let fresh = await challenges.overallBoard(language: appState.targetLanguage,
+                                                     season: season, limit: 50) {
+            rows = fresh
+        } else if rows == nil {
+            rows = []
+        }
+    }
+}
+
 // MARK: - The name on the boards
 
 struct SpeechChallengeNameSheet: View {

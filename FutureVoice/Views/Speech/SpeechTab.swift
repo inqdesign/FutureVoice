@@ -94,7 +94,7 @@ struct SpeechTab: View {
                     Spacer()
                     if let ended = challenges.lastEndedSeason {
                         NavigationLink {
-                            SpeechChallengeListView()
+                            SpeechSeasonRecordsView(season: ended)
                                 .environmentObject(appState)
                         } label: {
                             Text("Season \(ended) records")
