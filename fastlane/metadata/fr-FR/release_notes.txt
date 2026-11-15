@@ -1,4 +1,2 @@
 Nouveautés
-• Tu peux maintenant pratiquer le chinois simplifié et le français. Les deux sont encore en test.
-• Les résultats des défis de discours affichent cinq notes : vitesse de parole, rythme, pauses, précision et prononciation. Les sons ratés sont marqués directement sur le texte.
-• Sur l’écran des résultats, écoute ta lecture et celle de ton futur moi côte à côte.
+• Commence une seule chose de Ma routine, et ta série tient pour la journée.
