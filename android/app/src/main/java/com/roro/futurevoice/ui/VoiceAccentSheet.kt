@@ -253,6 +253,7 @@ fun VoiceAccentSheet(
                         name = com.roro.futurevoice.data.VoiceName.display(context,
                             com.roro.futurevoice.data.PersonaStore.shared(context).load()?.displayName),
                         sample = VoiceComparison.sampleFile(context.filesDir),
+                        language = VoiceComparison.scriptLanguage(context) ?: targetLanguage,
                     )
             }.onSuccess { newId ->
                 HapticEngine.success(context)

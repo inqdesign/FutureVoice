@@ -38,20 +38,25 @@ class VoiceCloneClient(private val auth: AuthRepository) {
         name: String,
         sample: File,
         description: String? = null,
+        /** What the sample was READ in (iOS `cloneSampleLanguage`). The
+         *  server read the profile until 2026-11-15, which a new account
+         *  hasn't written yet at the clone: every new voice became English. */
+        language: String? = null,
     ): String = withContext(Dispatchers.IO) {
         val prepared = com.roro.futurevoice.audio.VoiceDenoiser.prepareForClone(sample)
         try {
-            upload(name, prepared, description)
+            upload(name, prepared, description, language)
         } finally {
             // The take on disk is never replaced; only the copy goes.
             if (prepared != sample) prepared.delete()
         }
     }
 
-    private suspend fun upload(name: String, sample: File, description: String?): String {
+    private suspend fun upload(name: String, sample: File, description: String?, language: String?): String {
         val body = MultipartBody.Builder().setType(MultipartBody.FORM)
             .addFormDataPart("name", name)
             .apply { description?.let { addFormDataPart("description", it) } }
+            .apply { language?.let { addFormDataPart("language", it) } }
             .addFormDataPart("files", sample.name, sample.asRequestBody("audio/wav".toMediaType()))
             .build()
         val request = Request.Builder()

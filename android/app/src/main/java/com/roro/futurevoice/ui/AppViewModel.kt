@@ -649,7 +649,8 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
             com.roro.futurevoice.net.VoiceCloneClient(auth).cloneVoice(
                 name = com.roro.futurevoice.data.VoiceName.display(appContext,
                     com.roro.futurevoice.data.PersonaStore.shared(appContext).load()?.displayName),
-                sample = sample)
+                sample = sample,
+                language = VoiceComparison.scriptLanguage(appContext) ?: _state.value.targetLanguage)
         }
         adoptAccentSwap(newId, null)
     }
@@ -907,6 +908,7 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
                     name = com.roro.futurevoice.data.VoiceName.display(appContext,
                         PersonaStore.shared(appContext).load()?.displayName),
                     sample = sample,
+                    language = VoiceComparison.scriptLanguage(appContext) ?: _state.value.targetLanguage,
                 )
                 endStandIn()
                 com.roro.futurevoice.data.PhraseAudioStore.shared(appContext).registerOwnVoice(newId)
@@ -1047,6 +1049,7 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
             com.roro.futurevoice.net.VoiceCloneClient(auth).cloneVoice(
                 name = "Future Self",
                 sample = sample,
+                language = VoiceComparison.scriptLanguage(appContext) ?: _state.value.targetLanguage,
             )
         }
         result.onSuccess { newId ->
