@@ -279,7 +279,7 @@ final class GoogleDriveTransport: SyncTransport, BlobCellularControl {
     /// First pull: the token is taken FIRST, so nothing written while the
     /// listing runs can fall between the two.
     private func fullListing(parent: String) async throws -> SyncChangeBatch {
-        let start = try await json(URLRequest(url: URL(string: "\(api)/changes/startPageToken")!))
+        let start = try await retrying { try await self.json(URLRequest(url: URL(string: "\(self.api)/changes/startPageToken")!)) }
         guard let startToken = start["startPageToken"] as? String else {
             throw SyncTransportError.other("drive: no start token")
         }
@@ -293,7 +293,8 @@ final class GoogleDriveTransport: SyncTransport, BlobCellularControl {
                 .init(name: "pageSize", value: "1000"),
                 .init(name: "fields", value: "nextPageToken,files(\(fileFields))"),
             ] + (page.map { [URLQueryItem(name: "pageToken", value: $0)] } ?? [])
-            let body = try await json(URLRequest(url: c.url!))
+            let url = c.url!
+            let body = try await retrying { try await self.json(URLRequest(url: url)) }
             files += (body["files"] as? [[String: Any]]) ?? []
             page = body["nextPageToken"] as? String
         } while page != nil
@@ -317,7 +318,8 @@ final class GoogleDriveTransport: SyncTransport, BlobCellularControl {
                 .init(name: "fields", value: "nextPageToken,newStartPageToken,changes(fileId,removed,file(\(fileFields)))"),
             ]
             let body: [String: Any]
-            do { body = try await json(URLRequest(url: c.url!)) } catch DriveError.notFound {
+            let url = c.url!
+            do { body = try await retrying { try await self.json(URLRequest(url: url)) } } catch DriveError.notFound {
                 throw SyncTransportError.tokenExpired
             }
             for change in (body["changes"] as? [[String: Any]]) ?? [] {
@@ -362,23 +364,32 @@ final class GoogleDriveTransport: SyncTransport, BlobCellularControl {
     /// leaving blobs' bytes on the server. A file deleted while the listing
     /// ran is simply gone; any other failure aborts the pull, so the change
     /// token never moves past an item that was not applied.
+    ///
+    /// A first pull is one request PER ITEM, thousands for a learner who has
+    /// used the app for weeks, so two things keep "any failure aborts" from
+    /// meaning "never": each request is retried (`retrying`), and every
+    /// payload that did arrive is parked in `pullCache` under its id and
+    /// modified time, so the next attempt fetches only what is still
+    /// missing. Reported on Android 2026-11-15: a reinstall with ~4,000
+    /// records on Drive failed its first pull twice, each time from zero.
     private func materialize(_ files: [[String: Any]]) async throws -> [SyncRecord] {
-        var shells: [(id: String, record: SyncRecord)] = []
+        var shells: [(id: String, stamp: String, record: SyncRecord)] = []
         for file in files {
             guard let id = file["id"] as? String, let shell = Self.shell(file) else { continue }
             remember(name: shell.recordName, id: id)
-            shells.append((id, shell))
+            let stamp = ((file["modifiedTime"] as? String) ?? "").filter { $0.isLetter || $0.isNumber }
+            shells.append((id, stamp, shell))
         }
         var out: [SyncRecord] = []
         for start in stride(from: 0, to: shells.count, by: Self.parallel) {
             let slice = shells[start..<min(start + Self.parallel, shells.count)]
             try await withThrowingTaskGroup(of: SyncRecord?.self) { group in
-                for (id, shell) in slice {
+                for (id, stamp, shell) in slice {
                     group.addTask {
                         if shell.kind.isBlob || shell.isTombstone { return shell }
                         do {
                             var record = shell
-                            record.payload = try await self.download(id: id, cellular: true)
+                            record.payload = try await self.payload(id: id, stamp: stamp)
                             return record
                         } catch DriveError.notFound {
                             return nil
@@ -388,8 +399,49 @@ final class GoogleDriveTransport: SyncTransport, BlobCellularControl {
                 for try await record in group { if let record { out.append(record) } }
             }
         }
+        // Everything arrived; a file edited later gets a new modified time,
+        // so nothing parked here could be reused anyway.
+        try? FileManager.default.removeItem(at: Self.pullCache)
         return out
     }
+
+    /// Payloads fetched by a pull that has not finished yet. A cache, not
+    /// data: losing it costs only the downloads again.
+    private static var pullCache: URL {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("sync-pull", isDirectory: true)
+    }
+
+    private func payload(id: String, stamp: String) async throws -> Data {
+        let parked = Self.pullCache.appendingPathComponent("\(id)-\(stamp)")
+        if let data = try? Data(contentsOf: parked) { return data }
+        let data = try await retrying { try await self.download(id: id, cellular: true) }
+        try? FileManager.default.createDirectory(at: Self.pullCache, withIntermediateDirectories: true)
+        try? data.write(to: parked, options: .atomic)
+        return data
+    }
+
+    /// Another go at a request that failed on the NETWORK (no connection, a
+    /// 5xx, a token that couldn't be fetched) or was rate limited: out of
+    /// thousands, one of those is ordinary and no reason to throw the rest
+    /// away. Anything else (404, no permission, a full Drive) is an answer.
+    private func retrying<T>(_ body: () async throws -> T) async throws -> T {
+        var wait: TimeInterval = 1
+        for _ in 0..<Self.retries {
+            do {
+                return try await body()
+            } catch SyncTransportError.network {
+            } catch SyncTransportError.rateLimited(let seconds) {
+                wait = max(wait, min(seconds, 30))
+            }
+            try await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000))
+            wait = min(wait * 2, 16)
+        }
+        return try await body()
+    }
+
+    /// Extra attempts per request: 1 + 2 + 4 + 8 s of waiting at most.
+    private static let retries = 4
 
     // MARK: - Fetch
 
