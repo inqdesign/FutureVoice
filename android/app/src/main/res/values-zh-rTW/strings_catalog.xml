@@ -2812,6 +2812,7 @@
     <string name="speech_category_acceptance">"得獎感言"</string>
     <string name="speech_category_famous_speech">"經典演說"</string>
     <string name="speech_category_movie_scene">"電影場景"</string>
+    <string name="speech_category_film_review">"影評人"</string>
     <string name="speech_category_product_launch">"新品發表"</string>
     <string name="speech_category_show_host">"電視購物"</string>
     <string name="speech_challenge_again">"再挑戰"</string>

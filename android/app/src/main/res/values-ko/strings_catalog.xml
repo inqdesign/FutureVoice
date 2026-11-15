@@ -2812,6 +2812,7 @@
     <string name="speech_category_acceptance">"수상 소감"</string>
     <string name="speech_category_famous_speech">"명연설"</string>
     <string name="speech_category_movie_scene">"영화 장면"</string>
+    <string name="speech_category_film_review">"영화평론가"</string>
     <string name="speech_category_product_launch">"신제품 발표"</string>
     <string name="speech_category_show_host">"쇼호스트"</string>
     <string name="speech_challenge_again">"다시 도전"</string>

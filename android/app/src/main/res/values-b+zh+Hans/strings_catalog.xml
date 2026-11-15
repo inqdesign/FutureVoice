@@ -2812,6 +2812,7 @@
     <string name="speech_category_acceptance">"获奖感言"</string>
     <string name="speech_category_famous_speech">"经典演讲"</string>
     <string name="speech_category_movie_scene">"电影场景"</string>
+    <string name="speech_category_film_review">"影评人"</string>
     <string name="speech_category_product_launch">"新品发布"</string>
     <string name="speech_category_show_host">"电视购物"</string>
     <string name="speech_challenge_again">"再挑战"</string>

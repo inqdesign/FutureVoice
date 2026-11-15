@@ -2808,6 +2808,7 @@
     <string name="speech_category_acceptance">"Discours de remerciement"</string>
     <string name="speech_category_famous_speech">"Grand discours"</string>
     <string name="speech_category_movie_scene">"Scène de film"</string>
+    <string name="speech_category_film_review">"Critique de cinéma"</string>
     <string name="speech_category_product_launch">"Lancement de produit"</string>
     <string name="speech_category_show_host">"Téléachat"</string>
     <string name="speech_challenge_again">"Retenter"</string>

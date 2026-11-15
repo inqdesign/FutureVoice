@@ -2808,6 +2808,7 @@
     <string name="speech_category_acceptance">"Dankesrede"</string>
     <string name="speech_category_famous_speech">"Berühmte Rede"</string>
     <string name="speech_category_movie_scene">"Filmszene"</string>
+    <string name="speech_category_film_review">"Filmkritikerin"</string>
     <string name="speech_category_product_launch">"Produktvorstellung"</string>
     <string name="speech_category_show_host">"Teleshopping"</string>
     <string name="speech_challenge_again">"Noch mal"</string>

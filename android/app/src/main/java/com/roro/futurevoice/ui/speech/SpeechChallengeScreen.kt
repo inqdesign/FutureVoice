@@ -1323,6 +1323,7 @@ internal fun challengeCategoryLabel(key: String?): String? = when (key) {
     "show_host" -> stringResource(R.string.speech_category_show_host)
     "famous_speech" -> stringResource(R.string.speech_category_famous_speech)
     "movie_scene" -> stringResource(R.string.speech_category_movie_scene)
+    "film_review" -> stringResource(R.string.speech_category_film_review)
     "acceptance" -> stringResource(R.string.speech_category_acceptance)
     "product_launch" -> stringResource(R.string.speech_category_product_launch)
     "in_flight" -> stringResource(R.string.speech_category_in_flight)
