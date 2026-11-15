@@ -743,7 +743,11 @@ private fun NowPlayingCaption(isEmpty: Boolean, state: AppState) {
                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 val hidden = !showCaptions && revealed != line.id
                 Text(caption(line, nowMs, state.targetLanguage),
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Medium),
+                    // Typeset in the target language so Han characters take
+                    // one face (iOS `typesettingLanguage`, 2026-11-15).
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Medium,
+                        localeList = androidx.compose.ui.text.intl.LocaleList(
+                            if (state.targetLanguage == "zh") "zh-Hans" else state.targetLanguage)),
                     modifier = Modifier
                         .then(if (hidden) {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Modifier.blur(7.dp)

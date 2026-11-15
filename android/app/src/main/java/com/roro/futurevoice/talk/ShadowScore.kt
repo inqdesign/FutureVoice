@@ -790,6 +790,44 @@ object WordTimings {
         }
     }
 
+    /** The publisher's silence between one host's sentences (news-show-probe.py SENTENCE_GAP). */
+    const val PODCAST_SENTENCE_GAP_MS = 420
+
+    /**
+     * A podcast line has no measured timings, and its file is the line's
+     * sentences with a fixed 0.42 s between them. The plain estimate spread
+     * that silence over the characters, so the highlight ran ahead from the
+     * second sentence on (iOS `PlaylistPlayer.podcastTimings`, 2026-11-15).
+     */
+    fun podcast(text: String, durationMs: Int, language: String): List<WordTiming> {
+        val words = com.roro.futurevoice.data.WordSplitter.timingWords(text, language)
+        if (words.isEmpty() || durationMs <= 0) return emptyList()
+        val enders = setOf('。', '！', '？', '.', '!', '?', '…')
+        val closers = setOf('”', '"', '\'', '’', '」', '』', '）', ')')
+        val sentences = mutableListOf(mutableListOf<String>())
+        words.forEachIndexed { i, w ->
+            sentences.last().add(w)
+            val last = w.trimEnd { it in closers }.lastOrNull()
+            if (last != null && last in enders && i < words.size - 1) sentences.add(mutableListOf())
+        }
+        val spaced = com.roro.futurevoice.data.WordSplitter.spaced(language)
+        fun weight(w: String) = if (spaced) maxOf(w.length, 1) else maxOf(LocalAlignment.normalized(w).length, 1)
+        val speech = durationMs - PODCAST_SENTENCE_GAP_MS * (sentences.size - 1)
+        if (speech <= durationMs / 3) return estimate(text, durationMs, language)
+        val msPerChar = speech.toDouble() / sentences.sumOf { s -> s.sumOf { weight(it) } }
+        var cursor = 0.0
+        val out = mutableListOf<WordTiming>()
+        sentences.forEachIndexed { si, sentence ->
+            if (si > 0) cursor += PODCAST_SENTENCE_GAP_MS
+            for (w in sentence) {
+                val start = cursor
+                cursor += msPerChar * weight(w)
+                out.add(WordTiming(w, start.toInt(), maxOf(start.toInt() + 1, cursor.toInt() - 20), isMeasured = false))
+            }
+        }
+        return out
+    }
+
     /** Which word index is being spoken at [positionMs], or -1. */
     fun indexAt(timings: List<WordTiming>, positionMs: Int): Int =
         timings.indexOfFirst { positionMs in it.startMs..it.endMs }

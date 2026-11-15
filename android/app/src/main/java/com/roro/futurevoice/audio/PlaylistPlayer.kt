@@ -352,8 +352,9 @@ object PlaylistPlayer {
             startMeter(file, mine)
             val stored = line.storedTimings(c).orEmpty().filter { it.endMs > it.startMs }
             timings = stored.ifEmpty {
-                WordTimings.estimate(line.text, mp.duration,
-                    com.roro.futurevoice.data.LanguageScope.active(c))
+                val lang = com.roro.futurevoice.data.LanguageScope.active(c)
+                if (line.translations != null) WordTimings.podcast(line.text, mp.duration, lang)
+                else WordTimings.estimate(line.text, mp.duration, lang)
             }
             isPlaying = true
             claimLockScreen()
