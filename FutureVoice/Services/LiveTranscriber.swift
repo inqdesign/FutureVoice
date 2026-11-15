@@ -385,10 +385,15 @@ final class LiveTranscriber: ObservableObject {
             let sampleRate = format.sampleRate
             if capture {
                 localRecorder.begin(format: format, trimLeadingSilence: true)
-                if chunkCapture {
-                    localChunkRecorder.begin(format: format)
-                    self?.captureFormat = format
-                }
+            }
+            // The pieces don't depend on the full-turn file: the speech take
+            // records its own file and asks for pieces alone. Nested under
+            // `capture`, its writer never opened, `rotateCaptureChunk` always
+            // returned nil, and every take was read whole after the stop
+            // (`speech_take.pieces` 0 on every take through 1.3.3).
+            if chunkCapture {
+                localChunkRecorder.begin(format: format)
+                self?.captureFormat = format
             }
             input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
                 localAppender.append(buffer)
