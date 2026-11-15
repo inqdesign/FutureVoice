@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs><filter id="ink" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="7" result="w"/>
+      <feDisplacementMap in="SourceGraphic" in2="w" scale="5" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="2" seed="5" result="g"/>
+      <feColorMatrix in="g" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -0.5 1.2" result="ga"/>
+      <feComposite in="d" in2="ga" operator="in"/>
+    </filter><filter id="paper"><feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="3" seed="2" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.45  0 0 0 0 0.40  0 0 0 0 0.32  0 0 0 0.05 0"/>
+      <feComposite in2="SourceGraphic" operator="in"/></filter></defs>
+  <rect width="1024" height="1024" fill="#F3EEE3"/>
+  <rect width="1024" height="1024" fill="#F3EEE3" filter="url(#paper)"/>
+  <g filter="url(#ink)" fill="none" stroke="#2B53B8" stroke-width="30" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 342 842 C 412 818 612 816 682 840 C 626 871 554 869 514 840 C 506 760 518 680 512 600 C 432 600 372 552 372 462 L 374 408"/><path d="M 512 600 C 592 600 652 552 652 462 L 650 408"/><path d="M 512 232 C 452 232 412 272 412 332 L 412 420 C 412 478 456 520 512 520 C 568 520 612 478 612 420 L 612 332 C 612 272 574 232 516 233"/><path d="M 444 336 C 490 330 540 340 580 332 M 444 392 C 492 398 540 386 580 392" stroke-width="24"/>
+  </g>
+</svg>

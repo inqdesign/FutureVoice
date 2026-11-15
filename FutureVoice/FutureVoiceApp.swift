@@ -1866,7 +1866,9 @@ final class AppState: ObservableObject {
     /// learner who kills the app on that screen is covered by the Talk
     /// launcher, which warms on arrival.
     func warmFreeTalkOpeners() {
-        guard !holdVoiceOnboarding else { return }
+        // The speech app has no free talk: a voice made there must not buy
+        // openers nobody will hear.
+        guard !SpeechAppFlags.isSpeechApp, !holdVoiceOnboarding else { return }
         let language = targetLanguage
         let personaName = persona?.displayName
         let level = proficiency

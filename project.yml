@@ -190,7 +190,9 @@ targets:
           - Default
     settings:
       base:
-        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # Its own icon (SpeechApp/SpeechAssets.xcassets): the blue pencil
+        # stand mic, founder's pick 2026-11-14. Source: docs/brand/speech-app-icon.svg.
+        ASSETCATALOG_COMPILER_APPICON_NAME: SpeechAppIcon
         PRODUCT_NAME: SpeechApp
         INFOPLIST_FILE: SpeechApp/Info.plist
         TARGETED_DEVICE_FAMILY: "1,2"

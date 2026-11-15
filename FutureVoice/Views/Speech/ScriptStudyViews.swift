@@ -369,7 +369,42 @@ struct ScriptVoiceoverSection: View {
     private var voiceId: String? { appState.voiceCloneId }
     private var quote: Int { ScriptVoiceover.quoteMinutes(text: script.body, language: script.language) }
 
+    #if SPEECH_APP
+    /// No voice yet: the first tap makes one from the learner's best take.
+    @State private var makingVoice = false
+    #endif
+
     var body: some View {
+        #if SPEECH_APP
+        if voiceId == nil {
+            Section {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Your voice is made from your best take, so there's nothing to record.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button {
+                        player.stop()
+                        makingVoice = true
+                    } label: {
+                        Label("Make it in my voice", systemImage: "person.wave.2")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .accentProminent()
+                    .labelStyle(PillLabelStyle(stacked: false))
+                    .controlSize(.large)
+                    .disabled(quote > ScriptVoiceover.maxMinutes)
+                }
+                .padding(.vertical, 4)
+                .sheet(isPresented: $makingVoice) {
+                    SpeechVoiceFromTakesSheet { newId in start(newId) }
+                        .environmentObject(appState)
+                }
+            } header: {
+                Text("Hear it in my voice")
+            }
+        }
+        #endif
         if let voiceId {
             Section {
                 // What it costs (or that it's free now) under the heading,

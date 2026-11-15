@@ -855,6 +855,23 @@
         }
       }
     },
+    "Hear it in your own voice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hear it in your own voice"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 목소리로 들어 보기"
+          }
+        }
+      }
+    },
     "In practice" : {
       "localizations" : {
         "de" : {
@@ -35050,6 +35067,23 @@
         }
       }
     },
+    "A job interview" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A job interview"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "면접"
+          }
+        }
+      }
+    },
     "A job interview, a call to your landlord, dinner with your partner's parents. You know enough of the language. What you don't know is what to say first, what to ask, and how to get through the awkward moment." : {
       "localizations" : {
         "de" : {
@@ -36152,6 +36186,23 @@
         }
       }
     },
+    "A presentation at work" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A presentation at work"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "회사 발표"
+          }
+        }
+      }
+    },
     "A presentation at work, a pitch, introducing yourself at a meeting. Saying prepared words clearly, at a steady pace, with pauses in the right places, is its own skill, and most people only find that out on the day." : {
       "localizations" : {
         "de" : {
@@ -37166,6 +37217,23 @@
         }
       }
     },
+    "A take" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A take"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "테이크"
+          }
+        }
+      }
+    },
     "A talk block rings as your daily call when the call is on (Me › Call). Up to 4 call times." : {
       "localizations" : {
         "de" : {
@@ -37347,6 +37415,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "售票員"
+          }
+        }
+      }
+    },
+    "A toast at a wedding" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A toast at a wedding"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "결혼식 축사"
           }
         }
       }
@@ -41868,6 +41953,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "回答語言"
+          }
+        }
+      }
+    },
+    "Answer, or ask for a change…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Answer, or ask for a change…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "답하거나, 고칠 점을 말해 주세요…"
           }
         }
       }
@@ -87980,6 +88082,23 @@
         }
       }
     },
+    "Introducing myself" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introducing myself"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자기소개"
+          }
+        }
+      }
+    },
     "Introducing yourself" : {
       "localizations" : {
         "de" : {
@@ -96257,6 +96376,23 @@
         }
       }
     },
+    "Make my voice" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Make my voice"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 목소리 만들기"
+          }
+        }
+      }
+    },
     "Make the words yours" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -96571,6 +96707,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在準備測驗…"
+          }
+        }
+      }
+    },
+    "Making your voice…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Making your voice…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 목소리를 만들고 있어요…"
           }
         }
       }
@@ -122471,6 +122624,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "讀取"
+          }
+        }
+      }
+    },
+    "Read it all" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Read it all"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "전체 보기"
           }
         }
       }
@@ -154901,6 +155071,23 @@
         }
       }
     },
+    "The writer couldn't answer. Try again." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The writer couldn't answer. Try again."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "답을 받지 못했어요. 다시 해 주세요."
+          }
+        }
+      }
+    },
     "Their family" : {
       "localizations" : {
         "de" : {
@@ -162712,6 +162899,23 @@
         }
       }
     },
+    "Use this script" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use this script"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 원고로 할게요"
+          }
+        }
+      }
+    },
     "Use this topic" : {
       "localizations" : {
         "de" : {
@@ -163590,6 +163794,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "聊天、今天的計畫，以及為你的目標準備的一切：可能的問題、閱讀材料、範例回答。和家教練習問題算通話。"
+          }
+        }
+      }
+    },
+    "Writer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Writer"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "작가"
           }
         }
       }
@@ -167368,6 +167589,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "你在準備什麼呢？"
+          }
+        }
+      }
+    },
+    "What are you preparing for? Tell me the occasion, and attach anything that helps, like a job posting or your notes. We'll write it together." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What are you preparing for? Tell me the occasion, and attach anything that helps, like a job posting or your notes. We'll write it together."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "어떤 자리를 준비하고 있어요? 채용 공고나 메모처럼 도움이 될 자료가 있으면 붙여 주세요. 같이 써 봐요."
           }
         }
       }
@@ -189138,6 +189376,23 @@
         }
       }
     },
+    "Made from" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Made from"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 테이크로 만들어요"
+          }
+        }
+      }
+    },
     "Made from the recording on this phone. A stand-in voice speaks until then." : {
       "localizations" : {
         "de" : {
@@ -189872,6 +190127,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "溫暖、隨和"
+          }
+        }
+      }
+    },
+    "Your voice is made from one of your takes. Read any script for 20 seconds or more first." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your voice is made from one of your takes. Read any script for 20 seconds or more first."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목소리는 내 테이크로 만들어요. 먼저 아무 원고나 20초 이상 읽어 주세요."
+          }
+        }
+      }
+    },
+    "Your voice is made from your best take, so there's nothing to record." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your voice is made from your best take, so there's nothing to record."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "가장 잘 읽은 테이크로 목소리를 만들어요. 따로 녹음하지 않아도 돼요."
           }
         }
       }

@@ -506,11 +506,21 @@ struct SpeechTab: View {
             Text(publishError ?? "")
         }
         .sheet(isPresented: $composing, onDismiss: openPending) {
+            #if SPEECH_APP
+            // Written WITH the learner, for what they are preparing for
+            // (2026-11-14, founder), in place of the one-shot topic form.
+            SpeechWriterView { script in
+                store.add(script)
+                openAfterSheet = script
+            }
+            .environmentObject(appState)
+            #else
             SpeechComposerSheet { script in
                 store.add(script)
                 openAfterSheet = script
             }
             .environmentObject(appState)
+            #endif
         }
         .sheet(isPresented: $addingOwn, onDismiss: openPending) {
             SpeechOwnScriptSheet(existing: nil) { script in
@@ -800,6 +810,12 @@ struct SpeechScriptSheet: View {
                     }
                 }
 
+                #if SPEECH_APP
+                // The fluent reading, then the same script in the reader's
+                // own voice (2026-11-14, founder), made from their best take.
+                ScriptVoiceoverSection(script: script, player: voiceoverPlayer)
+                #endif
+
                 // Its own row, not the toolbar (founder, 2026-10-14): a switch
                 // beside the title and Done crowded the header, and in longer
                 // languages the label had nowhere to go.
@@ -875,7 +891,7 @@ struct SpeechScriptSheet: View {
                 // A tutor reading's Speech sits beside Play and Shadow; its
                 // own row only when there is no voiceover section to join.
                 #if SPEECH_APP
-                // No voiceover in the speech app: the only voice is the reader's.
+                // The speech app's voiceover sits under the fluent reading, above.
                 let hasVoiceoverRow = false
                 #else
                 let hasVoiceoverRow = !shipped || studyHere
