@@ -660,7 +660,7 @@ fun CloneFlowScreen(
                     // iOS sends `voiceDisplayName` — the library entry says whose it is.
                     name = com.roro.futurevoice.data.VoiceName.display(context, com.roro.futurevoice.data.PersonaStore.shared(context).load()?.displayName),
                     sample = sampleFile,
-                    language = VoiceComparison.scriptLanguage(context) ?: targetLanguage,
+                    language = targetLanguage,
                 )
             }.onSuccess { adoptVoice(it, null, greet = true) }
                 .onFailure { e ->
@@ -730,7 +730,7 @@ fun CloneFlowScreen(
                     // iOS sends `voiceDisplayName` — the library entry says whose it is.
             name = com.roro.futurevoice.data.VoiceName.display(context, com.roro.futurevoice.data.PersonaStore.shared(context).load()?.displayName),
                     sample = source,
-                    language = scriptLanguageCode,
+                    language = targetLanguage,
                 )
                 // Keep the original so the clone can be rebuilt later
                 // without recording again (iOS `VoiceSampleStore`).

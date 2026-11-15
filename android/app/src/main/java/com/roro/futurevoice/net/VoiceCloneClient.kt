@@ -38,9 +38,10 @@ class VoiceCloneClient(private val auth: AuthRepository) {
         name: String,
         sample: File,
         description: String? = null,
-        /** What the sample was READ in (iOS `cloneSampleLanguage`). The
-         *  server read the profile until 2026-11-15, which a new account
-         *  hasn't written yet at the clone: every new voice became English. */
+        /** The target language, the one the clone will speak (iOS
+         *  `cloneLanguage`). The server read the profile until
+         *  2026-11-15, which a new account hasn't written yet at the clone:
+         *  every new voice became English. */
         language: String? = null,
     ): String = withContext(Dispatchers.IO) {
         val prepared = com.roro.futurevoice.audio.VoiceDenoiser.prepareForClone(sample)
