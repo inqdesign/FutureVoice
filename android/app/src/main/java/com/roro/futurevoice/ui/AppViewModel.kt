@@ -285,6 +285,10 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
                         // An account now owns the session: a linked anonymous
                         // user keeps its id and its voice is off the clock.
                         if (!auth.isAnonymous) com.roro.futurevoice.data.VoiceReclaim.clear(appContext)
+                        // The free minutes are once per phone (SignupDevice).
+                        if (!auth.isAnonymous) viewModelScope.launch {
+                            com.roro.futurevoice.net.SignupDevice.reportIfNeeded(appContext, auth)
+                        }
                         settleAdoption()
                         restoreVoiceClone()
                         // A code typed on Welcome is applied the moment an
@@ -368,6 +372,9 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
      *  user into an account without a fresh session event. */
     private fun refreshAccountState() {
         _state.update { it.copy(isAnonymous = auth.isAnonymous, email = auth.email) }
+        if (!auth.isAnonymous) viewModelScope.launch {
+            com.roro.futurevoice.net.SignupDevice.reportIfNeeded(appContext, auth)
+        }
         settleAdoption()
     }
 
