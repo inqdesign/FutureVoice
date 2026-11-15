@@ -51,3 +51,8 @@ Output: E-latest/E1–E3.png, E_sheet.jpg, gen_e.py. Copy provisional. Nothing u
   challenge pictures' style, ill/). Cards written per language (copy_lang.MEET). Replaced in every set; Play sent
   again (fa114500 on feat/android). The Korean iPhone set on 1.3.4 still has the old 02: Apple locks it in review;
   asc_upload.py puts the new one on the next version with everything else.
+- 11-15: App Store. 1.3.4 went live, so version 1.3.5 was made (draft) and every set uploaded to it with
+  asc_upload.py (now resumable: RESUME=1, per-file retry). 9 of 10 locales complete (iPhone 6.9 + 6.5 + iPad 13,
+  10 each). German got only iPhone 6.9 shots 01–08: another session submitted 1.3.5 for review mid-upload and Apple
+  locked it. German's 6.5 and iPad fall back to the primary language's until the next version.
+  Play: all 7 languages sent (293e163e), in Google's review.

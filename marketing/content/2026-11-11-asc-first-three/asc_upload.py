@@ -49,19 +49,45 @@ def files(folder, kind):
     return out
 
 
+def retry(fn, tries=6):
+    for i in range(tries):
+        try:
+            return fn()
+        except Exception as e:          # the upload host resets connections now and then
+            if i == tries - 1:
+                raise
+            print("    retry:", str(e)[:80]); time.sleep(5 * (i + 1))
+
+
 def upload(set_id, shots):
-    for s in a.call("GET", f"/appScreenshotSets/{set_id}/appScreenshots?limit=50")["data"]:
-        a.call("DELETE", f"/appScreenshots/{s['id']}")
+    """Resumable: a screenshot already COMPLETE under the same file name stays; the rest is
+    replaced. RESUME=1 keeps finished ones (a re-run after a dropped connection)."""
+    keep = set()
+    for s in retry(lambda: a.call("GET", f"/appScreenshotSets/{set_id}/appScreenshots?limit=50")["data"]):
+        done = s["attributes"]["assetDeliveryState"]["state"] == "COMPLETE"
+        if os.environ.get("RESUME") and done:
+            keep.add(s["attributes"]["fileName"]); continue
+        retry(lambda: a.call("DELETE", f"/appScreenshots/{s['id']}"))
     for name, raw in shots:
-        shot = a.call("POST", "/appScreenshots", {"data": {"type": "appScreenshots",
-            "attributes": {"fileName": name, "fileSize": len(raw)},
-            "relationships": {"appScreenshotSet": {"data": {"type": "appScreenshotSets", "id": set_id}}}}})["data"]
-        for op in shot["attributes"]["uploadOperations"]:
-            req = urllib.request.Request(op["url"], data=raw[op["offset"]:op["offset"] + op["length"]], method=op["method"])
-            for h in op.get("requestHeaders") or []: req.add_header(h["name"], h["value"])
-            urllib.request.urlopen(req, timeout=120).read()
-        a.call("PATCH", f"/appScreenshots/{shot['id']}", {"data": {"type": "appScreenshots", "id": shot["id"],
-            "attributes": {"uploaded": True, "sourceFileChecksum": hashlib.md5(raw).hexdigest()}}})
+        if name in keep:
+            continue
+        def one():
+            shot = a.call("POST", "/appScreenshots", {"data": {"type": "appScreenshots",
+                "attributes": {"fileName": name, "fileSize": len(raw)},
+                "relationships": {"appScreenshotSet": {"data": {"type": "appScreenshotSets", "id": set_id}}}}})["data"]
+            try:
+                for op in shot["attributes"]["uploadOperations"]:
+                    req = urllib.request.Request(op["url"], data=raw[op["offset"]:op["offset"] + op["length"]], method=op["method"])
+                    for h in op.get("requestHeaders") or []: req.add_header(h["name"], h["value"])
+                    urllib.request.urlopen(req, timeout=120).read()
+                a.call("PATCH", f"/appScreenshots/{shot['id']}", {"data": {"type": "appScreenshots", "id": shot["id"],
+                    "attributes": {"uploaded": True, "sourceFileChecksum": hashlib.md5(raw).hexdigest()}}})
+            except Exception:
+                try: a.call("DELETE", f"/appScreenshots/{shot['id']}")
+                except Exception: pass
+                raise
+        retry(one)
+        print("    up", name)
 
 
 def main():
@@ -73,6 +99,9 @@ def main():
     for loc in locs:
         code = loc["attributes"]["locale"]
         folder = FOLDERS.get(code)
+        only = os.environ.get("LOCALES")
+        if only and code not in only.split(","):
+            continue
         if not folder:
             print(f"  {code}: no set, left alone"); continue
         sets = a.call("GET", f"/appStoreVersionLocalizations/{loc['id']}/appScreenshotSets?limit=50")["data"]
