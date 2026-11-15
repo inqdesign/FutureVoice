@@ -11,6 +11,6 @@ for lang in ("ko", "en"):
     importlib.reload(g)
     body = (f'<img src="file://{SRC[lang]}" style="position:absolute;left:0;top:0;width:1320px">'
             '<div style="position:absolute;left:0;top:0;width:1320px;height:690px;background:#F5F5F5"></div>'
-            + g.title(TEXT[lang]))
+            + g.title(g.C['hand_title']))
     g.render(body, f"{g.OUT}/{OUTF[lang]}")
     print(OUTF[lang])

@@ -22,6 +22,7 @@ STAGE = 0.757                         # Android: everything under the headline, 
 FONTS = {"ja": "'Hiragino Sans','Hiragino Kaku Gothic ProN'", "zh-Hans": "'PingFang SC'",
          "zh-CN": "'PingFang SC'", "zh-Hant": "'PingFang TC'", "zh-TW": "'PingFang TC'",
          "ko": "'Apple SD Gothic Neo'"}
+CJK = {'ko', 'ja', 'zh-Hans', 'zh-Hant', 'zh-CN', 'zh-TW'}
 HTML_LANG = {"zh-CN": "zh-Hans", "zh-TW": "zh-Hant"}.get(lang, lang)
 FONT = f"-apple-system,{FONTS.get(lang, 'system-ui')},'SF Pro Display',sans-serif"
 
@@ -38,9 +39,9 @@ def size(n):
 
 CSS = f"""*{{margin:0;padding:0;box-sizing:border-box}}html,body{{width:{W}px;height:{H}px;overflow:hidden}}
 body{{font-family:{FONT};position:relative;word-break:keep-all;line-break:strict;background:linear-gradient(#F1F1F3,#E4E4E8);color:#111}}
-h1{{position:absolute;left:60px;right:60px;text-align:center;font-weight:800;line-height:1.18;letter-spacing:{'-0.043em' if lang=='ko' else '-0.022em'};white-space:nowrap}}
+h1{{position:absolute;left:150px;right:150px;text-align:center;font-weight:{800 if lang in CJK else 700};line-height:1.18;letter-spacing:{'-0.04em' if lang in CJK else '-0.015em'};white-space:nowrap}}
 h1 i{{font-style:normal;color:#A3A3A8}}
-p{{position:absolute;left:90px;right:90px;text-align:center;font-size:54px;line-height:1.42;font-weight:500;letter-spacing:-0.02em;color:#6E6E73}}
+p{{position:absolute;left:150px;right:150px;text-align:center;font-size:54px;line-height:1.42;font-weight:500;letter-spacing:-0.02em;color:#6E6E73}}
 .ph{{position:absolute;background:linear-gradient(120deg,#C9CBD0,#F4F4F6 40%,#B9BBC1);box-shadow:0 0 0 4px #A9ABB1 inset,0 50px 120px rgba(0,0,0,.14)}}
 .ph .sc{{width:100%;height:100%;overflow:hidden;background:#fff;position:relative}}
 .ph img{{width:100%;display:block}}
@@ -55,9 +56,23 @@ p{{position:absolute;left:90px;right:90px;text-align:center;font-size:54px;line-
 .script{{position:absolute;left:130px;width:1060px;top:640px;height:820px;overflow:hidden;font-family:-apple-system,'SF Pro Display',sans-serif;font-size:70px;line-height:1.5;font-weight:700;letter-spacing:.01em;word-spacing:.08em;color:#111;-webkit-mask-image:linear-gradient(#000 50%,rgba(0,0,0,.25) 85%,transparent 100%)}}
 """
 # Headlines never wrap and never overflow: each shrinks until its widest line fits.
-FIT = """<script>for(const h of document.querySelectorAll('h1')){let s=parseFloat(getComputedStyle(h).fontSize);
-while(h.scrollWidth>h.clientWidth+1&&s>60){s-=2;h.style.fontSize=s+'px'}}
-for(const b of document.querySelectorAll('.rc b')){let s=46;while(b.scrollWidth>b.clientWidth+1&&s>28){s-=1;b.style.fontSize=s+'px'}}</script>"""
+# One headline size for a whole set: every page measures all of its set's headlines
+# (hidden copies) and uses the largest size at which the longest one still fits.
+def heads():
+    hs = [C[k] for k in ("s01", "s03", "s04", "s05", "s06", "s07", "s08", "s09", "s10") if k in C]
+    hs.append(MEET[lang][0])
+    if C.get("hand_title"): hs.append(C["hand_title"])
+    return hs
+
+
+def fit_script():
+    probes = "".join(f'<h1 class="probe" style="visibility:hidden;top:0">{a}<br><i>{b}</i></h1>' for a, b in heads())
+    return (probes + """<script>
+const ps=[...document.querySelectorAll('h1.probe')];let s=BASE;
+for(const p of ps){p.style.fontSize=s+'px';while(p.scrollWidth>p.clientWidth+1&&s>60){s-=2;p.style.fontSize=s+'px'}}
+for(const h of document.querySelectorAll('h1:not(.probe)'))h.style.fontSize=s+'px';
+for(const b of document.querySelectorAll('.rc b')){let z=46;while(b.scrollWidth>b.clientWidth+1&&z>28){z-=1;b.style.fontSize=z+'px'}}
+</script>""").replace("BASE", "190" if ipad else "134")
 
 
 def phone(img, x, y, w, extra=""):
@@ -142,7 +157,7 @@ def face_crop(img):
 
 def render(body, out):
     html = (f'<!doctype html><html lang="{HTML_LANG}"><meta charset="utf-8"><style>{CSS}</style>'
-            f'<body>{body}{FIT}</body></html>')
+            f'<body>{body}{fit_script()}</body></html>')
     p = f"{OUT}/_t_{lang}.html"
     open(p, "w").write(html)
     subprocess.run([CHROME, "--headless=new", "--disable-gpu", "--hide-scrollbars", f"--user-data-dir={OUT}/prof",
