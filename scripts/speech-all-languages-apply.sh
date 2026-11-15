@@ -6,8 +6,8 @@
 #   scripts/speech-all-languages-apply.sh --dry-run   prints what it would do
 #   scripts/speech-all-languages-apply.sh             asks once, then runs
 #
-# Safe to run twice: every insert is `on conflict do nothing`, the apply script
-# refuses a version already recorded, and a picture upload overwrites the same
+# Safe to run twice: every insert is `on conflict do nothing`, a migration already
+# recorded under its own name is skipped (another name is refused), and a picture upload overwrites the same
 # file. Runs the files as committed (HEAD), never a working-tree edit.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -39,8 +39,24 @@ read -r -p "Apply ${#MIGRATIONS[@]} migrations and upload the pictures? [y/N] " 
 ok="$(printf '%s' "$ok" | tr -cd 'A-Za-zㅛ' | tr 'A-Z' 'a-z')"
 [[ "$ok" == "y" || "$ok" == "yes" || "$ok" == "ㅛ" ]] || { echo "nothing done"; exit 0; }
 
+raw="$(security find-generic-password -s "Supabase CLI" -w)"
+token="$(echo "${raw#go-keyring-base64:}" | base64 -d)"
+recorded_name() {
+  curl -s -X POST \
+    "https://api.supabase.com/v1/projects/chhzjtigzdotacutwcyo/database/query" \
+    -H "Authorization: Bearer $token" -H "Content-Type: application/json" \
+    -d "{\"query\":\"select name from supabase_migrations.schema_migrations where version = '$1'\"}"
+}
+
 for m in "${MIGRATIONS[@]}"; do
   echo "== $m"
+  version="${m%%_*}"; name="${m#*_}"; name="${name%.sql}"
+  # A version already recorded under THIS file's name was applied by an
+  # earlier run: skip it. Under another name, apply-migration.sh refuses.
+  if [[ "$(recorded_name "$version")" == "[{\"name\":\"$name\"}]" ]]; then
+    echo "  already applied, skipped"
+    continue
+  fi
   bash scripts/apply-migration.sh "supabase/migrations/$m"
 done
 
