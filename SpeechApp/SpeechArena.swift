@@ -419,7 +419,9 @@ enum Arena {
     /// Each kind of challenge has a muted colour and a pattern of its own.
     static func tone(_ category: String?, seed: UUID? = nil) -> (top: Color, bottom: Color, pattern: TilePattern) {
         let keys = ["show_host", "famous_speech", "movie_scene", "acceptance", "product_launch", "in_flight", "podcast", "short_talk"]
-        var category = category
+        // A film critic wears the film tile. Kept out of `keys`, which also
+        // deals colours to challenges with no kind by index.
+        var category = category == "film_review" ? "movie_scene" : category
         if category == nil || !keys.contains(category!), let seed {
             // No kind on file: the challenge still gets a colour of its own.
             let byte = withUnsafeBytes(of: seed.uuid) { $0.reduce(0) { $0 &+ Int($1) } }

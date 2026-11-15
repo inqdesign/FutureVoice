@@ -124,6 +124,7 @@ enum SpeechChallengeCategory {
         case "show_host": return explain(key: "speech.category.show_host", default: "Show host")
         case "famous_speech": return explain(key: "speech.category.famous_speech", default: "Famous speech")
         case "movie_scene": return explain(key: "speech.category.movie_scene", default: "Movie scene")
+        case "film_review": return explain(key: "speech.category.film_review", default: "Film critic")
         case "acceptance": return explain(key: "speech.category.acceptance", default: "Acceptance speech")
         case "product_launch": return explain(key: "speech.category.product_launch", default: "Product launch")
         case "in_flight": return explain(key: "speech.category.in_flight", default: "In-flight announcement")
