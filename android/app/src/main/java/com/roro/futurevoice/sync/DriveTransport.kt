@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
@@ -209,8 +210,8 @@ class DriveTransport(
     /** First pull: the token is taken FIRST, so nothing written while the
      *  listing runs can fall between the two. */
     private suspend fun fullListing(parent: String): SyncChangeBatch {
-        val start = call(Request.Builder().url("$api/changes/startPageToken?supportsAllDrives=false")
-            .get()).jsonObject["startPageToken"]!!.jsonPrimitive.content
+        val start = retrying { call(Request.Builder().url("$api/changes/startPageToken?supportsAllDrives=false")
+            .get()) }.jsonObject["startPageToken"]!!.jsonPrimitive.content
         val files = ArrayList<JsonObject>()
         var page: String? = null
         do {
@@ -221,7 +222,7 @@ class DriveTransport(
                 .addQueryParameter("fields", "nextPageToken,files($fileFields)")
                 .apply { page?.let { addQueryParameter("pageToken", it) } }
                 .build()
-            val body = call(Request.Builder().url(url).get()).jsonObject
+            val body = retrying { call(Request.Builder().url(url).get()) }.jsonObject
             body["files"]?.jsonArray?.forEach { files.add(it.jsonObject) }
             page = body["nextPageToken"]?.jsonPrimitive?.content
         } while (page != null)
@@ -240,7 +241,7 @@ class DriveTransport(
                 .addQueryParameter("pageSize", "1000")
                 .addQueryParameter("fields", "nextPageToken,newStartPageToken,changes(fileId,removed,file($fileFields))")
                 .build()
-            val body = try { call(Request.Builder().url(url).get()).jsonObject }
+            val body = try { retrying { call(Request.Builder().url(url).get()) }.jsonObject }
                        catch (e: NotFound) { throw SyncTransportError.TokenExpired }
             for (c in body["changes"]?.jsonArray.orEmpty()) {
                 val o = c.jsonObject
@@ -274,19 +275,70 @@ class DriveTransport(
     }
 
     /** Turns file metadata into records, downloading item payloads (small)
-     *  and leaving blobs' bytes on the server. */
+     *  and leaving blobs' bytes on the server.
+     *
+     *  A first pull is one request PER ITEM — thousands for a learner who
+     *  has used the app for weeks — and a failure still aborts the whole
+     *  pull, so the change token never moves past an item that was not
+     *  applied. Two things keep that from meaning "never": each download is
+     *  retried ([retrying]), and every payload that DID arrive is parked in
+     *  [pullCache] under its id and modified time, so the next attempt only
+     *  fetches what is still missing. Reported 2026-11-15: a reinstall with
+     *  ~4,000 records on Drive failed its first pull twice ("offline" after
+     *  1 and 6.5 min), each attempt starting again from zero. */
     private suspend fun materialize(files: List<JsonObject>): List<SyncRecord> = coroutineScope {
-        files.mapNotNull { f -> recordShell(f)?.let { f to it } }.map { (f, shell) ->
+        val records = files.mapNotNull { f -> recordShell(f)?.let { f to it } }.map { (f, shell) ->
             async {
                 if (shell.kind.isBlob || shell.isTombstone) shell
-                // A file deleted while the listing ran is simply gone; any
-                // other failure aborts the pull, so the change token never
-                // moves past an item that was not applied.
+                // A file deleted while the listing ran is simply gone.
                 else gate.withPermit {
-                    try { shell.copy(payload = String(download(id(f)))) } catch (_: NotFound) { null }
+                    try { shell.copy(payload = String(payload(f))) } catch (_: NotFound) { null }
                 }
             }
         }.awaitAll().filterNotNull()
+        // Everything arrived: the records now go to the engine, and a file
+        // edited later gets a new modified time, so nothing here is reused.
+        pullCache.deleteRecursively()
+        records
+    }
+
+    /** Payloads fetched by a pull that has not finished yet. A cache, not
+     *  data: losing it costs only the downloads again. */
+    private val pullCache get() = File(context.cacheDir, "sync-pull")
+
+    private suspend fun payload(f: JsonObject): ByteArray {
+        val stamp = f["modifiedTime"]?.jsonPrimitive?.content.orEmpty().filter { it.isLetterOrDigit() }
+        val parked = File(pullCache, "${id(f)}-$stamp")
+        if (parked.isFile) runCatching { return parked.readBytes() }
+        val bytes = retrying { download(id(f)) }
+        runCatching {
+            pullCache.mkdirs()
+            val tmp = File(pullCache, parked.name + ".part")
+            tmp.writeBytes(bytes)
+            tmp.renameTo(parked)
+        }
+        return bytes
+    }
+
+    /** One more go at a request that failed on the NETWORK (an IOException,
+     *  a 5xx, a token that couldn't be fetched) or was rate limited: out of
+     *  thousands, one of those is ordinary, and it is no reason to throw the
+     *  rest away. Anything else — 404, no permission, a full Drive — is an
+     *  answer and goes straight up. */
+    private suspend fun <T> retrying(block: suspend () -> T): T {
+        var wait = 1_000L
+        repeat(RETRIES) {
+            try {
+                return block()
+            } catch (e: SyncTransportError.Network) {
+                // fall through to the wait
+            } catch (e: SyncTransportError.RateLimited) {
+                wait = maxOf(wait, minOf(e.seconds, 30L) * 1000)
+            }
+            delay(wait)
+            wait = minOf(wait * 2, 16_000L)
+        }
+        return block()
     }
 
     private fun recordShell(f: JsonObject): SyncRecord? {
@@ -381,5 +433,7 @@ class DriveTransport(
         private val OCTET = "application/octet-stream".toMediaType()
         /** Drive's simple/multipart upload is for files up to 5 MB. */
         private const val RESUMABLE_FROM = 4L * 1024 * 1024
+        /** Extra attempts per request: 1 + 2 + 4 + 8 s of waiting at most. */
+        private const val RETRIES = 4
     }
 }
