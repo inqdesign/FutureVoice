@@ -1669,7 +1669,7 @@ enum DebugCapture {
             // the learner's first answer on.
             once("first-call") { seedUnmetPersona(into: appState) }
             return AnyView(ConversationView().environmentObject(appState))
-        case "call-seed-fix", "call-seed-coach":
+        case "call-seed-fix", "call-seed-coach", "call-seed-pair":
             // The real call screen (header island, chips, lesson strip, pill)
             // with a staged talk on it; `ConversationView` reads the seed on
             // appear and never opens a line. The tutor's lesson and the

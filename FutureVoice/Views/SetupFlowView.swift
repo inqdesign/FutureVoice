@@ -122,6 +122,9 @@ struct SetupFlowView: View {
             // button calls, never a shortcut around it.
             if let seeded = UserDefaults.standard.string(forKey: "setupNative") {
                 pickNative(LanguageCatalog.normalizedNative(seeded))
+                // `-setupStep <n>` opens on a later step (1 = the language
+                // to learn), for the same captures.
+                step = UserDefaults.standard.integer(forKey: "setupStep")
                 return
             }
             #endif

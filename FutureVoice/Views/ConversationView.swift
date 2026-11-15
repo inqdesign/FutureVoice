@@ -6861,6 +6861,27 @@ struct ConversationView: View {
             TalkGoalItem(key: "come up", text: "come up", isWord: false),
             TalkGoalItem(key: "in one go", text: "in one go", isWord: false),
         ]
+        if seed == "pair" {
+            // Two whole lines: the learner's slip, and the fluent self saying it right.
+            goalItems = []
+            turns = [
+                Turn(id: UUID(), role: .user, audioURL: nil,
+                     transcript: "Yesterday I go to the office early, so I leave at four.",
+                     durationMs: 4000, timestamp: now),
+                Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
+                     transcript: "Oh, so you went in early yesterday and left at four? Nice!",
+                     durationMs: 3000, timestamp: now),
+                Turn(id: UUID(), role: .user, audioURL: nil,
+                     transcript: "Yes. I am live in Seoul since three years.",
+                     durationMs: 3000, timestamp: now),
+                Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
+                     transcript: "Right, you've been living in Seoul for three years now.",
+                     durationMs: 3000, timestamp: now),
+            ]
+            phoneCallActive = false
+            isPausedForIdle = true
+            return
+        }
         if seed == "fix" {
             tutorThisCall = true
             tutorWasOn = true
