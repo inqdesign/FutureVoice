@@ -119,7 +119,11 @@ enum SpeechLibrary {
         case "de": suffix = "000000000004"
         case "es": suffix = "000000000009"
         case "fr": suffix = "0000000f0001"
-        case "zh": suffix = "00000000000b"
+        // Was …00000000000b (2026-11-13), which is the English "Nervous?"
+        // challenge's id, so the Chinese sample could never be a challenge.
+        // Moved 2026-11-15 with its server row; sample takes from those two
+        // days stay on disk under the old id.
+        case "zh": suffix = "0000000b0001"
         default:   suffix = "000000000001"
         }
         return UUID(uuidString: "5BEEC000-0000-4000-8000-\(suffix)")!
