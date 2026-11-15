@@ -1738,6 +1738,14 @@ final class AppState: ObservableObject {
         StudyWidgetRefresher.refresh()   // blank the home-screen widgets too
     }
 
+    /// The language the sample was read in, for the clone: what this take
+    /// says, else what the last take said, else the target (the script's
+    /// default when the native one wasn't picked).
+    private func cloneSampleLanguage(_ scriptLanguage: String?) -> String {
+        let code = scriptLanguage ?? cloneScriptLanguage ?? targetLanguage
+        return LanguageCatalog.language(code)?.code ?? code
+    }
+
     /// Clone (or re-clone) the voice from a recorded sample WAV. Normalizes the
     /// sample loudness, uploads it to Cartesia, swaps in the new voice id, and
     /// cleans up the previous clone. Shared by first-run onboarding and the
@@ -1774,7 +1782,8 @@ final class AppState: ObservableObject {
                 // every clone used to land upstream as the same "Future Self".
                 // Never put a language in it: one clone speaks all of them.
                 name: voiceDisplayName,
-                sampleAudioURLs: [normalized]
+                sampleAudioURLs: [normalized],
+                language: cloneSampleLanguage(scriptLanguage)
             )
         } catch where error.isVoiceLimitReached && pendingDeleteVoiceId != nil {
             // The account's voice slots are full AND this user is re-recording,
@@ -1786,7 +1795,8 @@ final class AppState: ObservableObject {
             await cleanupPreviousVoiceClone()
             do {
                 newId = try await VoiceClient.shared.cloneVoice(
-                    name: voiceDisplayName, sampleAudioURLs: [normalized])
+                    name: voiceDisplayName, sampleAudioURLs: [normalized],
+                    language: cloneSampleLanguage(scriptLanguage))
             } catch {
                 reportCloneFailure(error, isFirstClone: isFirstClone, afterReclaim: true)
                 throw error

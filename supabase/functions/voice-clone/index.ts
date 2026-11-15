@@ -133,9 +133,20 @@ Deno.serve(async (req) => {
   // target: the read-aloud script is written in it.
   const clip = incoming.getAll("files").find((v): v is File => v instanceof File)
   if (!clip) return errorResponse(400, "no recording in files")
-  const { data: profile } = await billingClient().from("profiles")
-    .select("target_language").eq("id", user.id).maybeSingle()
-  const language = cartesia.lineLanguage("", (profile as { target_language?: string } | null)?.target_language)
+  // The app says what the take was read in (builds from 2026-11-15). The
+  // profile is only the fallback for older builds: a NEW account's row still
+  // holds the column default `en` at this moment (the setup is mirrored after
+  // the session exists), so every new voice was made as English whatever was
+  // read or learned.
+  const sent = ((incoming.get("language") as string | null) ?? "").trim()
+  let language: string
+  if (sent) {
+    language = cartesia.lineLanguage("", sent)
+  } else {
+    const { data: profile } = await billingClient().from("profiles")
+      .select("target_language").eq("id", user.id).maybeSingle()
+    language = cartesia.lineLanguage("", (profile as { target_language?: string } | null)?.target_language)
+  }
   const made = await cartesia.cloneVoice(clip, voiceName ?? `Future ${user.id.slice(0, 8)}`, language)
   if (!made.ok) return errorResponse(made.status >= 400 ? made.status : 502, "cartesia upstream error", made.detail)
   const json = { voice_id: made.voiceId }
