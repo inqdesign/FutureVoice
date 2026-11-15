@@ -579,6 +579,13 @@ private struct NowPlayingCaption: View {
                         VStack(alignment: .leading, spacing: 8) {
                             caption(line)
                                 .font(.title3.weight(.medium))
+                                // The highlight cuts the line into a new set of
+                                // coloured runs every word, and with no language
+                                // each run's Han characters picked their own
+                                // fallback font (PingFang SC / Hiragino /
+                                // the Korean face): the weight jumped as the
+                                // highlight moved (Chinese, 2026-11-15).
+                                .typesettingLanguage(Self.typesetting(appState.targetLanguage))
                                 .fixedSize(horizontal: false, vertical: true)
                                 .blur(radius: showCaptions || revealed == line.id ? 0 : 7)
                                 .contentShape(Rectangle())
@@ -623,6 +630,12 @@ private struct NowPlayingCaption: View {
     }
 
     private struct TranslationKey: Hashable { let line: UUID?; let on: Bool }
+
+    /// The target is a bare `zh`, which is Simplified (see "Chinese as a
+    /// TARGET language").
+    static func typesetting(_ code: String) -> Locale.Language {
+        Locale.Language(identifier: code == "zh" ? "zh-Hans" : code)
+    }
 
     private func loadTranslation() async {
         translation = nil

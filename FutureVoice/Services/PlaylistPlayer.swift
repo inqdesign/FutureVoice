@@ -288,6 +288,54 @@ final class PlaylistPlayer: ObservableObject {
 
     // MARK: - Playback
 
+    /// The publisher's silence between one host's sentences
+    /// (`news-show-probe.py` SENTENCE_GAP).
+    static let podcastSentenceGapMs = 420
+
+    /// A podcast line has no measured timings, and its file is the line's
+    /// sentences with a fixed 0.42 s of silence between them. Spreading the
+    /// whole file over the characters (the plain estimate) put that silence
+    /// inside the words, so the highlight ran ahead of the voice from the
+    /// second sentence on (reported on Chinese, 2026-11-15). Each sentence
+    /// gets its own share, and the gaps are left out.
+    static func podcastTimings(for text: String, durationMs: Int) -> [WordTiming] {
+        let words = WordSplitter.timingWords(text)
+        guard !words.isEmpty, durationMs > 0 else { return [] }
+        let enders: Set<Character> = ["。", "！", "？", ".", "!", "?", "…"]
+        let closers: Set<Character> = ["”", "\"", "'", "’", "」", "』", "）", ")"]
+        var sentences: [[String]] = [[]]
+        for (i, w) in words.enumerated() {
+            sentences[sentences.count - 1].append(w)
+            let core = w.reversed().drop(while: { closers.contains($0) })
+            if let last = core.first, enders.contains(last), i < words.count - 1 {
+                sentences.append([])
+            }
+        }
+        func weight(_ w: String) -> Int {
+            WordSplitter.spaced ? max(w.count, 1) : max(LocalAlignment.normalized(w).count, 1)
+        }
+        let gaps = podcastSentenceGapMs * (sentences.count - 1)
+        let speech = durationMs - gaps
+        guard speech > durationMs / 3 else {
+            return ShadowDrillView.estimatedTimings(for: text, durationMs: durationMs)
+        }
+        let total = Double(sentences.reduce(0) { $0 + $1.reduce(0) { $0 + weight($1) } })
+        let msPerChar = Double(speech) / total
+        var out: [WordTiming] = []
+        var cursor = 0.0
+        for (s, sentence) in sentences.enumerated() {
+            if s > 0 { cursor += Double(podcastSentenceGapMs) }
+            for w in sentence {
+                let start = cursor
+                cursor += msPerChar * Double(weight(w))
+                out.append(WordTiming(word: w, startMs: Int(start),
+                                      endMs: max(Int(start) + 1, Int(cursor) - 20),
+                                      isMeasured: false))
+            }
+        }
+        return out
+    }
+
     private func startCurrent(from offset: TimeInterval = 0) {
         generation += 1
         let mine = generation
@@ -309,10 +357,11 @@ final class PlaylistPlayer: ObservableObject {
             }
             if offset > 0 { audio.seek(to: offset) }
             let stored = (line.storedTimings ?? []).filter { $0.endMs > $0.startMs }
-            timings = stored.isEmpty
-                ? ShadowDrillView.estimatedTimings(for: line.text,
-                                                   durationMs: Int(audio.duration * 1000))
-                : stored
+            let durationMs = Int(audio.duration * 1000)
+            timings = !stored.isEmpty ? stored
+                : line.translations != nil
+                    ? Self.podcastTimings(for: line.text, durationMs: durationMs)
+                    : ShadowDrillView.estimatedTimings(for: line.text, durationMs: durationMs)
             isPlaying = true
             claimLockScreen()
             publishNowPlaying()
