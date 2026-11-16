@@ -74,6 +74,17 @@ class DriveTransport(
     @Volatile private var token: String? = null
     private val zoneIds = HashMap<String, String>()
 
+    /**
+     * What THIS device last wrote to each file: Drive file id → the md5 Drive
+     * reported for it. The change feed lists this device's own writes too,
+     * and every item in it used to be downloaded again — a learner's call
+     * pushed ~150 word records and the next pass pulled all ~150 back
+     * (2026-11-16). A file whose md5 still matches holds exactly what this
+     * device pushed and already has, so the pull leaves it out. Memory
+     * only: after a restart an echo is downloaded once, as before.
+     */
+    private val wrote = java.util.concurrent.ConcurrentHashMap<String, String>()
+
     /** Downloads of audio follow this unless the learner tapped for a file. */
     @Volatile var allowsMeteredForBlobs: Boolean = false
 
@@ -176,10 +187,10 @@ class DriveTransport(
             .addPart(meta.toString().toRequestBody(jsonType))
             .addPart(media)
             .build()
-        val req = if (id == null) Request.Builder().url("$upload/files?uploadType=multipart&fields=id").post(body)
-                  else Request.Builder().url("$upload/files/$id?uploadType=multipart&fields=id").patch(body)
+        val req = if (id == null) Request.Builder().url("$upload/files?uploadType=multipart&fields=id,md5Checksum").post(body)
+                  else Request.Builder().url("$upload/files/$id?uploadType=multipart&fields=id,md5Checksum").patch(body)
         return try {
-            call(req).jsonObject["id"]!!.jsonPrimitive.content
+            remember(call(req).jsonObject)
         } catch (e: NotFound) {
             // The file this device remembered is gone (deleted elsewhere):
             // write it fresh rather than failing the record forever.
@@ -189,18 +200,35 @@ class DriveTransport(
     }
 
     private suspend fun resumable(meta: JsonObject, media: RequestBody, id: String?): String {
-        val start = if (id == null) Request.Builder().url("$upload/files?uploadType=resumable&fields=id")
+        val start = if (id == null) Request.Builder().url("$upload/files?uploadType=resumable&fields=id,md5Checksum")
                         .post(meta.toString().toRequestBody(jsonType))
-                    else Request.Builder().url("$upload/files/$id?uploadType=resumable&fields=id")
+                    else Request.Builder().url("$upload/files/$id?uploadType=resumable&fields=id,md5Checksum")
                         .patch(meta.toString().toRequestBody(jsonType))
         val location = callRaw(start).use { it.header("Location") }
             ?: throw SyncTransportError.Other("no upload location")
-        return call(Request.Builder().url(location).put(media)).jsonObject["id"]!!.jsonPrimitive.content
+        return remember(call(Request.Builder().url(location).put(media)).jsonObject)
+    }
+
+    /** A save's answer: its id, with the md5 noted for [isOwnEcho]. */
+    private fun remember(file: JsonObject): String {
+        val id = id(file)
+        val md5 = file["md5Checksum"]?.jsonPrimitive?.content
+        if (md5 != null) {
+            if (wrote.size >= MAX_REMEMBERED) wrote.clear()
+            wrote[id] = md5
+        } else wrote.remove(id)
+        return id
+    }
+
+    /** The file still holds exactly what this device last wrote to it. */
+    private fun isOwnEcho(f: JsonObject): Boolean {
+        val md5 = f["md5Checksum"]?.jsonPrimitive?.content ?: return false
+        return wrote[id(f)] == md5
     }
 
     // ── Changes ─────────────────────────────────────────────────────────
 
-    private val fileFields = "id,name,description,appProperties,parents,trashed,size,modifiedTime"
+    private val fileFields = "id,name,description,appProperties,parents,trashed,size,modifiedTime,md5Checksum"
 
     override suspend fun changes(zone: String, token: String?): SyncChangeBatch {
         val parent = zoneId(zone)
@@ -287,7 +315,7 @@ class DriveTransport(
      *  ~4,000 records on Drive failed its first pull twice ("offline" after
      *  1 and 6.5 min), each attempt starting again from zero. */
     private suspend fun materialize(files: List<JsonObject>): List<SyncRecord> = coroutineScope {
-        val records = files.mapNotNull { f -> recordShell(f)?.let { f to it } }.map { (f, shell) ->
+        val records = files.filterNot(::isOwnEcho).mapNotNull { f -> recordShell(f)?.let { f to it } }.map { (f, shell) ->
             async {
                 if (shell.kind.isBlob || shell.isTombstone) shell
                 // A file deleted while the listing ran is simply gone.
@@ -433,6 +461,8 @@ class DriveTransport(
         private val OCTET = "application/octet-stream".toMediaType()
         /** Drive's simple/multipart upload is for files up to 5 MB. */
         private const val RESUMABLE_FROM = 4L * 1024 * 1024
+        /** Files remembered by [remember]; past this the memo starts over. */
+        private const val MAX_REMEMBERED = 20_000
         /** Extra attempts per request: 1 + 2 + 4 + 8 s of waiting at most. */
         private const val RETRIES = 4
     }
