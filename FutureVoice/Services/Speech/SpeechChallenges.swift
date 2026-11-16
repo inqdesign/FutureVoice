@@ -172,6 +172,19 @@ final class SpeechChallenges: ObservableObject {
     var boardSeasons: [Int] { seasons.filter { $0.is_open || $0.ended }.map(\.season).sorted(by: >) }
     func seasonEnded(_ season: Int) -> Bool { seasons.first { $0.season == season }?.ended == true }
 
+    /// My best score on a challenge as its card shows it: the board's, or a
+    /// take on this phone that didn't reach the board. On a Season 2+
+    /// challenge only a take scored the reading way counts (2026-11-16,
+    /// founder: a Season 1 take's score on a Season 2 card read as if it
+    /// were this season's) — the same rule `enter` uses for the board.
+    func myBest(for script: SpeechScript) -> Int? {
+        let seasonTwo = (season(of: script.id) ?? 1) >= 2
+        let local = SpeechStore.shared.takes(for: script.id)
+            .filter { !seasonTwo || ((($0.metrics.scoring ?? 0) >= SpeechScoreV4.version) && $0.metrics.reading != nil) }
+            .map(\.metrics.overall).max()
+        return [standings[script.id]?.myBest, local].compactMap { $0 }.max()
+    }
+
     func loadCache(language: String) {
         guard loadedLanguage != language else { return }
         loadedLanguage = language

@@ -556,7 +556,7 @@ struct SpeechArenaHome: View {
     @Namespace private var zoom
 
     private func best(_ script: SpeechScript) -> Int? {
-        [challenges.standings[script.id]?.myBest, store.best(for: script.id)].compactMap { $0 }.max()
+        challenges.myBest(for: script)
     }
 
     private func hasTried(_ script: SpeechScript) -> Bool {

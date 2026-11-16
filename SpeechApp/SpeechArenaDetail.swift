@@ -241,7 +241,7 @@ struct SpeechArenaDetail: View {
 
     private var standing: SpeechChallenges.Standing? { challenges.standings[script.id] }
     private var isPast: Bool { standing?.retiredAt != nil }
-    private var best: Int? { [standing?.myBest, store.best(for: script.id)].compactMap { $0 }.max() }
+    private var best: Int? { SpeechChallenges.shared.myBest(for: script) }
     private var takes: Int { store.takes(for: script.id).count }
 
     var body: some View {

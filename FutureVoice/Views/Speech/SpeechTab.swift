@@ -129,8 +129,7 @@ struct SpeechTab: View {
                         openChallenge = script
                     } label: {
                         ArenaTile(script: script, category: challenges.standings[script.id]?.category,
-                                  best: [challenges.standings[script.id]?.myBest, store.best(for: script.id)]
-                                      .compactMap { $0 }.max(),
+                                  best: challenges.myBest(for: script),
                                   tries: challenges.standings[script.id]?.attempts ?? 0,
                                   ended: challenges.isPast(script.id))
                             .zoomSource("tile-\(script.id)", in: zoom, radius: 30)
@@ -188,7 +187,7 @@ struct SpeechTab: View {
                 .environmentObject(appState)
         } label: {
             SpeechChallengeRow(script: script, standing: challenges.standings[script.id],
-                               localBest: store.best(for: script.id))
+                               localBest: challenges.myBest(for: script))
                 .frame(maxHeight: .infinity, alignment: .top)
         }
         .buttonStyle(.plain)
