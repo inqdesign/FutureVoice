@@ -380,10 +380,10 @@ struct SpeechTab: View {
             .navigationTitle(fixedPage == .challenges
                              ? Text(groups.selected?.name ?? explain("Everyone"))
                              : Text(title))
-            .toolbarTitleMenu {
-                if fixedPage == .challenges {
-                    SpeechGroupMenuItems(creating: $creatingGroup, joining: $joiningGroup, leaving: $leavingGroup)
-                }
+            // Only Challenges has a title menu: with the small title on every
+            // tab, an empty one drew an arrow beside "My scripts".
+            .titleMenu(fixedPage == .challenges) {
+                SpeechGroupMenuItems(creating: $creatingGroup, joining: $joiningGroup, leaving: $leavingGroup)
             }
             #else
             .navigationTitle(title)
@@ -406,10 +406,10 @@ struct SpeechTab: View {
             // Same header as Watch and Progress: the title inline-large on
             // the toolbar row, the tab's one action at its trailing edge.
             #if SPEECH_APP
-            // Challenges: the small title, because iOS opens a title menu
-            // only from it. With the large one, switching groups needed a
-            // scroll first (2026-11-13, founder).
-            .toolbarTitleDisplayMode(fixedPage == .challenges ? .inline : .inlineLarge)
+            // The small title on every tab (2026-11-16, founder: My scripts
+            // and Me read better like Challenges and Ranking). Challenges
+            // needs it anyway: iOS opens a title menu only from the small one.
+            .toolbarTitleDisplayMode(.inline)
             #else
             .toolbarTitleDisplayMode(.inlineLarge)
             #endif
@@ -1567,3 +1567,12 @@ struct SpeechPlusSheet: View {
         .onAppear { Analytics.capture("speech_plus_sheet", ["light": isLight]) }
     }
 }
+
+#if SPEECH_APP
+private extension View {
+    /// The system's title menu, on one page only (fixed per page).
+    @ViewBuilder func titleMenu<Items: View>(_ on: Bool, @ViewBuilder _ items: () -> Items) -> some View {
+        if on { toolbarTitleMenu(content: items) } else { self }
+    }
+}
+#endif

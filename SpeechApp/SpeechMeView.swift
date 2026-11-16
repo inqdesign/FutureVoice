@@ -107,7 +107,8 @@ struct SpeechMeView: View {
                 }
             }
             .navigationTitle("Me")
-            .toolbarTitleDisplayMode(.inlineLarge)
+            // The small title, like every tab (2026-11-16, founder).
+            .toolbarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showingSettings = true } label: {
