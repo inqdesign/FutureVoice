@@ -1,0 +1,2 @@
+Fixed
+• Your fluent self's answers after the first one now play out loud again.

@@ -1,0 +1,2 @@
+Corrections
+• Pendant un appel, les réponses de ton moi fluide après la première s’entendent de nouveau.

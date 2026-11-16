@@ -1,0 +1,2 @@
+Correcciones
+• En las llamadas, las respuestas de tu yo fluido vuelven a sonar después de la primera.
