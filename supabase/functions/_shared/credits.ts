@@ -39,6 +39,7 @@ export type ChargeableAction =
   | "gemini_transcribe" // verbatim transcript of one spoken turn (flash-lite)
   | "pronunciation"     // Azure phoneme assessment of one take — free, daily-capped
   | "speech_reference"  // native reference reading of a script (TTS + word timing) — free, cached, daily-capped
+  | "speech_cover"      // a cover picture for a learner's own speech script (gpt-image-2) — free, daily-capped
 
 /**
  * Returns the SECONDS-of-talk cost for a given action + parameters. Only the

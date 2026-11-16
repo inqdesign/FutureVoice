@@ -59,6 +59,9 @@ final class SpeechStore: ObservableObject {
             .flatMap { try? decoder.decode([SpeechTake].self, from: $0) } ?? [])
             .map(\.withCurrentPrices)
             .sorted { $0.createdAt > $1.createdAt }
+        #if SPEECH_APP
+        ScriptCover.resume(scripts)
+        #endif
     }
 
     func reloadIfLanguageChanged() {
@@ -93,12 +96,19 @@ final class SpeechStore: ObservableObject {
         let builtIn = scripts.filter(\.isBuiltIn)
         scripts = builtIn + ([script] + scripts.filter { !$0.isBuiltIn })
         writeScripts()
+        #if SPEECH_APP
+        // Drawn once, the first time it is kept (2026-11-16, founder).
+        ScriptCover.ensure(script)
+        #endif
     }
 
     func deleteScript(id: UUID) {
         for take in takes(for: id) { deleteTake(id: take.id) }
         scripts.removeAll { $0.id == id && !$0.isBuiltIn }
         writeScripts()
+        #if SPEECH_APP
+        ScriptCover.remove(id: id)
+        #endif
     }
 
     func save(_ take: SpeechTake) {

@@ -886,6 +886,10 @@ enum ChallengeArt {
     /// thread; a picture not checked yet this launch is fetched behind it.
     static func image(for id: UUID) -> UIImage? {
         _ = arrivals.count
+        #if SPEECH_APP
+        // A learner's own script wears its own cover (`ScriptCover`).
+        if let cover = ScriptCover.image(for: id) { return cover }
+        #endif
         let full = id.uuidString.lowercased()
         let key = String(id.uuidString.suffix(4))
         lock.lock()
@@ -962,6 +966,9 @@ enum ChallengeArt {
     /// pictures downloaded on earlier launches, so they draw at once.
     static func prepare() async {
         await Task.detached(priority: .userInitiated) {
+            #if SPEECH_APP
+            ScriptCover.prepare()
+            #endif
             let urls = Bundle.main.urls(forResourcesWithExtension: "png", subdirectory: nil) ?? []
             for url in urls {
                 let name = url.deletingPathExtension().lastPathComponent
