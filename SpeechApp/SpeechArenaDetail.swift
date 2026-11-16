@@ -197,7 +197,7 @@ private struct CardLeaderFace: View {
                     .font(.system(size: size * 0.5, weight: .semibold, design: .rounded))
                     .foregroundStyle(ChallengeArt.inkText.opacity(0.6))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color(red: 0.90, green: 0.87, blue: 0.80))
+                    .background(ChallengeArt.faceFill)
             }
         }
         .frame(width: size, height: size)
@@ -273,8 +273,9 @@ struct SpeechArenaDetail: View {
         .noBarShade(.top)
         .background(Look.page.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
-        // Dark clock and battery over the cream picture.
-        .toolbarColorScheme(.light, for: .navigationBar)
+        // Clock and battery against the picture's ground: light over the
+        // speech app's graphite, dark over nawana's cream.
+        .toolbarColorScheme(SpeechAppFlags.isSpeechApp ? .dark : .light, for: .navigationBar)
         // The page draws its own back and ⋯ (`pageButtons`): the system's
         // glass buttons are drawn apart from the page, and while it zooms
         // open or is dragged shut they showed as grey blocks on the picture.

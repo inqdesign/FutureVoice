@@ -1,6 +1,7 @@
 import SwiftUI
 import SceneKit
 import UIKit
+import CryptoKit
 
 // The speech app's Challenges tab as a game, not a lesson (2026-11-12,
 // founder: "immersive, a bit of gamification, fun from first principles,
@@ -842,18 +843,28 @@ enum ChallengeArt {
     /// In nawana's light mode they are white, like every other card there
     /// (2026-11-13, founder); the pictures are transparent, so nothing else
     /// changes. Dark mode and the speech app keep the cream.
+    /// The speech app's cards are graphite on its black stage (2026-11-16,
+    /// founder picked #1C1C1E over a warm charcoal and a near-black), with
+    /// light words; its pictures are cleaned for a dark ground
+    /// (`ChallengeArtDefringe`). nawana keeps cream/white cards.
     #if SPEECH_APP
-    static let paper = cream
+    static let paper = Color(red: 28 / 255, green: 28 / 255, blue: 30 / 255)
+    static let inkText = Color(red: 0.96, green: 0.95, blue: 0.93)
+    /// The button's fill and its label, the opposite of the card.
+    static let buttonFill = Color(red: 0.96, green: 0.95, blue: 0.93)
+    static let buttonText = Color(red: 0.11, green: 0.11, blue: 0.12)
+    /// A leader's initial sits on this when they have no photo.
+    static let faceFill = Color(white: 0.27)
     #else
     static let paper = Color(uiColor: UIColor { traits in
         traits.userInterfaceStyle == .dark ? UIColor(cream) : .white
     })
-    #endif
-    static let cream = Color(red: 251 / 255, green: 248 / 255, blue: 240 / 255)
     static let inkText = Color(red: 0.13, green: 0.12, blue: 0.11)
-    /// The button's fill and its label, the opposite of the card.
     static let buttonFill = Color(red: 0.13, green: 0.12, blue: 0.11)
     static let buttonText = Color.white
+    static let faceFill = Color(red: 0.90, green: 0.87, blue: 0.80)
+    #endif
+    static let cream = Color(red: 251 / 255, green: 248 / 255, blue: 240 / 255)
 
     static let remoteBase = URL(string: "https://pub-83c97a52f2e549718b126bf60f710f1a.r2.dev/speech/pictures")!
 
@@ -890,8 +901,27 @@ enum ChallengeArt {
 
     private static func load(_ key: String) -> UIImage? {
         guard let url = Bundle.main.url(forResource: "challenge-\(key)", withExtension: "png"),
-              let raw = UIImage(contentsOfFile: url.path) else { return nil }
+              let data = try? Data(contentsOf: url) else { return nil }
+        return forCard(data)
+    }
+
+    /// A picture ready for the card. In the speech app the cut-out is cleaned
+    /// for the dark card, once per drawing: every language's copy of a
+    /// challenge is the same file, so the result is kept in Caches under a
+    /// hash of the bytes and the next launch reads it straight back.
+    private static func forCard(_ data: Data) -> UIImage? {
+        #if SPEECH_APP
+        let hash = SHA256.hash(data: data).prefix(8).map { String(format: "%02x", $0) }.joined()
+        let file = cacheDir.appendingPathComponent("clean-v1-\(hash).png")
+        if let done = UIImage(contentsOfFile: file.path) { return done.preparingForDisplay() ?? done }
+        guard let raw = UIImage(data: data) else { return nil }
+        let clean = ChallengeArtDefringe.clean(raw) ?? raw
+        if let png = clean.pngData() { try? png.write(to: file, options: .atomic) }
+        return clean.preparingForDisplay() ?? clean
+        #else
+        guard let raw = UIImage(data: data) else { return nil }
         return raw.preparingForDisplay() ?? raw
+        #endif
     }
 
     private static var cacheDir: URL {
@@ -914,12 +944,11 @@ enum ChallengeArt {
         }
         guard let (data, response) = try? await URLSession.shared.data(for: req),
               let http = response as? HTTPURLResponse, http.statusCode == 200,
-              let raw = UIImage(data: data) else { return }
+              let image = forCard(data) else { return }
         try? data.write(to: file, options: .atomic)
         if let tag = http.value(forHTTPHeaderField: "ETag") {
             try? tag.write(to: tagFile, atomically: true, encoding: .utf8)
         }
-        let image = raw.preparingForDisplay() ?? raw
         lock.lock(); remote[full] = image; lock.unlock()
         await MainActor.run { arrivals.count += 1 }
     }
@@ -945,10 +974,11 @@ enum ChallengeArt {
             let cached = (try? FileManager.default.contentsOfDirectory(at: cacheDir, includingPropertiesForKeys: nil)) ?? []
             for url in cached where url.pathExtension == "png" {
                 let full = url.deletingPathExtension().lastPathComponent
+                // The cleaned copies live here too; they are not challenges.
+                if full.hasPrefix("clean-") { continue }
                 lock.lock(); let have = remote[full] != nil; lock.unlock()
                 if have { continue }
-                guard let raw = UIImage(contentsOfFile: url.path) else { continue }
-                let image = raw.preparingForDisplay() ?? raw
+                guard let data = try? Data(contentsOf: url), let image = forCard(data) else { continue }
                 lock.lock(); remote[full] = image; lock.unlock()
             }
         }.value
@@ -1031,7 +1061,7 @@ struct ArenaTile: View {
                     Text(verbatim: "\(best)")
                         .font(.caption.weight(.semibold).monospacedDigit())
                         .minimumScaleFactor(0.7)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(ChallengeArt.paper)
                         .frame(width: 30, height: 30)
                         .background(Circle().fill(ChallengeArt.inkText.opacity(0.6)))
                         .frame(width: 34, height: 34)
