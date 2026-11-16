@@ -996,8 +996,9 @@ struct ArenaTicket: View {
 
     private var zoomID: String { "ticket-\(script.id)" }
 
-    private var goal: Text {
-        guard let best else { return Text("Gold at 90") }
+    /// Nothing before a first take (2026-11-16, founder: "Gold at 90" cut).
+    private var goal: Text? {
+        guard let best else { return nil }
         if best >= 90 { return Text("Gold won · best \(best)") }
         return Text("Best \(best) · \(90 - best) to gold")
     }
@@ -1020,7 +1021,9 @@ struct ArenaTicket: View {
                 }
                 .frame(height: 40)
                 ChallengeCardFace(script: script, category: category, figureHeight: 240, titleSize: 30, titleLines: 3)
-                goal.font(.subheadline).foregroundStyle(ChallengeArt.inkText.opacity(0.65))
+                if let goal {
+                    goal.font(.subheadline).foregroundStyle(ChallengeArt.inkText.opacity(0.65))
+                }
                 // No button: the whole card opens the page, and the page has
                 // its own (2026-11-13, founder: two "Take it on"s in a row).
             }

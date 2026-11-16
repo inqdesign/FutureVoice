@@ -22,13 +22,15 @@ struct ArenaMedalCalendar: View {
         return c
     }
 
-    /// From a year back (or the first challenge, if older) to the end of this
-    /// week, oldest first.
+    /// From a year back (or the first challenge, if older) to TODAY,
+    /// oldest first. Today is always the last slot, so it sits at the right
+    /// edge every day (2026-11-16, founder: it moved through the week).
     private var days: [Date] {
-        let end = calendar.dateInterval(of: .weekOfYear, for: Date())!.end
-        let earliest = byDay.keys.min() ?? Date()
-        let yearBack = calendar.date(byAdding: .day, value: -364, to: Date())!
-        let first = calendar.dateInterval(of: .weekOfYear, for: min(earliest, yearBack))!.start
+        let today = calendar.startOfDay(for: Date())
+        let end = calendar.date(byAdding: .day, value: 1, to: today)!
+        let earliest = byDay.keys.min() ?? today
+        let yearBack = calendar.date(byAdding: .day, value: -364, to: today)!
+        let first = calendar.startOfDay(for: min(earliest, yearBack))
         var out: [Date] = []
         var day = first
         while day < end {

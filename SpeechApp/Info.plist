@@ -48,9 +48,9 @@
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
-		<string>LaunchBackground</string>
+		<string>SpeechLaunchBackground</string>
 		<key>UIImageName</key>
-		<string>LaunchLogo</string>
+		<string>SpeechSplashMark</string>
 	</dict>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>

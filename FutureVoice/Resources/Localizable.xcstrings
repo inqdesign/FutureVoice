@@ -199286,6 +199286,76 @@
           }
         }
       }
+    },
+    "Your turn." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이제 내 차례."
+          }
+        }
+      }
+    },
+    "Interviews and exams" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "면접과 시험"
+          }
+        }
+      }
+    },
+    "Bring the script for the talk you have coming up." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "앞둔 발표, 내 원고로 연습해요."
+          }
+        }
+      }
+    },
+    "Presentations at work" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "회사 발표"
+          }
+        }
+      }
+    },
+    "Pitches and demos" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "피칭과 데모"
+          }
+        }
+      }
+    },
+    "Conference talks" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "컨퍼런스 발표"
+          }
+        }
+      }
+    },
+    "A prompter that follows your voice. A score for every take." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목소리를 따라오는 프롬프터, 테이크마다 매기는 점수."
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

@@ -63,7 +63,7 @@ struct SpeechRootView: View {
         } else if !auth.didResolveInitialSession {
             // Under the mark until the stored sign-in is read: before this, a
             // signed-in launch showed the welcome page on its way to the tabs.
-            Color("LaunchBackground").ignoresSafeArea()
+            Color("SpeechLaunchBackground").ignoresSafeArea()
         } else if !auth.isSignedIn {
             SpeechWelcomeView()
         } else {
@@ -73,8 +73,8 @@ struct SpeechRootView: View {
 
     private var launchMark: some View {
         ZStack {
-            Color("LaunchBackground")
-            Image("LaunchLogo")
+            Color("SpeechLaunchBackground")
+            Image("SpeechSplashMark")
         }
         .ignoresSafeArea()
     }

@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>speech app · teaser (in-app)</title>
+<!-- IN-APP CUT (2026-11-16, founder): the speech app's welcome screen. Each person carries their challenge's
+     category; no mic, no "Your turn"/"Coming soon": the crowd lands and STAYS, the line fades, and the app's
+     native page takes over on that exact frame. Record like teaser.html, then trim 0-3 s (the mic) in ffmpeg. -->
+<!-- THE SPEECH APP TEASER (2026-11-14). 9:16, ~25 s. The sound is the challenges' own fluent readings (TTS, R2), each cut off
+     mid-word, then all at once; build_timeline.py makes media/track.wav and timeline.js. The founder approved the
+     storyboard (storyboard.html). Every move is a function of one clock, render(t). Recorded frame by frame:
+       /opt/homebrew/opt/node@22/bin/node scripts/marketing/step-record.mjs \
+         "marketing/content/2026-11-14-speech-teaser/teaser.html?manual" --size 1080x1920 --seconds <TL.total> --fps 30 \
+         --out marketing/content/2026-11-14-speech-teaser/_silent.mp4
+       ffmpeg -i _silent.mp4 -i media/track.wav -map 0:v -map 1:a -c:v copy -c:a aac -b:a 192k -shortest teaser.mp4
+     ?t=N draws one still. Look = the speech app's: black, system serif (New York), Dear RoRo's crayon cut-outs, the
+     blue mic. No pixel font. Every line is the real opening of a live challenge, in its own reading. -->
+<style>
+*{box-sizing:border-box;margin:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#000}
+body{position:relative;color:#F2EEE6;font-family:ui-serif,"New York",Georgia,serif;-webkit-font-smoothing:antialiased}
+.layer{position:absolute;inset:0}
+.grain{position:absolute;inset:-120px;z-index:20;pointer-events:none;opacity:.17;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .6 0 0 0 0 .6 0 0 0 0 .6 2.4 0 0 0 -.95'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23g)'/%3E%3C/svg%3E")}
+#cream{background:#F2ECE2;opacity:0}
+#mic{position:absolute;left:240px;top:560px;width:600px;height:600px;overflow:visible;z-index:5}
+#mic path{fill:none;stroke:#345BBA;stroke-width:9;stroke-linecap:round;stroke-linejoin:round}
+.scene{position:absolute;inset:0;opacity:0}
+.scene img{position:absolute;left:50%;bottom:150px;translate:-50% 0;height:1150px}
+.cat{position:absolute;left:90px;top:112px;font:600 40px -apple-system,"SF Pro Text",sans-serif;letter-spacing:.18em;text-transform:uppercase;color:#6F93F2}
+.line{position:absolute;left:90px;right:90px;top:200px;font-size:56px;line-height:1.24;letter-spacing:-.01em}
+/* the app's read-along (SpeechListenViews): unread 28%, being read in the accent, read in full */
+.line .w b{font-weight:inherit;white-space:nowrap;color:rgba(242,238,230,.28)}
+.line .w.now b{color:#6F93F2}
+.line .w.read b{color:#F2EEE6}
+#row{position:absolute;inset:0;opacity:0}
+#row img{position:absolute;translate:-50% 0}
+#everyone{position:absolute;left:0;right:0;top:360px;text-align:center;font-size:80px;letter-spacing:-.012em;opacity:0}
+#turn{position:absolute;left:0;right:0;top:830px;text-align:center;font-size:104px;letter-spacing:-.015em;color:#F2EEE6;opacity:0;z-index:6}
+#soon{position:absolute;left:0;right:0;top:975px;text-align:center;font:600 32px -apple-system,"SF Pro Text",sans-serif;letter-spacing:.34em;text-transform:uppercase;color:#8d8a84;opacity:0;z-index:6}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <filter id="crayon"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="4"/><feDisplacementMap in="SourceGraphic" scale="2.4"/></filter>
+  <!-- the creator video's boil, on the mic: three wobbles swapped six times a second, a crayon grain on each -->
+  <filter id="boil-m0" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="4" result="g"/><feDisplacementMap in="SourceGraphic" in2="g" scale="2.4" result="c"/><feTurbulence type="fractalNoise" baseFrequency=".022" numOctaves="1" seed="6" result="w"/><feDisplacementMap in="c" in2="w" scale="6"/></filter>
+  <filter id="boil-m1" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="9" result="g"/><feDisplacementMap in="SourceGraphic" in2="g" scale="2.4" result="c"/><feTurbulence type="fractalNoise" baseFrequency=".022" numOctaves="1" seed="27" result="w"/><feDisplacementMap in="c" in2="w" scale="6"/></filter>
+  <filter id="boil-m2" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="13" result="g"/><feDisplacementMap in="SourceGraphic" in2="g" scale="2.4" result="c"/><feTurbulence type="fractalNoise" baseFrequency=".022" numOctaves="1" seed="61" result="w"/><feDisplacementMap in="c" in2="w" scale="6"/></filter>
+</svg>
+
+<div class="layer" id="cream"></div>
+
+<!-- the mic, one crayon line in four strokes (head, grille, cradle, stem, base) -->
+<svg id="mic" viewBox="0 0 400 400">
+  <path id="p0" d="M160 129.5 A39.5 39.5 0 0 1 239 129.5 V181 A39.5 39.5 0 0 1 160 181 Z"/>
+  <path id="p1" d="M173 128 H226"/>
+  <path id="p2" d="M173 151 H226"/>
+  <path id="p3" d="M143 158 V190 A57 57 0 0 0 257 190 V158"/>
+  <path id="p4" d="M200 247 V323"/>
+  <path id="p5" d="M132 330 C172 321 232 317 262 325 C281 331 250 341 222 337 C200 333 196 322 214 318"/>
+</svg>
+
+<div id="scenes"></div>
+<div id="row"></div>
+<div id="everyone">Everyone has a line.</div>
+<div id="turn">Your turn.</div>
+<div id="soon">Coming soon</div>
+<div class="grain"></div>
+<div class="layer" id="fade" style="background:#000;opacity:0;z-index:30"></div>
+
+<script src="timeline.js"></script>
+<script>
+/* The clock is the VOICES: build_timeline.py cuts each challenge's fluent reading (R2, the listening reading)
+   and writes window.TL with when every word is said; media/track.wav is the same cut. Edit timings there. */
+const TOTAL = TL.total;
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const ease = (x) => 1 - Math.pow(1 - clamp(x), 3);
+const inOut = (x) => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+
+const SCENES = TL.scenes;
+/* each challenge's category, as the app names it (SpeechChallengeCategory) */
+const CATS = { "0010": "In-flight announcement", "002C": "Weather forecast", "002B": "Museum guide",
+  "0005": "Short talk", "0025": "Podcast", "002D": "Film critic", "0020": "Show host", "000B": "Short talk",
+  "0024": "Acceptance speech" };
+const scenesEl = document.getElementById("scenes");
+SCENES.forEach((s) => {
+  const el = document.createElement("div");
+  el.className = "scene";
+  el.innerHTML = `<img src="media/challenge-${s.img}.png"><div class="cat">${CATS[s.img] || ""}</div><div class="line">${
+    s.words.map((w, j) => `<span class="w">${j ? " " : ""}<b>${w.w}</b></span>`).join("")}${s.more ? '<span class="w"> <b>…</b></span>' : ""}</div>`;
+  scenesEl.appendChild(el);
+  s.el = el; s.spans = [...el.querySelectorAll(".w")]; s.box = el.querySelector(".line"); s.pic = el.querySelector("img");
+});
+const rowEl = document.getElementById("row");
+const rowImgs = TL.row.map((r, i) => {
+  const im = document.createElement("img");
+  im.src = `media/challenge-${r.img}.png`;
+  const back = i % 2 === 1, k = Math.floor(i / 2);
+  im.style.left = `${back ? 210 + k * 165 : 135 + k * 202}px`;
+  im.style.bottom = back ? "860px" : "560px";
+  im.style.height = back ? "430px" : "470px";
+  im.style.zIndex = back ? "1" : "2";
+  rowEl.appendChild(im);
+  return im;
+});
+
+const paths = [...document.querySelectorAll("#mic path")];
+const lens = paths.map((p) => p.getTotalLength());
+const totalLen = lens.reduce((a, b) => a + b, 0);
+function drawMic(p) { // p = share of the whole line drawn, strokes in order
+  let left = p * totalLen;
+  paths.forEach((el, i) => {
+    const d = clamp(left, 0, lens[i]);
+    el.style.strokeDasharray = `${lens[i]} ${lens[i]}`;
+    el.style.strokeDashoffset = String(lens[i] - d);
+    el.style.opacity = d > 0.5 ? 1 : 0;
+    left -= lens[i];
+  });
+}
+const $ = (id) => document.getElementById(id);
+
+function render(t) {
+  /* the opening: the mic draws itself in silence and stops at the cradle; cut when the first voice starts */
+  /* the end: as the last people go, the mic finishes on black (the opening's, picked up) while the voices fade;
+     then "Your turn.", "Coming soon", on black, in silence */
+  const HALF = (lens[0] + lens[1] + lens[2] + lens[3] * 0.55) / totalLen;
+  let micP = 0, micO = 0;
+  if (t < TL.micEnd) { micP = HALF * inOut((t - 0.3) / 1.8); micO = 1; }
+  else if (t >= TL.cream) { micP = HALF + (1 - HALF) * inOut((t - TL.cream - 0.3) / 1.4); micO = ease((t - TL.cream) / 0.3); }
+  drawMic(micP);
+  $("mic").style.opacity = 0;   // in-app: no mic
+  $("mic").style.filter = `url(#boil-m${Math.floor(t * 6) % 3})`;
+  $("mic").style.translate = t >= TL.cream ? "0 -330px" : "0 0";   // above the crowd at the end
+  $("cream").style.opacity = 0;   // the end stays on black (founder 2026-11-14: the turn to white was cut)
+  $("turn").style.opacity = 0;
+  $("turn").style.translate = `0 ${24 * (1 - ease((t - TL.turn) / 0.4))}px`;
+  $("soon").style.opacity = 0;
+  $("fade").style.opacity = 0;
+
+  /* the people: hard cuts; the line sits dim and each word lights as it is said; the voice is cut mid-line */
+  SCENES.forEach((s, i) => {
+    const on = t >= s.start && t < s.end;
+    s.el.style.opacity = on ? 1 : 0;
+    if (!on) return;
+    const k = (t - s.start);
+    const enter = i === 0 ? ease(k / 0.35) : 1;
+    s.pic.style.opacity = enter;
+    s.pic.style.translate = `calc(-50% + ${(1 - enter) * 70}px) ${i === 0 ? 0 : (1 - ease(k / 0.18)) * 18}px`;
+    s.spans.forEach((w, j) => {
+      if (j >= s.words.length) return;
+      const at = s.words[j].at, end = s.words[j].end;
+      w.classList.toggle("read", at !== null && t >= end);
+      w.classList.toggle("now", at !== null && t >= at && t < end);
+    });
+  });
+
+  /* everyone at once: each lands and talks; nobody leaves. At TL.settle they ease to the bottom of the
+     screen while their voices fade together and the mic finishes drawing above them */
+  const rowOn = t >= TL.row[0].land;
+  rowEl.style.opacity = rowOn ? 1 : 0;
+  const drop = 0;   // in-app: the crowd stays where it lands
+  rowImgs.forEach((im, i) => {
+    const land = ease((t - TL.row[i].land) / 0.18);
+    im.style.opacity = rowOn ? land : 0;
+    im.style.translate = `-50% ${(1 - land) * 22 + drop}px`;
+  });
+  $("everyone").style.opacity = rowOn ? ease((t - TL.everyone) / 0.3) * (1 - clamp((t - TL.settle - 0.3) / 0.5)) : 0;
+}
+
+/* ── run: ?manual for the frame-by-frame recorder, ?t=N for a still, nothing for real time ── */
+const q = new URLSearchParams(location.search);
+const still = q.has("t") ? parseFloat(q.get("t")) : null;
+window.renderAt = async (t) => { render(t); await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))); };
+render(q.has("manual") ? 0 : (still ?? 0));
+Promise.all([...document.images].map((im) => im.decode().catch(() => {}))).then(() => {
+  if (q.has("manual")) { render(0); document.documentElement.dataset.scene = "1"; return; }
+  if (still !== null) { render(still); document.documentElement.dataset.scene = "1"; return; }
+  const t0 = performance.now();
+  const loop = () => { render(((performance.now() - t0) / 1000) % TOTAL); requestAnimationFrame(loop); };
+  loop();
+});
+</script>
+</body>
+</html>
