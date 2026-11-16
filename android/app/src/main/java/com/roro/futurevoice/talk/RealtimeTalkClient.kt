@@ -507,6 +507,7 @@ class RealtimeTalkClient(private val context: Context) {
         // The whole call on the call path, so the echo canceller has the
         // reply to subtract (iOS: the voice-processing unit).
         com.roro.futurevoice.audio.CallAudioMode.enter(context)
+        com.roro.futurevoice.sync.SyncEngine.callStarted()
         tornDown = false
         wallCode = null
         lastErrorCode = null
@@ -802,6 +803,7 @@ class RealtimeTalkClient(private val context: Context) {
         // Here, not on the audio thread: a resume's connect() runs right
         // after this and must not have its mode switched off behind it.
         com.roro.futurevoice.audio.CallAudioMode.exit(context)
+        com.roro.futurevoice.sync.SyncEngine.callEnded()
         runCatching { socket?.close(1000, null) }; socket = null
     }
 

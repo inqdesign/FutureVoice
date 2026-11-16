@@ -230,10 +230,28 @@ class SyncEngine(
     /** "Sync now" in settings — retries even inside the quota backoff. */
     fun syncNow() { if (isEnabled) { forceRetry = true; requestSync(null) } }
 
+    /** A live call holds every pass (2026-11-16): a pass diffs every store
+     *  and uploads turn audio on the call's own Wi-Fi, and a learner with
+     *  sync on heard the fluent self go silent mid-sentence, over and over,
+     *  from the day she turned it on. Requests made meanwhile run as one
+     *  pass when the call ends. A pass already running is left to finish. */
+    private var callHeld = false
+    private var heldRequest = false
+
+    @Synchronized
+    private fun holdForCall() { callHeld = true }
+
+    @Synchronized
+    private fun releaseAfterCall() {
+        callHeld = false
+        if (heldRequest) { heldRequest = false; requestSync(null) }
+    }
+
     /** One pass at a time; a request during a pass runs once more after it. */
     @Synchronized
     fun requestSync(kinds: Set<SyncKind>?, scope: Scope = Scope.EVERYTHING) {
         if (!isEnabled) return
+        if (callHeld) { heldRequest = true; kinds?.let { dirty.addAll(it) }; return }
         if (running != null) {
             rerunRequested = true
             if (scope == Scope.EVERYTHING) rerunScope = Scope.EVERYTHING
@@ -763,5 +781,9 @@ class SyncEngine(
          *  Which kind moved doesn't matter: the pass diffs, and a debounced
          *  burst of writes (a talk ending) is one pass. */
         fun noteChanged() { instance?.markDirtyAll() }
+
+        /** A realtime call began / ended — see [requestSync]'s hold. */
+        fun callStarted() { instance?.holdForCall() }
+        fun callEnded() { instance?.releaseAfterCall() }
     }
 }
