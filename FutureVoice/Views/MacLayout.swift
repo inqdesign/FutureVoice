@@ -960,7 +960,14 @@ enum MacSheets {
     @MainActor
     static func zoomSheet(_ presented: UIViewController) {
         guard let view = presented.viewIfLoaded, let host = view.superview else { return }
-        let zoom = MacLayout.zoom
+        // Only the zoom the page doesn't already get from above (2026-11-16).
+        // On macOS 26 a sheet is a window of its own at 1.0×; a learner on
+        // macOS 27 saw every sheet's page drawn 1.3× too wide, cut off on the
+        // right and at the bottom — the zoom applied twice. The scale the host
+        // already has on screen is measured, so the page ends up at the zoom
+        // either way.
+        let inherited = host.window == nil ? 1 : host.convert(CGRect(x: 0, y: 0, width: 100, height: 100), to: nil).width / 100
+        let zoom = inherited > 1.01 ? max(1, MacLayout.zoom / inherited) : MacLayout.zoom
         let size = host.bounds.size
         guard size.width > 0, size.height > 0 else { return }
         let transform = CGAffineTransform(scaleX: zoom, y: zoom)
