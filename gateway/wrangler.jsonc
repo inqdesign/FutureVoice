@@ -19,7 +19,14 @@
   // RE-ENABLE this line the moment the account moves to Workers Paid;
   // production calls should not run on the free tier's default CPU budget.
   // "limits": { "cpu_ms": 300000 },
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  // Our own name for the gateway (2026-11-16). `*.workers.dev` is blocked in
+  // mainland China: every call from there timed out before a word. The
+  // workers.dev address stays on for every build already installed.
+  "workers_dev": true,
+  "routes": [
+    { "pattern": "gateway.nawana.app", "custom_domain": true }
+  ]
   // Secrets (set with `wrangler secret put <NAME>`):
   //   SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY,
   //   GEMINI_API_KEY, CARTESIA_API_KEY

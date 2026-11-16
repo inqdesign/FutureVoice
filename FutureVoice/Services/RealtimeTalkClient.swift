@@ -245,12 +245,29 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         let raw = (stored?.isEmpty == false ? stored! : Self.defaultGateway)
         return URL(string: raw) ?? URL(string: Self.defaultGateway)!
     }
-    private static let defaultGateway =
-        "wss://futurevoice-gateway.futurevoice-gateway.workers.dev/call"
+    /// Our own name for the gateway (2026-11-16). `*.workers.dev` is blocked
+    /// in mainland China: three calls from a Mac there timed out before a
+    /// word, and so did the one before them. Same worker, same everything.
+    private static let defaultGateway = "wss://gateway.nawana.app/call"
+    /// The old address, still served for every build already installed. A
+    /// socket that fails before its first message tries it once
+    /// (`retryOnFallbackGateway`), so a fault on the new name can never be
+    /// worse than before it existed.
+    static let fallbackGatewayURL =
+        URL(string: "wss://futurevoice-gateway.futurevoice-gateway.workers.dev/call")!
 
     // MARK: Transport
 
     private var socket: URLSessionWebSocketTask?
+    /// The `start` message this call opened with, kept so a socket that fails
+    /// before its first message can be re-opened on the fallback address.
+    private var startPayload: [String: Any]?
+    /// Whether anything at all came back on the current socket. A failure
+    /// with nothing received is a connection that never formed; after the
+    /// first message it is a dropped call, which the fallback must not touch.
+    private var socketHeardAnything = false
+    /// Which address the current socket went to; the fallback is tried once.
+    private var socketURL: URL?
     private lazy var session: URLSession = {
         let config = URLSessionConfiguration.default
         // A call is idle-quiet only between turns; the mic keeps the socket
@@ -2173,8 +2190,11 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                             language: String, system: String,
                             opener: String?,
                             history: [(role: String, text: String)]) throws {
-        let task = session.webSocketTask(with: Self.gatewayURL)
+        let url = Self.gatewayURL
+        let task = session.webSocketTask(with: url)
         socket = task
+        socketURL = url
+        socketHeardAnything = false
         // No mic wiring and no `receiveNext` here: `connect` opens the socket
         // before the audio stack exists, `startAudio` hands the tap the
         // socket once it is live, and reading starts after that.
@@ -2212,7 +2232,31 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         if !history.isEmpty {
             payload["history"] = history.map { ["role": $0.role, "text": $0.text] }
         }
+        startPayload = payload
         sendControl(payload)
+    }
+
+    /// The new gateway name refused or never answered: open the same call on
+    /// the old address, once. Only for a socket that heard nothing (a call
+    /// that was running and dropped is `fail`'s, with its Reconnect), only
+    /// from the default address (a `wrangler dev` override is left alone).
+    private func retryOnFallbackGateway(after error: Error) -> Bool {
+        guard !socketHeardAnything, let payload = startPayload,
+              let url = socketURL, url != Self.fallbackGatewayURL,
+              UserDefaults.standard.string(forKey: "futurevoice.realtimeGatewayURL")?.isEmpty ?? true
+        else { return false }
+        Self.step("socket: \(url.host ?? "?") failed before a word (\(error.localizedDescription)) — trying the old address")
+        Telemetry.log("talk_rt_gateway_fallback", ["error": error.localizedDescription])
+        socket?.cancel(with: .goingAway, reason: nil)
+        let task = session.webSocketTask(with: Self.fallbackGatewayURL)
+        socket = task
+        socketURL = Self.fallbackGatewayURL
+        task.resume()
+        sendControl(payload)
+        // The tap already holds the dead socket; hand it the new one.
+        if engineRunning { mic.set(converter: converter, format: uplinkFormat, socket: task) }
+        receiveNext()
+        return true
     }
 
     private func sendControl(_ payload: [String: Any]) {
@@ -2240,9 +2284,11 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                     // The gateway closes the socket right after a wall; the
                     // held one settles when the audio drains, not here.
                     if self.heldWall != nil { return }
+                    if self.retryOnFallbackGateway(after: error) { return }
                     self.fail("socket", error.localizedDescription)
                     self.teardown()
                 case .success(let message):
+                    self.socketHeardAnything = true
                     switch message {
                     case .data(let data):   self.playReplyChunk(data)
                     case .string(let text): self.handleEvent(text)
