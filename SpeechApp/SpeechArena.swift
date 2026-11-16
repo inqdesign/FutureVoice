@@ -753,7 +753,7 @@ struct ArenaPodium: View {
         Group {
             if top.isEmpty {
                 VStack(spacing: 12) {
-                    MicTrophy3D(tier: .gold, label: "1").frame(width: 120, height: 192)
+                    MicTrophy(tier: .gold, label: "1").frame(width: 120, height: 192)
                     Text("Be the first on the board").font(Arena.display(20))
                 }
                 .frame(maxWidth: .infinity)
@@ -772,7 +772,7 @@ struct ArenaPodium: View {
         let first = row.rank == 1
         let tier = MedalTier(rank: row.rank) ?? .bronze
         return VStack(spacing: 8) {
-            MicTrophy3D(tier: tier, label: "\(row.rank)")
+            MicTrophy(tier: tier, label: "\(row.rank)")
                 .frame(width: first ? 112 : 84, height: first ? 180 : 136)
             SpeechChallengeFace(face: row.face, size: first ? 60 : 48)
                 .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 1))
