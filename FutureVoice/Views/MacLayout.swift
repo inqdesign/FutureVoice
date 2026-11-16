@@ -378,6 +378,18 @@ extension View {
         self
         #endif
     }
+
+    /// A picker that is a SUBMENU on the phone (`.menu`) and a section of
+    /// the menu on the Mac. On the Mac a `.menu` picker inside a menu came out
+    /// as a submenu whose every choice was greyed out (a learner, 2026-11-16:
+    /// the player's pause and speed could not be changed).
+    func submenuPicker() -> some View {
+        #if targetEnvironment(macCatalyst)
+        pickerStyle(.inline)
+        #else
+        pickerStyle(.menu)
+        #endif
+    }
 }
 
 extension View {

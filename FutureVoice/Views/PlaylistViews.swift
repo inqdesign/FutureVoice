@@ -741,7 +741,7 @@ private struct PlayerOptionsMenu: View {
             } label: {
                 Label("Pause between lines", systemImage: "pause")
             }
-            .pickerStyle(.menu)
+            .submenuPicker()
             Picker(selection: $player.speed) {
                 ForEach(PlaylistPlayer.speeds, id: \.self) { s in
                     Text(verbatim: s == 1 ? "1×" : String(format: "%.2g×", s)).tag(s)
@@ -749,7 +749,7 @@ private struct PlayerOptionsMenu: View {
             } label: {
                 Label("Speed", systemImage: "gauge.with.dots.needle.33percent")
             }
-            .pickerStyle(.menu)
+            .submenuPicker()
             if player.hasQueue {
                 Divider()
                 Button(role: .destructive) { player.close() } label: {
