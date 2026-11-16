@@ -331,7 +331,11 @@ class FreeTalkOpeners(private val context: Context) {
             // same, but a warm-up filed as "turn" read in the ledger as a
             // call's reply.
             com.roro.futurevoice.net.VoiceClient(com.roro.futurevoice.data.AuthRepository())
-                .synthesize(voiceId = voiceId, text = line, purpose = "opener")
+                .synthesize(voiceId = voiceId, text = line, purpose = "opener",
+                    // A FRESH key per warm (iOS 2026-11-16): the default key
+                    // is derived from the line, so a re-bake re-sent a key
+                    // already on file and `tts` answered 409 after ten minutes.
+                    idempotencyKey = "tts-opener:${java.util.UUID.randomUUID()}")
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
         } catch (e: Exception) {
