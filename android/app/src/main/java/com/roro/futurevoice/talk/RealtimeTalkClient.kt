@@ -549,7 +549,13 @@ class RealtimeTalkClient(private val context: Context) {
             }
         }
 
-        val req = Request.Builder().url(Config.gatewayUrl).build()
+        // Our own name for the gateway first (iOS 2026-11-16: `*.workers.dev`
+        // is blocked in mainland China). A socket that fails before it hears
+        // anything tries the old address once, so the new name can never be
+        // worse than before it existed.
+        fun openSocket(url: String, isFallback: Boolean) {
+        var heard = false
+        val req = Request.Builder().url(url).build()
         socket = http.newWebSocket(req, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 webSocket.send(start.toString())
@@ -563,10 +569,12 @@ class RealtimeTalkClient(private val context: Context) {
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
+                heard = true
                 handle(runCatching { json.parseToJsonElement(text) as JsonObject }.getOrNull() ?: return)
             }
 
             override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
+                heard = true
                 // The phone already cut this line: the rest is never heard
                 // and never kept.
                 if (droppingCutLine) return
@@ -598,6 +606,13 @@ class RealtimeTalkClient(private val context: Context) {
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
                 if (tornDown) return
                 Log.w(TAG, "socket failed", t)
+                if (!heard && !isFallback && socket === webSocket) {
+                    Log.w(TAG, "gateway unreachable before a word, trying the old address")
+                    com.roro.futurevoice.core.Telemetry.log("talk_rt_gateway_fallback",
+                        mapOf("error" to (t.message ?: "")))
+                    openSocket(Config.fallbackGatewayUrl, isFallback = true)
+                    return
+                }
                 lastErrorCode = "socket"
                 fail(t.message ?: "connection failed", "socket")
             }
@@ -618,6 +633,8 @@ class RealtimeTalkClient(private val context: Context) {
                 }
             }
         })
+        }
+        openSocket(Config.gatewayUrl, isFallback = false)
     }
 
     /** Polite hang-up: the gateway closes upstream sessions, then the socket. */

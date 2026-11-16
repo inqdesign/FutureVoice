@@ -26,9 +26,13 @@ object Config {
      * The realtime Talk gateway (`gateway/` in this repo — a Cloudflare
      * Worker + Durable Object). ONE WebSocket per call; the gateway meters
      * the call itself through `talk-tick` with the caller's own JWT, so the
-     * app never ticks on this path. Same URL iOS ships with.
+     * app never ticks on this path. Same URL iOS ships with: our own name
+     * since 2026-11-16, because `*.workers.dev` is blocked in mainland China.
      */
-    const val gatewayUrl: String = "wss://futurevoice-gateway.futurevoice-gateway.workers.dev/call"
+    const val gatewayUrl: String = "wss://gateway.nawana.app/call"
+    /** The old address, still served; tried once when the new name fails
+     *  before a word (`RealtimeTalkClient.openSocket`). */
+    const val fallbackGatewayUrl: String = "wss://futurevoice-gateway.futurevoice-gateway.workers.dev/call"
 }
 
 /**
