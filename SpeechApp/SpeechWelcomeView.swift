@@ -3,40 +3,72 @@ import AuthenticationServices
 import AVFoundation
 
 /// The first screen (2026-11-16, founder): the teaser plays (each person
-/// with their challenge's category, saying their opening, then everyone at
-/// once), and the page takes over on its last frame: the crowd stays, "Your
-/// turn." comes in where "Everyone has a line." was, and what people bring
-/// their own script for comes in under it. Aimed at people who speak in
+/// with their challenge's category, saying their opening), and as everyone
+/// gathers at the end, "Your turn." and the button come in under them at the
+/// same moment (the crowd stays where the video draws it; founder: no
+/// slide). From then on only the crowd's band of the video shows, so the
+/// teaser's own end line ("Everyone has a line.") never appears while the
+/// video and its sound play to the end; then the page's still takes over in
+/// the same place. Aimed at people who speak in
 /// public for work, and at anyone with a talk coming up.
 struct SpeechWelcomeView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var teaserDone = false
+
+    private enum Stage { case teaser, gathering, page }
+    @State private var stage: Stage = .teaser
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                // The teaser's own ground (black under its film grain), so
-                // the video has no visible frame.
-                Color(white: 10 / 255).ignoresSafeArea()
-                if teaserDone || reduceMotion {
-                    SpeechWelcomeTurn()
-                        .transition(.opacity)
-                } else {
-                    SpeechTeaserPlayer {
-                        // The page opens on the video's last frame, so the
-                        // hand-over is a cut nobody sees.
-                        teaserDone = true
+            GeometryReader { geo in
+                let screen = CGSize(width: geo.size.width + geo.safeAreaInsets.leading + geo.safeAreaInsets.trailing,
+                                    height: geo.size.height + geo.safeAreaInsets.top + geo.safeAreaInsets.bottom)
+                // Where the video (aspect fit) draws the still's y 340, the
+                // top of the page's crowd band, so the crowd never moves.
+                let fit = min(screen.width / 720, screen.height / 1280)
+                let bandTop = (screen.height - 1280 * fit) / 2 + 340 * fit - geo.safeAreaInsets.top
+                ZStack {
+                    // The teaser's own ground (black under its film grain),
+                    // so the video has no visible frame.
+                    Color(white: 10 / 255).ignoresSafeArea()
+                    if stage != .page && !reduceMotion {
+                        SpeechTeaserPlayer(
+                            onGather: { stage = .gathering },
+                            onHandOff: { stage = .page }
+                        )
+                        // Once the crowd gathers, only its band shows (faded
+                        // like the page's still): the teaser's own end line
+                        // sits above it and never appears, while the video
+                        // and its sound play to the end.
+                        .mask(alignment: .top) {
+                            if stage == .teaser {
+                                Color.black
+                            } else {
+                                SpeechWelcomeTurn.bandMask
+                                    .frame(width: 720 * fit, height: 600 * fit)
+                                    .padding(.top, (screen.height - 1280 * fit) / 2 + 340 * fit)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                            }
+                        }
+                        .ignoresSafeArea()
+                        .allowsHitTesting(false)
                     }
-                    .ignoresSafeArea()
-                    .transition(.opacity)
-                    .overlay(alignment: .topTrailing) {
+                    // Above the video: its ground is transparent, so the
+                    // text comes in under the gathering crowd.
+                    SpeechWelcomeTurn(
+                        textShown: stage != .teaser || reduceMotion,
+                        crowdShown: stage == .page || reduceMotion,
+                        crowdTop: max(0, bandTop),
+                        crowdWidth: 720 * fit
+                    )
+                    if stage == .teaser && !reduceMotion {
                         Button("Skip") {
-                            withAnimation(.easeInOut(duration: 0.4)) { teaserDone = true }
+                            withAnimation(.easeInOut(duration: 0.4)) { stage = .page }
                         }
                         .buttonStyle(.bordered)
                         .tint(.white)
                         .padding(.trailing, 20)
                         .padding(.top, 8)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                     }
                 }
             }
@@ -44,138 +76,116 @@ struct SpeechWelcomeView: View {
     }
 }
 
-/// After the teaser: its last frame (the crowd), "Your turn." over it, and
-/// the kinds of talk people bring under it.
+/// The page (2026-11-16, founder: the first cut was "too bad"): the crowd
+/// from the teaser's last frame where the video drew it, "Your turn." right
+/// under it, one line on what it is for and one on what it does, and the
+/// button at the bottom. The four use-case cards were cut; the subtitle
+/// already says it.
 private struct SpeechWelcomeTurn: View {
-    private struct UseCase: Identifiable {
-        let symbol: String
-        let title: LocalizedStringKey
-        var id: String { symbol }
+    let textShown: Bool
+    let crowdShown: Bool
+    /// Where the video draws its crowd, so the still takes over in place.
+    let crowdTop: CGFloat
+    let crowdWidth: CGFloat
+
+    /// The band's fade, shared with the video's mask so the hand-off from
+    /// the playing video to the still has the same edges.
+    static var bandMask: LinearGradient {
+        LinearGradient(stops: [
+            .init(color: .clear, location: 0),
+            .init(color: .black, location: 0.14),
+            .init(color: .black, location: 0.93),
+            .init(color: .clear, location: 1),
+        ], startPoint: .top, endPoint: .bottom)
     }
 
-    private let cases = [
-        UseCase(symbol: "chart.bar.doc.horizontal", title: "Presentations at work"),
-        UseCase(symbol: "lightbulb", title: "Pitches and demos"),
-        UseCase(symbol: "person.3", title: "Conference talks"),
-        UseCase(symbol: "target", title: "Interviews and exams"),
-    ]
-
-    @State private var shown = false
-
-    /// Where the teaser's 1080×1920 frame sits on this screen (aspect fit,
-    /// the same as the player), so the text lands on the video's places.
-    private func videoRect(in size: CGSize) -> CGRect {
-        let scale = min(size.width / 1080, size.height / 1920)
-        let w = 1080 * scale, h = 1920 * scale
-        return CGRect(x: (size.width - w) / 2, y: (size.height - h) / 2, width: w, height: h)
+    /// The crowd's band in the 720×1280 still (y 340–940), faded at its top
+    /// and bottom so the frame's film grain never shows an edge.
+    private var crowd: some View {
+        Color.clear
+            .aspectRatio(720 / 600, contentMode: .fit)
+            .overlay {
+                Image("SpeechTeaserEnd")
+                    .resizable()
+                    .scaledToFill()
+            }
+            .clipped()
+            .mask(Self.bandMask)
+            .accessibilityHidden(true)
     }
 
     var body: some View {
-        GeometryReader { geo in
-            let full = CGSize(width: geo.size.width + geo.safeAreaInsets.leading + geo.safeAreaInsets.trailing,
-                              height: geo.size.height + geo.safeAreaInsets.top + geo.safeAreaInsets.bottom)
-            let video = videoRect(in: full)
-            // "Everyone has a line." sat at y 360 of 1920, 80 px tall.
-            let headlineTop = video.minY + video.height * (350 / 1920) - geo.safeAreaInsets.top
-            // The crowd's feet are at y 1360 of 1920.
-            let casesTop = video.minY + video.height * (1390 / 1920) - geo.safeAreaInsets.top
-            ZStack(alignment: .top) {
-                Image("SpeechTeaserEnd")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: full.width, height: full.height)
-                    .offset(x: -geo.safeAreaInsets.leading, y: -geo.safeAreaInsets.top)
-                    .accessibilityHidden(true)
+        VStack(spacing: 0) {
+            crowd
+                // Exactly the video's size: left to the stack, the band
+                // shrank to fit and the hand-off read as the picture shrinking.
+                .frame(width: crowdWidth, height: crowdWidth * 600 / 720)
+                .layoutPriority(1)
+                .padding(.top, crowdTop)
+                // Takes over from the video in the same place: no fade.
+                .opacity(crowdShown ? 1 : 0)
 
-                VStack(spacing: 8) {
-                    Text("Your turn.")
-                        .font(.system(size: video.width * 88 / 1080, weight: .regular, design: .serif))
-                        .foregroundStyle(Color(red: 0.95, green: 0.93, blue: 0.90))
-                    Text("Bring the script for the talk you have coming up.")
-                        .font(.body)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .opacity(shown ? 1 : 0)
-                        .animation(.easeOut(duration: 0.5).delay(0.35), value: shown)
-                }
-                .padding(.horizontal, 32)
-                .frame(maxWidth: .infinity)
-                .offset(y: max(8, headlineTop))
-                .opacity(shown ? 1 : 0)
-                .offset(y: shown ? 0 : 14)
-                .animation(.easeOut(duration: 0.55), value: shown)
-
-                VStack(spacing: 14) {
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
-                              spacing: 10) {
-                        ForEach(Array(cases.enumerated()), id: \.element.id) { index, item in
-                            HStack(spacing: 10) {
-                                Image(systemName: item.symbol)
-                                    // The teaser's read-along blue.
-                                    .foregroundStyle(Color(red: 0.435, green: 0.576, blue: 0.949))
-                                    .frame(width: 22)
-                                Text(item.title)
-                                    .font(.subheadline.weight(.medium))
-                                    .lineLimit(2)
-                                    .minimumScaleFactor(0.85)
-                                Spacer(minLength: 0)
-                            }
-                            .padding(.horizontal, 12)
-                            .frame(maxWidth: .infinity, minHeight: 50)
-                            .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                            .opacity(shown ? 1 : 0)
-                            .offset(y: shown ? 0 : 12)
-                            .animation(.easeOut(duration: 0.45).delay(0.6 + Double(index) * 0.08), value: shown)
-                        }
-                    }
-                    Text("A prompter that follows your voice. A score for every take.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .opacity(shown ? 1 : 0)
-                        .animation(.easeOut(duration: 0.5).delay(1.0), value: shown)
-                }
-                .padding(.horizontal, 20)
-                .offset(y: casesTop)
-
-                VStack {
-                    Spacer()
-                    NavigationLink {
-                        SpeechSignInView()
-                    } label: {
-                        Text("Get started")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 6)
-                    }
-                    .accentProminent()
-                    .controlSize(.large)
-                    .opacity(shown ? 1 : 0)
-                    .animation(.easeOut(duration: 0.5).delay(1.1), value: shown)
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 16)
-                .frame(width: geo.size.width, height: geo.size.height)
+            VStack(spacing: 10) {
+                Text("Your turn.")
+                    .font(.system(size: 48, weight: .regular, design: .serif))
+                    .foregroundStyle(Color(red: 0.95, green: 0.93, blue: 0.90))
+                Text("Bring the script for the talk you have coming up.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                Text("A prompter that follows your voice. A score for every take.")
+                    .font(.footnote)
+                    .foregroundStyle(.white.opacity(0.45))
+                    .padding(.top, 2)
             }
-            .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 24)
+            .padding(.top, 8)
+            .opacity(textShown ? 1 : 0)
+            .offset(y: textShown ? 0 : 12)
+            .animation(.easeOut(duration: 0.7).delay(0.4), value: textShown)
+
+            Spacer(minLength: 24)
+
+            NavigationLink {
+                SpeechSignInView()
+            } label: {
+                Text("Get started")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+            }
+            .accentProminent()
+            .controlSize(.large)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 16)
+            .opacity(textShown ? 1 : 0)
+            .animation(.easeOut(duration: 0.6).delay(1.0), value: textShown)
+            .allowsHitTesting(textShown)
         }
-        .onAppear { shown = true }
     }
 }
 
-/// The teaser (marketing/content/2026-11-14-speech-teaser, cut before its
-/// "Coming soon" end card), full screen, no controls, once.
+/// The teaser (marketing/content/2026-11-14-speech-teaser), full screen,
+/// no controls, once. Its crowd gathers from 22.1 s and is whole at 24.2 s;
+/// it plays to its end (26.6 s) so the sound is never cut, and the page hides
+/// everything but the crowd from the gathering on.
 private struct SpeechTeaserPlayer: UIViewRepresentable {
-    let onEnd: () -> Void
+    let onGather: () -> Void
+    let onHandOff: () -> Void
 
-    func makeCoordinator() -> Coordinator { Coordinator(onEnd: onEnd) }
+    static let gatherAt = 22.1
+
+    func makeCoordinator() -> Coordinator { Coordinator(onGather: onGather, onHandOff: onHandOff) }
 
     func makeUIView(context: Context) -> PlayerView {
         let view = PlayerView()
-        view.backgroundColor = UIColor(white: 10 / 255, alpha: 1)
+        // Transparent: the page's ground is the screen's, so moving the video
+        // never shows its edge.
+        view.backgroundColor = .clear
+        view.playerLayer.backgroundColor = UIColor.clear.cgColor
         view.playerLayer.videoGravity = .resizeAspect
         guard let url = Bundle.main.url(forResource: "speech_teaser", withExtension: "mp4") else {
-            DispatchQueue.main.async { onEnd() }
+            DispatchQueue.main.async { onGather(); onHandOff() }
             return view
         }
         let player = AVPlayer(url: url)
@@ -198,20 +208,49 @@ private struct SpeechTeaserPlayer: UIViewRepresentable {
     }
 
     final class Coordinator {
-        let onEnd: () -> Void
-        private var token: NSObjectProtocol?
-        init(onEnd: @escaping () -> Void) { self.onEnd = onEnd }
+        let onGather: () -> Void
+        let onHandOff: () -> Void
+        private weak var player: AVPlayer?
+        private var boundary: Any?
+        private var endToken: NSObjectProtocol?
+        private var gathered = false
+        private var handedOff = false
+
+        init(onGather: @escaping () -> Void, onHandOff: @escaping () -> Void) {
+            self.onGather = onGather
+            self.onHandOff = onHandOff
+        }
 
         func observe(_ player: AVPlayer) {
-            token = NotificationCenter.default.addObserver(
+            self.player = player
+            let at = [NSValue(time: CMTime(seconds: SpeechTeaserPlayer.gatherAt, preferredTimescale: 600))]
+            boundary = player.addBoundaryTimeObserver(forTimes: at, queue: .main) { [weak self] in
+                self?.gather()
+            }
+            endToken = NotificationCenter.default.addObserver(
                 forName: .AVPlayerItemDidPlayToEndTime,
                 object: player.currentItem, queue: .main
-            ) { [weak self] _ in self?.onEnd() }
+            ) { [weak self] _ in self?.handOff() }
+        }
+
+        private func gather() {
+            guard !gathered else { return }
+            gathered = true
+            onGather()
+        }
+
+        private func handOff() {
+            gather()
+            guard !handedOff else { return }
+            handedOff = true
+            onHandOff()
         }
 
         func stop() {
-            if let token { NotificationCenter.default.removeObserver(token) }
-            token = nil
+            if let boundary { player?.removeTimeObserver(boundary) }
+            boundary = nil
+            if let endToken { NotificationCenter.default.removeObserver(endToken) }
+            endToken = nil
         }
     }
 }
