@@ -66,7 +66,7 @@ final class GoogleDriveTransport: SyncTransport, BlobCellularControl {
     private let api = "https://www.googleapis.com/drive/v3"
     private let upload = "https://www.googleapis.com/upload/drive/v3"
     private let folderMime = "application/vnd.google-apps.folder"
-    private let fileFields = "id,name,description,appProperties,parents,trashed,size,modifiedTime"
+    private let fileFields = "id,name,description,appProperties,parents,trashed,size,modifiedTime,md5Checksum"
     /// Drive's own guidance is a handful of parallel requests per user.
     private static let parallel = 6
     /// Simple/multipart upload is for files up to 5 MB.
@@ -79,6 +79,15 @@ final class GoogleDriveTransport: SyncTransport, BlobCellularControl {
     /// Record name ↔ Drive file id, learnt from listings and saves.
     private var idByName: [String: String] = [:]
     private var nameById: [String: String] = [:]
+    /// What THIS device last wrote to each file: Drive file id → the md5
+    /// Drive reported for it (2026-11-16). The change feed lists this
+    /// device's own writes too, and every item in it was downloaded again —
+    /// a learner's call pushed ~150 word records and the next pass pulled
+    /// all ~150 back. A file whose md5 still matches holds exactly what this
+    /// device pushed and already has, so the pull leaves it out. Memory
+    /// only: after a relaunch an echo is downloaded once, as before.
+    private var ownWrites: [String: String] = [:]
+    private static let maxOwnWrites = 20_000
 
     init(userId: String) {
         self.userId = userId
@@ -234,20 +243,17 @@ final class GoogleDriveTransport: SyncTransport, BlobCellularControl {
         body.append(media)
         body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
         let path = id.map { "\(upload)/files/\($0)" } ?? "\(upload)/files"
-        var request = URLRequest(url: URL(string: "\(path)?uploadType=multipart&fields=id")!)
+        var request = URLRequest(url: URL(string: "\(path)?uploadType=multipart&fields=id,md5Checksum")!)
         request.httpMethod = id == nil ? "POST" : "PATCH"
         request.setValue("multipart/related; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         request.httpBody = body
         request.allowsCellularAccess = cellular
-        guard let fileId = try await json(request)["id"] as? String else {
-            throw SyncTransportError.other("drive: no file id")
-        }
-        return fileId
+        return try noteOwnWrite(try await json(request))
     }
 
     private func resumable(meta: [String: Any], media: Data, id: String?, cellular: Bool) async throws -> String {
         let path = id.map { "\(upload)/files/\($0)" } ?? "\(upload)/files"
-        var start = URLRequest(url: URL(string: "\(path)?uploadType=resumable&fields=id")!)
+        var start = URLRequest(url: URL(string: "\(path)?uploadType=resumable&fields=id,md5Checksum")!)
         start.httpMethod = id == nil ? "POST" : "PATCH"
         start.setValue("application/json; charset=UTF-8", forHTTPHeaderField: "Content-Type")
         start.httpBody = try JSONSerialization.data(withJSONObject: meta)
@@ -260,10 +266,7 @@ final class GoogleDriveTransport: SyncTransport, BlobCellularControl {
         put.httpBody = media
         put.allowsCellularAccess = cellular
         put.timeoutInterval = 600
-        guard let fileId = try await json(put)["id"] as? String else {
-            throw SyncTransportError.other("drive: no file id")
-        }
-        return fileId
+        return try noteOwnWrite(try await json(put))
     }
 
     // MARK: - Changes
@@ -377,6 +380,7 @@ final class GoogleDriveTransport: SyncTransport, BlobCellularControl {
         for file in files {
             guard let id = file["id"] as? String, let shell = Self.shell(file) else { continue }
             remember(name: shell.recordName, id: id)
+            if isOwnEcho(file) { continue }
             let stamp = ((file["modifiedTime"] as? String) ?? "").filter { $0.isLetter || $0.isNumber }
             shells.append((id, stamp, shell))
         }
@@ -543,6 +547,26 @@ final class GoogleDriveTransport: SyncTransport, BlobCellularControl {
             schema: prop(file, "s").flatMap(Int.init) ?? SyncSchema.version,
             modifiedAt: modified, deletedAt: deleted,
             systemFields: (file["id"] as? String).map { Data($0.utf8) })
+    }
+
+    /// A save's answer: its id, with the md5 noted for `isOwnEcho`.
+    private func noteOwnWrite(_ file: [String: Any]) throws -> String {
+        guard let fileId = file["id"] as? String else { throw SyncTransportError.other("drive: no file id") }
+        lock.lock(); defer { lock.unlock() }
+        if let md5 = file["md5Checksum"] as? String {
+            if ownWrites.count >= Self.maxOwnWrites { ownWrites.removeAll() }
+            ownWrites[fileId] = md5
+        } else {
+            ownWrites[fileId] = nil
+        }
+        return fileId
+    }
+
+    /// The file still holds exactly what this device last wrote to it.
+    private func isOwnEcho(_ file: [String: Any]) -> Bool {
+        guard let id = file["id"] as? String, let md5 = file["md5Checksum"] as? String else { return false }
+        lock.lock(); defer { lock.unlock() }
+        return ownWrites[id] == md5
     }
 
     private func remember(name: String, id: String) {
