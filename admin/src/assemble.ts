@@ -25,6 +25,8 @@ const TEST_IDS = new Set([
   // The same relay account again, re-created 2026-10-09 after the iPad
   // deleted b28ca7b1 (`20261009120000`).
   "4d63c941-f08c-4509-8958-7092a4357778",
+  // The owner's Android account (2026-11-16).
+  "d4b0af1b-50c1-4337-9145-521e21ca225d",
 ]);
 // Store review accounts, matched by email so a re-created account stays
 // filtered: Google Play's reviewer signs in as this one (2026-10-06,
@@ -35,6 +37,8 @@ const TEST_EMAILS = new Set([
   "nawana.review@gmail.com",
   "hi.superpower.lab@gmail.com",
   "buchhaltung.dearroro@gmail.com",
+  // The owner's Android account (2026-11-16).
+  "eunggyuboram@gmail.com",
 ]);
 
 // Apple's cut and the sticker prices. Prices live in docs/launch-billing.md;
