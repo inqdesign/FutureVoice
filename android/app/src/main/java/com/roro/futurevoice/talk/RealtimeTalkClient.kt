@@ -270,7 +270,14 @@ class RealtimeTalkClient(private val context: Context) {
      * (AudioTrack::releaseBuffer null deref, reproduced on the emulator).
      */
     private val audioThread = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
-        Thread(r, "rt-audio")
+        // Audio priority (2026-11-16): this thread is the only thing that
+        // feeds the speaker, and at normal priority a busy screen (the
+        // transcript, the reveal) could hold it off long enough to starve
+        // the track.
+        Thread({
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO)
+            r.run()
+        }, "rt-audio")
     }.asCoroutineDispatcher()
     private val json = Json { ignoreUnknownKeys = true }
     private val http = OkHttpClient.Builder()
@@ -290,6 +297,14 @@ class RealtimeTalkClient(private val context: Context) {
     @Volatile private var turnsThisCall = 0
 
     private var player: PcmStreamPlayer? = null
+    /** Underruns of players already released this call (see `logSession`). */
+    @Volatile private var underrunsThisCall = 0
+
+    /** Stop and drop the player, keeping its underrun count. Audio thread. */
+    private fun retirePlayer() {
+        player?.let { runCatching { it.stop() }; underrunsThisCall += it.underruns }
+        player = null
+    }
     private var replyRate = DEFAULT_REPLY_RATE
     private var replyContext: String? = null
     /** When the line on screen began (`audio_start`), for telling a cut-in
@@ -499,7 +514,7 @@ class RealtimeTalkClient(private val context: Context) {
         micBytesSent = 0; warningsThisCall = 0; turnsThisCall = 0
         meterTotal = 0
         linesStarted = 0; setEchoGate(false)
-        linesByRoute.clear(); zeroSeconds = 0.0
+        linesByRoute.clear(); zeroSeconds = 0.0; underrunsThisCall = 0
         manualTurnsOn = manualTurns
         droppingCutLine = false; bargeVoiced = 0.0; bargeQuiet = 0.0
         state = State.CONNECTING
@@ -783,7 +798,7 @@ class RealtimeTalkClient(private val context: Context) {
         // The rest will never be heard; the line keeps all its words.
         finishReveal()
         stopMic()
-        scope.launch(audioThread) { runCatching { player?.stop() }; player = null }
+        scope.launch(audioThread) { retirePlayer() }
         // Here, not on the audio thread: a resume's connect() runs right
         // after this and must not have its mode switched off behind it.
         com.roro.futurevoice.audio.CallAudioMode.exit(context)
@@ -856,7 +871,7 @@ class RealtimeTalkClient(private val context: Context) {
                     // The rate can change between replies; a player is bound
                     // to one rate, so it is rebuilt when the announced differs.
                     val p = player?.takeIf { it.sampleRate == rate }
-                        ?: PcmStreamPlayer(rate, forCall = true).also { player?.stop(); player = it }
+                        ?: PcmStreamPlayer(rate, forCall = true).also { retirePlayer(); player = it }
                     p.volume = com.roro.futurevoice.data.AudioPrefs.talkVoiceVolume(context)
                     p.start()
                     lineTrackStarted = true
@@ -981,7 +996,7 @@ class RealtimeTalkClient(private val context: Context) {
         // on this thread (a stop queued on the audio thread waited behind the
         // line's own writes), released there as before.
         player?.cutNow()
-        scope.launch(audioThread) { runCatching { player?.stop() }; player = null }
+        scope.launch(audioThread) { retirePlayer() }
         // A barge-in means the learner IS talking — the gate would
         // only stand in their way now.
         setEchoGate(false)
@@ -1071,7 +1086,11 @@ class RealtimeTalkClient(private val context: Context) {
             // ("Headphones:3,Speaker:5"), and seconds sent as echo-gate zeros.
             "route_out" to if (outputIsSpeaker()) "Speaker" else "Headphones",
             "line_routes" to linesByRoute.toSortedMap().entries.joinToString(",") { "${it.key}:${it.value}" },
-            "zero_s" to zeroSeconds.roundToInt().toString()))
+            "zero_s" to zeroSeconds.roundToInt().toString(),
+            // Times the speaker ran dry — "the voice keeps cutting out" as a
+            // number (2026-11-16). A line's own end counts once (the track
+            // keeps playing with nothing left), so compare it with `lines`.
+            "underruns" to (underrunsThisCall + (player?.underruns ?: 0)).toString()))
     }
 
     // ------------------------------------------------------------------

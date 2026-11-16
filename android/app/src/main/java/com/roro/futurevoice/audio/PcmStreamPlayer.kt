@@ -53,7 +53,15 @@ class PcmStreamPlayer(
             AudioFormat.ENCODING_PCM_16BIT,
         )
         // A generous ring buffer: the network, not the DAC, is the jittery part.
-        val bufferSize = maxOf(minBuffer, sampleRate) // ~0.5s of 16-bit mono
+        // The call's buffer holds SECONDS (2026-11-16): the gateway hands a
+        // whole line over in under a second, so the only thing that can starve
+        // the track is this phone's writer falling behind — and with half a
+        // second of room, any stall over 0.5 s came out as dead silence in the
+        // middle of a sentence (a learner's screen recording: 1–1.3 s of
+        // digital zero, four times in one line). A cut still empties it at
+        // once ([cutNow] flushes).
+        val bufferSize = if (forCall) maxOf(minBuffer, sampleRate * 2 * CALL_BUFFER_SECONDS)
+            else maxOf(minBuffer, sampleRate) // ~0.5s of 16-bit mono
         track = AudioTrack.Builder()
             .setAudioAttributes(
                 AudioAttributes.Builder()
@@ -141,8 +149,15 @@ class PcmStreamPlayer(
         runCatching { t.flush() }
     }
 
+    /** Times the track ran dry (the DAC played silence for want of data),
+     *  summed over every line this player played. Telemetry only. */
+    val underruns: Int
+        get() = pastUnderruns + runCatching { track?.underrunCount ?: 0 }.getOrDefault(0)
+    private var pastUnderruns = 0
+
     fun stop() = synchronized(this) {
         track?.let {
+            pastUnderruns += runCatching { it.underrunCount }.getOrDefault(0)
             runCatching { it.pause() }
             runCatching { it.flush() }
             runCatching { it.stop() }
@@ -151,5 +166,10 @@ class PcmStreamPlayer(
         track = null
         writtenFrames = 0
         carry = null
+    }
+
+    private companion object {
+        /** The realtime call's ring buffer, in seconds of audio. */
+        const val CALL_BUFFER_SECONDS = 4
     }
 }
