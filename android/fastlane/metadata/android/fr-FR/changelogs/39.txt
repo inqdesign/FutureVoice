@@ -1,0 +1,2 @@
+Corrections
+• Pendant un appel, la voix de ton moi fluide ne se coupe plus au milieu d’une phrase.

@@ -1,0 +1,2 @@
+Correcciones
+• En las llamadas, la voz de tu yo fluido ya no se corta a mitad de frase.
