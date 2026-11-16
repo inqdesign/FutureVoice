@@ -132,6 +132,7 @@ enum SpeechChallengeCategory {
         case "short_talk": return explain(key: "speech.category.short_talk", default: "Short talk")
         case "docent": return explain(key: "speech.category.docent", default: "Museum guide")
         case "weather": return explain(key: "speech.category.weather", default: "Weather forecast")
+        case "wedding": return explain(key: "speech.category.wedding", default: "Wedding speech")
         default: return nil
         }
     }

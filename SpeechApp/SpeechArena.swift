@@ -422,7 +422,7 @@ enum Arena {
         let keys = ["show_host", "famous_speech", "movie_scene", "acceptance", "product_launch", "in_flight", "podcast", "short_talk"]
         // A film critic wears the film tile. Kept out of `keys`, which also
         // deals colours to challenges with no kind by index.
-        var category = category == "film_review" ? "movie_scene" : category
+        var category = category == "film_review" ? "movie_scene" : category == "wedding" ? "acceptance" : category
         if category == nil || !keys.contains(category!), let seed {
             // No kind on file: the challenge still gets a colour of its own.
             let byte = withUnsafeBytes(of: seed.uuid) { $0.reduce(0) { $0 &+ Int($1) } }
