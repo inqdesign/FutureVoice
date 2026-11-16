@@ -2807,10 +2807,11 @@
     <string name="specific_enough_it_or_tap_a_breadcrumb_to_explore_more">"Konkret genug – %s starten oder auf einen Pfadpunkt tippen, um weiterzustöbern."</string>
     <string name="speech_category_acceptance">"Dankesrede"</string>
     <string name="speech_category_famous_speech">"Berühmte Rede"</string>
-    <string name="speech_category_movie_scene">"Filmszene"</string>
     <string name="speech_category_film_review">"Filmkritikerin"</string>
+    <string name="speech_category_movie_scene">"Filmszene"</string>
     <string name="speech_category_product_launch">"Produktvorstellung"</string>
     <string name="speech_category_show_host">"Teleshopping"</string>
+    <string name="speech_category_wedding">"Hochzeitsrede"</string>
     <string name="speech_challenge_again">"Noch mal"</string>
     <string name="speech_challenge_new">"Neu"</string>
     <string name="speech_challenge_take">"Los"</string>

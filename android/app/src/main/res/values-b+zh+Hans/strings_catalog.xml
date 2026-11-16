@@ -2811,10 +2811,11 @@
     <string name="specific_enough_it_or_tap_a_breadcrumb_to_explore_more">"够具体了，可以直接%s，或点上方的路径再探索。"</string>
     <string name="speech_category_acceptance">"获奖感言"</string>
     <string name="speech_category_famous_speech">"经典演讲"</string>
-    <string name="speech_category_movie_scene">"电影场景"</string>
     <string name="speech_category_film_review">"影评人"</string>
+    <string name="speech_category_movie_scene">"电影场景"</string>
     <string name="speech_category_product_launch">"新品发布"</string>
     <string name="speech_category_show_host">"电视购物"</string>
+    <string name="speech_category_wedding">"婚礼致辞"</string>
     <string name="speech_challenge_again">"再挑战"</string>
     <string name="speech_challenge_new">"新挑战"</string>
     <string name="speech_challenge_take">"挑战"</string>

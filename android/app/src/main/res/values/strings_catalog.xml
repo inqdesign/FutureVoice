@@ -2822,10 +2822,11 @@
     <string name="specific_enough_it_or_tap_a_breadcrumb_to_explore_more">"Specific enough — %s it, or tap a breadcrumb to explore more."</string>
     <string name="speech_category_acceptance">"Acceptance speech"</string>
     <string name="speech_category_famous_speech">"Famous speech"</string>
-    <string name="speech_category_movie_scene">"Movie scene"</string>
     <string name="speech_category_film_review">"Film critic"</string>
+    <string name="speech_category_movie_scene">"Movie scene"</string>
     <string name="speech_category_product_launch">"Product launch"</string>
     <string name="speech_category_show_host">"Show host"</string>
+    <string name="speech_category_wedding">"Wedding speech"</string>
     <string name="speech_challenge_again">"Again"</string>
     <string name="speech_challenge_new">"New"</string>
     <string name="speech_challenge_take">"Take it on"</string>

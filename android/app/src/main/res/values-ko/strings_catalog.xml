@@ -2811,10 +2811,11 @@
     <string name="specific_enough_it_or_tap_a_breadcrumb_to_explore_more">"충분히 구체적이에요. %s 하거나, 위 경로를 눌러 더 탐색하세요."</string>
     <string name="speech_category_acceptance">"수상 소감"</string>
     <string name="speech_category_famous_speech">"명연설"</string>
-    <string name="speech_category_movie_scene">"영화 장면"</string>
     <string name="speech_category_film_review">"영화평론가"</string>
+    <string name="speech_category_movie_scene">"영화 장면"</string>
     <string name="speech_category_product_launch">"신제품 발표"</string>
     <string name="speech_category_show_host">"쇼호스트"</string>
+    <string name="speech_category_wedding">"결혼식 축사"</string>
     <string name="speech_challenge_again">"다시 도전"</string>
     <string name="speech_challenge_new">"새 챌린지"</string>
     <string name="speech_challenge_take">"도전"</string>
