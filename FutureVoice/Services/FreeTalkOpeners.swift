@@ -146,8 +146,14 @@ final class FreeTalkOpeners {
             // the two identically (`TALK_PURPOSES`), but a warm-up filed as
             // "turn" was indistinguishable in the ledger from a call's reply,
             // and the admin console read a language switch as a 6-minute call.
+            // A FRESH key per warm (2026-11-16): the default key is derived
+            // from the line, so a re-bake (speed moved, baked list reset)
+            // re-sent a key already on file, and `tts` refuses a key older
+            // than ten minutes with 409. The line's audio had been removed
+            // above, so it was never cached again and every warm failed.
             audio = try await VoiceClient.shared.synthesize(
-                voiceId: voiceId, text: line, purpose: "opener")
+                voiceId: voiceId, text: line,
+                idempotencyKey: "tts-opener:\(UUID().uuidString)", purpose: "opener")
         } catch {
             Self.report("opener_audio_failed", language: nil, error: error)
             throw error
