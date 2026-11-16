@@ -229,6 +229,19 @@ class SpeechChallenges private constructor(private val context: Context) {
     fun seasonEnded(season: Int, seasons: List<SeasonStatus> = _seasons.value): Boolean =
         seasons.firstOrNull { it.season == season }?.ended == true
 
+    /** My best on a challenge as its card shows it: the board's, or a take on
+     *  this phone. On a Season 2+ challenge only a take scored the reading way
+     *  counts (iOS: a Season 1 take's score on a Season 2 card read as this
+     *  season's), the same rule as [keptOff]. */
+    fun myBest(scriptId: String, takes: List<SpeechTake>): Int? {
+        val seasonTwo = (season(scriptId) ?: 1) >= 2
+        val local = takes.filter {
+            !seasonTwo || ((it.metrics.scoring ?: 0) >= com.roro.futurevoice.talk.SpeechReading.READING_SCORING_FROM
+                && it.metrics.reading != null)
+        }.maxOfOrNull { it.metrics.overall }
+        return listOfNotNull(_standings.value[scriptId]?.myBest, local).maxOrNull()
+    }
+
     /** The last list per language, so a take's result page finds its script
      *  offline and the tab draws before the network answers. */
     @Synchronized

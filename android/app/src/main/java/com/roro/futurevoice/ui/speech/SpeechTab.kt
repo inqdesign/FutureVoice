@@ -273,7 +273,7 @@ internal fun SpeechTabBody(language: String, native: String, level: CefrLevel,
                 // both apps): the picture on cream, the title, the medal I hold.
                 TwoAcross(live, spacing = 12.dp, rowSpacing = 12.dp) { script, mod ->
                     ArenaTile(script, standings[script.id],
-                        best = listOfNotNull(standings[script.id]?.myBest, store.best(script.id)).maxOrNull(),
+                        best = challenges.myBest(script.id, store.takes(script.id)),
                         ended = standings[script.id]?.retiredAt != null,
                         onClick = { onOpenChallenge(script) }, modifier = mod)
                 }
