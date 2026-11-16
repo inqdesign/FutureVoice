@@ -246,11 +246,6 @@ struct AccountStatus {
         isEntitled && monthlyCapSeconds == nil
     }
 
-    /// A free account that has had its scenes — the next one is the plans.
-    var freeScenesSpent: Bool {
-        guard !isEntitled, !unlimited, let cap = freeScenesCap else { return false }
-        return freeScenesUsed >= cap
-    }
 
     /// Scenes are paid for out of the talk pool rather than counted.
     var scenesCostTalk: Bool { sceneTalkSeconds != nil }
@@ -259,10 +254,13 @@ struct AccountStatus {
     var sceneTalkMinutes: Int { (sceneTalkSeconds ?? 0) / 60 }
 
     /// Talk minutes a scene can be paid from: the plan's pool plus invite
-    /// minutes and packs (the claim spends both, extra first). Nil where
-    /// nothing is counted.
+    /// minutes and packs (the claim spends both, extra first), or with no
+    /// plan the free minutes (2026-11-16: a free account's scene costs five
+    /// minutes too; there is no free sample). Nil where nothing is counted.
     var sceneSpendableSeconds: Int? {
-        guard isEntitled, !isUncappedTalk, !unlimited else { return nil }
+        guard !unlimited else { return nil }
+        if !isEntitled { return max(0, secondsBalance) }
+        guard !isUncappedTalk else { return nil }
         return secondsRemaining + bonusSeconds
     }
 

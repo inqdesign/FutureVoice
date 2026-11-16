@@ -54,22 +54,20 @@ final class BillingGate: ObservableObject {
         return await snapshot(force: account != nil)?.needsSubscription ?? false
     }
 
-    /// What a tap that writes a scene may do: go, the plans (no plan, or a
-    /// free account that has had its sample scene), or — for an
-    /// account whose scenes cost talk time and hasn't a whole scene's worth
-    /// left — the spent-pool sheet. Same cache rule as `blocks()`: a yes from
+    /// What a tap that writes a scene may do: go, the plans (a free account
+    /// without a whole scene's five minutes left), or, for a subscriber
+    /// without them, the spent-pool sheet. Same cache rule as `blocks()`: a yes from
     /// cache, a no only from a fresh fetch, and a failed fetch is a yes.
     enum SceneAnswer { case go, paywall, short(AccountStatus) }
 
     func sceneAnswer() async -> SceneAnswer {
-        if let cached = account, !cached.needsSubscription, !cached.freeScenesSpent,
-           !cached.sceneTalkShort {
+        if let cached = account, !cached.needsSubscription, !cached.sceneTalkShort {
             Task { await refreshIfStale() }
             return .go
         }
         guard let fresh = await snapshot(force: account != nil) else { return .go }
-        if fresh.needsSubscription || fresh.freeScenesSpent { return .paywall }
-        if fresh.sceneTalkShort { return .short(fresh) }
+        if fresh.needsSubscription { return .paywall }
+        if fresh.sceneTalkShort { return fresh.isEntitled ? .short(fresh) : .paywall }
         return .go
     }
 

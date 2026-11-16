@@ -24,11 +24,6 @@ struct SceneCostNote: View {
 
     static func text(_ account: AccountStatus?) -> String? {
         guard let account, !account.unlimited else { return nil }
-        if !account.isEntitled {
-            // A spent sample answers with the plans at the tap; nothing to say.
-            guard let cap = account.freeScenesCap, account.freeScenesUsed < cap else { return nil }
-            return explain("Your free scene · it takes no talk time")
-        }
         if account.scenesCostTalk {
             // Short of a whole scene: say what it needs before the tap, which
             // answers with the spent-pool sheet.
