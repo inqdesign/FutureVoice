@@ -42,12 +42,6 @@ fun SceneCostNote(modifier: Modifier = Modifier) {
 @Composable
 private fun sceneCostText(account: AccountStatus?): String? {
     if (account == null || account.unlimited) return null
-    if (!account.isEntitled) {
-        // A spent sample answers with the plans at the tap; nothing to say.
-        val cap = account.freeScenesCap ?: return null
-        if (account.freeScenesUsed >= cap) return null
-        return stringResource(R.string.your_free_scene_it_takes_no_talk_time)
-    }
     if (account.scenesCostTalk) {
         // Short of a whole scene: say what it needs before the tap, which
         // answers with the spent-pool sheet.

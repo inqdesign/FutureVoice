@@ -17,8 +17,9 @@ import kotlinx.coroutines.launch
  * Two rules keep it honest, and both matter:
  *
  * - **It gates on [AccountStatus.needsSubscription] ONLY** — plus, for a
- *   tap that writes a scene, a FREE account's spent free scenes
- *   ([AccountStatus.freeScenesSpent]). A spent PLAN allowance is not this — that learner already paid, and the client's copy of the
+ *   tap that writes a scene, a whole scene's five minutes
+ *   ([AccountStatus.sceneTalkShort]: a free account short of them gets the
+ *   plans). A spent PLAN allowance is not this — that learner already paid, and the client's copy of the
  *   period's usage is stale often enough to refuse a call the server would
  *   allow.
  * - **A "no" is never given from cache.** A purchase that landed a minute ago
@@ -101,7 +102,9 @@ object BillingGate {
         if (go && scene && (fresh ?: cached)?.sceneTalkShort == true) {
             val confirmed = fresh ?: runCatching { AccountStatus.load(auth) }.getOrNull()?.also { remember(it) }
             if (confirmed?.sceneTalkShort == true) {
-                showSceneShort.value = true
+                // A free account without five minutes left: the plans.
+                if (confirmed.isEntitled) showSceneShort.value = true
+                else showPaywall.value = true
                 return false
             }
         }
@@ -124,11 +127,8 @@ object BillingGate {
      *   its empty snapshot, which reads as an account holding nothing and
      *   paywalled the tap (found by 5.13; iOS returns nil there).
      *
-     * [scene] is iOS `blocksScene`: a tap about to WRITE a Watch scene is
-     * also refused for a free account that has had its free scenes
-     * ([AccountStatus.freeScenesSpent]) — it can still talk off its balance,
-     * but the server would refuse the scene after it was written. Same cache
-     * rule.
+     * [scene] is kept for the cache rule's signature; a scene's five
+     * minutes are judged by [AccountStatus.sceneTalkShort] in [start].
      */
     internal suspend fun decide(
         cached: AccountStatus?, signedIn: Boolean, scene: Boolean = false,
@@ -141,7 +141,7 @@ object BillingGate {
     }
 
     private fun allows(status: AccountStatus, scene: Boolean): Boolean =
-        !status.needsSubscription && !(scene && status.freeScenesSpent)
+        !status.needsSubscription
 
     /**
      * iOS `blocks` → `refreshIfStale`: a cached YES is still the instant

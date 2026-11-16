@@ -24,8 +24,7 @@ class BillingGateTest {
     }
 
     /** A free account with a minute or more to talk on, two scenes had. */
-    private val freeScenesGone = AccountStatus(secondsBalance = 600, freeScenesUsed = 2, freeScenesCap = 2)
-    private val freeSceneLeft = freeScenesGone.copy(freeScenesUsed = 1)
+    private val freeMinutes = AccountStatus(secondsBalance = 600)
 
     @Test fun aCachedYesNeverWaitsOnTheNetwork() {
         assertEquals(true to 0, decide(paid, fresh = nothing))
@@ -56,27 +55,17 @@ class BillingGateTest {
         assertTrue(AccountStatus(subscriptionStatus = "expired").needsSubscription)
     }
 
-    /** iOS `blocksScene`: a free account that has had its scenes is sent to
-     *  the plans at the tap — before a scene is written for nothing. */
-    @Test fun aFreeAccountsSpentScenesStopTheSceneTap() {
-        assertEquals(false to 1, decide(freeScenesGone, scene = true, fresh = freeScenesGone))
-        assertEquals(true to 0, decide(freeSceneLeft, scene = true, fresh = freeScenesGone))
-        // A purchase since: the cached no is read again and lets it through.
-        assertEquals(true to 1, decide(freeScenesGone, scene = true, fresh = paid))
-    }
-
-    /** It can still TALK off its balance — the call tap is untouched. */
-    @Test fun spentFreeScenesDoNotStopACall() {
-        assertEquals(true to 0, decide(freeScenesGone, fresh = nothing))
-    }
-
-    @Test fun onlyAFreeAccountHasFreeScenesToSpend() {
-        assertTrue(freeScenesGone.freeScenesSpent)
-        assertFalse(freeSceneLeft.freeScenesSpent)
-        assertFalse(freeScenesGone.copy(subscriptionStatus = "active").freeScenesSpent)
-        assertFalse(freeScenesGone.copy(unlimited = true).freeScenesSpent)
-        // A server from before the field says nothing — never a refusal.
-        assertFalse(freeScenesGone.copy(freeScenesCap = null).freeScenesSpent)
+    /** 2026-11-16: no free sample scene. A free account's scene costs five
+     *  minutes of its balance like a subscriber's, so the scene tap passes
+     *  the gate whenever a call would, and [AccountStatus.sceneTalkShort]
+     *  decides whether five minutes are there. */
+    @Test fun aFreeAccountsSceneIsPaidFromItsMinutes() {
+        assertEquals(true to 0, decide(freeMinutes, scene = true, fresh = nothing))
+        val scene = freeMinutes.copy(sceneTalkSeconds = 300)
+        assertFalse(scene.sceneTalkShort)
+        assertTrue(scene.copy(secondsBalance = 299).sceneTalkShort)
+        assertTrue(scene.copy(secondsBalance = 120).sceneTalkShort)
+        assertFalse(scene.copy(unlimited = true).sceneTalkShort)
     }
 
     /** iOS `refreshIfStale`: a cached yes is re-read BEHIND the tap after
@@ -89,7 +78,7 @@ class BillingGateTest {
         assertTrue(BillingGate.refreshBehind(paid, false, null, t))
         assertFalse(BillingGate.refreshBehind(nothing, false, t, t + 120_000))
         assertFalse(BillingGate.refreshBehind(null, false, null, t))
-        assertFalse(BillingGate.refreshBehind(freeScenesGone, true, t, t + 120_000))
-        assertTrue(BillingGate.refreshBehind(freeScenesGone, false, t, t + 120_000))
+        assertTrue(BillingGate.refreshBehind(freeMinutes, true, t, t + 120_000))
+        assertTrue(BillingGate.refreshBehind(freeMinutes, false, t, t + 120_000))
     }
 }

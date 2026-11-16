@@ -178,12 +178,15 @@ data class AccountStatus(
     val sceneTalkMinutes: Int get() = (sceneTalkSeconds ?: 0) / 60
 
     /** Talk seconds a scene can be paid from: the plan's pool plus invite
-     *  minutes and packs (the claim spends both, extra first). Null where
-     *  nothing is counted (iOS `sceneSpendableSeconds`). */
+     *  minutes and packs (the claim spends both, extra first), or with no
+     *  plan the free minutes (2026-11-16: a free account's scene costs five
+     *  minutes too, no free sample). Null where nothing is counted
+     *  (iOS `sceneSpendableSeconds`). */
     val sceneSpendableSeconds: Int?
         get() {
-            val cap = monthlyCapSeconds
-            if (!isEntitled || cap == null || unlimited) return null
+            if (unlimited) return null
+            if (!isEntitled) return maxOf(0, secondsBalance)
+            val cap = monthlyCapSeconds ?: return null
             return maxOf(0, cap - secondsUsedPeriod) + bonusSeconds
         }
 
@@ -194,14 +197,6 @@ data class AccountStatus(
             val cost = sceneTalkSeconds ?: return false
             val left = sceneSpendableSeconds ?: return false
             return left < cost
-        }
-
-    /** A free account that has had its scenes — the next one is the plans
-     *  (iOS `freeScenesSpent`). It can still talk off its balance. */
-    val freeScenesSpent: Boolean
-        get() {
-            val cap = freeScenesCap ?: return false
-            return !isEntitled && !unlimited && freeScenesUsed >= cap
         }
 
     companion object {
