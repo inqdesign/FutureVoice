@@ -2299,8 +2299,10 @@ if (params.get("checkout") === "success") {
 }
 
 // The nav link points at a section that is always there now.
-const navPricing = document.getElementById("nav-pricing")
-if (navPricing) navPricing.hidden = false
+for (const id of ["nav-pricing", "nav-pricing-m"]) {
+  const a = document.getElementById(id)
+  if (a) a.hidden = false
+}
 
 if (BILLING.enabled && BILLING.supabaseUrl && BILLING.supabaseAnonKey) {
   // Web checkout is live: swap the App Store CTA for the Stripe one. Until
