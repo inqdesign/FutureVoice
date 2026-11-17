@@ -21,6 +21,8 @@
 // - NO THINKING. Haiku 5.5 answers without it by default, which is the
 //   gateway's "minimal" in spirit and measured fine on the probes.
 
+import { OPEN_TALK_BRIEF } from "./open-talk"
+
 export type Line = { role: "user" | "model"; text: string }
 
 /** Appended to the app's system prompt on Claude only; Gemini never sees it.
@@ -37,10 +39,12 @@ export const CLAUDE_SPOKEN_ONLY = `
 HOW YOUR WORDS REACH THEM: everything you write is read aloud, as it is written, to the person on the call, the moment you write it. So write only the words you say to them, once. No notes, no plans, no drafts, no checking your own line, no "wait" followed by a correction, nothing in brackets. Decide what to say before you write; then say it.
 `
 
-/** Free talk (2026-11-12, founder: "it should be just natural conversation,
- *  we shouldn't say more than one question and so on"): the app's free-talk
- *  prompt is facts only, and an `openTalk` call gets the spoken-only half
- *  above and none of the question rules, in the prompt or in `SpokenGate`. */
+/** Free talk got NO question rule from 2026-11-12 to 2026-11-17 (founder:
+ *  "it should be just natural conversation"), in the prompt or in
+ *  `SpokenGate`. With no brief the model interviewed (open-talk.ts), so an
+ *  `openTalk` call now gets the spoken-only half, `OPEN_TALK_BRIEF` after
+ *  it, and the gate's shape: one question, `OPEN_TALK_MAX_SENTENCES`. The
+ *  rest of this addendum is still not sent to it. */
 export const CLAUDE_ADDENDUM = CLAUDE_SPOKEN_ONLY + `
 ONE QUESTION MARK PER TURN, at most, and it ends the turn. A reaction is a statement, not a question: "Oh, tired." not "Oh, tired?"; "Busy with work, I see." not "Busy with work, huh?". After your question, stop — no second question, not even a guess at their answer ("…? At home?"). If you want to offer a choice, put it inside the one question ("Coffee or tea?").
 If the prompt above has a "HOW TO ASK — THIS LEARNER IS A BEGINNER" section, it holds for every turn, the first one too: the question is short and answerable in a few words ("Are you at home?", "Did you work today?"), never "how was your day?" or "tell me about…".
@@ -93,6 +97,17 @@ function isEchoQuestion(sentence: string, first: boolean): boolean {
   return latin ? s.split(/\s+/).length <= 3 : s.replace(/\s/g, "").length <= 8
 }
 
+/** A reaction of a few words ("Oh no.", "That's rough.", "그렇구나."): free,
+ *  as it was under the old prompt's ceiling. */
+function isShortReaction(sentence: string): boolean {
+  const s = sentence.trim()
+  return /[A-Za-zÀ-ÿ]/.test(s) ? s.split(/\s+/).length <= 3 : s.replace(/\s/g, "").length <= 8
+}
+
+/** Free talk's ceiling: the old conversation prompt's own ("HARD CEILING 3
+ *  sentences, a two- or three-word reaction is free"), held in code. */
+export const OPEN_TALK_MAX_SENTENCES = 3
+
 /** Holds the stream back to whole sentences and checks each before it goes
  *  on. The voice is sent sentence by sentence anyway (session.ts
  *  `routeDelta`), so this costs the call no audio latency — only the text on
@@ -108,12 +123,18 @@ function isEchoQuestion(sentence: string, first: boolean): boolean {
 export class SpokenGate {
   private pending = ""
   private sentences = 0
+  private counted = 0
   private asked = false
   emitted = ""
   constructor(
     private language: string,
     private emit: (text: string) => void,
-    /** false = free talk: any number of questions (see `CLAUDE_SPOKEN_ONLY`). */
+    /** Free talk: the reply ends after this many sentences, a short reaction
+     *  ("Oh no.", "That's rough.") not counted. Undefined = no ceiling: every
+     *  other mode's prompt carries its own. */
+    private maxSentences?: number,
+    /** false = a free talk with the brief switched off: any number of
+     *  questions, as from 2026-11-12. */
     private oneQuestion = true,
   ) {}
 
@@ -160,8 +181,14 @@ export class SpokenGate {
     const question = /[?？]$/.test(trimmed)
     const choice = /^(or\b|oder\b|아니면|それとも|o\b|ou\b)/i.test(trimmed)
     if (this.oneQuestion && question && this.asked && !choice) return false
+    // Words did not hold a free talk to a phone call's turn (probe: "two
+    // sentences is a normal turn" still averaged four), so the ceiling is
+    // here: the reply ends where the next full sentence would start.
+    const reaction = isShortReaction(trimmed)
+    if (this.maxSentences !== undefined && !reaction && this.counted >= this.maxSentences) return false
     if (question && !isEchoQuestion(trimmed, this.sentences === 0)) this.asked = true
     this.sentences += 1
+    if (!reaction) this.counted += 1
     this.emitted += text
     this.emit(text)
     return true
@@ -220,8 +247,12 @@ export async function streamClaude(opts: {
   thinking?: string
   /** "" = the model default (medium on Haiku 5.5); low | medium | high. */
   effort?: string
-  /** Free talk: no question rule (`CLAUDE_SPOKEN_ONLY`). */
+  /** Free talk: none of the question rules in the prompt. */
   openTalk?: boolean
+  /** Free talk with the brief on (OPEN_TALK_BRIEF switch): `OPEN_TALK_BRIEF`
+   *  after the spoken-only half, and the gate holds one question and the
+   *  sentence ceiling. */
+  openTalkBrief?: boolean
   signal: AbortSignal
   onDelta: (text: string) => void
   /** The model's first raw text, before the gate holds it to a sentence —
@@ -259,7 +290,8 @@ export async function streamClaude(opts: {
       // Unused headroom costs nothing.
       max_tokens: 2048,
       stream: true,
-      system: [{ type: "text", text: opts.system + (opts.openTalk ? CLAUDE_SPOKEN_ONLY : CLAUDE_ADDENDUM), cache_control: { type: "ephemeral" } }],
+      system: [{ type: "text", text: opts.system + (!opts.openTalk ? CLAUDE_ADDENDUM
+        : opts.openTalkBrief ? CLAUDE_SPOKEN_ONLY + OPEN_TALK_BRIEF : CLAUDE_SPOKEN_ONLY), cache_control: { type: "ephemeral" } }],
       messages: opts.messages,
       ...(opts.thinking ? { thinking: { type: opts.thinking } } : {}),
       ...(opts.effort ? { output_config: { effort: opts.effort } } : {}),
@@ -275,7 +307,9 @@ export async function streamClaude(opts: {
     throw new Error(`reply upstream ${opts.model} ${resp.status}: ${(await resp.text()).slice(0, 300)}`)
   }
 
-  const gate = new SpokenGate(opts.language, opts.onDelta, !opts.openTalk)
+  const gate = new SpokenGate(opts.language, opts.onDelta,
+    opts.openTalk && opts.openTalkBrief ? OPEN_TALK_MAX_SENTENCES : undefined,
+    !opts.openTalk || opts.openTalkBrief === true)
   let cut = false
   let startedText = false
   reader = resp.body.getReader()

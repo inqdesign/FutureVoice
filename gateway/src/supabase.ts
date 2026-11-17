@@ -36,6 +36,8 @@ export interface Env {
    *  medium | high); unset = the model's defaults (adaptive, medium). */
   CLAUDE_REPLY_THINKING?: string
   CLAUDE_REPLY_EFFORT?: string
+  /** Free talk's character brief + shape (open-talk.ts): off | all | user ids. */
+  OPEN_TALK_BRIEF?: string
   /** Anthropic key for the Claude reply. */
   ANTHROPIC_API_KEY?: string
   /** Streaming PCM format for the call's voice (default pcm_22050). */

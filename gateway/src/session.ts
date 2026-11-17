@@ -918,6 +918,7 @@ export class CallSession implements DurableObject {
       // p50 1.16 → 1.01 s, p90 2.59 → 1.53 s, over 2 s 38 → 9 of 152
       // (scratch probe, ko/en a2/b1); notes written 3/379 at both.
       claudeEffort: this.env.CLAUDE_REPLY_EFFORT || "low",
+      openTalkBrief: onForUser(this.env.OPEN_TALK_BRIEF, this.userId),
     })
     this.replyEngine.steer = this.pendingSteer
     this.replyEngine.openTalk = this.openTalk

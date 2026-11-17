@@ -11,6 +11,7 @@
 // async call in Phase 2 — the voice must never wait on coaching.
 
 import { steerTurnText } from "./steer-turn"
+import { OPEN_TALK_BRIEF } from "./open-talk"
 import { claudeMessages, isClaudeModel, SpokenLeakError, streamClaude, type ClaudeUsage } from "./claude-reply"
 
 const API_HOST = "https://generativelanguage.googleapis.com"
@@ -44,6 +45,8 @@ export interface ReplyConfig {
   /** Claude only (claude-reply.ts): thinking type and effort, "" = default. */
   claudeThinking?: string
   claudeEffort?: string
+  /** The OPEN_TALK_BRIEF switch for this caller (open-talk.ts). */
+  openTalkBrief?: boolean
 }
 
 /** One generation request, and whether it reads the cache. */
@@ -60,8 +63,24 @@ export class ReplyEngine {
    *  system instruction's tail until the system instruction became a cache —
    *  see `steer-turn.ts`). Empty = none. */
   steer = ""
-  /** Free talk (`StartMessage.openTalk`): Claude gets no question rule. */
-  openTalk = false
+  /** Free talk (`StartMessage.openTalk`): the reply gets `OPEN_TALK_BRIEF`
+   *  on either model, and on Claude the gate's sentence ceiling. Changing it
+   *  changes the system text, so the Gemini cache is dropped like a new
+   *  prompt's. */
+  private _openTalk = false
+  get openTalk(): boolean { return this._openTalk }
+  set openTalk(on: boolean) {
+    if (on === this._openTalk) return
+    this._openTalk = on
+    this.systemVersion += 1
+    if (this.cache) void this.deleteCache(this.cache.name)
+    this.cache = null
+  }
+  /** What Gemini is given as the system text (Claude appends its own tail
+   *  in `streamClaude`). */
+  private get geminiSystem(): string {
+    return this._openTalk && this.config.openTalkBrief ? this.config.system + OPEN_TALK_BRIEF : this.config.system
+  }
 
   /** Per model: the hedge's fallback is priced differently from the primary. */
   readonly usageByModel = new Map<string, ReplyUsage>()
@@ -187,7 +206,7 @@ export class ReplyEngine {
         ? { cachedContent: cache.name, contents: contents.slice(cache.prefix.length), generationConfig }
         : {
             systemInstruction: {
-              parts: [{ text: steerInSystem ? `${this.config.system}\n\n${this.steer}` : this.config.system }],
+              parts: [{ text: steerInSystem ? `${this.geminiSystem}\n\n${this.steer}` : this.geminiSystem }],
             },
             contents, generationConfig,
           }) }
@@ -335,7 +354,7 @@ export class ReplyEngine {
         apiKey: this.config.anthropicKey, model, system, signal, onDelta, onFirstText, usage: raw,
         language: this.config.language ?? "en",
         thinking: this.config.claudeThinking, effort: this.config.claudeEffort,
-        openTalk: this.openTalk,
+        openTalk: this.openTalk, openTalkBrief: this.config.openTalkBrief,
         messages: claudeMessages(steered, ReplyEngine.settledPrefix(history).length),
       })
     } finally {
@@ -465,7 +484,7 @@ export class ReplyEngine {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         model: `models/${model}`,
-        systemInstruction: { parts: [{ text: this.config.system }] },
+        systemInstruction: { parts: [{ text: this.geminiSystem }] },
         ...(prefix.length > 0
           ? { contents: prefix.map((t) => ({ role: t.role, parts: [{ text: t.text }] })) }
           : {}),

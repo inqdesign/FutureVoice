@@ -3111,6 +3111,45 @@ the transport's fault, a typo the model's); `decodeDetail` carries all of it
 into `talk_summary_retry` / `talk_summary_error`. Read the next one off the
 console before guessing at a repair pass.
 
+## Free talk has a character brief (2026-11-17)
+
+From 2026-11-12 a free talk ran with no rules at all: a facts-only prompt
+(`ConversationEngine.freeTalkPrompt`) and no question rule in the gateway
+("let the model handle the conversation"). A learner's calls showed what a
+model does with no brief: six-sentence replies with three stacked
+questions, her words echoed back, a stranger's sentence the mic caught
+taken as fact and built on, her correction of it ignored, "I don't have a
+clear record of you saying that", and "you might enjoy describing the food
+in English". Fifty rules were recited or ignored; zero rules is an
+interviewer.
+
+- **`OPEN_TALK_BRIEF`** (`gateway/src/open-talk.ts`): about ten lines of
+  prose on who is on the call (a close person, not a helper or a teacher;
+  listen first; a line that fits nothing was probably not theirs, ask;
+  believe a correction; go along with what you can't find in the record;
+  leave their language alone; do the call the way they ask). Appended to
+  the app's prompt for an `openTalk` call on both reply models. In the
+  gateway so every build gets it at once, Android too.
+- **The shape is code, not words.** "Two sentences is a normal turn" still
+  averaged four on Haiku, so `SpokenGate` holds a free talk to one real
+  question and `OPEN_TALK_MAX_SENTENCES` (3, a reaction of three words or
+  fewer is free: the old prompt's ceiling). Claude path only; the Gemini
+  hedge gets the brief and no gate.
+- **Switch:** Worker secret `OPEN_TALK_BRIEF` = off (default) | all | user
+  ids. Off is the 11-12 behaviour untouched.
+- `scripts/free-talk-probe.py` prints every reply with and without the
+  brief over her situations, and what the gate would let through (English,
+  B2 only so far); `gateway/test/open-talk-check.mjs` runs the real reply
+  path. Probe, Haiku: sentences 5.1 bare, 4.1 with the brief, 3.2 as
+  spoken; two or more questions 18/24, 11/24, 2/24. Known rough edges: an
+  echo said as a question ("Working the whole weekend?") uses up the one
+  question, a cut can end on a half thought, replies almost never go
+  without a question until the gate cuts one, and Gemini still says "I
+  remember doing that myself".
+- Same day, in the app: the EARLIER TODAY record is the last 30 lines /
+  3,000 chars (was 10 / 1,400), without lines flagged misheard or the reply
+  built on them.
+
 ## A learner who switches language, or isn't finished (2026-10-08)
 
 Found reading one A2 learner's calls; both were everywhere once counted.
