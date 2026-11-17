@@ -5,8 +5,8 @@ import SwiftUI
 /// deep). Only the picture behind swipes, like Photos with older to the
 /// left; the score, the sheet and the buttons stay put and change to the
 /// take swiped to. The indicator at the top says where you are, and a tap on
-/// it is a menu of every take to jump to, and deleting the one shown — what
-/// the list this replaced did. A menu, not a sheet: the page's details are a
+/// it is a menu of every take to jump to. Deleting the one shown is the
+/// page's ⋯, so a lone take can be deleted too. A menu, not a sheet: the page's details are a
 /// sheet already, and a page shows one at a time.
 /// Android still opens the old takes list from the history button.
 struct SpeechTakesPager: View {
@@ -14,6 +14,7 @@ struct SpeechTakesPager: View {
     @ObservedObject private var store = SpeechStore.shared
     @Environment(\.dismiss) private var dismiss
     @State private var current: UUID?
+    @State private var confirmDelete = false
 
     /// Oldest first, so the newest is the last page and older ones are a
     /// swipe to the right away.
@@ -28,7 +29,8 @@ struct SpeechTakesPager: View {
             Group {
                 if let shown {
                     SpeechResultView(takeId: shown.id, pages: takes.map(\.id),
-                                     onPage: { current = $0 })
+                                     onPage: { current = $0 },
+                                     onDelete: { confirmDelete = true })
                 } else {
                     ContentUnavailableView("No takes yet", systemImage: "record.circle",
                                            description: Text("Your recordings of this script will be here."))
@@ -50,21 +52,24 @@ struct SpeechTakesPager: View {
                                     }
                                 }
                             }
-                            Divider()
-                            Menu {
-                                Button("Delete", role: .destructive) {
-                                    store.deleteTake(id: shown.id)
-                                    current = nil
-                                }
-                            } label: {
-                                Label("Delete this take", systemImage: "trash")
-                            }
                         } label: {
                             TakesIndicator(index: index, count: takes.count)
                         }
                         .accessibilityLabel(Text("Take \(index + 1) of \(takes.count)"))
                     }
                 }
+            }
+            .confirmationDialog("Delete this take?", isPresented: $confirmDelete,
+                                titleVisibility: .visible) {
+                Button("Delete", role: .destructive) {
+                    guard let shown else { return }
+                    let last = takes.count <= 1
+                    store.deleteTake(id: shown.id)
+                    current = nil
+                    if last { dismiss() }
+                }
+            } message: {
+                Text("Its recording, video and score are deleted.")
             }
         }
         // A picture swiped in shows its first frame before its player draws.

@@ -20,6 +20,8 @@ struct SpeechResultView: View {
     var pages: [UUID]? = nil
     /// The take swiped to.
     var onPage: ((UUID) -> Void)? = nil
+    /// Asks to delete the take shown; nil draws no Delete.
+    var onDelete: (() -> Void)? = nil
 
     @ObservedObject private var store = SpeechStore.shared
     /// The first frame of each take's loop, for pictures swiped in.
@@ -205,22 +207,28 @@ struct SpeechResultView: View {
         .toolbar(immersive ? .hidden : .visible, for: .navigationBar)
         .statusBarHidden(immersive)
         .toolbar {
-            if stored != nil {
+            // One ⋯ for what can be done with the take (founder, 2026-11-17):
+            // share (save, send, the video's options) and delete.
+            if stored != nil || onDelete != nil {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showingVideoOptions = true
+                    AppMenu {
+                        if stored != nil {
+                            Button { showingVideoOptions = true } label: {
+                                Label("Share", systemImage: "square.and.arrow.up")
+                            }
+                        }
+                        if let onDelete {
+                            Button(role: .destructive) { onDelete() } label: {
+                                Label("Delete this take", systemImage: "trash")
+                            }
+                        }
                     } label: {
-                        // Its tray is heavy and its arrow thin: centred by the
-                        // box, it reads low in the circle. A plain button, or
-                        // the bar takes the bare symbol and drops the offset.
-                        Image(systemName: "square.and.arrow.down")
-                            .offset(y: -2)
-                            // The bar adds its own margin: this makes a circle.
+                        // The bar adds its own margin: this makes a circle.
+                        Image(systemName: "ellipsis")
                             .frame(width: 36, height: 44)
                             .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(Text("Save to Photos"))
+                    .accessibilityLabel(Text("More"))
                 }
             }
         }
