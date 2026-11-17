@@ -118,6 +118,21 @@ final class SpeechDeliveryTests: XCTestCase {
         XCTAssertEqual(SpeechTakeSession.pieceText(readBack: "hi", heard: "", language: "en")?.text, "hi")
     }
 
+    /// Azure judged the piece against a script span that didn't cover the
+    /// audio and wrote words out of that span: its text is no transcript,
+    /// however short the read-back looks beside it.
+    func testAzureTextFromAnUncoveredSpanNeverStandsIn() {
+        let azure = "1000 people aged people 2025 in 2025 a nature a people aged people was people in the aging more looked looked the aging"
+        let read = "thousand people aged fifty-one to ninety in twenty-seven"
+        let kept = SpeechTakeSession.pieceText(readBack: read, heard: azure, insertions: 18, language: "en")
+        XCTAssertEqual(kept?.text, read)
+        XCTAssertEqual(kept?.replaced, false)
+        XCTAssertNil(SpeechTakeSession.pieceText(readBack: "", heard: azure, insertions: 18, language: "en"))
+        XCTAssertNil(SpeechTakeSession.pieceText(readBack: nil, heard: azure, insertions: 18, language: "en"))
+        // A covered span (a few stray words at most) still stands in.
+        XCTAssertEqual(SpeechTakeSession.pieceText(readBack: read, heard: azure, insertions: 3, language: "en")?.replaced, true)
+    }
+
     func testWeakSoundsIsTheFifthPercentile() {
         let sounds = Array(repeating: 95, count: 39) + [20]
         let piece = SpeechDelivery.Piece(reference: "a", result: result([word("a", 0, sounds: sounds)]))

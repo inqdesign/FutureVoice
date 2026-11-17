@@ -120,10 +120,23 @@ final class SpeechTakeSession: ObservableObject {
     /// heard the piece and the read-back holds under 70% of its words (or
     /// nothing), Azure's own text is the piece's text. With no Azure text
     /// the read-back stands, nil included.
-    nonisolated static func pieceText(readBack: String?, heard: String?, language: String) -> (text: String, replaced: Bool)? {
+    ///
+    /// Azure's text is a transcript only when its script span COVERED the
+    /// audio (2026-11-17, founder's take: "fifty-one to ninety" marked as
+    /// "2025"). The span is where the prompter was, not where the voice was,
+    /// and for audio the span lacks Azure writes words out of the span:
+    /// measured, a piece saying "thousand people, aged fifty-one to ninety"
+    /// against a span ending at "aged" came back "1000 people aged people
+    /// 2025 in 2025 a nature…". Those words are tagged Insertion: 0 on six
+    /// covered readings, 6 to 20 on six uncovered ones. From
+    /// `maxInsertionsToTrust` up, Azure's text never stands in.
+    nonisolated static func pieceText(readBack: String?, heard: String?, insertions: Int = 0,
+                                      language: String) -> (text: String, replaced: Bool)? {
         let read = readBack?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let azure = heard?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard !azure.isEmpty else { return readBack.map { ($0, false) } }
+        // Nobody read this piece: nil sends the whole file to the reader.
+        guard insertions <= maxInsertionsToTrust else { return read.isEmpty ? nil : (readBack ?? read, false) }
         func size(_ s: String) -> Int {
             LanguageCatalog.writesSpaces(language)
                 ? s.split(whereSeparator: \.isWhitespace).count
@@ -132,6 +145,7 @@ final class SpeechTakeSession: ObservableObject {
         if read.isEmpty || Double(size(read)) < 0.7 * Double(size(azure)) { return (azure, true) }
         return (readBack ?? read, false)
     }
+    nonisolated static let maxInsertionsToTrust = 3
     private var lastChunkAt: TimeInterval = 0
     /// The prompter cursor at the last cut: the script from here to the
     /// cursor at the next cut is that piece's reference (`scriptSpan`).
@@ -721,6 +735,7 @@ final class SpeechTakeSession: ObservableObject {
                 let readBack = await read
                 let result = await pron.result
                 guard let piece = Self.pieceText(readBack: readBack, heard: result?.recognized,
+                                                 insertions: result?.words.filter(\.isInsertion).count ?? 0,
                                                  language: language) else { return nil }
                 return Piece(text: piece.text, pron: result, reference: reference,
                              readBackReplaced: piece.replaced, startMs: startMs)
