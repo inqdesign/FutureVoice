@@ -89,6 +89,11 @@ struct ConversationDetailView: View {
     /// The failure was the 402 credit gate — retrying can only fail again, so
     /// the alert leads to the paywall instead of a dead-end OK.
     @State private var regenerateOutOfCredits = false
+    /// "Before you go" — shown once, over the book, when this page is the
+    /// wrap-up after a talk (`postTalk`). Closing it leaves the book open.
+    @State private var takeaway: TalkTakeaway?
+    @State private var takeawayOffered = false
+    @State private var takeawayShownAt = Date()
 
     var body: some View {
         // The book's fixed layout: the page fills the screen, the ribbons
@@ -117,6 +122,18 @@ struct ConversationDetailView: View {
         .onAppear {
             refresh()
             if selectedChapter == nil { selectedChapter = initialChapter }
+            offerTakeaway()
+        }
+        .fullScreenCover(item: Binding(
+            get: { takeaway.map(TakeawayRef.init) },
+            set: { if $0 == nil { takeaway = nil } })) { ref in
+            TalkTakeawayView(takeaway: ref.value) { how in
+                Analytics.capture("talk_takeaway_closed", [
+                    "how": how,
+                    "seconds": Int(Date().timeIntervalSince(takeawayShownAt)),
+                ])
+            }
+            .environmentObject(appState)
         }
         .navigationDestination(isPresented: $showingTranscript) {
             TalkTranscriptView(session: session)
@@ -586,10 +603,10 @@ struct ConversationDetailView: View {
                     masteryMark(item.masteredAt != nil)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(item.text)
-                            .font(.body)
+                            .font(.title3)
                             .foregroundStyle(item.masteredAt != nil ? .secondary : .primary)
                         if !item.note.isEmpty {
-                            Text(item.note).font(.caption).foregroundStyle(.secondary)
+                            Text(item.note).font(.subheadline).foregroundStyle(.secondary)
                         }
                     }
                     Spacer(minLength: 8)
@@ -602,7 +619,7 @@ struct ConversationDetailView: View {
             }
             .buttonStyle(.plain)
             if item.id != theirs.last?.id {
-                Divider().padding(.leading, 44)
+                Divider().padding(.leading, 48)
             }
         }
         if !mineWords.isEmpty {
@@ -670,7 +687,7 @@ struct ConversationDetailView: View {
                 masteryMark(mastered)
                     .padding(.top, 2)
                 Text(ExpressionsView.display(e))
-                    .font(.subheadline)
+                    .font(.body)
                     .foregroundStyle(.primary)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
@@ -680,7 +697,7 @@ struct ConversationDetailView: View {
                     .padding(.top, 2)
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            .padding(.vertical, 10)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -704,7 +721,7 @@ struct ConversationDetailView: View {
                     // front, score at the end — not a decorative icon.
                     masteryMark(line.masteredAt != nil)
                     Text(line.text)
-                        .font(.subheadline)
+                        .font(.body)
                         .foregroundStyle(.primary)
                         .lineSpacing(2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -892,7 +909,7 @@ struct ConversationDetailView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     if let original = item.original, !original.isEmpty {
                         Text(original)
-                            .font(.subheadline)
+                            .font(.body)
                             .foregroundStyle(.secondary)
                             .strikethrough()
                             .lineSpacing(2)
@@ -900,12 +917,12 @@ struct ConversationDetailView: View {
                     }
                     Text(highlightedCorrection(item.fluent,
                                                original: item.original ?? "",
-                                               baseFont: .subheadline))
-                        .font(.subheadline)
+                                               baseFont: .body))
+                        .font(.body)
                         .lineSpacing(2)
                         .fixedSize(horizontal: false, vertical: true)
                     if !item.reason.isEmpty {
-                        Text(item.reason).font(.caption).foregroundStyle(.secondary)
+                        Text(item.reason).font(.subheadline).foregroundStyle(.secondary)
                     }
                 }
                 Spacer(minLength: 8)
@@ -996,7 +1013,7 @@ struct ConversationDetailView: View {
 
     private func masteryMark(_ mastered: Bool) -> some View {
         Image(systemName: mastered ? "checkmark.circle.fill" : "circle")
-            .font(.body)
+            .font(.title3)
             .foregroundStyle(mastered ? AnyShapeStyle(.green) : AnyShapeStyle(.tertiary))
     }
 
@@ -1075,6 +1092,29 @@ struct ConversationDetailView: View {
     }
 
     // MARK: - Data
+
+    private struct TakeawayRef: Identifiable {
+        let value: TalkTakeaway
+        var id: Int { 0 }
+    }
+
+    /// Once per wrap-up, and only when the talk left something to show.
+    private func offerTakeaway() {
+        guard postTalk != nil, !takeawayOffered, session.summary != nil else { return }
+        takeawayOffered = true
+        let fix = (corrections.first { $0.masteredAt == nil && !($0.original ?? "").isEmpty }
+                   ?? corrections.first)
+            .map { TalkTakeaway.Fix(original: $0.original, fluent: $0.fluent, reason: $0.reason) }
+        let t = TalkTakeaway.make(session: session, curriculum: curriculum, fix: fix)
+        guard !t.isEmpty else { return }
+        Analytics.capture("talk_takeaway_shown", ["parts": t.parts])
+        // A beat after the page appears: presenting in the same pass as the
+        // sheet that holds this page is dropped by UIKit.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            takeawayShownAt = Date()
+            takeaway = t
+        }
+    }
 
     private func refresh() {
         // Pick up store-side changes (misheard exclusions made from the

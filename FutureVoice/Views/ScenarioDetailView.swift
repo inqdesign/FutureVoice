@@ -605,14 +605,14 @@ struct ScenarioDetailView: View {
                         masteryMark(item.masteredAt != nil)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(item.text)
-                                .font(.body)
+                                .font(.title3)
                                 .foregroundStyle(item.masteredAt != nil ? .secondary : .primary)
                             if !item.note.isEmpty {
-                                Text(item.note).font(.caption).foregroundStyle(.secondary)
+                                Text(item.note).font(.subheadline).foregroundStyle(.secondary)
                             }
                             if showExample, let ex = item.example, !ex.isEmpty {
                                 Text("\u{201C}\(ex)\u{201D}")
-                                    .font(.caption).foregroundStyle(.tint)
+                                    .font(.subheadline).foregroundStyle(.tint)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                         }
@@ -635,7 +635,7 @@ struct ScenarioDetailView: View {
                     }
                 }
                 if item.id != items.last?.id {
-                    Divider().padding(.leading, 44)
+                    Divider().padding(.leading, 48)
                 }
         }
         Color.clear.frame(height: 6)
@@ -661,7 +661,7 @@ struct ScenarioDetailView: View {
                                 .foregroundStyle(line.masteredAt != nil ? .secondary : .primary)
                                 .fixedSize(horizontal: false, vertical: true)
                             if !line.note.isEmpty {
-                                Text(line.note).font(.caption).foregroundStyle(.secondary)
+                                Text(line.note).font(.subheadline).foregroundStyle(.secondary)
                             }
                         }
                         Spacer(minLength: 8)
@@ -688,7 +688,7 @@ struct ScenarioDetailView: View {
                     }
                 }
                 if line.id != c.shadowLines.last?.id {
-                    Divider().padding(.leading, 44)
+                    Divider().padding(.leading, 48)
                 }
         }
         Color.clear.frame(height: 6)
@@ -696,7 +696,7 @@ struct ScenarioDetailView: View {
 
     private func masteryMark(_ mastered: Bool) -> some View {
         Image(systemName: mastered ? "checkmark.circle.fill" : "circle")
-            .font(.body)
+            .font(.title3)
             .foregroundStyle(mastered ? AnyShapeStyle(.green) : AnyShapeStyle(.tertiary))
     }
 
