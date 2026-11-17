@@ -160,6 +160,22 @@ final class EarlierTodayTests: XCTestCase {
         }
     }
 
+    /// What came earlier is one more remembered line, never part of "This
+    /// call" (2026-11-17): there it read as the call's agenda and every
+    /// second call of a day opened on it.
+    func testEarlierTodayIsFiledWithWhatIsRemembered() {
+        let earlier = EarlierToday(kind: .talk, key: "k", endedAt: Date(),
+                                   record: "A talk that ended 40 minutes ago.\nIts last lines, oldest first:\nthem: \"I have to go now.\"\nyou: \"Sure.\"")
+        let p = ConversationEngine.conversationSystemPrompt(
+            targetLanguage: "en", nativeLanguage: "ko", level: .b1, topPatterns: [],
+            weakVocabAreas: [], topic: "", earlierToday: earlier, freeMode: true)
+        let line = "  · (earlier today) A talk that ended 40 minutes ago. It ended like this: them: \"I have to go now.\" / you: \"Sure.\""
+        let about = try! XCTUnwrap(p.range(of: "About them:")), call = try! XCTUnwrap(p.range(of: "This call:"))
+        let at = try! XCTUnwrap(p.range(of: line))
+        XCTAssertTrue(about.lowerBound < at.lowerBound && at.lowerBound < call.lowerBound)
+        XCTAssertFalse(p.contains("- Earlier today:"))
+    }
+
     func testFreeTalkPromptCarriesEarlierTodayOnlyWhenThereIsOne() {
         func prompt(_ e: EarlierToday?) -> String {
             ConversationEngine.conversationSystemPrompt(

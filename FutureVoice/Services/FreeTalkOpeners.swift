@@ -421,5 +421,10 @@ extension FreeTalkOpeners {
     /// opened on a bundled hello for the time of day, or a line written ahead
     /// about what came earlier, and fell back to the same "Hi again! What
     /// have you been up to since?" whenever that line wasn't ready.
-    static let sayHelloNote = "They just called you. Say hello."
+    ///
+    /// The middle sentence is a fact, not a direction (2026-11-17): without
+    /// it the hello commented on a voice it had not heard ("You sound like
+    /// you've just come out of a busy morning", 7 of 8 in the probe, 0 of 16
+    /// with it).
+    static let sayHelloNote = "They just called you. You have not heard them say anything yet. Say hello."
 }

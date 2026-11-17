@@ -28,6 +28,11 @@ BRIEF = (open(os.environ["BRIEF_FILE"]).read() if os.environ.get("BRIEF_FILE") e
 
 # `ConversationEngine.freeTalkPrompt`, filled in for one learner.
 def system(moment):
+    memory = ""
+    if PLACE == "memory" and "- Earlier today: " in moment:
+        moment, record = moment.split("\n- Earlier today: ", 1)
+        # ConversationEngine.asMemoryLine
+        memory = "\n  · (earlier today) " + record.replace("\nIts last lines, oldest first:\n", " It ended like this: ").replace("\n", " / ")
     return f"""You are the user's future self: them, a few years from now, speaking English fluently, in their own voice. They called you. Talk with them freely, about anything, in English.
 
 About them:
@@ -39,7 +44,7 @@ About them:
   · Lead meetings in English without preparing every sentence
 - What they told you in earlier calls, with when you heard it:
   · (2 weeks ago) lives with her partner
-  · (5 days ago) training for a 10k
+  · (5 days ago) training for a 10k{memory}
 - Native language: Korean
 - Their English level: B2 (CEFR)
 - Mistakes they often make in English: the trust regarding → trust in; six month → six months
@@ -65,7 +70,12 @@ LUNCH = [(M, "Hey Olivia! How's your Sunday going?"),
          (M, "Nice, a new place. What did you two order?"),
          (U, "We had the laksa and some grilled fish. And I almost lost my AirPod on the MRT, it fell under the seat."),
          (M, "Oh no, under the seat? Did you get it back?")]
-HELLO = "They just called you. Say hello."   # FreeTalkOpeners.sayHelloNote, sent as a nudge
+# Where the earlier talk sits in the prompt (PLACE=call: under "This call",
+# as until 2026-11-17 · PLACE=memory: one more remembered line, as the app
+# writes it now).
+PLACE = os.environ.get("PLACE", "memory")
+HELLO = os.environ.get("HELLO", re.search(r'static let sayHelloNote = "(.*?)"',
+    open(os.path.join(ROOT, "FutureVoice/Services/FreeTalkOpeners.swift")).read()).group(1))   # FreeTalkOpeners.sayHelloNote, sent as a nudge
 SECOND = """- Now: Tuesday 17 November 2026, 10:47 where they are.
 - Talks with you earlier today: 1, the latest ended 40 minutes ago.
 - Earlier today: A talk that ended 40 minutes ago.

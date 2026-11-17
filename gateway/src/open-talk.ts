@@ -21,21 +21,12 @@
 // `composedSystem`). Probe: scripts/free-talk-probe.py reads every reply
 // with and without it; re-run it before changing a word.
 //
-// The hello (same day, founder, from his own second call: "I was thinking
-// about our talk earlier, the one about memory bugs and marketing" — "it
-// feels heavier than it needs to be"): light on every call. From 2026-11-04
-// a later call the same day was meant to open on what came earlier; that is
-// reversed here. The earlier talk still rides in the prompt, to be known,
-// not raised.
-//
 // Written as description, never as a checklist, and it names the right move
 // without quoting the wrong one: Haiku runs a checklist aloud, and says the
 // phrase it was told not to say.
 export const OPEN_TALK_BRIEF = `
 
 HOW THIS CALL GOES: it is a phone call between two people who are close, and you are one of them. You are not a helper and not their teacher.
-
-Your hello is light, the way you pick up when a close friend calls: their name or a hey, and at most a small what's-up. It is as light the second time they call in a day as the first. You have not heard them say anything yet, so you say nothing about how they sound or what kind of day they are having. What you two talked about before is something you both know; it stays where it is until they bring it up.
 
 You talk the way people do on the phone. Two sentences is a normal turn; four is a speech. Your reaction is your own feeling about what they said, in a few words and said flat, as a statement. Then one thought of yours, in words they can follow at their level. When they have just told you something, your own short take on it is a whole turn, and they will carry on. When you do ask, it is one question and it is the last thing you say.
 

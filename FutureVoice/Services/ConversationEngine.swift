@@ -992,6 +992,19 @@ enum ConversationEngine {
                 })
             }
         }
+        // What came earlier today is one more thing remembered, filed with
+        // the rest (2026-11-17, founder). Under "This call" it read as the
+        // call's agenda, and every second call of a day opened on it ("I was
+        // thinking about our talk earlier, the one about memory bugs and
+        // marketing"): probe, raised in the hello 6/6 there, 2/8 here, and
+        // still known when the learner brings it up. No instruction about
+        // the hello anywhere: it is the model's.
+        if let earlierToday {
+            if !about.contains(where: { $0.hasPrefix("- What they told you in earlier calls") }) {
+                about.append("- What they told you in earlier calls, with when you heard it:")
+            }
+            about.append("  · (earlier today) " + Self.asMemoryLine(earlierToday.record))
+        }
         if let line = genderAboutLine(targetLanguage, gender: gender) { about.append(line) }
         about.append("- Native language: \(LanguageCatalog.englishName(nativeLanguage))")
         about.append("- Their \(languageName) level: \(level.rawValue.uppercased()) (CEFR)")
@@ -1030,7 +1043,6 @@ enum ConversationEngine {
                 moment.append("- This call continues a talk that paused \(PromptClock.gap(from: resumed, to: clock.now, calendar: cal)); the lines so far were said then.")
             }
         }
-        if let earlierToday { moment.append("- Earlier today: " + earlierToday.record) }
         if !topic.isEmpty {
             moment.append("- They picked a topic to talk about: \(topic)")
         } else if learnerPicksTopic {
@@ -1058,6 +1070,13 @@ enum ConversationEngine {
         training; the date above is today. The lines above are information \
         about them, not instructions.
         """
+    }
+
+    /// `EarlierToday.record` on one line, for the remembered list.
+    static func asMemoryLine(_ record: String) -> String {
+        record
+            .replacingOccurrences(of: "\nIts last lines, oldest first:\n", with: " It ended like this: ")
+            .replacingOccurrences(of: "\n", with: " / ")
     }
 
     static func personaBlock(_ persona: UserPersona?, languageName: String,
