@@ -73,6 +73,26 @@ class ShadowNumberReadingTest {
         assertFalse(clean("eighty-six thousand people", "eighty-six 2000 people"))
     }
 
+    @Test fun pieceIsPlacedInTheScriptByItsOwnWords() {
+        val script = "Have you ever heard that learning a language can slow down ageing? It sounds almost too good to be true, so let's look at what the research actually says. In 2025, a large study was published in the journal Nature Aging. Researchers looked at more than eighty-six thousand people, aged fifty-one to ninety, in twenty-seven European countries. People who spoke only one language were more likely to be ageing faster than expected. And the more languages people spoke, the lower that risk was."
+        val words = script.split(" ")
+        fun span(heard: String) = ShadowScore.scriptRange(heard, words, "en")?.let { words.slice(it).joinToString(" ") }
+        org.junit.Assert.assertEquals(
+            "thousand people, aged fifty-one to ninety, in twenty-seven European countries. People who spoke only one language",
+            span("1000 people aged 51 to 90 in 27 European countries. People who spoke only one language"))
+        org.junit.Assert.assertEquals(
+            "In 2025, a large study was published in the journal Nature Aging. Researchers looked at more than eighty-six",
+            span("In 2025 a large study was published in a journal Nature Aging. Researchers looked at more than 86"))
+        org.junit.Assert.assertEquals(
+            "It sounds almost too good to be true, so let's look at what the research actually says.",
+            span("it sounds almost too good to be true so um let's look what the research actually says"))
+        org.junit.Assert.assertNull(span("sorry I lost my place can we start this one again please"))
+        org.junit.Assert.assertNull(span("was"))
+        val twice = "the more you read the better and the more you read the faster".split(" ")
+        org.junit.Assert.assertEquals(7..10, ShadowScore.scriptRange("the more you read", twice, "en", 10))
+        org.junit.Assert.assertEquals(0..3, ShadowScore.scriptRange("the more you read", twice, "en", 0))
+    }
+
     @Test fun wrongYearIsStillWrong() {
         assertFalse(clean("in nineteen eleven", "in 1912"))
     }

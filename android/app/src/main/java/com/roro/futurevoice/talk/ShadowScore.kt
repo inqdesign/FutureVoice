@@ -81,6 +81,71 @@ object ShadowScore {
         }
     }
 
+    /**
+     * Which words of a script a PIECE of a reading holds: the piece's own
+     * transcript laid against the whole script, free to begin and end
+     * anywhere in it (iOS `scriptRange`, 2026-11-17). A piece's span used to
+     * be where the prompter's cursor stood when it was cut; a cursor behind
+     * the voice had "fifty-one to ninety" judged against the sentence before
+     * it. Null when the piece is too short to place or under half its words
+     * are the script's. [near] (a word index) only settles a tie.
+     */
+    fun scriptRange(heard: String, words: List<String>, language: String, near: Int? = null): IntRange? {
+        val style = LanguageCatalog.tokenStyle(language)
+        val key = soundKey(language)
+        val script = ArrayList<String>()
+        val owner = ArrayList<Int>()
+        for ((index, word) in words.withIndex()) {
+            for (token in tokenize(expandForDiff(word, language), style)) {
+                script.add(key(token)); owner.add(index)
+            }
+        }
+        val piece = tokenize(expandForDiff(heard, language), style).map(key)
+        val m = piece.size
+        val n = script.size
+        if (m < (if (style == LanguageCatalog.TokenStyle.WORD) 3 else 5) || n == 0) return null
+        // Edit distance of the whole piece against ANY stretch of the script:
+        // row 0 is free, so the stretch may start anywhere.
+        val dp = Array(m + 1) { IntArray(n + 1) }
+        for (i in 1..m) {
+            dp[i][0] = i
+            for (j in 1..n) {
+                dp[i][j] = minOf(dp[i - 1][j - 1] + (if (piece[i - 1] == script[j - 1]) 0 else 1),
+                    dp[i - 1][j] + 1, dp[i][j - 1] + 1)
+            }
+        }
+        val hintToken = near?.let { h -> owner.indexOfFirst { it >= h }.takeIf { it >= 0 } } ?: 0
+        var end = 1
+        for (j in 1..n) {
+            if (dp[m][j] < dp[m][end] ||
+                (dp[m][j] == dp[m][end] && near != null && kotlin.math.abs(j - hintToken) < kotlin.math.abs(end - hintToken))) end = j
+        }
+        // From the first script token the piece matched to the last: a word
+        // at either edge that matched nothing is not kept (a piece cut after
+        // "eighty-six" opens on "1000", and "one" is not "six").
+        var i = m
+        var j = end
+        var matched = 0
+        var first = -1
+        var last = -1
+        while (i > 0) {
+            if (j > 0 && dp[i][j] == dp[i - 1][j - 1] + (if (piece[i - 1] == script[j - 1]) 0 else 1)) {
+                if (piece[i - 1] == script[j - 1]) {
+                    matched++
+                    first = j - 1
+                    if (last < 0) last = j - 1
+                }
+                i--; j--
+            } else if (dp[i][j] == dp[i - 1][j] + 1) {
+                i--
+            } else {
+                j--
+            }
+        }
+        if (matched * 2 < m || first < 0) return null
+        return owner[first]..owner[last]
+    }
+
     /** How two tokens are compared: Japanese by sound (the transcriber picks
      *  the script, ナワナ / なわな, so kana is keyed in hiragana), Chinese by
      *  Simplified character, everything else as written (iOS `soundKey`). */

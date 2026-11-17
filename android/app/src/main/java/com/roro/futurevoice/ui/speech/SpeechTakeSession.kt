@@ -338,7 +338,7 @@ class SpeechTakeSession(
             (atSentenceEnd() || clock - lastChunkAt >= CHUNK_HARD_SECONDS)) {
             capture?.rotatePiece()?.let { piece ->
                 lastChunkAt = clock
-                pieces += readPiece(piece, scriptSpan(_cursor.value), clock)
+                pieces += readPiece(piece, scriptSpan(_cursor.value), _cursor.value, clock)
             }
         }
         // Held: the reader stopped the text on purpose; nothing ends now.
@@ -387,7 +387,7 @@ class SpeechTakeSession(
         val meterVoiced = cap?.meterVoicedSeconds ?: 0.0
         val tail = cap?.stop()
         val liveText = stopLive()
-        tail?.let { pieces += readPiece(it, scriptSpan(_track.value.words.size), duration) }
+        tail?.let { pieces += readPiece(it, scriptSpan(_track.value.words.size), _track.value.words.size, duration) }
         val reads = pieces.toList()
         pieces = mutableListOf()
         val fromCamera = recordingVideo
@@ -432,11 +432,13 @@ class SpeechTakeSession(
         var prons = mutableListOf<PronunciationResult>()
         var assessed = listOf<SpeechDelivery.Piece>()
         var readBackFixed = 0
+        var placedPieces = 0
         for (p in reads) {
             val piece = p.await()
             if (piece == null) { texts.clear(); prons.clear(); assessed = emptyList(); break }
             texts += piece.text
             if (piece.readBackReplaced) readBackFixed++
+            if (piece.placed) placedPieces++
             piece.pron?.let {
                 prons += it
                 assessed = assessed + SpeechDelivery.Piece(piece.reference, it, piece.startMs)
@@ -576,6 +578,7 @@ class SpeechTakeSession(
             "scoring" to (metrics.scoring ?: 0),
             // Pieces whose read-back lost words Azure heard ([pieceText]).
             "readback_fixed" to readBackFixed,
+            "placed_pieces" to placedPieces,
             "meter_voiced" to meterVoiced.toInt(),
             "live_dropped" to liveDropped,
             "read_ms" to readMs, "result_ms" to resultMs, "coach_ms" to coachMs,
@@ -602,50 +605,47 @@ class SpeechTakeSession(
         if (hi <= lastCutCursor) return ""
         val lo = maxOf(0, lastCutCursor - 2)
         lastCutCursor = hi
-        val joiner = if (LanguageCatalog.writesSpaces(_script.value.language)) " " else ""
-        // A line break where a paragraph ends, so `SpeechDelivery` knows a
-        // paragraph's pause from a sentence's.
-        val text = StringBuilder()
-        for (i in lo until hi) {
-            if (i > lo) text.append(if (words[i].paragraph != words[i - 1].paragraph && joiner.isNotEmpty()) "\n" else joiner)
-            text.append(words[i].text)
-        }
-        return text.toString()
+        return spanText(words, lo until hi, _script.value.language)
     }
 
     /**
      * One piece of the take: its words, and how they were pronounced. The
-     * script sentences the prompter walked are the reference — what the
-     * learner was READING, judged for how it sounded; the two readers run
-     * side by side. Without one (the prompter never moved) the read-back is
-     * the reference and the assessment waits for it. Either way the result
-     * never waits on this piece: it runs while the next is still spoken.
+     * piece is read first, and its own words say which part of the script it
+     * holds ([ShadowScore.scriptRange]): that span is what its sounds are
+     * judged against. Words that are not the script's are judged against
+     * themselves. Only a piece nobody could read falls back to [cursorSpan],
+     * where the prompter stood — the cursor is where the SCREEN was, and a
+     * cursor behind the voice had a piece judged against the sentence before
+     * the one it held (iOS 2026-11-17). The assessment waits for the
+     * read-back, which happens while the next piece is still spoken.
      */
-    private fun readPiece(file: File, reference: String, endedAt: Double): Deferred<Piece?> {
+    private fun readPiece(file: File, cursorSpan: String, cursor: Int, endedAt: Double): Deferred<Piece?> {
         val language = _script.value.language
+        val words = _track.value.words
         return scope.async(Dispatchers.IO) {
             // Counted back from the take's clock by the file's own length, so
             // the time the words are placed at never adds up across pieces.
             val seconds = WavPcm.read(file)?.let { it.samples.size.toDouble() / it.sampleRate } ?: 0.0
             val startMs = ((endedAt - seconds) * 1000).toInt()
             try {
-                if (reference.isNotEmpty()) {
-                    coroutineScope {
-                        val read = async { SpeechReader.readPiece(file, language) }
-                        val pron = async { PronunciationAssessor.assess(context, file, reference, language, "speech") }
-                        val readBack = read.await()
-                        val result = pron.await().result
-                        pieceText(readBack, result?.recognized, language,
-                            result?.words?.count { it.isInsertion } ?: 0)?.let { (text, replaced) ->
-                            Piece(text, result, reference, replaced, startMs)
-                        }
+                val readBack = SpeechReader.readPiece(file, language)
+                val said = readBack?.trim().orEmpty()
+                var reference = cursorSpan
+                var placed = false
+                if (said.isNotEmpty()) {
+                    val range = com.roro.futurevoice.talk.ShadowScore.scriptRange(said, words.map { it.text }, language, cursor)
+                    if (range != null) {
+                        reference = spanText(words, range, language)
+                        placed = true
+                    } else {
+                        reference = said
                     }
-                } else {
-                    val text = SpeechReader.readPiece(file, language) ?: return@async null
-                    val trimmed = text.trim()
-                    if (trimmed.isEmpty()) Piece(text, null)
-                    else Piece(text, PronunciationAssessor.assess(context, file, trimmed, language, "speech").result,
-                        trimmed, startMs = startMs)
+                }
+                if (reference.isEmpty()) return@async readBack?.let { Piece(it, null) }
+                val result = PronunciationAssessor.assess(context, file, reference, language, "speech").result
+                pieceText(readBack, result?.recognized, language,
+                    result?.words?.count { it.isInsertion } ?: 0)?.let { (text, replaced) ->
+                    Piece(text, result, reference, replaced, startMs, placed)
                 }
             } finally { file.delete() }
         }
@@ -764,6 +764,8 @@ class SpeechTakeSession(
         val readBackReplaced: Boolean = false,
         /** Where this piece begins in the take. */
         val startMs: Int = 0,
+        /** The script span came from the piece's own words, not the prompter's cursor. */
+        val placed: Boolean = false,
     )
 
     companion object {
@@ -783,6 +785,19 @@ class SpeechTakeSession(
             maxOf(targetSeconds, SpeechLibrary.estimatedSeconds(body, language)) * 3.0 + 60
 
         const val MAX_INSERTIONS_TO_TRUST = 3
+
+        /** The script's words in [range] as one text. */
+        fun spanText(words: List<com.roro.futurevoice.talk.SpeechPrompterTrack.Word>, range: IntRange, language: String): String {
+            val joiner = if (LanguageCatalog.writesSpaces(language)) " " else ""
+            // A line break where a paragraph ends, so `SpeechDelivery` knows a
+            // paragraph's pause from a sentence's.
+            val text = StringBuilder()
+            for (i in range) {
+                if (i > range.first) text.append(if (words[i].paragraph != words[i - 1].paragraph && joiner.isNotEmpty()) "\n" else joiner)
+                text.append(words[i].text)
+            }
+            return text.toString()
+        }
 
         /**
          * A piece's words, from two witnesses (iOS `pieceText`). The read-back
