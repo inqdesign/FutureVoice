@@ -319,11 +319,11 @@ object TalkGoalPicker {
         if (!turn.isEvidence ||
             turn.transcript.isBlank() || items.isEmpty()) return emptySet()
         val out = HashSet<String>()
-        var lemmas: Set<String>? = null   // one pass per turn, at most
         for (item in items) {
             if (item.isWord) {
-                val found = lemmas ?: com.roro.futurevoice.data.VocabLemmas.lemmas(listOf(turn.transcript)).also { lemmas = it }
-                if (found.contains(item.key)) out.add(item.key)
+                // In any inflection (iOS, 2026-11-17): "invigilators" ticks
+                // "invigilator", and a chip stored as "erodes" can tick.
+                if (CarryoverDetector.saysWord(item.text, turn.transcript)) out.add(item.key)
             } else if (CarryoverDetector.firstMatch(item.text, listOf(turn)) != null) {
                 out.add(item.key)
             }

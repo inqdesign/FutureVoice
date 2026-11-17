@@ -65,7 +65,12 @@ object ScenarioMastery {
     fun saidIn(spoken: String, phrase: String): Boolean {
         val needle = phrase.trim().lowercase()
         if (needle.isEmpty() || spoken.isEmpty()) return false
-        return Regex("\\b" + Regex.escape(needle) + "\\b").containsMatchIn(spoken)
+        if (Regex("\\b" + Regex.escape(needle) + "\\b").containsMatchIn(spoken)) return true
+        // In any inflection (iOS, 2026-11-17): "invigilators" masters
+        // "invigilator", "struck a nerve" masters "strikes a nerve".
+        return if (!needle.contains(' ')) CarryoverDetector.saysWord(needle, spoken)
+        else CarryoverDetector.firstMatch(needle, listOf(
+            com.roro.futurevoice.talk.Turn(role = TurnRole.USER, transcript = spoken))) != null
     }
 
     /**

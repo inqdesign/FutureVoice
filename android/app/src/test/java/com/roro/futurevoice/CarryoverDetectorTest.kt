@@ -111,4 +111,19 @@ class CarryoverDetectorTest {
         assertEquals("I'm in a really good mood today.", hits.first().item)
         assertFalse(hits.any { it.item.lowercase().contains("sweet") })
     }
+
+    // iOS 2026-11-17: a word being spent counts in any inflection. (The forms
+    // table is an asset, absent on the JVM, so only the plural rule runs here.)
+    @Test fun `a chip word ticks in the plural`() {
+        assertTrue(CarryoverDetector.saysWord("invigilator",
+            "and is traditional invigilators um capability to catch", "en"))
+        assertTrue(CarryoverDetector.saysWord("erodes", "trust erodes slowly", "en"))
+        assertFalse(CarryoverDetector.saysWord("invigilator", "the teacher caught them", "en"))
+    }
+
+    @Test fun `a correction stays exact`() {
+        assertEquals(null, CarryoverDetector.firstMatch("here for six months",
+            listOf(user("she is here for six month already")),
+            rejectingMistake = "here for six month", language = "en"))
+    }
 }

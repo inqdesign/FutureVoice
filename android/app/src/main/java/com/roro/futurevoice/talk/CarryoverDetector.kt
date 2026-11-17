@@ -188,13 +188,20 @@ object CarryoverDetector {
         // learner's, the expression is the same. Never for a correction card:
         // there the speech level can be the fix itself.
         val politeFree = korean && rejectingMistake == null
+        // A phrase being SPENT (a chip, a book expression) counts in any
+        // inflection: "struck a nerve" spends "strikes a nerve". A correction
+        // stays exact, or "six month" would spend "six months" (iOS, 2026-11-17).
+        val fold = rejectingMistake == null && foldsInflection(language)
         val needle = tokens(item, language).map { if (politeFree) strippingPolite(it) else it }
+            .map { if (fold) folded(it, language!!) else it }
         val core = if (politeFree) needle else contentTokens(item, language)
+            .map { if (fold) folded(it, language!!) else it }
         if (needle.size < minTokens(language) || core.size < minContentTokens(language)) return null
         val koreanNeedle = if (korean) koreanKey(item, politeFree) else ""
         if (korean && koreanNeedle.length < MIN_KOREAN_SYLLABLES) return null
         for (turn in userTurns) {
             val hay = tokens(turn.transcript, language).map { if (politeFree) strippingPolite(it) else it }
+                .map { if (fold) folded(it, language!!) else it }
             val span = matchedSpan(needle, core, hay, minTokens(language), language)
             if (span != null) {
                 if (rejectingMistake != null && !showsTheFix(rejectingMistake, item, span, language)) continue
@@ -208,6 +215,39 @@ object CarryoverDetector {
             return Hit(DrillIngest.relevantFragment(turn.transcript, item, language = language), turn.id)
         }
         return null
+    }
+
+    /** Spaced languages other than Korean fold inflection when a word or a
+     *  phrase is being spent. No language (a unit test) folds nothing. */
+    private fun foldsInflection(language: String?) =
+        language != null && language != "ko" && WordSplitter.spaced(language)
+
+    /**
+     * One normalized token with its inflection folded ("strikes", "struck" →
+     * strike). A word the table doesn't know comes back as itself; for
+     * English, such a word loses a regular plural ending ("invigilators" →
+     * invigilator), which no table carries (iOS `folded`).
+     */
+    fun folded(token: String, language: String): String {
+        if (!foldsInflection(language) || token.length <= 2 || !token.all { it.isLetter() }) return token
+        val lemma = com.roro.futurevoice.data.VocabLemmas.lemma(token, language)
+        if (lemma != token || language != "en" || CoreVocabulary.isUngraded(token, "en")) return lemma
+        if (token.endsWith("ies") && token.length > 4) return token.dropLast(3) + "y"
+        if (token.endsWith("s") && !token.endsWith("ss") && !token.endsWith("us") &&
+            !token.endsWith("is") && token.length > 3) return token.dropLast(1)
+        return token
+    }
+
+    /** Did [text] carry [word], in any inflection? The ONE check for a single
+     *  word being spent: the chip row and a Watch book's word mastery. */
+    fun saysWord(word: String, text: String,
+                 language: String? = CoreVocabulary.activeLanguage()): Boolean {
+        val key = normalized(word)
+        if (key.isEmpty() || key.contains(' ')) return false
+        val target = if (language != null) folded(key, language) else key
+        if (tokens(text, language).any { it == key || (language != null && folded(it, language) == target) }) return true
+        val inContext = com.roro.futurevoice.data.VocabLemmas.lemmas(listOf(text), language)
+        return key in inContext || target in inContext
     }
 
     /** Every token the correction ADDED is in the span; every one it REMOVED is not. */
