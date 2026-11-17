@@ -65,7 +65,21 @@ LUNCH = [(M, "Hey Olivia! How's your Sunday going?"),
          (M, "Nice, a new place. What did you two order?"),
          (U, "We had the laksa and some grilled fish. And I almost lost my AirPod on the MRT, it fell under the seat."),
          (M, "Oh no, under the seat? Did you get it back?")]
+HELLO = "They just called you. Say hello."   # FreeTalkOpeners.sayHelloNote, sent as a nudge
+SECOND = """- Now: Tuesday 17 November 2026, 10:47 where they are.
+- Talks with you earlier today: 1, the latest ended 40 minutes ago.
+- Earlier today: A talk that ended 40 minutes ago.
+Its last lines, oldest first:
+them: "So the bug was that the app forgot what the user said in the earlier call."
+you: "Ah, a memory bug. Did you find where it came from?"
+them: "Yes, it only kept the last ten lines. And after that I need to plan the marketing for next week."
+you: "That's a full morning. What's first on the marketing list?"
+them: "Maybe a new carousel. Okay, I have to go now."
+you: "Sure. Good luck with it.\""""
 CASES = {
+  "hello-first": (FIRST, [(U, HELLO)]),
+  "hello-second": (SECOND, [(U, HELLO)]),
+  "hello-second-then": (SECOND, [(U, HELLO), (M, "Hey Olivia. What's up?"), (U, "Not much, I just finished the carousel.")]),
   "noise": (FIRST, LUNCH + [(U, "She is here for six month.")]),
   "correction": (LATER, [(M, "Hey Olivia! How's your friend settling in? You mentioned she's here for six months."),
       (U, "Excuse me, the six month is that you misheard because I was walking outside and then you misheard from the other people's voice and then you just reasonably assumed that it was my voice.")]),

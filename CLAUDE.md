@@ -3150,6 +3150,16 @@ interviewer.
   3,000 chars (was 10 / 1,400), without lines flagged misheard or the reply
   built on them.
 
+- **The hello is light on every call** (same day, founder, from his own
+  second call opening on "I was thinking about our talk earlier, the one
+  about memory bugs and marketing": "heavier than it needs to be"). The
+  brief says so: a hey and at most a small what's-up, nothing about how
+  they sound, and the earlier talk stays put until they raise it. This
+  reverses 2026-11-04 (a later call opens on what came earlier); the
+  EARLIER TODAY record still rides in the prompt. Probe: "Hey Olivia,
+  what's up?" 6/6 on a first and a second call, and it still knows the
+  earlier talk when she brings it up. It is nearly the same words every
+  time.
 - **"That wasn't me" works by voice** (same day, `MisheardJudge`). A line
   that disowns an earlier one ("you misheard", "that was someone else")
   flags that line the way the transcript page's swipe does: out of every
