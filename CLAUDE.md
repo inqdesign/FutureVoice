@@ -3193,6 +3193,29 @@ interviewer.
   not. Pronunciation it cannot do (it gets text): it says so and names the
   words that arrived as something else. A request with no question mark
   ("Explain X.") still gets 3 sentences and the closing question.
+- **A free talk remembers the talks before it, and the APP looks one up**
+  (same day, founder: "keep the memory somewhere and take it out when it is
+  needed"; `TalkRecall.swift`). A free talk knew the profile, twelve
+  remembered facts and the end of one talk from earlier today; yesterday's
+  half hour was three facts, and the learner was told "I don't have a record
+  of that". The store already exists (every talk is on the phone, whole).
+  The model cannot fetch from it (the talks are on the phone, and a reply
+  that stops to search is a silence on a call), so: the prompt carries an
+  INDEX, one line per earlier talk with the fluent self (12, when + title),
+  and after each learner line the app asks whether it is about one of them
+  (`mayRecall`, a word check, then flash-lite, `purpose: "coach"`, free). A
+  hit puts that talk's lines, centred on what is being talked about (24
+  lines / 2,400 chars), into the prompt by `set.system`; two talks held at
+  once. Nothing waits: the line that first mentions the talk is answered
+  from the index, the next ones from the talk. The index joins after the
+  hello, like the clock. `scripts/recall-probe.py`: 63/66 (en/ko/de), the
+  three a harmless lookup. Call model, read: "Remember the interview I told
+  you about?" picks it up from the index 10/10, and asked the interviewer's
+  name it answers from the looked-up talk 4/4. Still open: a talk that is
+  not on file ("remember my sister's wedding?") gets "I don't remember that
+  one, sorry, tell me", with or without the index; a brief wording that
+  forbade it made it say "I don't have that in my notes". Telemetry
+  `talk_recalled` (days_ago, held). Not yet tried on a real call.
 - **"That wasn't me" works by voice** (same day, `MisheardJudge`). A line
   that disowns an earlier one ("you misheard", "that was someone else")
   flags that line the way the transcript page's swipe does: out of every
