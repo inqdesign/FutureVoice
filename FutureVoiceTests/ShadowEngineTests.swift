@@ -76,6 +76,35 @@ final class ShadowEngineTests: XCTestCase {
         XCTAssertFalse(wrong.steps.allSatisfy { $0.op == .match })
     }
 
+    /// A piece of a take is placed in the script by its own words, wherever
+    /// the prompter was.
+    func testPieceIsPlacedInTheScriptByItsOwnWords() {
+        let script = "Have you ever heard that learning a language can slow down ageing? It sounds almost too good to be true, so let's look at what the research actually says. In 2025, a large study was published in the journal Nature Aging. Researchers looked at more than eighty-six thousand people, aged fifty-one to ninety, in twenty-seven European countries. People who spoke only one language were more likely to be ageing faster than expected. And the more languages people spoke, the lower that risk was."
+        let words = script.split(separator: " ").map(String.init)
+        func span(_ heard: String, near: Int? = nil) -> String? {
+            ShadowEngine.scriptRange(of: heard, in: words, language: "en", near: near)
+                .map { words[$0].joined(separator: " ") }
+        }
+        // Cut inside a number, digits for words, a wrong article.
+        XCTAssertEqual(span("1000 people aged 51 to 90 in 27 European countries. People who spoke only one language"),
+                       "thousand people, aged fifty-one to ninety, in twenty-seven European countries. People who spoke only one language")
+        XCTAssertEqual(span("In 2025 a large study was published in a journal Nature Aging. Researchers looked at more than 86"),
+                       "In 2025, a large study was published in the journal Nature Aging. Researchers looked at more than eighty-six")
+        // A skipped word and an added one stay inside the span.
+        XCTAssertEqual(span("it sounds almost too good to be true so um let's look what the research actually says"),
+                       "It sounds almost too good to be true, so let's look at what the research actually says.")
+        // Not the script, or too short to place.
+        XCTAssertNil(span("sorry I lost my place can we start this one again please"))
+        XCTAssertNil(span("was"))
+        // The same words twice: the place nearer the hint.
+        let twice = "the more you read the better and the more you read the faster".split(separator: " ").map(String.init)
+        XCTAssertEqual(ShadowEngine.scriptRange(of: "the more you read", in: twice, language: "en", near: 10), 7..<11)
+        XCTAssertEqual(ShadowEngine.scriptRange(of: "the more you read", in: twice, language: "en", near: 0), 0..<4)
+        // Korean is placed by syllable, whatever the spacing.
+        let ko = "오늘은 날씨가 정말 좋아서 공원에 산책을 나갔습니다. 거기서 오랜 친구를 만났어요.".split(separator: " ").map(String.init)
+        XCTAssertEqual(ShadowEngine.scriptRange(of: "공원에 산책을 나갔 습니다 거기서", in: ko, language: "ko"), 4..<8)
+    }
+
     /// A different number is still a different number.
     func testWrongYearIsStillWrong() {
         let a = ShadowEngine.analyze(target: "in nineteen eleven", learner: "in 1912")

@@ -218,6 +218,69 @@ enum ShadowEngine {
         return { $0 }
     }
 
+    /// Which words of a script a PIECE of a reading holds: the piece's own
+    /// transcript laid against the whole script, free to begin and end
+    /// anywhere in it. A speech take is read in pieces, and until 2026-11-17
+    /// a piece's span was where the prompter's cursor stood when it was cut;
+    /// a cursor behind the voice had "fifty-one to ninety" judged against
+    /// the sentence before it. Nil when the piece is too short to place or
+    /// under half its words are the script's (the reader left the script).
+    /// `near` (a word index) only settles a tie between two places the same
+    /// words occur.
+    static func scriptRange(of heard: String, in words: [String], language: String,
+                            near hint: Int? = nil) -> Range<Int>? {
+        let style = LanguageCatalog.tokenStyle(language)
+        let key = soundKey(for: language)
+        var script: [String] = [], owner: [Int] = []
+        for (index, word) in words.enumerated() {
+            for token in tokenize(expandForDiff(word, language: language), style: style) {
+                script.append(key(token))
+                owner.append(index)
+            }
+        }
+        let piece = tokenize(expandForDiff(heard, language: language), style: style).map(key)
+        let m = piece.count, n = script.count
+        guard m >= (style == .word ? 3 : 5), n > 0 else { return nil }
+        // Edit distance of the whole piece against ANY stretch of the script:
+        // row 0 is free, so the stretch may start anywhere.
+        var dp = Array(repeating: Array(repeating: 0, count: n + 1), count: m + 1)
+        for i in 1...m {
+            dp[i][0] = i
+            for j in 1...n {
+                dp[i][j] = min(dp[i - 1][j - 1] + (piece[i - 1] == script[j - 1] ? 0 : 1),
+                               dp[i - 1][j] + 1, dp[i][j - 1] + 1)
+            }
+        }
+        let hintToken = hint.flatMap { h in owner.firstIndex { $0 >= h } } ?? 0
+        var end = 1
+        for j in 1...n {
+            if dp[m][j] < dp[m][end]
+                || (dp[m][j] == dp[m][end] && hint != nil && abs(j - hintToken) < abs(end - hintToken)) { end = j }
+        }
+        // The span runs from the first script token the piece matched to the
+        // last: a word at either edge that matched nothing is not kept (a
+        // piece cut after "eighty-six" opens on "1000", and "one" is not
+        // "six").
+        var i = m, j = end, matched = 0
+        var first: Int?, last: Int?
+        while i > 0 {
+            if j > 0, dp[i][j] == dp[i - 1][j - 1] + (piece[i - 1] == script[j - 1] ? 0 : 1) {
+                if piece[i - 1] == script[j - 1] {
+                    matched += 1
+                    first = j - 1
+                    if last == nil { last = j - 1 }
+                }
+                i -= 1; j -= 1
+            } else if dp[i][j] == dp[i - 1][j] + 1 {
+                i -= 1
+            } else {
+                j -= 1
+            }
+        }
+        guard matched * 2 >= m, let first, let last else { return nil }
+        return owner[first]..<(owner[last] + 1)
+    }
+
     static func heardLineEnd(target: String, heard: String, language: String) -> Bool {
         let style = LanguageCatalog.tokenStyle(language)
         let t = tokenize(expandForDiff(target, language: language), style: .word)

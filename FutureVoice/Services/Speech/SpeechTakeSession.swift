@@ -110,6 +110,9 @@ final class SpeechTakeSession: ObservableObject {
         /// Where this piece begins in the take (negative: it opened during
         /// the countdown).
         var startMs = 0
+        /// The script span was found from the piece's own words, not taken
+        /// from the prompter's cursor.
+        var placed = false
     }
 
     /// A piece's words, from two witnesses. The read-back (Gemini) is the
@@ -379,7 +382,7 @@ final class SpeechTakeSession: ObservableObject {
            atSentenceEnd || clock - lastChunkAt >= Self.chunkHardSeconds,
            let piece = live.rotateCaptureChunk() {
             lastChunkAt = clock
-            chunkReads.append(readPiece(piece, reference: scriptSpan(upTo: cursor), endedAt: clock))
+            chunkReads.append(readPiece(piece, cursorSpan: scriptSpan(upTo: cursor), cursor: cursor, endedAt: clock))
         }
         // Finished = the LAST word was heard, then a second of quiet. Being
         // ON the last word isn't finished: a breath before it ("…바로 그 첫,
@@ -426,7 +429,8 @@ final class SpeechTakeSession: ObservableObject {
         let meterVoiced = live.fluencyStats().speakingSeconds
         let liveText = await live.stopAndFinalize()
         if let tail = live.lastChunkRecordingURL {
-            chunkReads.append(readPiece(tail, reference: scriptSpan(upTo: track.words.count),
+            chunkReads.append(readPiece(tail, cursorSpan: scriptSpan(upTo: track.words.count),
+                                        cursor: track.words.count,
                                         endedAt: startedAt.map { stoppedAt.timeIntervalSince($0) } ?? clock))
         }
         let pieces = chunkReads
@@ -474,10 +478,12 @@ final class SpeechTakeSession: ObservableObject {
         var prons: [PronunciationResult] = []
         var assessed: [SpeechDelivery.Piece] = []
         var readBackFixed = 0
+        var placedPieces = 0
         for piece in pieces {
             guard let piece = await piece.value else { texts = []; prons = []; assessed = []; break }
             texts.append(piece.text)
             if piece.readBackReplaced { readBackFixed += 1 }
+            if piece.placed { placedPieces += 1 }
             if let pron = piece.pron {
                 prons.append(pron)
                 assessed.append(.init(reference: piece.reference, result: pron, startMs: piece.startMs))
@@ -675,6 +681,9 @@ final class SpeechTakeSession: ObservableObject {
             "scoring": metrics.scoring ?? 0,
             // Pieces whose read-back lost words Azure heard (`pieceText`).
             "readback_fixed": readBackFixed,
+            // Pieces whose script span came from their own words (the rest
+            // fell back to the prompter's cursor).
+            "placed_pieces": placedPieces,
             "read_ms": readMs,
             "result_ms": resultMs,
             "coach_ms": coachMs,
@@ -699,53 +708,66 @@ final class SpeechTakeSession: ObservableObject {
         guard hi > lastCutCursor else { return "" }
         let lo = max(0, lastCutCursor - 2)
         lastCutCursor = hi
-        let joiner = LanguageCatalog.writesSpaces(script.language) ? " " : ""
+        return Self.spanText(track, lo..<hi, language: script.language)
+    }
+
+    /// The script's words in `range` as one text.
+    nonisolated static func spanText(_ track: SpeechPrompterTrack, _ range: Range<Int>, language: String) -> String {
+        let joiner = LanguageCatalog.writesSpaces(language) ? " " : ""
         // A line break where a paragraph ends, so `SpeechDelivery` knows a
         // paragraph's pause from a sentence's.
         var text = ""
-        for (i, w) in track.words[lo..<hi].enumerated() {
+        for (i, w) in track.words[range].enumerated() {
             if i > 0 {
-                text += w.paragraph != track.words[lo + i - 1].paragraph && !joiner.isEmpty ? "\n" : joiner
+                text += w.paragraph != track.words[range.lowerBound + i - 1].paragraph && !joiner.isEmpty ? "\n" : joiner
             }
             text += w.text
         }
         return text
     }
 
+    /// - Parameter cursorSpan: the script the prompter walked since the last
+    ///   cut. Only the fallback: the cursor is where the SCREEN was, and a
+    ///   cursor behind the voice had a piece judged against the sentence
+    ///   before the one it held (2026-11-17).
     /// - Parameter endedAt: the take's clock when this piece was cut. Its
     ///   start is counted back from there by the file's own length, so the
     ///   time the words are placed at never adds up across pieces.
-    private func readPiece(_ url: URL, reference: String, endedAt: TimeInterval) -> Task<Piece?, Never> {
+    private func readPiece(_ url: URL, cursorSpan: String, cursor: Int, endedAt: TimeInterval) -> Task<Piece?, Never> {
         let language = script.language
+        let track = track
         let seconds = (try? AVAudioFile(forReading: url)).map { Double($0.length) / $0.fileFormat.sampleRate } ?? 0
         let startMs = Int((endedAt - seconds) * 1000)
         return Task {
             defer { try? FileManager.default.removeItem(at: url) }
-            // The script sentences the prompter walked are the reference:
-            // what the learner was READING, judged for how it sounded. The
-            // script diff (accuracy) still comes from the read-back. With a
-            // script reference the two readers run side by side; without one
-            // (the prompter never moved) the read-back is the reference and
-            // the assessment waits for it. Either way the result never waits
-            // on this piece: it runs while the next is still being spoken.
-            if !reference.isEmpty {
-                async let read = SpeechReader.readPiece(audioURL: url, language: language)
-                async let pron = PronunciationAssessor.assess(
-                    audioURL: url, reference: reference, language: language, surface: "speech")
-                let readBack = await read
-                let result = await pron.result
-                guard let piece = Self.pieceText(readBack: readBack, heard: result?.recognized,
-                                                 insertions: result?.words.filter(\.isInsertion).count ?? 0,
-                                                 language: language) else { return nil }
-                return Piece(text: piece.text, pron: result, reference: reference,
-                             readBackReplaced: piece.replaced, startMs: startMs)
+            // The piece is read first, and its own words say which part of
+            // the script it holds: that span is what its sounds are judged
+            // against. Words that are not the script's (the reader left it)
+            // are judged against themselves. Only a piece nobody could read
+            // falls back to where the prompter stood. The assessment waits
+            // for the read-back, which happens while the next piece is still
+            // being spoken.
+            let readBack = await SpeechReader.readPiece(audioURL: url, language: language)
+            let said = readBack?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            var reference = cursorSpan
+            var placed = false
+            if !said.isEmpty {
+                if let range = ShadowEngine.scriptRange(of: said, in: track.words.map(\.text),
+                                                        language: language, near: cursor) {
+                    reference = Self.spanText(track, range, language: language)
+                    placed = true
+                } else {
+                    reference = said
+                }
             }
-            guard let text = await SpeechReader.readPiece(audioURL: url, language: language) else { return nil }
-            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { return Piece(text: text, pron: nil) }
-            let pron = await PronunciationAssessor.assess(
-                audioURL: url, reference: trimmed, language: language, surface: "speech")
-            return Piece(text: text, pron: pron.result, reference: trimmed, startMs: startMs)
+            guard !reference.isEmpty else { return readBack.map { Piece(text: $0, pron: nil) } }
+            let result = await PronunciationAssessor.assess(
+                audioURL: url, reference: reference, language: language, surface: "speech").result
+            guard let piece = Self.pieceText(readBack: readBack, heard: result?.recognized,
+                                             insertions: result?.words.filter(\.isInsertion).count ?? 0,
+                                             language: language) else { return nil }
+            return Piece(text: piece.text, pron: result, reference: reference,
+                         readBackReplaced: piece.replaced, startMs: startMs, placed: placed)
         }
     }
 
