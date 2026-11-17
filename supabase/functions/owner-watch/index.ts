@@ -46,7 +46,22 @@ const TEST_IDS = new Set([
   // The same relay account again, re-created 2026-10-09 after the iPad
   // deleted b28ca7b1 (`20261009120000`).
   "4d63c941-f08c-4509-8958-7092a4357778",
+  // The owner's Android account (2026-11-16).
+  "d4b0af1b-50c1-4337-9145-521e21ca225d",
 ])
+/// The same accounts by email, as `admin/src/assemble.ts` keeps them, so an
+/// account re-created under the same address is caught too.
+const TEST_EMAILS = new Set([
+  "nawana.review@gmail.com",
+  "hi.superpower.lab@gmail.com",
+  "buchhaltung.dearroro@gmail.com",
+  "hello.threesby@gmail.com",
+  "eunggyuboram@gmail.com",
+])
+
+function isTest(userId: string, email: unknown): boolean {
+  return TEST_IDS.has(userId) || TEST_EMAILS.has(String(email ?? "").toLowerCase())
+}
 
 type Alert = { kind: string; key: string; payload: Record<string, unknown> }
 
@@ -112,7 +127,8 @@ function compose({ kind, payload }: Alert): string | null {
   const p = payload ?? {}
   const userId = String(p.user_id ?? "")
   const who = (p.email as string | null) ?? `익명 계정 · ${userId.slice(0, 8)}`
-  const tag = TEST_IDS.has(userId) ? " (내 테스트 계정)" : ""
+  const test = isTest(userId, p.email)
+  const tag = test ? " (내 테스트 계정)" : ""
 
   const lines: (string | null)[] = []
   switch (kind) {
@@ -132,6 +148,8 @@ function compose({ kind, payload }: Alert): string | null {
     }
 
     case "paywall": {
+      // The owner opening their own paywall is noise (2026-11-17, founder).
+      if (test) return null
       const n = Number(p.count ?? 1)
       lines.push(`[nawana] 👀 페이월을 봤습니다${tag}`,
                  `누구: ${who}`,
