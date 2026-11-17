@@ -62,6 +62,7 @@
     <string name="a_job_interview_a_call_to_your_landlord_dinner_with_your_par_3ed825">"求职面试、给房东打电话、和伴侣父母吃饭。语言你会得差不多，难的是第一句说什么、该问什么、尴尬的时候怎么接下去。"</string>
     <!-- 'A job posting, a listing, an event page — anything about the situation.' -->
     <string name="a_job_posting_a_listing_an_event_page_anything_about_the_sit_623078">"招聘启事、房源页面、活动信息，只要和这个情境有关的页面都可以。"</string>
+    <string name="a_line_to_say_after_it">"跟着说的一句"</string>
     <string name="a_min">"每分钟 %s"</string>
     <string name="a_mistake_you_keep_making">"常犯的语法错误"</string>
     <string name="a_month">"每月"</string>
@@ -365,6 +366,7 @@
     <string name="basic_simple_everyday_exchanges">"基础 · 简短的日常对话"</string>
     <string name="be_the_first">"抢先挑战"</string>
     <string name="becoming_you">"正在变成你"</string>
+    <string name="before_you_go">"记住这几个就好"</string>
     <string name="before_your_first_call">"第一次对话之前"</string>
     <!-- "Before your free trial turns into your plan, Apple asks you to confirm it once more. Without it, the plan doesn't start." -->
     <string name="before_your_free_trial_turns_into_your_plan_apple_asks_you_t_c4e22b">"免费试用转为套餐之前，Apple 会再请你确认一次。没有确认的话，套餐不会开始。"</string>
@@ -1016,6 +1018,7 @@
     <string name="first_test_done">"完成第一次测验"</string>
     <string name="first_time">"第一次"</string>
     <string name="fix_the_sentence">"改正句子"</string>
+    <string name="fixed_sentence">"改过的句子"</string>
     <string name="flat">"语调平板"</string>
     <string name="flow">"流畅度"</string>
     <string name="fluency">"流利度"</string>
@@ -2068,6 +2071,7 @@
     <string name="one_tap_keeps_your_plan_going">"点一下确认，套餐就会继续"</string>
     <!-- 'One test a week from your talks, words and corrections. It opens on this day and waits until the next one.' -->
     <string name="one_test_a_week_from_your_talks_words_and_corrections_it_ope_cb8368">"每周一次，用你的对话、单词和修正做成的测验。在这一天开放，等到下一周。"</string>
+    <string name="one_thing_from_each_part_of_this_talk">"从刚才的通话里各挑了一个"</string>
     <string name="one_time_no_expiry">"单次购买 · 无期限"</string>
     <string name="online">"网上"</string>
     <string name="online_shopping">"网络购物"</string>
@@ -3773,6 +3777,7 @@
     <string name="with_room_in_the_margin">"附留白可做笔记"</string>
     <string name="withdraw_consent_delete_my_voice">"撤回同意并删除我的声音"</string>
     <string name="woman">"女性"</string>
+    <string name="word">"单词"</string>
     <string name="word_notebook">"单词本"</string>
     <!-- 'word or line mastered, out of %lld your talks and watches have made' -->
     <string name="word_or_line_mastered_out_of_lld_your_talks_and_watches_have_8aaf23">"在通话和情境练习累积的%d个当中已学会"</string>

@@ -84,6 +84,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.Circle
@@ -215,6 +216,7 @@ private fun TalkDetailPage(
         mutableStateOf<List<com.roro.futurevoice.talk.Turn>>(emptyList())
     }
     var bestTakes by remember(sessionId, revision) { mutableStateOf<Map<String, Int>>(emptyMap()) }
+    var curriculumReady by remember(sessionId, revision) { mutableStateOf(false) }
     LaunchedEffect(sessionId, revision, level) {
         val attempts = com.roro.futurevoice.data.ShadowAttemptStore.shared(context).load(language)
         curriculum = com.roro.futurevoice.data.TalkCurriculum.build(
@@ -225,6 +227,7 @@ private fun TalkDetailPage(
         shadowTurns = com.roro.futurevoice.data.TalkCurriculum.shadowPicks(s, level, language)
         bestTakes = attempts.filterNot { it.isPartial }
             .groupBy { it.turnId }.mapValues { (_, v) -> v.maxOf { it.overallScore } }
+        curriculumReady = true
     }
     // What the learner actually said, per correction: a turn-derived item
     // carries its source turn in its id; a summary one is matched by text.
@@ -235,6 +238,25 @@ private fun TalkDetailPage(
         val said = s.turns.firstOrNull { it.id == turnId }?.transcript
             ?: saidByPhrase[com.roro.futurevoice.talk.CarryoverDetector.normalized(item.text)]
         return said?.let { com.roro.futurevoice.data.DrillIngest.relevantFragment(it, item.text) }
+    }
+    // "Before you go" (iOS `offerTakeaway`): once per wrap-up, over the book,
+    // and only when the talk left something to show. Closing it leaves the
+    // book open.
+    var takeaway by remember(sessionId) { mutableStateOf<TalkTakeaway?>(null) }
+    var takeawayOffered by remember(sessionId) { mutableStateOf(false) }
+    LaunchedEffect(curriculumReady) {
+        if (!curriculumReady || onDone == null || takeawayOffered || sm == null) return@LaunchedEffect
+        takeawayOffered = true
+        val fixItem = curriculum.corrections.firstOrNull { it.masteredAt == null && !originalOf(it).isNullOrBlank() }
+            ?: curriculum.corrections.firstOrNull()
+        val fix = fixItem?.let { TalkTakeaway.Fix(originalOf(it), it.text, it.note) }
+        val t = TalkTakeaway.make(s, curriculum, fix)
+        if (t.isEmpty) return@LaunchedEffect
+        com.roro.futurevoice.core.Analytics.capture("talk_takeaway_shown", mapOf("parts" to t.parts))
+        takeaway = t
+    }
+    takeaway?.let { t ->
+        TalkTakeawayDialog(t, s, language, onClose = { takeaway = null })
     }
     val grammar = sm?.grammarIssues.orEmpty()
     /** The correction's card, opened as STUDY material — examples, variants,
@@ -552,10 +574,10 @@ private fun TalkDetailPage(
                                 // vocab store is the one source of truth.
                                 MasteryMark(item.masteredAt != null)
                                 Column(Modifier.weight(1f)) {
-                                    Text(item.text, style = MaterialTheme.typography.bodyLarge,
+                                    Text(item.text, style = MaterialTheme.typography.bodyLarge.copy(fontSize = 20.sp),
                                         color = if (item.masteredAt != null) MaterialTheme.colorScheme.onSurfaceVariant
                                         else MaterialTheme.colorScheme.onSurface)
-                                    if (item.note.isNotBlank()) Text(item.note, style = MaterialTheme.typography.bodySmall,
+                                    if (item.note.isNotBlank()) Text(item.note, style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
@@ -715,7 +737,7 @@ private fun TalkDetailPage(
                                 MasteryMark(item.masteredAt != null, Modifier.padding(top = 3.dp))
                                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                     if (original.isNotBlank()) {
-                                        Text(original, style = MaterialTheme.typography.bodyMedium.copy(
+                                        Text(original, style = MaterialTheme.typography.bodyLarge.copy(
                                             textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough),
                                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
@@ -726,9 +748,9 @@ private fun TalkDetailPage(
                                             androidx.compose.ui.text.SpanStyle(color = accent,
                                                 fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
                                     }
-                                    Text(line, style = MaterialTheme.typography.bodyMedium)
+                                    Text(line, style = MaterialTheme.typography.bodyLarge)
                                     if (item.note.isNotBlank()) {
-                                        Text(item.note, style = MaterialTheme.typography.bodySmall,
+                                        Text(item.note, style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 }
@@ -1409,7 +1431,7 @@ private fun MasteryMark(mastered: Boolean, modifier: Modifier = Modifier) {
     Icon(
         if (mastered) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
         contentDescription = null,
-        modifier = modifier.size(15.dp),
+        modifier = modifier.size(20.dp),
         tint = if (mastered) Color(0xFF34C759) else MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
@@ -1419,11 +1441,11 @@ private fun MasteryRow(text: String, mastered: Boolean, score: Int? = null, onCl
     Row(
         Modifier.fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(vertical = 8.dp),
+            .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         MasteryMark(mastered)
-        Text(text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Text(text, style = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp), modifier = Modifier.weight(1f))
         if (score != null) {
             Text("$score", style = MaterialTheme.typography.labelMedium,
                 color = if (score >= com.roro.futurevoice.data.TalkCurriculum.SHADOW_MASTERY_SCORE)

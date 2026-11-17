@@ -62,6 +62,7 @@
     <string name="a_job_interview_a_call_to_your_landlord_dinner_with_your_par_3ed825">"면접, 집주인과의 통화, 애인 부모님과의 저녁 식사. 말은 어느 정도 할 줄 알아도, 처음에 무슨 말을 꺼낼지, 뭘 물어볼지, 어색한 순간을 어떻게 넘길지는 잘 떠오르지 않죠."</string>
     <!-- 'A job posting, a listing, an event page — anything about the situation.' -->
     <string name="a_job_posting_a_listing_an_event_page_anything_about_the_sit_623078">"채용 공고, 매물 페이지, 행사 안내처럼 이 상황에 관한 페이지면 돼요."</string>
+    <string name="a_line_to_say_after_it">"따라 말할 한 줄"</string>
     <string name="a_min">"분당 %s"</string>
     <string name="a_mistake_you_keep_making">"자주 틀리는 문법"</string>
     <string name="a_month">"한 달"</string>
@@ -365,6 +366,7 @@
     <string name="basic_simple_everyday_exchanges">"기초 · 짧은 일상 대화 정도"</string>
     <string name="be_the_first">"첫 도전자 되기"</string>
     <string name="becoming_you">"나를 익히는 중"</string>
+    <string name="before_you_go">"이것만 알고 가요"</string>
     <string name="before_your_first_call">"첫 대화 전에"</string>
     <!-- "Before your free trial turns into your plan, Apple asks you to confirm it once more. Without it, the plan doesn't start." -->
     <string name="before_your_free_trial_turns_into_your_plan_apple_asks_you_t_c4e22b">"체험이 끝나기 전에 Apple이 결제 동의를 한 번 더 받아요. 이 확인이 없으면 요금제가 시작되지 않고 그대로 끝나요."</string>
@@ -1016,6 +1018,7 @@
     <string name="first_test_done">"첫 테스트를 마쳤어요"</string>
     <string name="first_time">"처음"</string>
     <string name="fix_the_sentence">"문장 고치기"</string>
+    <string name="fixed_sentence">"고친 문장"</string>
     <string name="flat">"억양이 단조로움"</string>
     <string name="flow">"흐름"</string>
     <string name="fluency">"유창성"</string>
@@ -2068,6 +2071,7 @@
     <string name="one_tap_keeps_your_plan_going">"확인 한 번이면 구독이 그대로 이어져요"</string>
     <!-- 'One test a week from your talks, words and corrections. It opens on this day and waits until the next one.' -->
     <string name="one_test_a_week_from_your_talks_words_and_corrections_it_ope_cb8368">"일주일에 한 번, 내 대화와 단어, 교정으로 만든 테스트예요. 이 요일에 열리고 다음 주까지 기다려요."</string>
+    <string name="one_thing_from_each_part_of_this_talk">"방금 통화에서 하나씩 골랐어요"</string>
     <string name="one_time_no_expiry">"한 번 결제 · 기한 없음"</string>
     <string name="online">"온라인"</string>
     <string name="online_shopping">"온라인 쇼핑"</string>
@@ -3773,6 +3777,7 @@
     <string name="with_room_in_the_margin">"여백에 메모할 자리와 함께"</string>
     <string name="withdraw_consent_delete_my_voice">"동의 철회 및 목소리 삭제"</string>
     <string name="woman">"여성"</string>
+    <string name="word">"단어"</string>
     <string name="word_notebook">"단어장"</string>
     <!-- 'word or line mastered, out of %lld your talks and watches have made' -->
     <string name="word_or_line_mastered_out_of_lld_your_talks_and_watches_have_8aaf23">"대화와 시청이 만든 %d개 중에서 익혔어요"</string>

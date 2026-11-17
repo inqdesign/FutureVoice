@@ -62,6 +62,7 @@
     <string name="a_job_interview_a_call_to_your_landlord_dinner_with_your_par_3ed825">"面接、大家さんへの電話、恋人の両親との食事。言葉はある程度話せても、最初に何を言えばいいか、何を聞けばいいか、気まずい瞬間をどう乗り切るかはなかなか浮かびませんよね。"</string>
     <!-- 'A job posting, a listing, an event page — anything about the situation.' -->
     <string name="a_job_posting_a_listing_an_event_page_anything_about_the_sit_623078">"求人ページ、物件情報、イベント案内など、この場面に関するページなら何でも。"</string>
+    <string name="a_line_to_say_after_it">"真似して言う一文"</string>
     <string name="a_min">"1分あたり%s"</string>
     <string name="a_mistake_you_keep_making">"よく間違える文法"</string>
     <string name="a_month">"月額"</string>
@@ -365,6 +366,7 @@
     <string name="basic_simple_everyday_exchanges">"基礎 · 短い日常会話くらい"</string>
     <string name="be_the_first">"一番乗りしよう"</string>
     <string name="becoming_you">"声を覚えている途中"</string>
+    <string name="before_you_go">"これだけ覚えて帰りましょう"</string>
     <string name="before_your_first_call">"初めての会話の前に"</string>
     <!-- "Before your free trial turns into your plan, Apple asks you to confirm it once more. Without it, the plan doesn't start." -->
     <string name="before_your_free_trial_turns_into_your_plan_apple_asks_you_t_c4e22b">"無料体験がプランに切り替わる前に、Apple がもう一度だけ確認を求めます。確認しないとプランは始まりません。"</string>
@@ -1016,6 +1018,7 @@
     <string name="first_test_done">"はじめてのテスト、完了です"</string>
     <string name="first_time">"はじめて"</string>
     <string name="fix_the_sentence">"文を直す"</string>
+    <string name="fixed_sentence">"直した文"</string>
     <string name="flat">"抑揚が平ら"</string>
     <string name="flow">"流れ"</string>
     <string name="fluency">"流暢さ"</string>
@@ -2068,6 +2071,7 @@
     <string name="one_tap_keeps_your_plan_going">"ワンタップでプランがそのまま続きます"</string>
     <!-- 'One test a week from your talks, words and corrections. It opens on this day and waits until the next one.' -->
     <string name="one_test_a_week_from_your_talks_words_and_corrections_it_ope_cb8368">"週に1回、トークと単語と修正から作るテストです。この曜日に開き、次の週まで待っています。"</string>
+    <string name="one_thing_from_each_part_of_this_talk">"さっきの通話から一つずつ選びました"</string>
     <string name="one_time_no_expiry">"1回のみ · 期限なし"</string>
     <string name="online">"ネットで"</string>
     <string name="online_shopping">"オンラインショッピング"</string>
@@ -3773,6 +3777,7 @@
     <string name="with_room_in_the_margin">"余白にメモ欄つき"</string>
     <string name="withdraw_consent_delete_my_voice">"同意を撤回して声を削除"</string>
     <string name="woman">"女性"</string>
+    <string name="word">"単語"</string>
     <string name="word_notebook">"単語帳"</string>
     <!-- 'word or line mastered, out of %lld your talks and watches have made' -->
     <string name="word_or_line_mastered_out_of_lld_your_talks_and_watches_have_8aaf23">"通話とシーン練習で生まれた%d個のうち覚えました"</string>

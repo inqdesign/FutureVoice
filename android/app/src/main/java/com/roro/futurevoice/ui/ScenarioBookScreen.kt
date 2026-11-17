@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.size
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.material.icons.filled.Abc
@@ -593,19 +594,19 @@ private fun ItemRow(item: ScenarioCurriculum.Item, mastered: Boolean,
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         if (mastered) Icon(Icons.Filled.CheckCircle, contentDescription = null,
-            tint = Books.mastery, modifier = Modifier.size(18.dp))
+            tint = Books.mastery, modifier = Modifier.size(22.dp))
         else Icon(Icons.Outlined.Circle, contentDescription = null,
-            tint = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.size(18.dp))
+            tint = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.size(22.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(item.text, style = MaterialTheme.typography.bodyLarge,
+            Text(item.text, style = MaterialTheme.typography.bodyLarge.copy(fontSize = 20.sp),
                 color = if (mastered) MaterialTheme.colorScheme.onSurfaceVariant
                 else MaterialTheme.colorScheme.onSurface)
             if (item.note.isNotBlank()) {
-                Text(item.note, style = MaterialTheme.typography.bodySmall,
+                Text(item.note, style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (showExample && !item.example.isNullOrBlank()) {
-                Text("“${item.example}”", style = MaterialTheme.typography.bodySmall,
+                Text("“${item.example}”", style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary)
             }
         }
