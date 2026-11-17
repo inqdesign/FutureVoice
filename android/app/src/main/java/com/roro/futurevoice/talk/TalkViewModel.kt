@@ -317,6 +317,23 @@ class TalkViewModel(context: Context) : ViewModel() {
      *  other input pinned when the call opened, so a flip changes the tutor
      *  block and nothing else. Null until the prompt is first built. */
     private var promptForTutor: ((Boolean) -> String)? = null
+
+    /** A free talk's hello is written before the prompt carries the clock
+     *  (iOS 0398a648, founder: "it keeps saying the time"): nobody has spoken
+     *  yet, so the hello was filled with the nearest fact, the day and the
+     *  hour. The clock and the index join once the hello is said
+     *  ([giveClockAfterHello]). */
+    private var helloBeforeClock = false
+    /** The earlier talks a free talk knows of, and the ones looked up because
+     *  the learner brought them up ([TalkRecall]). Read once per call. */
+    private var recallIndex: List<TalkRecall.Entry> = emptyList()
+    private var recalledTalks: List<TalkRecall.Entry> = emptyList()
+    private val recallQueries = HashMap<String, String>()
+
+    /** What the island calls Free talk (iOS `isFreeMode`): no person, no
+     *  scene, not tutor or pronunciation. Its prompt is facts only. */
+    private fun isFreeMode(cfg: TalkConfig, tutor: Boolean = tutorThisCall): Boolean =
+        cfg.cast == null && cfg.scenarioId == null && !tutor && !pronThisCall
     /** A challenge was ticked since the prompt was last sent — the block
      *  tells the tutor to move on (iOS `tutorJustTicked`). */
     private var tutorJustTicked = false
@@ -492,6 +509,8 @@ class TalkViewModel(context: Context) : ViewModel() {
         sendToAnswerOn = SendToAnswer.resolve(SendToAnswer.choice(appContext), config.level.code) ||
             pronThisCall || tutorThisCall
         promptForTutor = null
+        helloBeforeClock = false
+        recallIndex = emptyList(); recalledTalks = emptyList(); recallQueries.clear()
         coachPlan = CoachPlan()
         coachSteerSent = ""
         coachSituation = null
@@ -896,6 +915,14 @@ class TalkViewModel(context: Context) : ViewModel() {
                     runCatching { EarlierToday.current(appContext, config.targetLanguage, excluding = sessionId) }.getOrNull()
                 }
                 earlierTalkId = earlierToday?.key?.takeIf { !it.startsWith("pron:") }
+                recallIndex = withContext(Dispatchers.IO) {
+                    runCatching {
+                        val store = SessionStore.shared(appContext)
+                        val langs = (com.roro.futurevoice.data.LanguageScope.enrolled(appContext) + config.targetLanguage).distinct()
+                        TalkRecall.index(langs.flatMap { runCatching { store.load(it) }.getOrDefault(emptyList()) },
+                            now = clock.now, excluding = setOfNotNull(sessionId, earlierTalkId))
+                    }.getOrDefault(emptyList())
+                }
                 val history = personHistory(config)
                 // Drawn with the clock, once per call (iOS `FreeTalkCue.random`).
                 val freeTalkCue = ConversationPrompt.FreeTalkCue.random(hasRecentNews =
@@ -918,7 +945,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                         counterpart = config.cast?.person,
                         personHistory = history,
                         brief = brief,
-                        clock = clock,
+                        clock = if (helloBeforeClock && isFreeMode(config, tutor)) null else clock,
                         tutor = tutor,
                         freeTalkCue = freeTalkCue,
                         earlierToday = earlierToday,
@@ -929,7 +956,18 @@ class TalkViewModel(context: Context) : ViewModel() {
                         tutorPlanning = _state.value.tutorPlanning,
                         tutorSelfJudges = tutorSelfJudges,
                         tutorRealGoal = _state.value.tutorLesson?.let { realGoalLine(it) },
-                    ) + ConversationPrompt.REALTIME_STYLE_RULES
+                        freeMode = isFreeMode(config, tutor),
+                        // Like the clock, the index joins after the hello: a
+                        // list of earlier talks beside "say hello" is a hello
+                        // about one of them.
+                        pastTalks = if (helloBeforeClock) emptyList()
+                            else TalkRecall.indexLines(recallIndex, clock.now, clock.zone),
+                        recalledTalks = recalledTalks.map {
+                            TalkRecall.record(it, recallQueries[it.id].orEmpty(), clock.now,
+                                config.targetLanguage, clock.zone)
+                        },
+                        // Free talk's prompt is facts only: no style rules after it.
+                    ) + (if (isFreeMode(config, tutor)) "" else ConversationPrompt.REALTIME_STYLE_RULES)
                 }
                 promptForTutor = if (pronThisCall) { _ -> pronSystemPrompt(config) } else build
                 realtimeSystem = promptForTutor!!(tutorThisCall)
@@ -970,6 +1008,18 @@ class TalkViewModel(context: Context) : ViewModel() {
                         connectRealtime(config, null, emptyList())
                         return@launch
                     }
+                }
+                // Free talk: the fluent self says hello itself, from what its
+                // prompt knows (iOS 2026-11-12, founder). It replaced bundled
+                // hellos and lines written ahead. The first meeting keeps its
+                // introduction and a "my own topic" call its own line.
+                if (config.initialOpener.isBlank() && freeTalk && isFreeMode(config) &&
+                    config.persona?.metAt != null && !config.picksTopic) {
+                    helloBeforeClock = true
+                    realtimeSystem = build(tutorThisCall)
+                    connectRealtime(config, null, emptyList())
+                    realtime.nudge(FreeTalkOpeners.SAY_HELLO_NOTE)
+                    return@launch
                 }
                 // The first line, spoken by the fluent self before the learner
                 // says anything — spoken BY THE GATEWAY, not the app: two
@@ -1137,6 +1187,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             meterFromStart = tutorThisCall,
             repeatAfterMe = pronThisCall,
             mode = callMode,
+            openTalk = isFreeMode(cfg),
         )
         syncCoachSteer()
         // A picked-up call is a new gateway session: a running lesson's hold
@@ -1180,6 +1231,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         }
         realtime.onUserTurn = turn@{ said, wav, ms, fluency, flags ->
             markLearnerSpoke()
+            giveClockAfterHello()
             // A turn whose correction is skipped (own language, a
             // pronunciation call) still ends the early one.
             if (flags.native || pronThisCall) takeEarlyCorrection("")
@@ -1203,6 +1255,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                 tutorTurn(last.id, joined, correction, ownLanguage = flags.native)
                 pronTurn(last.id, joined)
                 checkDisownedLine(last.id, joined, cfg)
+                checkRecalledTalk(last.id, joined, cfg)
                 return@turn
             }
             // Measured off the take (iOS 55088c28): realtime turns used to
@@ -1220,6 +1273,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             tutorTurn(turn.id, said, correction, ownLanguage = flags.native)
             pronTurn(turn.id, said)
             checkDisownedLine(turn.id, said, cfg)
+            checkRecalledTalk(turn.id, said, cfg)
         }
         realtime.onReplyAudio = { ctx, pcm, rate ->
             realtimeReplyTurns[ctx]?.let { id ->
@@ -1254,6 +1308,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             }
         }
         realtime.onReplyEnded = { ctx, full ->
+            giveClockAfterHello()
             realtimeReplyTurns[ctx]?.let { id ->
                 viewModelScope.launch {
                     // The whole line: the bubble may still be revealing its
@@ -2099,7 +2154,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             val phase = _state.value.phase
             if (phase != TalkPhase.IDLE && phase != TalkPhase.ENDED) {
                 realtime.setMeterFromStart(on)
-                realtime.setCallMode(callMode)
+                realtime.setCallMode(callMode, openTalk = config?.let { isFreeMode(it) } ?: false)
                 realtime.setSystem(realtimeSystem)
                 if (on && _state.value.tutorLesson == null) realtime.nudge(TutorNudges.TURNED_ON)
             }
@@ -2110,6 +2165,40 @@ class TalkViewModel(context: Context) : ViewModel() {
 
     // ------------------------------------------------------------------
     // Tutor lesson (iOS ConversationView's `TutorLesson` section)
+
+    /** The hello is out (or the learner spoke over it): from here the prompt
+     *  knows the day, the hour and the talks before this one (iOS
+     *  `giveClockAfterHello`). */
+    private fun giveClockAfterHello() {
+        if (!helloBeforeClock) return
+        helloBeforeClock = false
+        val build = promptForTutor ?: return
+        realtimeSystem = build(tutorThisCall)
+        realtime.setSystem(realtimeSystem)
+    }
+
+    // An earlier talk brought up (iOS `checkRecalledTalk`, [TalkRecall])
+
+    /** The learner may be talking about an earlier talk. If so its lines go
+     *  into the prompt for the replies after this one; nothing waits on it. */
+    private fun checkRecalledTalk(turnId: String, said: String, cfg: TalkConfig) {
+        if (!isFreeMode(cfg) || helloBeforeClock) return
+        val open = recallIndex.filter { e -> recalledTalks.none { it.id == e.id } }
+        if (!TalkRecall.mayRecall(said, open, cfg.targetLanguage)) return
+        val lastReply = _state.value.turns.lastOrNull { it.role != TurnRole.USER }?.transcript.orEmpty()
+        viewModelScope.launch {
+            val hit = TalkRecall.recalled(said, lastReply, open, turnId) ?: return@launch
+            if (!callIsLive || !isFreeMode(cfg) || recalledTalks.any { it.id == hit.id }) return@launch
+            recallQueries[hit.id] = said
+            recalledTalks = (recalledTalks + hit).takeLast(TalkRecall.HELD_AT_ONCE)
+            val build = promptForTutor ?: return@launch
+            realtimeSystem = build(tutorThisCall)
+            realtime.setSystem(realtimeSystem)
+            log("talk_recalled", mapOf(
+                "days_ago" to PromptClock.calendarDays(hit.endedAt, System.currentTimeMillis()).toString(),
+                "held" to recalledTalks.size.toString()))
+        }
+    }
 
     // "That wasn't me" (iOS `checkDisownedLine`, 2026-11-17)
 

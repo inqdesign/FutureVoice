@@ -501,6 +501,10 @@ class RealtimeTalkClient(private val context: Context) {
         /** What kind of call this is — "free" · "tutor" · "pron" — for the
          *  usage page's split (`StartMessage.mode`). */
         mode: String = "free",
+        /** Free talk (iOS `openTalk`): the gateway gives the reply its
+         *  free-talk brief and shape instead of the one-question rule. An
+         *  older gateway ignores it. */
+        openTalk: Boolean = false,
     ) {
         if (state != State.IDLE && state != State.FAILED) return
         synchronized(nudgeLock) { startSent = false; heldNudges.clear() }
@@ -539,6 +543,7 @@ class RealtimeTalkClient(private val context: Context) {
             // An older gateway ignores both.
             if (repeatAfterMe) put("repeatAfterMe", true)
             put("mode", mode)
+            if (openTalk) put("openTalk", true)
             opener?.takeIf { it.isNotBlank() }?.let { put("opener", it) }
             if (history.isNotEmpty()) {
                 put("history", buildJsonArray {
@@ -726,9 +731,9 @@ class RealtimeTalkClient(private val context: Context) {
     }
 
     /** The call's kind changed mid-call (tutor mode switched on or off). */
-    fun setCallMode(mode: String) {
+    fun setCallMode(mode: String, openTalk: Boolean = false) {
         if (tornDown) return
-        runCatching { socket?.send("""{"type":"set","mode":"$mode"}""") }
+        runCatching { socket?.send("""{"type":"set","mode":"$mode","openTalk":$openTalk}""") }
     }
 
     /** The last partial shown — what a reset throws away. */

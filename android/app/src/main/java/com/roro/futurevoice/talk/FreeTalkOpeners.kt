@@ -20,6 +20,11 @@ class FreeTalkOpeners(private val context: Context) {
         private const val CARTESIA_WHOLE_KEY = "futurevoice.freeTalkOpeners.cartesiaWhole"
         private const val TAG = "FreeTalkOpeners"
 
+        /** What the gateway is told so the fluent self says hello itself (iOS
+         *  `sayHelloNote`, 2026-11-12). The middle sentence is a fact, not a
+         *  direction: without it the hello commented on a voice it had not heard. */
+        const val SAY_HELLO_NOTE = "They just called you. You have not heard them say anything yet. Say hello."
+
         /** iOS `FreeTalkOpeners.warmAhead` — one since 2026-10-09: the
          *  launcher re-warms after every call, so a spare was rarely played. */
         const val WARM_AHEAD = 1
