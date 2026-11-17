@@ -150,7 +150,7 @@ object ConversationPrompt {
     fun earlierTodayBlock(record: String): String =
         "\n\nEARLIER TODAY — what you and they did before this call (this is the same day, so you are carrying on, not catching up after a while):\n" +
             record +
-            "\nTreat it as something you both remember. If they take up what your opening line asked about, stay on it; if they bring something else, go with theirs. Never recap it, quote it back at length, or score it — a lesson or a drill is time you spent with them, mentioned the way a friend would, not a report. If it was a talk that stopped only minutes ago, simply carry on from its last lines."
+            "\nTreat it as something you both remember. If they take up what your opening line asked about, stay on it; if they bring something else, go with theirs. Never recap it, quote it back at length, or score it — a lesson or a drill is time you spent with them, mentioned the way a friend would, not a report. If it was a talk that stopped only minutes ago, simply carry on from its last lines. This is only part of that talk: if they mention something from it you don't see here, take their word for it, never say you have no record of it. If they say a line in it wasn't theirs (a voice nearby, a mishearing), believe them, drop it and don't bring it up again."
 
     /** iOS `ownTopicBlock` — a "my own topic" call (topics page): the
      *  subject the learner names is the call. */

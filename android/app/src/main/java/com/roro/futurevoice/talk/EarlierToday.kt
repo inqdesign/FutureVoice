@@ -104,7 +104,11 @@ data class EarlierToday(
                 val about = s.topic?.trim()?.takeIf { it.isNotEmpty() }?.let { " about \"$it\"" } ?: ""
                 head = "A talk$about that ended $gap."
             }
-            val lines = lastLines(s.turns, if (kind == Kind.TALK) 10 else 6)
+            // A talk carries as much as a person's call history does (30
+            // lines / 3,000 chars); the last 10 lines lost what was said
+            // earlier in it (iOS, 2026-11-17).
+            val lines = if (kind == Kind.TALK) lastLines(s.turns, 30, budget = 3000)
+                        else lastLines(s.turns, 6)
             val record = if (lines.isEmpty()) head else head + "\nIts last lines, oldest first:\n" + lines
             return EarlierToday(kind, s.id, endedAt, record)
         }
@@ -113,7 +117,16 @@ data class EarlierToday(
         private fun lastLines(turns: List<Turn>, count: Int, budget: Int = 1400): String {
             val out = mutableListOf<String>()
             var used = 0
+            // A line flagged as misheard, and the reply built on it, stay out.
+            val dropped = HashSet<String>()
+            turns.forEachIndexed { i, t ->
+                if (t.role == TurnRole.USER && t.excludedFromScoring) {
+                    dropped += t.id
+                    turns.getOrNull(i + 1)?.takeIf { it.role != TurnRole.USER }?.let { dropped += it.id }
+                }
+            }
             for (t in turns.asReversed()) {
+                if (t.id in dropped) continue
                 val text = t.transcript.trim()
                 if (text.isEmpty()) continue
                 val line = "${if (t.role == TurnRole.USER) "them" else "you"}: \"${clip(text, 200)}\""
