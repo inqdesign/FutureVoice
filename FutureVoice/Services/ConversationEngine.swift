@@ -2094,6 +2094,7 @@ enum ConversationEngine {
     static func formatTranscript(_ turns: [Turn]) -> String {
         turns.map { turn in
             let label = turn.role == .fluentSelf ? "FLUENT_SELF"
+                : turn.excludedFromScoring ? "NOT_THE_USER"
                 : turn.readFromCoach ? "USER_READ"
                 : turn.tutorRole == .drill ? "USER_DRILL" : "USER"
             return "[\(label)] \(turn.transcript)"
@@ -2107,6 +2108,17 @@ enum ConversationEngine {
     level: judge the scorecard (every score, the level, the grammar range) on \
     the [USER] lines only, and quote nothing from a [USER_READ] line in \
     expressions_used, phrases_used, new_patterns_detected or grammar issues.
+    """
+
+    /// Rides under the transcript only when a line the learner disowned
+    /// during the call (`MisheardJudge`) is in it.
+    static let notTheUserLineNote = """
+    [NOT_THE_USER] lines were written down by speech recognition but the \
+    learner did not say them: another voice nearby, or a mishearing, and the \
+    learner said so later in the call. Treat such a line as if it were not \
+    there, and the reply right after it as an answer to nothing. Quote \
+    nothing from it anywhere, score nothing on it, and write no about_user \
+    entry from it or from anything the conversation built on it.
     """
 
     /// Rides under the transcript only when a `USER_DRILL` line is in it.

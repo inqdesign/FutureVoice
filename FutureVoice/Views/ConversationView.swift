@@ -3332,6 +3332,7 @@ struct ConversationView: View {
                                                 early: takeEarlyCorrection(matching: joined))
                 tutorTurn(turnId: id, said: joined, ownLanguage: flags.native, correction: correction)
                 pronTurn(turnId: id, said: joined)
+                checkDisownedLine(turnId: id, said: joined)
                 return
             }
             var turn = Turn(id: UUID(), role: .user, audioURL: nil,
@@ -3366,6 +3367,7 @@ struct ConversationView: View {
                                             early: takeEarlyCorrection(matching: text))
             tutorTurn(turnId: turn.id, said: text, ownLanguage: flags.native, correction: correction)
             pronTurn(turnId: turn.id, said: text)
+            checkDisownedLine(turnId: turn.id, said: text)
         }
         // The bubble appears WITH the voice and fills as the line is written —
         // the same "you read what you are hearing" the HTTP path gets from
@@ -3537,6 +3539,64 @@ struct ConversationView: View {
         case let e as URLError:                     return "url_\(e.code.rawValue)"
         default:                                    return String(describing: error).prefix(60).description
         }
+    }
+
+    // MARK: - "That wasn't me" (`MisheardJudge`)
+
+    /// The learner may be saying an earlier line was not theirs. Almost no
+    /// turn is: the word check decides whether to ask at all.
+    private func checkDisownedLine(turnId: UUID, said: String) {
+        guard !pronThisCall, MisheardJudge.mayRetract(said) else { return }
+        let candidates = disownCandidates(before: turnId)
+        guard !candidates.isEmpty else { return }
+        Task { @MainActor in
+            guard let hit = await MisheardJudge.retractedLine(newest: said, candidates: candidates,
+                                                              turnId: turnId),
+                  !isTornDown else { return }
+            disown(hit)
+        }
+    }
+
+    /// The lines they could mean, oldest first: the end of the talk this call
+    /// opened on (a line caught at the end of one call is disowned at the
+    /// start of the next), then this call's own.
+    private func disownCandidates(before turnId: UUID) -> [MisheardJudge.Candidate] {
+        func pairs(_ all: [Turn], session: UUID, last: Int) -> [MisheardJudge.Candidate] {
+            var out: [MisheardJudge.Candidate] = []
+            for (i, t) in all.enumerated() where t.role == .user && !t.excludedFromScoring
+                && !t.transcript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                let reply = i + 1 < all.count && all[i + 1].role == .fluentSelf ? all[i + 1].transcript : ""
+                out.append(.init(turnId: t.id, sessionId: session, said: t.transcript, reply: reply))
+            }
+            return Array(out.suffix(last))
+        }
+        var earlier: [MisheardJudge.Candidate] = []
+        if let key = earlierToday?.key, let id = UUID(uuidString: key),
+           let s = SessionStore.shared.load().first(where: { $0.id == id }) {
+            earlier = pairs(s.turns, session: id, last: 4)
+        }
+        let cut = turns.firstIndex(where: { $0.id == turnId }) ?? turns.count
+        return earlier + pairs(Array(turns[..<cut]), session: sessionId, last: 6)
+    }
+
+    /// What the transcript page's "misheard" swipe does, done now.
+    private func disown(_ hit: MisheardJudge.Candidate) {
+        if hit.sessionId == sessionId {
+            guard let idx = turns.firstIndex(where: { $0.id == hit.turnId }) else { return }
+            withAnimation(.easeInOut(duration: 0.25)) {
+                turns[idx].excludedFromScoring = true
+                turns[idx].suggestion = nil
+            }
+            heldSuggestions[hit.turnId] = nil
+            didSaveCurrentSession = false
+        } else {
+            if let updated = SessionStore.shared.excludeTurnFromScoring(sessionId: hit.sessionId,
+                                                                        turnId: hit.turnId) {
+                appState.reassessAfterEvidenceChange(in: updated)
+            }
+            appState.forgetNotes(fromSession: hit.sessionId, heardIn: hit.said)
+        }
+        Telemetry.log("talk_line_disowned", ["scope": hit.sessionId == sessionId ? "call" : "earlier"])
     }
 
     /// The per-turn correction. Its task answers the turn's fixes ([] when
@@ -7115,6 +7175,9 @@ private struct TurnView: View {
             }
             }
         }
+        // A line the learner disowned mid-call ("that wasn't me"): dimmed, as
+        // on the transcript page, so they can see it was taken out.
+        .opacity(turn.role == .user && turn.excludedFromScoring ? 0.45 : 1)
         // A late transcription upgrade rewrites the line under a translation
         // that was fetched for the OLD wording. Drop it and, if the learner is
         // looking at it, fetch the meaning of what the bubble now says.

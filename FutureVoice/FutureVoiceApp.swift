@@ -1645,6 +1645,22 @@ final class AppState: ObservableObject {
         persona = p
     }
 
+    /// A line the learner disowned ("that wasn't me", `MisheardJudge`) may
+    /// already be a remembered fact: the talk it sat in was summarized before
+    /// they could say so. Drops the notes that talk wrote from that sentence
+    /// (`PersonaNote.heard` is the sentence a note came from).
+    func forgetNotes(fromSession id: UUID, heardIn line: String) {
+        guard var p = persona else { return }
+        let before = p.learnedNotes.count
+        p.learnedNotes.removeAll { note in
+            guard note.sessionId == id, let heard = note.heard, !heard.isEmpty else { return false }
+            return CarryoverDetector.sharedWordRatio(of: heard, in: line) >= 0.6
+        }
+        guard p.learnedNotes.count != before else { return }
+        PersonaStore.shared.save(p)
+        persona = p
+    }
+
     func updateTopicSuggestions(_ topics: [SuggestedTopic]) {
         TopicStore.shared.save(topics)
         topicSuggestions = topics

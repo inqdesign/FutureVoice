@@ -3150,6 +3150,21 @@ interviewer.
   3,000 chars (was 10 / 1,400), without lines flagged misheard or the reply
   built on them.
 
+- **"That wasn't me" works by voice** (same day, `MisheardJudge`). A line
+  that disowns an earlier one ("you misheard", "that was someone else")
+  flags that line the way the transcript page's swipe does: out of every
+  score, its correction dropped, dimmed in the call, `[NOT_THE_USER]` in
+  the summary transcript (`notTheUserLineNote`; Android's note is in
+  `session-summary`). Candidates are this call's last 6 learner lines and
+  the last 4 of the talk the call opened on; a hit there flags the stored
+  talk (`excludeTurnFromScoring`) and drops the remembered lines it wrote
+  from that sentence (`forgetNotes`, by `PersonaNote.heard`). Two steps: a
+  word check in code (`mayRetract`, all target languages) so almost no
+  turn costs a call, then flash-lite (`purpose: "coach"`, free).
+  `scripts/misheard-probe.py`: 66/66, no line flagged that nobody
+  disowned ("I didn't mean it", noise talk, a complaint). Telemetry
+  `talk_line_disowned` (scope call | earlier). Not yet tried on a real call.
+
 ## A learner who switches language, or isn't finished (2026-10-08)
 
 Found reading one A2 learner's calls; both were everywhere once counted.

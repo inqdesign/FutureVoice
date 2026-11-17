@@ -152,6 +152,9 @@ enum SessionSummarizer {
         if turns.contains(where: { $0.tutorRole == .drill }) {
             userMessage += "\n\n" + ConversationEngine.drillLineNote
         }
+        if turns.contains(where: { $0.role == .user && $0.excludedFromScoring }) {
+            userMessage += "\n\n" + ConversationEngine.notTheUserLineNote
+        }
         // Stable idempotency key: retrying — by re-tapping End, or from the
         // book days later — re-runs the SAME logical request without a
         // second charge, as long as the transcript hasn't grown.
