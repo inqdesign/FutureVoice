@@ -492,12 +492,14 @@ class SpeechTakeSession(
         var prons = mutableListOf<PronunciationResult>()
         var assessed = listOf<SpeechDelivery.Piece>()
         var readBackFixed = 0
+        var restoredWords = 0
         var placedPieces = 0
         for (p in reads) {
             val piece = p.await()
             if (piece == null) { texts.clear(); prons.clear(); assessed = emptyList(); break }
             texts += piece.text
             if (piece.readBackReplaced) readBackFixed++
+            restoredWords += piece.restoredWords
             if (piece.placed) placedPieces++
             piece.pron?.let {
                 prons += it
@@ -638,6 +640,8 @@ class SpeechTakeSession(
             "scoring" to (metrics.scoring ?: 0),
             // Pieces whose read-back lost words Azure heard ([pieceText]).
             "readback_fixed" to readBackFixed,
+            // Script words the read-back missed and Azure heard clearly.
+            "readback_restored" to restoredWords,
             "placed_pieces" to placedPieces,
             "meter_voiced" to meterVoiced.toInt(),
             "live_dropped" to liveDropped,
@@ -703,9 +707,15 @@ class SpeechTakeSession(
                 }
                 if (reference.isEmpty()) return@async readBack?.let { Piece(it, null) }
                 val result = PronunciationAssessor.assess(context, file, reference, language, "speech").result
-                pieceText(readBack, result?.recognized, language,
-                    result?.words?.count { it.isInsertion } ?: 0)?.let { (text, replaced) ->
-                    Piece(text, result, reference, replaced, startMs, placed)
+                val insertions = result?.words?.count { it.isInsertion } ?: 0
+                pieceText(readBack, result?.recognized, language, insertions)?.let { (text, replaced) ->
+                    // Only against a script span the piece was placed on, and
+                    // only when Azure's alignment held (iOS 0c738bf4).
+                    val (restoredText, restored) =
+                        if (!replaced && placed && result != null && insertions <= MAX_INSERTIONS_TO_TRUST)
+                            com.roro.futurevoice.talk.ShadowScore.restoringClearWords(text, reference, result.words, language)
+                        else text to 0
+                    Piece(restoredText, result, reference, replaced, startMs, placed, restored)
                 }
             } finally { file.delete() }
         }
@@ -827,6 +837,8 @@ class SpeechTakeSession(
         val startMs: Int = 0,
         /** The script span came from the piece's own words, not the prompter's cursor. */
         val placed: Boolean = false,
+        /** Script words put back where Azure heard them clearly ([ShadowScore.restoringClearWords]). */
+        val restoredWords: Int = 0,
     )
 
     companion object {

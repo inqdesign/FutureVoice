@@ -146,6 +146,89 @@ object ShadowScore {
         return owner[first]..owner[last]
     }
 
+    /**
+     * A piece's read-back with the script's words put back where Azure heard
+     * them clearly (iOS `restoringClearWords`, 2026-11-17). The read-back is
+     * never shown the script, so a word it can't know comes back as something
+     * else: "this nawana Air flight" read as "to this fly" while Azure scored
+     * all four words 94–97 with no error. A stretch where the two disagree is
+     * restored only when EVERY script word in it came back from Azure as
+     * `None` at [minAccuracy] or more; omitted, inserted or mispronounced
+     * words keep the read-back's version. Spaced languages only.
+     * Returns the text and how many words were put back.
+     */
+    fun restoringClearWords(heard: String, reference: String, words: List<PronunciationResult.Word>,
+                            language: String, minAccuracy: Int = 85): Pair<String, Int> {
+        val style = LanguageCatalog.tokenStyle(language)
+        if (style != LanguageCatalog.TokenStyle.WORD || heard.isEmpty() || reference.isEmpty() || words.isEmpty()) return heard to 0
+        val key = soundKey(language)
+        fun toks(s: String) = tokenize(expandForDiff(s, language), style)
+
+        val heardWords = heard.split(Regex("\\s+")).filter { it.isNotEmpty() }.toMutableList()
+        val hTok = ArrayList<String>(); val hOwner = ArrayList<Int>()
+        for ((i, w) in heardWords.withIndex()) for (t in toks(w)) { hTok.add(t); hOwner.add(i) }
+        val refTok = toks(reference)
+        val aTok = ArrayList<String>(); val aClear = ArrayList<Boolean>()
+        for (w in words) {
+            if (w.isInsertion) continue
+            val clear = w.error == "None" && (w.accuracy ?: 0) >= minAccuracy
+            for (t in toks(w.word)) { aTok.add(t); aClear.add(clear) }
+        }
+        if (refTok.isEmpty() || hTok.isEmpty() || aTok.isEmpty()) return heard to 0
+
+        // Which script tokens Azure heard clearly.
+        val refClear = BooleanArray(refTok.size)
+        var i = 0; var j = 0
+        for (step in align(refTok, aTok, key).second) when (step.op) {
+            DiffOp.MATCH -> { refClear[i] = aClear[j]; i++; j++ }
+            DiffOp.SUB -> { i++; j++ }
+            DiffOp.DEL -> i++
+            DiffOp.INS -> j++
+        }
+
+        // Stretches where the read-back and the script disagree: [refFrom, refTo) × [hFrom, hTo).
+        val hunks = ArrayList<IntArray>()
+        var open: IntArray? = null
+        i = 0; j = 0
+        for (step in align(refTok, hTok, key).second) {
+            if (step.op == DiffOp.MATCH) {
+                open?.let { hunks.add(it) }; open = null
+                i++; j++
+                continue
+            }
+            val h = open ?: intArrayOf(i, i, j, j).also { open = it }
+            when (step.op) {
+                DiffOp.SUB -> { i++; j++ }
+                DiffOp.DEL -> i++
+                DiffOp.INS -> j++
+                DiffOp.MATCH -> {}
+            }
+            h[1] = i; h[3] = j
+        }
+        open?.let { hunks.add(it) }
+
+        fun boundary(t: Int) = t == 0 || t == hTok.size || hOwner[t - 1] != hOwner[t]
+        var restored = 0
+        for (h in hunks.asReversed()) {
+            val (rFrom, rTo, hFrom, hTo) = h
+            if (rFrom == rTo || (rFrom until rTo).any { !refClear[it] } || !boundary(hFrom) || !boundary(hTo)) continue
+            val put = refTok.subList(rFrom, rTo).toMutableList()
+            if (hFrom == hTo) {
+                val at = if (hFrom == 0) 0 else hOwner[hFrom - 1] + 1
+                heardWords.addAll(at, put)
+            } else {
+                val first = hOwner[hFrom]; val last = hOwner[hTo - 1]
+                // The sentence's own punctuation stays with it.
+                val tail = heardWords[last].takeLastWhile { !it.isLetterOrDigit() && !it.isWhitespace() }
+                put[put.size - 1] = put.last() + tail
+                for (k in last downTo first) heardWords.removeAt(k)
+                heardWords.addAll(first, put)
+            }
+            restored += put.size
+        }
+        return (if (restored > 0) heardWords.joinToString(" ") else heard) to restored
+    }
+
     /** How two tokens are compared: Japanese by sound (the transcriber picks
      *  the script, ナワナ / なわな, so kana is keyed in hiragana), Chinese by
      *  Simplified character, everything else as written (iOS `soundKey`). */
