@@ -280,12 +280,13 @@ enum TalkGoalPicker {
         guard turn.isEvidence,
               !turn.transcript.isEmpty, !items.isEmpty else { return [] }
         var out = Set<String>()
-        var lemmas: Set<String>?          // one NLTagger pass per turn, at most
         for item in items {
             if item.isWord {
-                let found = lemmas ?? VocabStore.lemmas(in: [turn.transcript])
-                lemmas = found
-                if found.contains(item.key) { out.insert(item.key) }
+                // In any inflection (2026-11-17): a chip stored as "erodes"
+                // never ticked, because the turn's words are lemmas, and
+                // "invigilators" never ticked "invigilator", because the
+                // tagger can't lemmatize a rare noun.
+                if CarryoverDetector.saysWord(item.text, in: turn.transcript) { out.insert(item.key) }
             } else if CarryoverDetector.firstMatch(of: item.text, in: [turn]) != nil {
                 out.insert(item.key)
             }

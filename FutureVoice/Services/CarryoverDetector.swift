@@ -251,13 +251,20 @@ enum CarryoverDetector {
                            rejectingMistake source: String? = nil) -> Hit? {
         let korean = isKorean
         let politeFree = korean && source == nil
+        // A phrase the learner is SPENDING (a chip, a book expression) counts
+        // in any inflection: "struck a nerve" spends "strikes a nerve". A
+        // correction (`source` set) stays exact, or "six month" would spend
+        // the card "six months" (2026-11-17, learner report).
+        let fold = source == nil && foldsInflection
         let needle = tokens(item).map { politeFree ? strippingPolite($0) : $0 }
-        let core = politeFree ? needle : contentTokens(item)
+            .map { fold ? folded($0) : $0 }
+        let core = politeFree ? needle : contentTokens(item).map { fold ? folded($0) : $0 }
         guard needle.count >= minTokensNow, core.count >= minContentTokensNow else { return nil }
         let koreanNeedle = korean ? koreanKey(item, politeFree: politeFree) : ""
         if korean, koreanNeedle.count < minKoreanSyllables { return nil }
         for turn in userTurns {
             let hay = tokens(turn.transcript).map { politeFree ? strippingPolite($0) : $0 }
+                .map { fold ? folded($0) : $0 }
             if let span = matchedSpan(needle, core: core, in: hay) {
                 if let source, !showsTheFix(from: source, to: item, in: span) { continue }
             } else if korean, koreanKey(turn.transcript, politeFree: politeFree).contains(koreanNeedle) {
@@ -360,6 +367,44 @@ enum CarryoverDetector {
 
     private static func strippingPolite(_ token: String) -> String {
         token.count > 1 && token.hasSuffix("요") ? String(token.dropLast()) : token
+    }
+
+    /// Spaced languages other than Korean fold inflection when a word or a
+    /// phrase is being SPENT (see `firstMatch`, `saysWord`). Korean has its
+    /// own syllable matching; unspaced languages don't inflect this way.
+    private static var foldsInflection: Bool { WordSplitter.spaced && !isKorean }
+
+    /// One normalized token with its inflection folded: "strikes", "struck"
+    /// → strike; "erodes" → erode. Asked one word at a time, which the
+    /// tagger handles well for English (measured 2026-11-17: struck, went,
+    /// left, buses, glasses all right). A word the tagger doesn't know comes
+    /// back as itself, and the tagger knows no rare nouns: "invigilators"
+    /// stayed plural, so a chip reading "invigilator" never ticked. For
+    /// English, a word the tagger can't read loses a regular plural ending.
+    static func folded(_ token: String) -> String {
+        guard foldsInflection, token.count > 2,
+              token.allSatisfy(\.isLetter) else { return token }
+        let lemma = VocabStore.lemmas(in: [token]).first ?? token
+        guard lemma == token, LanguageCatalog.base(LanguageScope.active) == "en" else { return lemma }
+        if token.hasSuffix("ies"), token.count > 4 { return String(token.dropLast(3)) + "y" }
+        if token.hasSuffix("s"), !token.hasSuffix("ss"), !token.hasSuffix("us"),
+           !token.hasSuffix("is"), token.count > 3 {
+            return String(token.dropLast())
+        }
+        return token
+    }
+
+    /// Did `text` carry `word`, in any inflection? The ONE check for a single
+    /// word being spent: the call's chip row and a Watch book's word mastery.
+    /// The tagger's own lemmas of the turn are asked too, since a word read in
+    /// context can come out better than one read alone.
+    static func saysWord(_ word: String, in text: String) -> Bool {
+        let key = normalized(word)
+        guard !key.isEmpty, !key.contains(" ") else { return false }
+        let target = folded(key)
+        if tokens(text).contains(where: { $0 == key || folded($0) == target }) { return true }
+        let inContext = VocabStore.lemmas(in: [text])
+        return inContext.contains(key) || inContext.contains(target)
     }
 
     /// First user turn that used `lemma`. Lemma-based, so the notebook's

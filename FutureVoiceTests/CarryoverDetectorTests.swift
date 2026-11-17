@@ -61,6 +61,34 @@ final class CarryoverDetectorTests: XCTestCase {
                                  sessionId: sessionId, sessionStartedAt: sessionStart)
     }
 
+    // MARK: - A word or phrase being spent counts in any inflection (2026-11-17)
+
+    /// The learner's report: the chip "invigilator" stayed empty after
+    /// "traditional invigilators", and a chip stored as "erodes" could never
+    /// tick at all.
+    func testAChipWordTicksInAnyInflection() {
+        XCTAssertTrue(CarryoverDetector.saysWord("invigilator",
+            in: "and is traditional invigilators um capability to catch"))
+        XCTAssertTrue(CarryoverDetector.saysWord("erodes", in: "trust erodes slowly"))
+        XCTAssertTrue(CarryoverDetector.saysWord("erodes", in: "it eroded the trust"))
+        XCTAssertTrue(CarryoverDetector.saysWord("chore", in: "I hate chores"))
+        XCTAssertFalse(CarryoverDetector.saysWord("invigilator", in: "the teacher caught them"))
+        XCTAssertFalse(CarryoverDetector.saysWord("it", in: "its color"))
+    }
+
+    func testAPhraseBeingSpentTicksInAnyInflection() {
+        let turn = userTurn("that comment really struck a nerve with everyone")
+        XCTAssertNotNil(CarryoverDetector.firstMatch(of: "strikes a nerve", in: [turn]))
+    }
+
+    /// Folding must never reach a correction: "six month" is the mistake the
+    /// card "six months" exists for.
+    func testACorrectionStaysExact() {
+        let turn = userTurn("she is here for six month already")
+        XCTAssertNil(CarryoverDetector.firstMatch(of: "here for six months", in: [turn],
+                                                  rejectingMistake: "here for six month"))
+    }
+
     // MARK: - A correction card is credited only when the mistake is gone
 
     private func correction(_ source: String, _ target: String) -> DrillCard {

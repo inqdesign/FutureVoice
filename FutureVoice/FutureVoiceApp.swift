@@ -1492,10 +1492,11 @@ final class AppState: ObservableObject {
 
         // A practice (coach mode) call read its answers off a suggestion —
         // practice, not a phrase the learner produced.
-        let spoken = SessionStore.shared.load()
+        let userTurns = SessionStore.shared.load()
             .filter { $0.topic == s.displayTitle && !$0.isPractice }
             .flatMap { $0.turns }
             .filter { $0.role == .user }
+        let spoken = userTurns
             .map(\.transcript)
             .joined(separator: " ")
             .lowercased()
@@ -1515,7 +1516,7 @@ final class AppState: ObservableObject {
             // form so a proper-noun curriculum word still gets its checkmark.
             let known = [word, word.lowercased(), VocabStore.lookupKey(for: word)]
                 .contains { VocabStore.shared.state(of: $0) != nil }
-            if known || saidByUser(word) {
+            if known || saidByUser(word) || userTurns.contains(where: { CarryoverDetector.saysWord(word, in: $0.transcript) }) {
                 c.words[i].masteredAt = Date()
                 changed = true
             }
@@ -1525,7 +1526,8 @@ final class AppState: ObservableObject {
             // hasUsedExpression, not hasExpression: a bookmark alone creates a
             // row, and reading that as mastery ticked items off for saving
             // them.
-            if saidByUser(item.text) || VocabStore.shared.hasUsedExpression(item.text) {
+            if saidByUser(item.text) || VocabStore.shared.hasUsedExpression(item.text)
+                || CarryoverDetector.firstMatch(of: item.text, in: userTurns) != nil {
                 c.expressions[i].masteredAt = Date()
                 changed = true
             }
