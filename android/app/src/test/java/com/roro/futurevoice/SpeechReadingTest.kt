@@ -206,6 +206,17 @@ class SpeechReadingTest {
         assertTrue(d.breaks.isEmpty())
     }
 
+    @Test fun azureTextFromAnUncoveredSpanNeverStandsIn() {
+        val azure = "1000 people aged people 2025 in 2025 a nature a people aged people was people in the aging more looked looked the aging"
+        val read = "thousand people aged fifty-one to ninety in twenty-seven"
+        val kept = SpeechTakeSession.pieceText(read, azure, "en", insertions = 18)
+        assertEquals(read, kept?.first)
+        assertEquals(false, kept?.second)
+        assertNull(SpeechTakeSession.pieceText("", azure, "en", insertions = 18))
+        assertNull(SpeechTakeSession.pieceText(null, azure, "en", insertions = 18))
+        assertEquals(true, SpeechTakeSession.pieceText(read, azure, "en", insertions = 3)?.second)
+    }
+
     @Test fun shortReadBackGivesWayToAzure() {
         val azure = "And guess what? This morning I ran for half an hour and I didn't even notice."
         val lost = SpeechTakeSession.pieceText("And guess what? This morning I went for", azure, "en")

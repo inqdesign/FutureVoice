@@ -635,7 +635,8 @@ class SpeechTakeSession(
                         val pron = async { PronunciationAssessor.assess(context, file, reference, language, "speech") }
                         val readBack = read.await()
                         val result = pron.await().result
-                        pieceText(readBack, result?.recognized, language)?.let { (text, replaced) ->
+                        pieceText(readBack, result?.recognized, language,
+                            result?.words?.count { it.isInsertion } ?: 0)?.let { (text, replaced) ->
                             Piece(text, result, reference, replaced, startMs)
                         }
                     }
@@ -781,6 +782,8 @@ class SpeechTakeSession(
         fun ceilingSeconds(targetSeconds: Int, body: String, language: String): Double =
             maxOf(targetSeconds, SpeechLibrary.estimatedSeconds(body, language)) * 3.0 + 60
 
+        const val MAX_INSERTIONS_TO_TRUST = 3
+
         /**
          * A piece's words, from two witnesses (iOS `pieceText`). The read-back
          * is the text the take is scored on, but it can come back short: when
@@ -788,10 +791,16 @@ class SpeechTakeSession(
          * (or nothing), Azure's own text is the piece's text. With no Azure
          * text the read-back stands, null included.
          */
-        fun pieceText(readBack: String?, heard: String?, language: String): Pair<String, Boolean>? {
+        fun pieceText(readBack: String?, heard: String?, language: String, insertions: Int = 0): Pair<String, Boolean>? {
             val read = readBack?.trim().orEmpty()
             val azure = heard?.trim().orEmpty()
             if (azure.isEmpty()) return readBack?.let { it to false }
+            // Azure's text is a transcript only when its script span covered
+            // the audio: for audio the span lacks, it writes words out of the
+            // span ("fifty-one to ninety" came back "2025"), tagged Insertion
+            // (0 on covered readings, 6 to 20 on uncovered ones). Nobody read
+            // the piece: null sends the whole file to the reader. iOS 2026-11-17.
+            if (insertions > MAX_INSERTIONS_TO_TRUST) return if (read.isEmpty()) null else (readBack ?: read) to false
             fun size(s: String): Int =
                 if (LanguageCatalog.writesSpaces(language)) s.split(Regex("\\s+")).count { it.isNotEmpty() }
                 else s.count { !it.isWhitespace() && !com.roro.futurevoice.talk.SpeechPrompterTrack.isPunctuation(it) }
