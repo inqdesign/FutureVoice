@@ -105,6 +105,34 @@ final class ShadowEngineTests: XCTestCase {
         XCTAssertEqual(ShadowEngine.scriptRange(of: "공원에 산책을 나갔 습니다 거기서", in: ko, language: "ko"), 4..<8)
     }
 
+    /// Spelling and spacing are the transcriber's: British or American, one
+    /// word or two.
+    func testSpellingAndCompoundsAreNotSlips() {
+        for (target, learner) in [
+            ("more likely to be ageing faster", "more likely to be aging faster"),
+            ("my favourite colour is grey", "my favorite color is gray"),
+            ("we realised the centre was cancelled", "we realized the center was canceled"),
+            ("she had a feeling about a shortcut", "she had a feeling about a short cut"),
+            ("through every breakup, every bad haircut", "through every break up every bad hair cut"),
+            ("a happy journey every day", "a happy journey everyday"),
+            ("make sure your seatbelts are fastened", "make sure your seat belts are fastened"),
+            ("All right, everyone, come closer", "Alright everyone come closer"),
+            ("okay, e-books are fine", "OK ebooks are fine"),
+        ] {
+            let a = ShadowEngine.analyze(target: target, learner: learner)
+            XCTAssertTrue(a.steps.allSatisfy { $0.op == .match }, "\(target) | \(learner): \(a.steps)")
+        }
+        // Different words stay different.
+        for (target, learner) in [
+            ("I learned it for four years", "I learnt it for for years"),
+            ("she won the prize", "she won the price"),
+            ("we went in to see him", "we went to see him"),
+        ] {
+            let a = ShadowEngine.analyze(target: target, learner: learner)
+            XCTAssertFalse(a.steps.allSatisfy { $0.op == .match }, "\(target) | \(learner)")
+        }
+    }
+
     /// A different number is still a different number.
     func testWrongYearIsStillWrong() {
         let a = ShadowEngine.analyze(target: "in nineteen eleven", learner: "in 1912")

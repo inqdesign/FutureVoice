@@ -184,3 +184,27 @@ final class SpeechRescoreCutTests: XCTestCase {
         XCTAssertEqual(long.map { ($0.wav.count - 44) / 2 }.reduce(0, +), 80 * 16_000)
     }
 }
+
+final class SpeechCoverageTests: XCTestCase {
+    private let script = "Have you ever heard that learning a language can slow down ageing? It sounds almost too good to be true, so let's look at what the research actually says. In the study, people who spoke only one language were more likely to be ageing faster than expected, and that can't hurt you."
+
+    private func coverage(_ said: String) -> Double {
+        SpeechAnalyzer.coverage(ShadowEngine.analyze(target: script, learner: said, language: "en").steps)
+    }
+
+    /// Nonsense that happens to hold a word of the script's end is not a
+    /// reading of the script.
+    func testNonsenseIsNotCoverage() {
+        XCTAssertLessThan(coverage("chuchu chuchu thank you thank you hello hello anger hello boy boy"), 0.1)
+        XCTAssertLessThan(coverage("you return home hello help help a car car car piece piece piece"), 0.1)
+    }
+
+    /// Stopping early, reading it all, and a misread last word read as before.
+    func testReadingStillCounts() {
+        XCTAssertEqual(coverage(script), 1, accuracy: 0.001)
+        XCTAssertEqual(coverage("Have you ever heard that learning language can slow down aging"), 12.0 / 53, accuracy: 0.03)
+        XCTAssertEqual(coverage(script.replacingOccurrences(of: "hurt you.", with: "hurt me")), 1, accuracy: 0.001)
+        // A stretch skipped in the middle is accuracy's, not coverage's.
+        XCTAssertEqual(coverage(script.replacingOccurrences(of: "It sounds almost too good to be true, so let's look at what the research actually says. ", with: "")), 1, accuracy: 0.001)
+    }
+}

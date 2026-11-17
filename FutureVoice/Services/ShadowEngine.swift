@@ -215,8 +215,59 @@ enum ShadowEngine {
     private static func soundKey(for language: String) -> (String) -> String {
         if language.hasPrefix("ja") { return JapaneseMorph.soundSpelling }
         if language.hasPrefix("zh") { return ChineseMorph.simplified }
+        if language.hasPrefix("en") { return englishSpelling }
         return { $0 }
     }
+
+    /// British and American spellings of one word are one word: a script
+    /// says "ageing", the transcriber writes "aging", and the reader said it
+    /// right (speech challenge, 2026-11-17, marked red). Both sides go
+    /// through this, so it only has to send the two spellings to the same
+    /// place; the steps still carry what each side wrote. Families with one
+    /// sound only (colour, realise, centre, travelled, defence), never a
+    /// pair that is said differently (learnt / learned).
+    static func englishSpelling(_ token: String) -> String {
+        guard token.count >= 4 else { return token }
+        if let known = spellingPairs[token] { return known }
+        spellingLock.lock()
+        let seen = spellingMemo[token]
+        spellingLock.unlock()
+        if let seen { return seen }
+        var t = token
+        for (pattern, template) in spellingRules {
+            let range = NSRange(t.startIndex..., in: t)
+            if pattern.firstMatch(in: t, range: range) != nil {
+                t = pattern.stringByReplacingMatches(in: t, range: range, withTemplate: template)
+            }
+        }
+        // The diff asks for every token of a long script on every trial.
+        spellingLock.lock()
+        if spellingMemo.count > 20_000 { spellingMemo.removeAll() }
+        spellingMemo[token] = t
+        spellingLock.unlock()
+        return t
+    }
+    private static var spellingMemo: [String: String] = [:]
+    private static let spellingLock = NSLock()
+
+    private static let spellingPairs: [String: String] = [
+        "ageing": "aging", "grey": "gray", "greys": "grays", "programme": "program", "programmes": "programs",
+        "tyre": "tire", "tyres": "tires", "jewellery": "jewelry", "judgement": "judgment",
+        "catalogue": "catalog", "dialogue": "dialog", "analogue": "analog", "cosy": "cozy",
+        "pyjamas": "pajamas", "plough": "plow", "sceptical": "skeptical", "mould": "mold",
+        "moustache": "mustache", "doughnut": "donut", "yoghurt": "yogurt", "storey": "story",
+        "kerb": "curb", "draught": "draft", "enrol": "enroll", "fulfil": "fulfill", "skilful": "skillful",
+        "wilful": "willful", "instalment": "installment", "practise": "practice", "practised": "practiced",
+        "practising": "practicing",
+    ]
+    private static let spellingRules: [(NSRegularExpression, String)] = [
+        (#"^(colo|favo|hono|neighbo|behavio|labo|flavo|humo|rumo|harbo|endeavo|savo|vigo|armo|odo|tumo|vapo|rigo|splendo|parlo|glamo)u(r.*)$"#, "$1$2"),
+        (#"^(.{3,})is(e|ed|es|ing|er|ers|ation|ations)$"#, "$1iz$2"),
+        (#"^(.{3,})ys(e|ed|es|ing)$"#, "$1yz$2"),
+        (#"^(cent|theat|met|lit|fib|calib|somb|spect|lust|meag)re(s?)$"#, "$1er$2"),
+        (#"^(travel|cancel|model|label|level|signal|counsel|fuel|quarrel|marvel|jewel|dial|equal|total|channel|tunnel|shovel|panel)l(ed|ing|er|ers)$"#, "$1$2"),
+        (#"^(defen|offen|licen|preten)ce(s?)$"#, "$1se$2"),
+    ].compactMap { pattern, template in (try? NSRegularExpression(pattern: pattern)).map { ($0, template) } }
 
     /// Which words of a script a PIECE of a reading holds: the piece's own
     /// transcript laid against the whole script, free to begin and end
@@ -648,6 +699,9 @@ enum ShadowEngine {
             ("lemme", "let me"), ("gimme", "give me"), ("kinda", "kind of"),
             ("sorta", "sort of"), ("outta", "out of"), ("dunno", "do not know"),
             ("'cause", "because"), ("cuz", "because"),
+            // One word or two is the transcriber's: "All right, everyone"
+            // came back "Alright" and was marked.
+            ("alright", "all right"), ("okay", "ok"),
         ]
         for (from, to) in irregular {
             // Lookarounds instead of \b: apostrophe-initial forms ("'cause")
@@ -822,6 +876,52 @@ enum ShadowEngine {
     /// reading.
     private static func heardTokens(_ heard: String, target: String, targetTokens: [String],
                                     language: String, style: LanguageCatalog.TokenStyle) -> [String] {
+        let tokens = numberedTokens(heard, target: target, targetTokens: targetTokens, language: language, style: style)
+        return style == .word ? joiningCompounds(tokens, targetTokens: targetTokens, language: language) : tokens
+    }
+
+    /// One word or two is the transcriber's choice, not the mouth's: a
+    /// script's "shortcut" came back "short cut" and showed a wrong word and
+    /// an added one, "every day" came back "everyday" and showed a skipped
+    /// word and a wrong one (stored takes, 2026-11-17). Two heard words that
+    /// make one of the target's, or one heard word that is two of the
+    /// target's in a row, are written the target's way, wherever that
+    /// brings the two closer.
+    private static func joiningCompounds(_ heard: [String], targetTokens: [String], language: String) -> [String] {
+        guard heard.count >= 1, targetTokens.count >= 2 else { return heard }
+        let key = soundKey(for: language)
+        let single = Set(targetTokens.map(key))
+        var pairs: [String: (String, String)] = [:]
+        for (a, b) in zip(targetTokens, targetTokens.dropFirst()) { pairs[key(a + b)] = (a, b) }
+        var tokens = heard
+        func cost(_ t: [String]) -> Int {
+            let (matched, steps) = align(targetTokens, t, key: key)
+            return steps.count - matched
+        }
+        var best: Int?
+        var i = 0
+        while i < tokens.count {
+            var trial: [String]?
+            if i + 1 < tokens.count, single.contains(key(tokens[i] + tokens[i + 1])),
+               !(single.contains(key(tokens[i])) && single.contains(key(tokens[i + 1]))) {
+                trial = tokens
+                trial?.replaceSubrange(i...(i + 1), with: [tokens[i] + tokens[i + 1]])
+            } else if let (a, b) = pairs[key(tokens[i])], !single.contains(key(tokens[i])) {
+                trial = tokens
+                trial?.replaceSubrange(i...i, with: [a, b])
+            }
+            if let trial {
+                let before = best ?? cost(tokens)
+                let after = cost(trial)
+                if after < before { tokens = trial; best = after } else { best = before }
+            }
+            i += 1
+        }
+        return tokens
+    }
+
+    private static func numberedTokens(_ heard: String, target: String, targetTokens: [String],
+                                       language: String, style: LanguageCatalog.TokenStyle) -> [String] {
         let plainTokens = { tokenize(expandForDiff(heard, language: language), style: style) }
         func hasDigits(_ t: String) -> Bool {
             t.unicodeScalars.contains { CharacterSet.decimalDigits.contains($0) }

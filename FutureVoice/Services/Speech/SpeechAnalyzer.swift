@@ -133,28 +133,33 @@ enum SpeechAnalyzer {
     /// is only about stopping early. A substitution with no match before it
     /// doesn't count: the alignment pairs any word said after stopping
     /// ("sorry") with the script's LAST token, which would read as finished.
+    ///
+    /// The end has to be READ to, not landed on: the alignment may place a
+    /// stray word anywhere, and twelve words of nonsense matched a "you" near
+    /// a script's end and read as 95% of it (stored takes, 2026-11-17:
+    /// "chuchu chuchu thank you…" scored 30). A match counts as reached only
+    /// when at least half of the ten script tokens ending at it were matched.
     static func coverage(_ steps: [ShadowEngine.DiffStep]) -> Double {
-        var index = -1          // script tokens seen so far, minus one
-        var reached = -1        // last script token reached
-        var extending = false   // still in the run right after a match
-        var total = 0
-        for step in steps {
-            switch step.op {
-            case .ins:
-                continue
-            case .match:
-                index += 1; total += 1
-                reached = index; extending = true
-            case .sub:
-                index += 1; total += 1
-                if extending { reached = index }
-            case .del:
-                index += 1; total += 1
-                extending = false
-            }
-        }
+        let total = steps.filter { $0.op != .ins }.count
         guard total > 0 else { return 1 }
-        return Double(reached + 1) / Double(total)
+        return Double(reached(steps) + 1) / Double(total)
+    }
+
+    /// The last script token the reader got to (-1: none), counted over the
+    /// diff's script tokens.
+    static func reached(_ steps: [ShadowEngine.DiffStep]) -> Int {
+        let ops = steps.filter { $0.op != .ins }.map(\.op)
+        var matchesBefore = [0]
+        for op in ops { matchesBefore.append(matchesBefore[matchesBefore.count - 1] + (op == .match ? 1 : 0)) }
+        var reached = -1
+        for index in ops.indices.reversed() where ops[index] == .match {
+            let from = max(0, index - 9)
+            let window = index - from + 1
+            if (matchesBefore[index + 1] - matchesBefore[from]) * 2 >= window { reached = index; break }
+        }
+        // A misread word right after it is still the end.
+        while reached >= 0, reached + 1 < ops.count, ops[reached + 1] == .sub { reached += 1 }
+        return reached
     }
 
     /// Which rules a take was scored by, stored on its metrics. 2 = the
@@ -198,8 +203,18 @@ enum SpeechAnalyzer {
     }
 
     static func slips(_ steps: [ShadowEngine.DiffStep], language: String, names: Set<String> = []) -> Int {
-        guard let first = steps.firstIndex(where: { $0.op == .match }),
-              let last = steps.lastIndex(where: { $0.op == .match }), first < last else { return 0 }
+        // "The last word read" is where the reading got to (`reached`), not a
+        // stray match further on: a take stopped after one sentence matched
+        // an "a" near the script's end and counted everything between as
+        // slips (33 of them for eleven words read, stored take 2026-11-17).
+        let end = reached(steps)
+        var seen = -1
+        var last: Int?
+        for (i, step) in steps.enumerated() where step.op != .ins {
+            seen += 1
+            if step.op == .match, seen <= end { last = i }
+        }
+        guard let first = steps.firstIndex(where: { $0.op == .match }), let last, first < last else { return 0 }
         let fillerWords = Set(SpeechLibrary.fillers(language).map { $0.lowercased() })
         return steps[first...last].filter { step in
             switch step.op {
