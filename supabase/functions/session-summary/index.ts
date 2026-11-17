@@ -63,6 +63,12 @@ const DRILL_LINE_NOTE =
   "from a [USER_DRILL] line in expressions_used, phrases_used, " +
   "new_patterns_detected or grammar issues."
 
+// `ConversationEngine.notTheUserLineNote` (iOS, 2026-11-17), verbatim: a line
+// the learner disowned during the call ("that wasn't me", `MisheardJudge`) is
+// labelled `[NOT_THE_USER]`.
+const NOT_THE_USER_LINE_NOTE =
+  "[NOT_THE_USER] lines were written down by speech recognition but the learner did not say them: another voice nearby, or a mishearing, and the learner said so later in the call. Treat such a line as if it were not there, and the reply right after it as an answer to nothing. Quote nothing from it anywhere, score nothing on it, and write no about_user entry from it or from anything the conversation built on it."
+
 Deno.serve(async (req) => {
   const pre = handlePreflight(req)
   if (pre) return pre
@@ -146,6 +152,7 @@ Deno.serve(async (req) => {
   let userMessage = `transcript:\n${transcript}\n\nmetrics:\n${metricsJSON}`
   if (/^\[USER_READ\] /m.test(transcript)) userMessage += "\n\n" + READ_LINE_NOTE
   if (/^\[USER_DRILL\] /m.test(transcript)) userMessage += "\n\n" + DRILL_LINE_NOTE
+  if (/^\[NOT_THE_USER\] /m.test(transcript)) userMessage += "\n\n" + NOT_THE_USER_LINE_NOTE
   const geminiBody = {
     system_instruction: { parts: [{ text: system }] },
     contents: [{ role: "user", parts: [{ text: userMessage }] }],

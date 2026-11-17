@@ -566,6 +566,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                 val earlierToday = if (config.resume != null) null else withContext(Dispatchers.IO) {
                     runCatching { EarlierToday.current(appContext, config.targetLanguage, excluding = sessionId) }.getOrNull()
                 }
+                earlierTalkId = earlierToday?.key?.takeIf { !it.startsWith("pron:") }
                 val history = personHistory(config)
                 // Drawn with the clock, once per call (iOS `FreeTalkCue.random`).
                 val freeTalkCue = ConversationPrompt.FreeTalkCue.random(hasRecentNews =
@@ -894,6 +895,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                 val earlierToday = if (config.resume != null) null else withContext(Dispatchers.IO) {
                     runCatching { EarlierToday.current(appContext, config.targetLanguage, excluding = sessionId) }.getOrNull()
                 }
+                earlierTalkId = earlierToday?.key?.takeIf { !it.startsWith("pron:") }
                 val history = personHistory(config)
                 // Drawn with the clock, once per call (iOS `FreeTalkCue.random`).
                 val freeTalkCue = ConversationPrompt.FreeTalkCue.random(hasRecentNews =
@@ -1200,6 +1202,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                     else requestRealtimeSuggestion(last.id, joined, cfg, takeEarlyCorrection(joined))
                 tutorTurn(last.id, joined, correction, ownLanguage = flags.native)
                 pronTurn(last.id, joined)
+                checkDisownedLine(last.id, joined, cfg)
                 return@turn
             }
             // Measured off the take (iOS 55088c28): realtime turns used to
@@ -1216,6 +1219,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                 else requestRealtimeSuggestion(turn.id, said, cfg, takeEarlyCorrection(said))
             tutorTurn(turn.id, said, correction, ownLanguage = flags.native)
             pronTurn(turn.id, said)
+            checkDisownedLine(turn.id, said, cfg)
         }
         realtime.onReplyAudio = { ctx, pcm, rate ->
             realtimeReplyTurns[ctx]?.let { id ->
@@ -2106,6 +2110,57 @@ class TalkViewModel(context: Context) : ViewModel() {
 
     // ------------------------------------------------------------------
     // Tutor lesson (iOS ConversationView's `TutorLesson` section)
+
+    // "That wasn't me" (iOS `checkDisownedLine`, 2026-11-17)
+
+    /** The talk this call opened on (`EarlierToday.key`), so a line caught at
+     *  the end of one call can be disowned at the start of the next. */
+    private var earlierTalkId: String? = null
+
+    private fun checkDisownedLine(turnId: String, said: String, cfg: TalkConfig) {
+        if (pronThisCall || !MisheardJudge.mayRetract(said)) return
+        viewModelScope.launch {
+            fun pairs(all: List<Turn>, session: String, last: Int): List<MisheardJudge.Candidate> =
+                all.mapIndexedNotNull { i, t ->
+                    if (t.role != TurnRole.USER || t.excludedFromScoring || t.transcript.isBlank()) null
+                    else MisheardJudge.Candidate(t.id, session, t.transcript,
+                        all.getOrNull(i + 1)?.takeIf { it.role == TurnRole.FLUENT_SELF }?.transcript.orEmpty())
+                }.takeLast(last)
+            val earlier = earlierTalkId?.let { id ->
+                withContext(Dispatchers.IO) {
+                    runCatching { SessionStore.shared(appContext).load(cfg.targetLanguage).firstOrNull { it.id == id } }.getOrNull()
+                }?.let { pairs(it.turns, id, 4) }
+            }.orEmpty()
+            val now = _state.value.turns
+            val cut = now.indexOfFirst { it.id == turnId }.let { if (it < 0) now.size else it }
+            val candidates = earlier + pairs(now.take(cut), sessionId, 6)
+            if (candidates.isEmpty()) return@launch
+            val hit = MisheardJudge.retractedLine(said, candidates, turnId) ?: return@launch
+            if (hit.sessionId == sessionId) {
+                heldSuggestions.remove(hit.turnId)
+                _state.update { st ->
+                    st.copy(turns = st.turns.map {
+                        if (it.id == hit.turnId) it.copy(excludedFromScoring = true, suggestion = null) else it
+                    })
+                }
+            } else withContext(Dispatchers.IO) {
+                runCatching {
+                    com.roro.futurevoice.data.MisheardExclusion.excludeTurn(appContext, hit.sessionId, hit.turnId, cfg.targetLanguage)
+                    // The talk was summarized before they could say so: drop
+                    // the remembered lines it wrote from that sentence.
+                    val store = com.roro.futurevoice.data.PersonaStore.shared(appContext)
+                    store.load()?.let { p ->
+                        val kept = p.learnedNotes.filterNot { n ->
+                            n.sessionId == hit.sessionId && !n.heard.isNullOrEmpty() &&
+                                CarryoverDetector.sharedWordRatio(n.heard, hit.said, cfg.targetLanguage) >= 0.6
+                        }
+                        if (kept.size != p.learnedNotes.size) store.save(p.copy(learnedNotes = kept))
+                    }
+                }
+            }
+            log("talk_line_disowned", mapOf("scope" to if (hit.sessionId == sessionId) "call" else "earlier"))
+        }
+    }
 
     private fun log(event: String, props: Map<String, String> = emptyMap()) =
         com.roro.futurevoice.core.Telemetry.log(event, props)

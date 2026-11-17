@@ -519,6 +519,9 @@ object SessionSummarizer {
         turns.joinToString("\n") { t ->
             val label = when {
                 t.role == TurnRole.FLUENT_SELF -> "FLUENT_SELF"
+                // Disowned mid-call (`MisheardJudge`); `session-summary` adds
+                // the note saying what it means (iOS `notTheUserLineNote`).
+                t.excludedFromScoring -> "NOT_THE_USER"
                 t.readFromCoach -> "USER_READ"
                 t.tutorRole == TutorTurnRole.DRILL -> "USER_DRILL"
                 else -> "USER"

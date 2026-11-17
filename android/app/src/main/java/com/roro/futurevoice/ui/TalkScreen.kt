@@ -1094,6 +1094,9 @@ fun TalkScreen(
                             // jump a whole line at a time as its reveal wrapped (founder,
                             // 2026-10-15); with the words now fading in, the jump was
                             // the one hard edge left.
+                            // A line the learner disowned mid-call ("that wasn't
+                            // me"): dimmed, as on the transcript page (iOS).
+                            .alpha(if (turn.role == TurnRole.USER && turn.excludedFromScoring) 0.45f else 1f)
                             .then(if (turn.role == TurnRole.USER) Modifier.animateContentSize(tween(250))
                                 else Modifier.animateContentSize(tween(220)))) {
                             DialogueLine(turn, scale = DialogueScale.CALL, otherName = otherSideName,
