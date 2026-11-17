@@ -64,6 +64,12 @@ struct ConversationView: View {
     /// opener and the prompt agree on it. Nil on the day's first talk and
     /// on a resumed talk, which has its own lines.
     @State private var earlierToday: EarlierToday?
+    /// The earlier talks a free talk knows of, and the ones looked up
+    /// because the learner brought them up (`TalkRecall`). Read once per
+    /// call, with the clock.
+    @State private var recallIndex: [TalkRecall.Entry] = []
+    @State private var recalledTalks: [TalkRecall.Entry] = []
+    @State private var recallQueries: [UUID: String] = [:]
     /// Set when a reply (Gemini/TTS) fails for the latest user turn — drives
     /// an inline Retry button so a network blip doesn't lose what they said.
     @State private var failedTurnId: UUID?
@@ -3341,6 +3347,7 @@ struct ConversationView: View {
                 tutorTurn(turnId: id, said: joined, ownLanguage: flags.native, correction: correction)
                 pronTurn(turnId: id, said: joined)
                 checkDisownedLine(turnId: id, said: joined)
+                checkRecalledTalk(turnId: id, said: joined)
                 return
             }
             var turn = Turn(id: UUID(), role: .user, audioURL: nil,
@@ -3376,6 +3383,7 @@ struct ConversationView: View {
             tutorTurn(turnId: turn.id, said: text, ownLanguage: flags.native, correction: correction)
             pronTurn(turnId: turn.id, said: text)
             checkDisownedLine(turnId: turn.id, said: text)
+            checkRecalledTalk(turnId: turn.id, said: text)
         }
         // The bubble appears WITH the voice and fills as the line is written —
         // the same "you read what you are hearing" the HTTP path gets from
@@ -3547,6 +3555,29 @@ struct ConversationView: View {
         case is CancellationError:                  return "cancelled"
         case let e as URLError:                     return "url_\(e.code.rawValue)"
         default:                                    return String(describing: error).prefix(60).description
+        }
+    }
+
+    // MARK: - An earlier talk brought up (`TalkRecall`)
+
+    /// The learner may be talking about an earlier talk. If so its lines go
+    /// into the prompt for the replies after this one; nothing waits on it.
+    private func checkRecalledTalk(turnId: UUID, said: String) {
+        guard isFreeMode, !helloBeforeClock else { return }
+        let open = recallIndex.filter { e in !recalledTalks.contains(e) }
+        guard TalkRecall.mayRecall(said, entries: open) else { return }
+        let lastReply = turns.last(where: { $0.role != .user })?.transcript ?? ""
+        Task { @MainActor in
+            guard let hit = await TalkRecall.recalled(newest: said, lastReply: lastReply,
+                                                      entries: open, turnId: turnId),
+                  !isTornDown, isFreeMode, !recalledTalks.contains(hit) else { return }
+            recallQueries[hit.id] = said
+            recalledTalks = Array((recalledTalks + [hit]).suffix(TalkRecall.heldAtOnce))
+            realtime.setSystem(systemPrompt() + realtimeStyleRules)
+            Telemetry.log("talk_recalled", [
+                "days_ago": String(PromptClock.calendarDays(from: hit.endedAt, to: Date())),
+                "held": String(recalledTalks.count),
+            ])
         }
     }
 
@@ -5619,6 +5650,11 @@ struct ConversationView: View {
             .contains { $0.kind == .now } ?? false)
         earlierToday = isResuming ? nil
             : EarlierToday.current(language: appState.targetLanguage, excluding: sessionId)
+        recallIndex = TalkRecall.index(
+            sessions: SessionStore.shared.loadAcrossLanguages(), now: Date(),
+            excluding: Set([sessionId] + [earlierToday?.key].compactMap { $0.flatMap(UUID.init(uuidString:)) }))
+        recalledTalks = []
+        recallQueries = [:]
         personHistory = sessionCounterpartId.flatMap {
             PersonHistory.build(personId: $0, sessions: SessionStore.shared.load(),
                                 excluding: sessionId, pickUp: pickUpLastTalk)
@@ -7054,7 +7090,14 @@ struct ConversationView: View {
             tutorPlanning: tutorPlanning,
             tutorSelfJudges: tutorSelfJudges,
             tutorRealGoal: tutorLesson.flatMap(realGoalLine(for:)),
-            freeMode: isFreeMode
+            freeMode: isFreeMode,
+            // Like the clock, the index joins after the hello: a list of
+            // earlier talks beside "say hello" is a hello about one of them.
+            pastTalks: helloBeforeClock ? []
+                : TalkRecall.indexLines(recallIndex, now: promptClock?.now ?? Date()),
+            recalledTalks: recalledTalks.map {
+                TalkRecall.record(of: $0, about: recallQueries[$0.id] ?? "", now: promptClock?.now ?? Date())
+            }
         )
     }
 

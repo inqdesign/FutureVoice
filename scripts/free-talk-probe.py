@@ -27,7 +27,25 @@ BRIEF = (open(os.environ["BRIEF_FILE"]).read() if os.environ.get("BRIEF_FILE") e
          re.search(r"OPEN_TALK_BRIEF = `(.*?)`", open(os.path.join(ROOT, "gateway/src/open-talk.ts")).read(), re.S).group(1))
 
 # `ConversationEngine.freeTalkPrompt`, filled in for one learner.
+# `TalkRecall`: the index of earlier talks, and one looked up.
+INDEX = '''
+- A few of the other talks you two had, newest first. There were more than these, and each covered more than its title says:
+  · yesterday: "Boss complained about the deck"
+  · 4 days ago: "Interview at the bank on Friday"
+  · 6 days ago: "Training for the 10k"
+  · 9 days ago: "Exam leak in the news"'''
+LOOKED_UP = '''
+- More of a talk from that list, which they have just brought up:
+  · A talk you two had 4 days ago, "Interview at the bank on Friday". All of it went like this: you: "Hey Olivia, how's it going?" / them: "I have an interview at the bank on Friday and I am nervous." / you: "A bank, wow. Which part worries you?" / them: "The salary question, I never know what number to say." / you: "What number do you have in mind?" / them: "Maybe eight thousand a month, but my friend says ask for nine." / you: "Nine sounds fair for a product manager there." / them: "It is DBS, the digital team. The interviewer is called Mr. Tan."'''
+
 def system(moment):
+    memory = ""
+    if moment.startswith("INDEX+"): memory, moment = INDEX + LOOKED_UP, moment[6:]
+    elif moment.startswith("INDEX:"): memory, moment = INDEX, moment[6:]
+    if memory: return system_with(moment, memory)
+    return system_with(moment, "")
+
+def system_with(moment, more):
     memory = ""
     if PLACE == "memory" and "- Earlier today: " in moment:
         moment, record = moment.split("\n- Earlier today: ", 1)
@@ -60,7 +78,7 @@ About them:
   · Lead meetings in English without preparing every sentence
 - What they told you in earlier calls, with when you heard it:
   · (2 weeks ago) lives with her partner
-  · (5 days ago) training for a 10k{memory}
+  · (5 days ago) training for a 10k{memory}{more}
 - Native language: Korean
 - Their English level: B2 (CEFR)
 - Mistakes they often make in English: the trust regarding → trust in; six month → six months
@@ -121,6 +139,15 @@ CASES = {
   "info": (FIRST, [(M, "Hey Olivia! How's your Sunday going?"), (U, "Good. Hey, can you explain to me why central banks raise interest rates? I never really got it.")]),
   "pron": (FIRST, [(M, "Hey Olivia! How's your Sunday going?"), (U, "Good. Can you check my pronunciation today? I will say a sentence. I sink the weather is really nice this morning.")]),
   "correct-me": (FIRST, [(M, "Hey Olivia! How's your Sunday going?"), (U, "Good. From now on, please correct every mistake I make, okay?"), (M, "Sure. So what did you get up to this morning?"), (U, "I go to the gym yesterday and then I have met my friend for six month.")]),
+  "recall-first": ("INDEX:" + FIRST, [(M, "Hey Olivia! How's your Sunday going?"), (U, "Good. Remember the interview I told you about? I got the job!")]),
+  "recall-then": ("INDEX+" + FIRST, [(M, "Hey Olivia! How's your Sunday going?"), (U, "Good. Remember the interview I told you about? I got the job!"),
+      (M, "No way, the bank one! Congratulations. How do you feel?"), (U, "Happy. But guess what they offered me.")]),
+  "recall-ask": ("INDEX+" + FIRST, [(M, "Hey Olivia! How's your Sunday going?"), (U, "Good. Remember the interview I told you about? I got the job!"),
+      (M, "No way, the bank one! Congratulations. How do you feel?"), (U, "Happy. Do you remember the name of the interviewer? I forgot it.")]),
+  "recall-none": ("INDEX:" + FIRST, [(M, "Hey Olivia! How's your Sunday going?"), (U, "Honestly I'm exhausted. I just want to lie on the sofa.")]),
+  "recall-hello": ("INDEX:" + FIRST, [(U, HELLO)]),
+  "recall-missing": ("INDEX:" + FIRST, [(M, "Hey Olivia! How's your Sunday going?"), (U, "Good. Remember I told you about my sister's wedding? It was yesterday.")]),
+  "missing-noindex": (FIRST, [(M, "Hey Olivia! How's your Sunday going?"), (U, "Good. Remember I told you about my sister's wedding? It was yesterday.")]),
   "short": (FIRST, [(M, "Hey Olivia! How's your Sunday going?"), (U, "Yeah, not much.")]),
   "asks": (NEWS, [(M, "So, that exam leak. Do you think they should push the date back?"),
       (U, "I'm not sure. What do you think?")]),

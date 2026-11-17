@@ -168,13 +168,16 @@ enum ConversationEngine {
         tutorPlanning: Bool = false,
         tutorSelfJudges: Bool = false,
         tutorRealGoal: String? = nil,
-        freeMode: Bool = false
+        freeMode: Bool = false,
+        pastTalks: [String] = [],
+        recalledTalks: [String] = []
     ) -> String {
         if freeMode {
             return freeTalkPrompt(targetLanguage: targetLanguage, nativeLanguage: nativeLanguage,
                                   level: level, topPatterns: topPatterns, weakVocabAreas: weakVocabAreas,
                                   topic: topic, persona: persona, newsFacts: newsFacts, clock: clock,
-                                  earlierToday: earlierToday, learnerPicksTopic: learnerPicksTopic)
+                                  earlierToday: earlierToday, learnerPicksTopic: learnerPicksTopic,
+                                  pastTalks: pastTalks, recalledTalks: recalledTalks)
         }
         let languageName = LanguageCatalog.englishName(targetLanguage)
         let patterns = topPatterns.prefix(3).map { "- \($0.mistake) → \($0.correction) (\($0.context))" }
@@ -962,7 +965,8 @@ enum ConversationEngine {
                                topPatterns: [LearnerPattern], weakVocabAreas: [String],
                                topic: String, persona: UserPersona?, newsFacts: [String],
                                clock: PromptClock?, earlierToday: EarlierToday?,
-                               learnerPicksTopic: Bool, now: Date = Date(),
+                               learnerPicksTopic: Bool, pastTalks: [String] = [],
+                               recalledTalks: [String] = [], now: Date = Date(),
                                gender: LearnerGender? = LearnerGender.current) -> String {
         let languageName = LanguageCatalog.englishName(targetLanguage)
         var about: [String] = []
@@ -1004,6 +1008,17 @@ enum ConversationEngine {
                 about.append("- What they told you in earlier calls, with when you heard it:")
             }
             about.append("  · (earlier today) " + Self.asMemoryLine(earlierToday.record))
+        }
+        // The other talks, as an index, and the one or two the app looked up
+        // because the learner brought them up (`TalkRecall`). Empty lists add
+        // nothing: the prompt is byte-identical without them.
+        if !pastTalks.isEmpty {
+            about.append("- A few of the other talks you two had, newest first. There were more than these, and each covered more than its title says:")
+            about.append(contentsOf: pastTalks.map { "  · \($0)" })
+        }
+        if !recalledTalks.isEmpty {
+            about.append("- More of a talk from that list, which they have just brought up:")
+            about.append(contentsOf: recalledTalks.map { "  · " + Self.asMemoryLine($0) })
         }
         if let line = genderAboutLine(targetLanguage, gender: gender) { about.append(line) }
         about.append("- Native language: \(LanguageCatalog.englishName(nativeLanguage))")
@@ -1076,6 +1091,8 @@ enum ConversationEngine {
     static func asMemoryLine(_ record: String) -> String {
         record
             .replacingOccurrences(of: "\nIts last lines, oldest first:\n", with: " It ended like this: ")
+            .replacingOccurrences(of: "\nAll of it, oldest first:\n", with: " It went like this: ")
+            .replacingOccurrences(of: "\nPart of it, oldest first:\n", with: " Part of it went like this: ")
             .replacingOccurrences(of: "\n", with: " / ")
     }
 
