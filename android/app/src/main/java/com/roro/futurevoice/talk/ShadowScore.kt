@@ -571,6 +571,17 @@ object ShadowScore {
                     if (word == "hundred" || (word == "thousand" && n % 1000 < 100)) withAnd.add("and")
                 }
                 out.add(withAnd.joinToString(" "))
+                // "a thousand" and a bare "thousand" are written "1000" too: a take
+                // cut between "eighty-six" and "thousand" came back "86" + "1000
+                // people" and showed an added "one" (iOS, 2026-11-17).
+                for (base in listOf(words, withAnd)) {
+                    if (base.size >= 2 && base[0] == "one" &&
+                        base[1] in setOf("hundred", "thousand", "million", "billion")) {
+                        val rest = base.drop(1).joinToString(" ")
+                        out.add("a $rest")
+                        out.add(rest)
+                    }
+                }
                 if (digits.length == 4 && n >= 1000) {
                     val hi = n / 100
                     val lo = n % 100

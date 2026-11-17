@@ -65,6 +65,14 @@ class ShadowNumberReadingTest {
         assertTrue(clean("about 1911 people came", "about one thousand nine hundred eleven people came"))
     }
 
+    @Test fun thousandWrittenAsDigitsAddsNoOne() {
+        assertTrue(clean("more than eighty-six thousand people, aged fifty-one to ninety",
+            "more than eighty-six 1000 people aged fifty-one to 90"))
+        assertTrue(clean("about a thousand people came", "about 1000 people came"))
+        assertTrue(clean("a hundred and five tickets", "105 tickets"))
+        assertFalse(clean("eighty-six thousand people", "eighty-six 2000 people"))
+    }
+
     @Test fun wrongYearIsStillWrong() {
         assertFalse(clean("in nineteen eleven", "in 1912"))
     }
