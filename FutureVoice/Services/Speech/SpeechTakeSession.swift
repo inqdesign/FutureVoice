@@ -258,6 +258,7 @@ final class SpeechTakeSession: ObservableObject {
                            contextualStrings: track.words.prefix(50).map(\.text),
                            chunkCapture: true,
                            voiceProcessing: true)
+            inputPort = AVAudioSession.sharedInstance().currentRoute.inputs.first?.portType.rawValue
             chunkReads = []
             lastChunkAt = 0
             lastCutCursor = 0
@@ -581,7 +582,8 @@ final class SpeechTakeSession: ObservableObject {
                               pronunciationWords: pronunciation?.weakWords,
                               assessments: prons.isEmpty ? nil : prons,
                               assessmentStartsMs: assessed.count == prons.count && !prons.isEmpty
-                                  ? assessed.map(\.startMs) : nil)
+                                  ? assessed.map(\.startMs) : nil,
+                              inputPort: inputPort)
         SpeechStore.shared.save(take)
         PronunciationLedger.shared.record(prons, id: id, surface: "speech", language: script.language)
         SyncEngine.noteChanged(.blobSpeechAudio)
@@ -647,6 +649,7 @@ final class SpeechTakeSession: ObservableObject {
         let hasVideo = await videoTask.value
         let delivered = await delivery.value
         Analytics.capture("speech_take", [
+            "mic": inputPort ?? "unknown",
             "built_in": script.isBuiltIn,
             "challenge": script.isChallenge,
             "genre": script.genre.rawValue,
@@ -954,6 +957,8 @@ final class SpeechTakeSession: ObservableObject {
     /// Follow diagnostics for the take's analytics row: how often the
     /// prompter found the reader, and where it ended.
     private var follows = 0
+    /// The mic the take came through, read once the mic is up.
+    private var inputPort: String?
     private var partials = 0
     private func followFacts() -> [String: Any] {
         ["words": track.words.count, "cursor_end": cursor, "follows": follows,

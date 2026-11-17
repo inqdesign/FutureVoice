@@ -20,16 +20,24 @@ enum VoiceFromTakes {
     /// nawana's recording stops at 90 s; a take is cut there too.
     static let maximumSeconds: Double = 90
 
-    /// The best take to make the voice from: the highest score, then the
-    /// longer one, among takes whose audio is still on this phone.
+    /// The best take to make the voice from, among takes whose audio is
+    /// still on this phone: the phone's own mic first (2026-11-15: the
+    /// speech app's takes came out ~11 dB noisier than nawana's, and an
+    /// earphone mic is the likely difference), then a take from before the
+    /// mic was recorded, then any other mic; within each, the highest score,
+    /// then the longer one.
     static func bestTake(in takes: [SpeechTake]) -> SpeechTake? {
-        takes
+        func micRank(_ t: SpeechTake) -> Int {
+            if t.usedBuiltInMic { return 2 }
+            return t.inputPort == nil ? 1 : 0
+        }
+        return takes
             .filter { $0.durationSeconds >= minimumSeconds }
             .filter { FileManager.default.fileExists(atPath: SpeechStore.mediaURL($0.audioFilename).path) }
             .max { a, b in
-                a.metrics.overall != b.metrics.overall
-                    ? a.metrics.overall < b.metrics.overall
-                    : a.durationSeconds < b.durationSeconds
+                if micRank(a) != micRank(b) { return micRank(a) < micRank(b) }
+                if a.metrics.overall != b.metrics.overall { return a.metrics.overall < b.metrics.overall }
+                return a.durationSeconds < b.durationSeconds
             }
     }
 
@@ -155,11 +163,14 @@ struct SpeechVoiceFromTakesSheet: View {
                         }
                         .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
+                    // nawana's recording step's own bar (`wizardBar` in
+                    // VoiceCloneOnboardingView): same button, same place.
+                    .accentProminent()
                     .controlSize(.large)
                     .disabled(making || !canMake)
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 8)
+                    .padding(.vertical, 12)
+                    .background(.bar)
                 }
             }
         }

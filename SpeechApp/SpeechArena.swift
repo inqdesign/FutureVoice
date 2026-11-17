@@ -531,16 +531,24 @@ struct SpeechArenaHome: View {
     private var every: [SpeechScript] { challenges.live + challenges.past }
     @Environment(\.displayScale) private var displayScale
 
-    /// One challenge a day: each by the day it came out (the newest, if a day
-    /// had two).
-    private var byDay: [Date: SpeechScript] {
-        var days: [Date: SpeechScript] = [:]
-        for script in every {
-            let day = Calendar.current.startOfDay(for: script.createdAt)
-            if let held = days[day], held.createdAt >= script.createdAt { continue }
-            days[day] = script
+    /// What I read each day (2026-11-15): every script with a take that
+    /// day, its best score that day and how many takes, best first. The
+    /// calendar row draws it; the streak counts the same days.
+    private var activity: [Date: [ArenaDayItem]] {
+        let calendar = Calendar.current
+        var byDay: [Date: [UUID: [SpeechTake]]] = [:]
+        for take in store.takes {
+            byDay[calendar.startOfDay(for: take.createdAt), default: [:]][take.scriptId, default: []].append(take)
         }
-        return days
+        return byDay.mapValues { scripts in
+            scripts.compactMap { id, takes -> ArenaDayItem? in
+                guard let script = store.script(id: id) ?? challenges.script(id: id) else { return nil }
+                return ArenaDayItem(script: script, best: takes.map(\.metrics.overall).max() ?? 0,
+                                    takes: takes.count)
+            }
+            .sorted { $0.best > $1.best }
+        }
+        .filter { !$0.value.isEmpty }
     }
 
     /// `-speechCapture cards|grid` (debug): start the page further down, for captures.
@@ -595,7 +603,7 @@ struct SpeechArenaHome: View {
             } else {
                 if Self.capture == nil {
                     // Mine first: a medal a day, the streak, my place.
-                    ArenaMedalCalendar(byDay: byDay, best: best,
+                    ArenaMedalCalendar(activity: activity,
                                        rank: challenges.overall?.first(where: \.is_me)?.rank,
                                        medals: medals, streak: streak)
                 }

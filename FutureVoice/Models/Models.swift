@@ -2380,6 +2380,14 @@ struct SpeechTake: Codable, Identifiable, Hashable {
     /// is the camera alone and the script is drawn when it is wanted. nil on
     /// earlier takes, whose video has the script burned into it.
     var prompter: SpeechPrompterRecord? = nil
+    /// The microphone the take came through (2026-11-15), the audio
+    /// session's input port when the take started ("MicrophoneBuiltIn",
+    /// "BluetoothHFP", "MicrophoneWired"…). nil on earlier takes. A voice
+    /// made from takes prefers the phone's own mic, as nawana's recording
+    /// does: an earphone mic is compressed and filtered before it arrives.
+    var inputPort: String? = nil
+
+    var usedBuiltInMic: Bool { inputPort == "MicrophoneBuiltIn" }   // AVAudioSession.Port.builtInMic
 }
 
 /// Everything needed to draw the rolling script over a camera-only take, on
