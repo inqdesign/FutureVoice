@@ -1,0 +1,2 @@
+Correcciones
+• En Discurso, los nombres que lees tal como vienen en el guion ahora cuentan como correctos.

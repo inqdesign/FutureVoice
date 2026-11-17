@@ -1,0 +1,2 @@
+Fixed
+• In Speech, names you read exactly as the script has them now count as correct.
