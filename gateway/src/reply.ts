@@ -355,6 +355,7 @@ export class ReplyEngine {
         language: this.config.language ?? "en",
         thinking: this.config.claudeThinking, effort: this.config.claudeEffort,
         openTalk: this.openTalk, openTalkBrief: this.config.openTalkBrief,
+        learnerAsked: last?.role === "user" && /[?？]/.test(last.text),
         messages: claudeMessages(steered, ReplyEngine.settledPrefix(history).length),
       })
     } finally {

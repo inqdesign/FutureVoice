@@ -107,6 +107,12 @@ function isShortReaction(sentence: string): boolean {
 /** Free talk's ceiling: the old conversation prompt's own ("HARD CEILING 3
  *  sentences, a two- or three-word reaction is free"), held in code. */
 export const OPEN_TALK_MAX_SENTENCES = 3
+/** …and the ceiling when the learner's line asked for something (it carries
+ *  a question mark): an explanation, a fact, an opinion they asked for needs
+ *  the room (2026-11-17, founder: "whatever they ask for, like talking to
+ *  Claude"). At 3, "why do central banks raise rates?" got a preamble and
+ *  one sentence of answer. */
+export const OPEN_TALK_ASKED_MAX_SENTENCES = 6
 
 /** Holds the stream back to whole sentences and checks each before it goes
  *  on. The voice is sent sentence by sentence anyway (session.ts
@@ -125,6 +131,10 @@ export class SpokenGate {
   private sentences = 0
   private counted = 0
   private asked = false
+  /** Past free talk's ceiling: the stream is read to its end and only its
+   *  closing question may still be said (`finish`). */
+  private over = false
+  private closing = ""
   emitted = ""
   constructor(
     private language: string,
@@ -161,7 +171,19 @@ export class SpokenGate {
   finish(): boolean {
     const tail = this.pending
     this.pending = ""
-    return tail.trim().length === 0 ? true : this.release(tail)
+    const ok = tail.trim().length === 0 ? true : this.release(tail)
+    // The question a long reply ended on is the learner's turn to speak
+    // (2026-11-17: an explanation they asked for ran three sentences and
+    // the ceiling cut "now you try it" off 3 times in 4). It is said after
+    // the ceiling, when the reply had not asked anything yet.
+    const closing = this.closing.trim()
+    if (ok && this.over && !this.asked && /[?？]$/.test(closing) && !spokenLeak(closing, this.language)) {
+      const text = (/\s$/.test(this.emitted) ? "" : " ") + closing
+      this.asked = true
+      this.emitted += text
+      this.emit(text)
+    }
+    return ok
   }
 
   private release(text: string): boolean {
@@ -178,6 +200,7 @@ export class SpokenGate {
       return false
     }
     const trimmed = text.trim()
+    if (this.over) { this.closing = text; return true }
     const question = /[?？]$/.test(trimmed)
     const choice = /^(or\b|oder\b|아니면|それとも|o\b|ou\b)/i.test(trimmed)
     if (this.oneQuestion && question && this.asked && !choice) return false
@@ -185,7 +208,14 @@ export class SpokenGate {
     // sentences is a normal turn" still averaged four), so the ceiling is
     // here: the reply ends where the next full sentence would start.
     const reaction = isShortReaction(trimmed)
-    if (this.maxSentences !== undefined && !reaction && this.counted >= this.maxSentences) return false
+    if (this.maxSentences !== undefined && !reaction && this.counted >= this.maxSentences) {
+      // A reply that already asked is done. One that has not is read on,
+      // unspoken, for the question it closes with.
+      if (this.asked) return false
+      this.over = true
+      this.closing = text
+      return true
+    }
     if (question && !isEchoQuestion(trimmed, this.sentences === 0)) this.asked = true
     this.sentences += 1
     if (!reaction) this.counted += 1
@@ -253,6 +283,8 @@ export async function streamClaude(opts: {
    *  after the spoken-only half, and the gate holds one question and the
    *  sentence ceiling. */
   openTalkBrief?: boolean
+  /** The learner's line asked for something: free talk's longer ceiling. */
+  learnerAsked?: boolean
   signal: AbortSignal
   onDelta: (text: string) => void
   /** The model's first raw text, before the gate holds it to a sentence —
@@ -308,7 +340,8 @@ export async function streamClaude(opts: {
   }
 
   const gate = new SpokenGate(opts.language, opts.onDelta,
-    opts.openTalk && opts.openTalkBrief ? OPEN_TALK_MAX_SENTENCES : undefined,
+    opts.openTalk && opts.openTalkBrief
+      ? (opts.learnerAsked ? OPEN_TALK_ASKED_MAX_SENTENCES : OPEN_TALK_MAX_SENTENCES) : undefined,
     !opts.openTalk || opts.openTalkBrief === true)
   let cut = false
   let startedText = false

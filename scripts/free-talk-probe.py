@@ -113,6 +113,14 @@ CASES = {
   "opinion": (NEWS, [(M, "So, that exam leak. Do you think they should push the date back?"),
       (U, "I guess it's supposed to test how you think. The most important thing is how people have lost the trust regarding this exam and is traditional invigilators um capability to catch any like cheating behaviors. So I don't think that um like the exam will proceed with the original schedule, but like pushing one week or two weeks kind of can create more chaos. So I think it's just um catch you know catch-22 situation.")]),
   "direct": (FIRST, LUNCH[:3] + [(U, "Wait, before that. I want to practise two idioms today, strike a nerve and a catch-22. Can you lead the conversation so I get to use them?")]),
+  "learn": (FIRST, LUNCH[:3] + [(U, "Actually, today I want to practise an expression. Sensible plan. I want to learn how to use it and talk using it.")]),
+  "learn-what": (FIRST, [(M, "Hey Olivia! How's your Sunday going?"), (U, "Good. Hey, what does a catch-22 mean? I heard it and I want to practise using it with you.")]),
+  "learn-then": (FIRST, [(M, "Hey Olivia! How's your Sunday going?"), (U, "Good. Today I want to practise the expression sensible plan. Can we talk so I can use it?"),
+      (M, "Sure. So what are you doing about the deck your boss wants by Friday?"),
+      (U, "I think I will finish the first draft tomorrow and then ask for feedback. Did I use it right? How would you say it with sensible plan?")]),
+  "info": (FIRST, [(M, "Hey Olivia! How's your Sunday going?"), (U, "Good. Hey, can you explain to me why central banks raise interest rates? I never really got it.")]),
+  "pron": (FIRST, [(M, "Hey Olivia! How's your Sunday going?"), (U, "Good. Can you check my pronunciation today? I will say a sentence. I sink the weather is really nice this morning.")]),
+  "correct-me": (FIRST, [(M, "Hey Olivia! How's your Sunday going?"), (U, "Good. From now on, please correct every mistake I make, okay?"), (M, "Sure. So what did you get up to this morning?"), (U, "I go to the gym yesterday and then I have met my friend for six month.")]),
   "short": (FIRST, [(M, "Hey Olivia! How's your Sunday going?"), (U, "Yeah, not much.")]),
   "asks": (NEWS, [(M, "So, that exam leak. Do you think they should push the date back?"),
       (U, "I'm not sure. What do you think?")]),
@@ -120,6 +128,7 @@ CASES = {
       (U, "Honestly I'm exhausted. I worked the whole weekend and my boss still complained about the deck.")]),
 }
 
+if os.environ.get("ONLY"): CASES = {k: v for k, v in CASES.items() if k in os.environ["ONLY"].split(",")}
 NOTE = os.environ.get("NOTE", "")
 def messages(lines):
     if NOTE and lines[-1][0] == U:
@@ -149,18 +158,27 @@ def ask(sys_text, lines):
 # `SpokenGate` for an openTalk call (claude-reply.ts): the reply ends at a
 # second real question, or where a 4th full sentence would start.
 MAX = int(re.search(r"OPEN_TALK_MAX_SENTENCES = (\d+)", gw).group(1))
-def gated(text):
-    out, counted, asked = [], 0, False
+MAX_ASKED = int(re.search(r"OPEN_TALK_ASKED_MAX_SENTENCES = (\d+)", gw).group(1))
+def gated(text, MAX=MAX):
+    out, counted, asked, over, closing = [], 0, False, False, ""
     for i, sent in enumerate(x for x in re.split(r"(?<=[.!?…])\s+", text) if x.strip()):
+        if over: closing = sent; continue
         q = sent.rstrip().endswith("?")
         short = len(sent.split()) <= 3
         tag = re.search(r"(\bhuh|\bright|isn't it|aren't you|don't you|\beh|\bno)\s*\?$", sent, re.I)
         if q and asked and not re.match(r"or\b", sent, re.I): break
-        if not short and counted >= MAX: break
+        if not short and counted >= MAX:
+            if asked: break
+            over, closing = True, sent; continue
         if q and not (tag or (i == 0 and short)): asked = True
         if not short: counted += 1
         out.append(sent)
+    if over and not asked and closing.rstrip().endswith("?"): out.append(closing)
     return " ".join(out)
+
+def cap(name):
+    role, text = CASES[name][1][-1]
+    return MAX_ASKED if role == U and "?" in text else MAX
 
 def shape(text):
     sents = [s for s in re.split(r"(?<=[.!?…])\s+", text) if s.strip()]
@@ -180,13 +198,13 @@ for name in CASES:
             t = results[(arm, name, run)]
             s, q = shape(t)
             print(f"[{arm} {s}s {q}q] {t}")
-            if arm == "brief" and gated(t) != " ".join(t.split()):
-                print(f"      SPOKEN → {gated(t)}")
+            if arm == "brief" and gated(t, cap(name)) != " ".join(t.split()):
+                print(f"      SPOKEN → {gated(t, cap(name))}")
 print()
 for arm in ARMS:
     shapes = [shape(results[(arm, n, r)]) for n in CASES for r in range(RUNS)]
     n = len(shapes)
-    if arm == "brief": shapes_g = [shape(gated(results[(arm, n, r)])) for n in CASES for r in range(RUNS)]
+    if arm == "brief": shapes_g = [shape(gated(results[(arm, n, r)], cap(n))) for n in CASES for r in range(RUNS)]
     print(f"{arm}: mean sentences {sum(s for s,_ in shapes)/n:.1f} · over 3 sentences {sum(s>3 for s,_ in shapes)}/{n} · "
           f"2+ questions {sum(q>1 for _,q in shapes)}/{n} · no question {sum(q==0 for _,q in shapes)}/{n}")
 if "brief" in ARMS:

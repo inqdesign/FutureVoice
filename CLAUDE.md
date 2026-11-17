@@ -3175,6 +3175,24 @@ interviewer.
   by `set.system` once the hello ends or the learner speaks
   (`giveClockAfterHello`). The hello is nearly one line now ("It's good to
   hear your voice. How's your day going so far?" 17/20). App only.
+- **The call is the learner's to run** (same day, founder: "in free talk
+  they do whatever they want: teach me this expression, tell me about X,
+  like talking to Claude"; the learner had asked "can I just tell it, like
+  a prompt?"). The brief's last paragraphs say so: whatever they ask for on
+  any turn they get (a subject, an explanation, a fact, an opinion, their
+  mistakes pointed out, a part to play), and an expression they name is
+  taught in one sentence, used once about a life like theirs, then handed
+  to them with a question. Two gate changes carry it: a learner line with a
+  question mark gets `OPEN_TALK_ASKED_MAX_SENTENCES` (6), and a reply cut at
+  the ceiling still says the question it closed on (`SpokenGate.over`), so
+  "now you try" survives. Probe cases `learn`, `learn-what`, `learn-then`,
+  `info`, `pron`, `correct-me` (`ONLY=` picks cases): "Sensible plan." was
+  asked back as "which expression?" 4/4 before, 0/3 after; unasked
+  corrections unchanged (2/8). Wording that put "every mistake corrected"
+  in the list raised unasked corrections; "their mistakes pointed out" did
+  not. Pronunciation it cannot do (it gets text): it says so and names the
+  words that arrived as something else. A request with no question mark
+  ("Explain X.") still gets 3 sentences and the closing question.
 - **"That wasn't me" works by voice** (same day, `MisheardJudge`). A line
   that disowns an earlier one ("you misheard", "that was someone else")
   flags that line the way the transcript page's swipe does: out of every
