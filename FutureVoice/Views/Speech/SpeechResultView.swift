@@ -24,6 +24,9 @@ struct SpeechResultView: View {
     /// The first frame of each take's loop, for pictures swiped in.
     @ObservedObject private var posters = SpeechPosters.shared
     @ObservedObject private var challenges = SpeechChallenges.shared
+    /// Scoring a take again is the admin's button (`SpeechRescore`).
+    @ObservedObject private var gate = BillingGate.shared
+    @State private var rescoring = false
     /// Re-renders as a video copy lands or goes up.
     @ObservedObject private var sync = SyncEngine.shared
     @ObservedObject private var videoSync = SpeechVideoSync.shared
@@ -85,6 +88,32 @@ struct SpeechResultView: View {
         }
     }
 
+    /// Reads the take's recording again and scores it the way a new take is
+    /// scored. A camera take goes back on the board with it, as a re-judged
+    /// one does.
+    private func rescoreButton(_ take: SpeechTake, _ script: SpeechScript) -> some View {
+        Button {
+            rescoring = true
+            Task {
+                if let scored = await SpeechRescore.run(take, script: script), script.isChallenge {
+                    SpeechChallenges.shared.enter(take: scored, script: script,
+                                                  recordedOnCamera: scored.videoFilename != nil || scored.prompter != nil)
+                }
+                rescoring = false
+            }
+        } label: {
+            if rescoring {
+                ProgressView()
+            } else {
+                Image(systemName: "arrow.clockwise")
+            }
+        }
+        .buttonStyle(.bordered)
+        .buttonBorderShape(.circle)
+        .disabled(rescoring)
+        .accessibilityLabel(Text("Score again"))
+    }
+
     // MARK: - The page: the reader, the score, and a sheet of details
 
     /// The camera on its own, for a take recorded that way.
@@ -122,6 +151,7 @@ struct SpeechResultView: View {
             if take.prompter != nil, hero.isFull { scriptToggle }
         } summary: {
             VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .center) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(script.title)
                         .font(.headline)
@@ -137,6 +167,9 @@ struct SpeechResultView: View {
                     .animation(.snappy(duration: 0.4), value: take.id)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                }
+                    Spacer(minLength: 8)
+                    if gate.account?.unlimited == true { rescoreButton(take, script) }
                 }
                 .padding(.horizontal, 20)
                 scoreStrip(take.metrics)
@@ -488,7 +521,8 @@ struct SpeechResultView: View {
         }
         #endif
         }
-        .task(id: take.id) {
+        // The transcript too: a take scored again keeps its id.
+        .task(id: "\(take.id)|\(take.transcript.hashValue)") {
             // The diff is O(script × transcript), so it runs off the main thread.
             let body = script.body, transcript = take.transcript, language = script.language
             let marks = await Task.detached {

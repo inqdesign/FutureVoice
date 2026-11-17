@@ -162,3 +162,25 @@ final class SpeechDeliveryTests: XCTestCase {
         XCTAssertLessThan(glide!.rangeSemitones, 11)
     }
 }
+
+final class SpeechRescoreCutTests: XCTestCase {
+    private func wav(seconds: Double) -> Data {
+        AudioLoudness.wavData(fromPCM16: Data(count: Int(seconds * 16_000) * 2), sampleRate: 16_000)
+    }
+
+    /// A stored take is cut where it was cut; the piece that opened during
+    /// the countdown starts at the file's start.
+    func testCutsFollowTheStoredStarts() {
+        let cuts = SpeechRescore.cuts(ofWAV: wav(seconds: 60), startsMs: [-2292, 22_000, 44_500])
+        XCTAssertEqual(cuts.map(\.startMs), [0, 22_000, 44_500])
+        XCTAssertEqual(cuts.map { ($0.wav.count - 44) / 32 }, [22_000, 22_500, 15_500])
+    }
+
+    /// No stored cuts, or one too long to assess: windows instead.
+    func testCutsFallBackToWindows() {
+        XCTAssertGreaterThan(SpeechRescore.cuts(ofWAV: wav(seconds: 70), startsMs: nil).count, 1)
+        let long = SpeechRescore.cuts(ofWAV: wav(seconds: 80), startsMs: [0, 40_000])
+        XCTAssertTrue(long.allSatisfy { Double($0.wav.count - 44) / 32_000 <= 30 })
+        XCTAssertEqual(long.map { ($0.wav.count - 44) / 2 }.reduce(0, +), 80 * 16_000)
+    }
+}

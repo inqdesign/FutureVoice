@@ -740,35 +740,42 @@ final class SpeechTakeSession: ObservableObject {
         let startMs = Int((endedAt - seconds) * 1000)
         return Task {
             defer { try? FileManager.default.removeItem(at: url) }
-            // The piece is read first, and its own words say which part of
-            // the script it holds: that span is what its sounds are judged
-            // against. Words that are not the script's (the reader left it)
-            // are judged against themselves. Only a piece nobody could read
-            // falls back to where the prompter stood. The assessment waits
-            // for the read-back, which happens while the next piece is still
-            // being spoken.
-            let readBack = await SpeechReader.readPiece(audioURL: url, language: language)
-            let said = readBack?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            var reference = cursorSpan
-            var placed = false
-            if !said.isEmpty {
-                if let range = ShadowEngine.scriptRange(of: said, in: track.words.map(\.text),
-                                                        language: language, near: cursor) {
-                    reference = Self.spanText(track, range, language: language)
-                    placed = true
-                } else {
-                    reference = said
-                }
-            }
-            guard !reference.isEmpty else { return readBack.map { Piece(text: $0, pron: nil) } }
-            let result = await PronunciationAssessor.assess(
-                audioURL: url, reference: reference, language: language, surface: "speech").result
-            guard let piece = Self.pieceText(readBack: readBack, heard: result?.recognized,
-                                             insertions: result?.words.filter(\.isInsertion).count ?? 0,
-                                             language: language) else { return nil }
-            return Piece(text: piece.text, pron: result, reference: reference,
-                         readBackReplaced: piece.replaced, startMs: startMs, placed: placed)
+            return await Self.judge(url, track: track, language: language,
+                                    cursorSpan: cursorSpan, cursor: cursor, startMs: startMs)
         }
+    }
+
+    /// One piece, read and judged. The piece is read first, and its own
+    /// words say which part of the script it holds: that span is what its
+    /// sounds are judged against. Words that are not the script's (the
+    /// reader left it) are judged against themselves. Only a piece nobody
+    /// could read falls back to where the prompter stood. The assessment
+    /// waits for the read-back, which happens while the next piece is still
+    /// being spoken. Also what a stored take is scored again with
+    /// (`SpeechRescore`), where there is no cursor.
+    nonisolated static func judge(_ url: URL, track: SpeechPrompterTrack, language: String,
+                                  cursorSpan: String = "", cursor: Int? = nil, startMs: Int) async -> Piece? {
+        let readBack = await SpeechReader.readPiece(audioURL: url, language: language)
+        let said = readBack?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        var reference = cursorSpan
+        var placed = false
+        if !said.isEmpty {
+            if let range = ShadowEngine.scriptRange(of: said, in: track.words.map(\.text),
+                                                    language: language, near: cursor) {
+                reference = Self.spanText(track, range, language: language)
+                placed = true
+            } else {
+                reference = said
+            }
+        }
+        guard !reference.isEmpty else { return readBack.map { Piece(text: $0, pron: nil) } }
+        let result = await PronunciationAssessor.assess(
+            audioURL: url, reference: reference, language: language, surface: "speech").result
+        guard let piece = Self.pieceText(readBack: readBack, heard: result?.recognized,
+                                         insertions: result?.words.filter(\.isInsertion).count ?? 0,
+                                         language: language) else { return nil }
+        return Piece(text: piece.text, pron: result, reference: reference,
+                     readBackReplaced: piece.replaced, startMs: startMs, placed: placed)
     }
 
     /// A long take's pronunciation when it was read as one file: windows of
