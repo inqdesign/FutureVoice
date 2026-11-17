@@ -192,17 +192,20 @@ object CarryoverDetector {
         // inflection: "struck a nerve" spends "strikes a nerve". A correction
         // stays exact, or "six month" would spend "six months" (iOS, 2026-11-17).
         val fold = rejectingMistake == null && foldsInflection(language)
-        val needle = tokens(item, language).map { if (politeFree) strippingPolite(it) else it }
-            .map { if (fold) folded(it, language!!) else it }
-        val core = if (politeFree) needle else contentTokens(item, language)
-            .map { if (fold) folded(it, language!!) else it }
-        if (needle.size < minTokens(language) || core.size < minContentTokens(language)) return null
+        // The same spend reads an idiom the way it is said ([spendNeedle]).
+        val spent = if (fold) spendNeedle(item, language!!) else null
+        val needle = spent?.first ?: tokens(item, language).map { if (politeFree) strippingPolite(it) else it }
+        val core = if (politeFree) needle
+            else spent?.first?.filter { !isFiller(it, language) } ?: contentTokens(item, language)
+        if (needle.size < (if (fold) MIN_SPEND_TOKENS else minTokens(language)) ||
+            core.size < minContentTokens(language)) return null
+        val window = spent?.let { spendWindow(it.first.size, it.second) }
         val koreanNeedle = if (korean) koreanKey(item, politeFree) else ""
         if (korean && koreanNeedle.length < MIN_KOREAN_SYLLABLES) return null
         for (turn in userTurns) {
-            val hay = tokens(turn.transcript, language).map { if (politeFree) strippingPolite(it) else it }
-                .map { if (fold) folded(it, language!!) else it }
-            val span = matchedSpan(needle, core, hay, minTokens(language), language)
+            val hay = if (fold) spendTokens(turn.transcript, language!!).map { folded(it, language) }
+                else tokens(turn.transcript, language).map { if (politeFree) strippingPolite(it) else it }
+            val span = matchedSpan(needle, core, hay, if (fold) 1 else minTokens(language), language, window)
             if (span != null) {
                 if (rejectingMistake != null && !showsTheFix(rejectingMistake, item, span, language)) continue
             } else if (korean && koreanKey(turn.transcript, politeFree).contains(koreanNeedle)) {
@@ -246,6 +249,12 @@ object CarryoverDetector {
         if (key.isEmpty() || key.contains(' ')) return false
         val target = if (language != null) folded(key, language) else key
         if (tokens(text, language).any { it == key || (language != null && folded(it, language) == target) }) return true
+        // "catch-22" and "no-brainer" are one word on the chip and two in the
+        // transcript ("catch 22", "no brainer").
+        if (language != null && foldsInflection(language)) {
+            val said = spendTokens(text, language)
+            if (said.zipWithNext().any { (a, b) -> a + b == key }) return true
+        }
         val inContext = com.roro.futurevoice.data.VocabLemmas.lemmas(listOf(text), language)
         return key in inContext || target in inContext
     }
@@ -286,6 +295,63 @@ object CarryoverDetector {
         if (ref.isEmpty()) return 0.0
         return ref.intersect(tokens(text, language).toSet()).size.toDouble() / ref.size
     }
+
+    /**
+     * Can a chip or a book expression reading [phrase] ever tick? The spend
+     * path's own gate ([firstMatch] with no source): two words that both
+     * carry meaning are enough ("sensible plan", "touch base"), and a slot
+     * word is not one of them (iOS `isSpendable`).
+     */
+    fun isSpendable(phrase: String, language: String? = CoreVocabulary.activeLanguage()): Boolean {
+        if (!foldsInflection(language)) return isCreditable(phrase, language)
+        val needle = spendNeedle(phrase, language!!).first
+        return needle.size >= MIN_SPEND_TOKENS &&
+            needle.count { !isFiller(it, language) } >= minContentTokens(language)
+    }
+
+    /**
+     * An idiom being SPENT, as it is said (iOS e2ad6ae9, a learner who builds
+     * scenes around idioms: "the idiom often isn't recognised"). Read
+     * differently here, and only here: two words are a phrase when both
+     * carry meaning; a hyphen is a space ("catch 22", "no brainer"); the
+     * dictionary's slot words are a gap the learner fills ("pull someone's
+     * leg" is "pulling my leg"); a leading "to" is the dictionary's; English
+     * contractions are spelled out on both sides. A correction card never
+     * comes through here. Returns the tokens and how many slots were dropped.
+     */
+    fun spendNeedle(item: String, language: String): Pair<List<String>, Int> {
+        var words = spendTokens(item, language)
+        if (words.size > 2 && words.first() == "to") words = words.drop(1)
+        val kept = words.filter { it !in SLOT_WORDS }
+        return kept.map { folded(it, language) } to (words.size - kept.size)
+    }
+
+    fun spendTokens(text: String, language: String): List<String> {
+        val words = tokens(text.replace('-', ' ').replace('\u2011', ' '), language)
+        return if (language == "en") words.flatMap { CONTRACTIONS[it] ?: listOf(it) } else words
+    }
+
+    private const val MIN_SPEND_TOKENS = 2
+
+    /** A two-word item gets one word of padding ("cut some corners"), or
+     *  "cut my finger on the corner" spends "cut corners"; each slot adds
+     *  room for what fills it. */
+    private fun spendWindow(tokens: Int, slots: Int) =
+        (if (tokens <= 2) tokens + 1 else tokens * 2 + 4) + slots * 3
+
+    private val SLOT_WORDS = setOf(
+        "someones", "someone", "somebodys", "somebody", "something", "ones", "sb", "sbs", "sth")
+
+    private val CONTRACTIONS: Map<String, List<String>> = mapOf(
+        "dont" to listOf("do", "not"), "doesnt" to listOf("does", "not"), "didnt" to listOf("did", "not"),
+        "cant" to listOf("can", "not"), "cannot" to listOf("can", "not"), "couldnt" to listOf("could", "not"),
+        "wouldnt" to listOf("would", "not"), "shouldnt" to listOf("should", "not"), "wont" to listOf("will", "not"),
+        "isnt" to listOf("is", "not"), "arent" to listOf("are", "not"), "wasnt" to listOf("was", "not"),
+        "werent" to listOf("were", "not"), "havent" to listOf("have", "not"), "hasnt" to listOf("has", "not"),
+        "hadnt" to listOf("had", "not"), "im" to listOf("i", "am"), "ive" to listOf("i", "have"),
+        "youre" to listOf("you", "are"), "youve" to listOf("you", "have"), "theyre" to listOf("they", "are"),
+        "thats" to listOf("that", "is"), "theres" to listOf("there", "is"), "lets" to listOf("let", "us"),
+    )
 
     fun isCreditable(phrase: String, language: String? = CoreVocabulary.activeLanguage()): Boolean =
         tokens(phrase, language).size >= minTokens(language) &&
@@ -340,9 +406,9 @@ object CarryoverDetector {
      * in order (function words may slip — that's what [MIN_COVERAGE] is for).
      */
     private fun matchedSpan(needle: List<String>, core: List<String>, hay: List<String>,
-                            minHay: Int, language: String?): List<String>? {
+                            minHay: Int, language: String?, spendWindow: Int? = null): List<String>? {
         if (needle.isEmpty() || hay.size < minHay) return null
-        val window = needle.size * 2 + 4
+        val window = spendWindow ?: (needle.size * 2 + 4)
         val required = Math.ceil(needle.size * MIN_COVERAGE).toInt()
         if (hay.size < required) return null
         for (start in 0..(hay.size - required)) {

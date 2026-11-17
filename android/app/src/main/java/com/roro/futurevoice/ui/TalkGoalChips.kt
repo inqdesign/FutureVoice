@@ -110,7 +110,7 @@ object TalkGoalPicker {
             // A phrase that cannot clear the detector is never offered: a
             // checkbox that cannot tick teaches the learner the whole row is
             // decorative.
-            .filter { CarryoverDetector.isCreditable(it) }
+            .filter { CarryoverDetector.isSpendable(it) }
             .take(MAX_EXPRESSIONS)
             .map { TalkGoalItem(CarryoverDetector.normalized(it), it, isWord = false) }
 
@@ -124,19 +124,19 @@ object TalkGoalPicker {
                 TalkGoalItem(CarryoverDetector.normalized(it), it,
                     isWord = com.roro.futurevoice.data.WordSplitter.isSingleWord(it, language))
             }
-            .filter { it.isWord || CarryoverDetector.isCreditable(it.text) }
+            .filter { it.isWord || CarryoverDetector.isSpendable(it.text) }
 
         // A claim is what the call is there to CHECK, so it goes in front of
         // the notebook: they said they know these and nothing has confirmed
         // it (iOS `4fc0068`).
         val claimed = (vocab.unconfirmedKnownExpressions(language)
-            .filter { CarryoverDetector.isCreditable(it) }
+            .filter { CarryoverDetector.isSpendable(it) }
             .map { TalkGoalItem(CarryoverDetector.normalized(it), it, isWord = false, claimedKnown = true) } +
             vocab.unconfirmedKnownWords(language)
                 .map { TalkGoalItem(CarryoverDetector.normalized(it), it,
                     isWord = com.roro.futurevoice.data.WordSplitter.isSingleWord(it, language),
                     claimedKnown = true) }
-                .filter { it.isWord || CarryoverDetector.isCreditable(it.text) })
+                .filter { it.isWord || CarryoverDetector.isSpendable(it.text) })
 
         // Interleave so the row opens with something short: a phrase first
         // would fill the visible width on its own and the words would only
@@ -193,13 +193,13 @@ object TalkGoalPicker {
             example = item.example, note = item.note.takeIf { it.isNotBlank() })
         val curriculum = scenario.curriculum
         val bookWords = rotated(runs, curriculum?.words.orEmpty().filter { it.masteredAt == null }.map(::bookItem))
-            .filter { it.isWord || CarryoverDetector.isCreditable(it.text) }
+            .filter { it.isWord || CarryoverDetector.isSpendable(it.text) }
         val bookPhrases = rotated(runs, curriculum?.expressions.orEmpty().filter { it.masteredAt == null }.map(::bookItem))
-            .filter { CarryoverDetector.isCreditable(it.text) }
+            .filter { CarryoverDetector.isSpendable(it.text) }
 
         val talks = previousTalks.sortedByDescending { it.startedAt }
         val offered = talks.flatMap { it.summary?.expressionsOffered.orEmpty() }
-            .filter { !vocab.hasUsedExpression(it, language) && CarryoverDetector.isCreditable(it) }
+            .filter { !vocab.hasUsedExpression(it, language) && CarryoverDetector.isSpendable(it) }
             .map { TalkGoalItem(CarryoverDetector.normalized(it), it, isWord = false) }
         val fluentTexts = talks.flatMap { s -> s.turns.filter { it.role == com.roro.futurevoice.talk.TurnRole.FLUENT_SELF }.map { it.transcript } }
         val userLemmas = com.roro.futurevoice.data.VocabLemmas.lemmas(
@@ -214,7 +214,7 @@ object TalkGoalPicker {
         // reading pulled out of it are what the call is there to try. Anything
         // already used in a talk has done its job and isn't asked for again.
         val briefPhrases = rotated(runs, scenario.brief?.keyExpressions.orEmpty()
-            .filter { !vocab.hasUsedExpression(it, language) && CarryoverDetector.isCreditable(it) }
+            .filter { !vocab.hasUsedExpression(it, language) && CarryoverDetector.isSpendable(it) }
             .map { TalkGoalItem(CarryoverDetector.normalized(it), it,
                 isWord = com.roro.futurevoice.data.WordSplitter.count(it, language) <= 1) })
 

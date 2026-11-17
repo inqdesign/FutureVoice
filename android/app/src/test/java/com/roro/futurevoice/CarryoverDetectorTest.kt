@@ -126,4 +126,37 @@ class CarryoverDetectorTest {
             listOf(user("she is here for six month already")),
             rejectingMistake = "here for six month", language = "en"))
     }
+
+    // iOS e2ad6ae9: an idiom is spent the way it is said. (No forms table on
+    // the JVM, so verb inflections are left to the device.)
+    @Test fun `an idiom ticks the way it is said`() {
+        fun ticks(item: String, line: String) =
+            if (!CarryoverDetector.normalized(item.replace("-", "")).contains(' ') && !item.contains(' '))
+                CarryoverDetector.saysWord(item, line, "en")
+            else CarryoverDetector.isSpendable(item, "en") &&
+                CarryoverDetector.firstMatch(item, listOf(user(line)), language = "en") != null
+        listOf(
+            "catch-22" to "it is a catch 22 situation",
+            "a catch-22" to "it is a catch-22 situation",
+            "no-brainer" to "that was a no brainer for me",
+            "sensible plan" to "I think that is a sensible plan",
+            "sensible plan" to "we need some sensible plans",
+            "touch base" to "let's touch base next week",
+            "cut corners" to "they cut some corners",
+            "to cut corners" to "they always cut corners",
+            "pull someone's leg" to "you always pull my leg",
+            "make up one's mind" to "I can't make up my mind",
+            "take something with a grain of salt" to "I take his advice with a grain of salt",
+            "I couldn't agree more" to "I could not agree more",
+        ).forEach { (item, line) -> assertTrue("$item ← $line", ticks(item, line)) }
+        listOf(
+            "cut corners" to "I cut my finger on the corner of the table",
+            "sensible plan" to "the plan was not sensible at all",
+            "pull someone's leg" to "I pull the door and hurt my leg on the way out of the room",
+            "strike a nerve" to "the nerve of him to strike me",
+        ).forEach { (item, line) -> assertFalse("$item ← $line", ticks(item, line)) }
+        listOf("how are you", "thank you", "I think").forEach {
+            assertFalse(it, CarryoverDetector.isSpendable(it, "en"))
+        }
+    }
 }
