@@ -1,3 +1,3 @@
 Novedades
 • En la conversación libre, pide en voz alta lo que quieras. Pídele que te enseñe una expresión o que te marque los errores, y lo hará.
-• La conversación libre recuerda tus conversaciones anteriores. Menciona una y la retoma.
+• La conversación libre ahora recuerda tus conversaciones anteriores con mucho más detalle. Saca una de hace unos días y recupera lo que dijiste para seguir desde ahí.

@@ -1,3 +1,3 @@
 Nouveautés
 • En conversation libre, demande à voix haute ce que tu veux. Qu’on t’apprenne une expression ou qu’on te signale tes erreurs : c’est fait.
-• La conversation libre se souvient de vos échanges passés. Évoques-en un, elle reprend le fil.
+• La conversation libre se souvient bien plus en détail de tes échanges passés. Parle d’une conversation d’il y a quelques jours : elle retrouve ce que tu as dit ce jour-là et reprend à partir de là.
