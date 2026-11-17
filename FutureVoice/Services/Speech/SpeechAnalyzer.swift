@@ -125,41 +125,52 @@ enum SpeechAnalyzer {
         return clamp(Int((0.30 * Double(accuracy) + coverage * said).rounded()))
     }
 
-    /// How far into the script the reader got, 0…1, over the diff's own
-    /// script tokens (words, or syllables for CJK): the last script token
-    /// MATCHED, carried on through the substitutions right after it (a
-    /// misread last word is still the end), plus one, over the script's
-    /// token count. Words skipped in the middle are accuracy's business; this
-    /// is only about stopping early. A substitution with no match before it
-    /// doesn't count: the alignment pairs any word said after stopping
-    /// ("sorry") with the script's LAST token, which would read as finished.
-    ///
-    /// The end has to be READ to, not landed on: the alignment may place a
-    /// stray word anywhere, and twelve words of nonsense matched a "you" near
-    /// a script's end and read as 95% of it (stored takes, 2026-11-17:
-    /// "chuchu chuchu thank you…" scored 30). A match counts as reached only
-    /// when at least half of the ten script tokens ending at it were matched.
+    /// The share of the script that was READ, 0…1, over the diff's own script
+    /// tokens (words, or syllables for CJK). Until 2026-11-17 this was how
+    /// far the reader got (the last token matched), so reading only a
+    /// script's last line was 95% of it: 25 seconds of "thank you" against a
+    /// script that ends on one scored 30 (founder: make it what was read).
     static func coverage(_ steps: [ShadowEngine.DiffStep]) -> Double {
-        let total = steps.filter { $0.op != .ins }.count
-        guard total > 0 else { return 1 }
-        return Double(reached(steps) + 1) / Double(total)
+        let read = covered(steps)
+        guard !read.isEmpty else { return 1 }
+        return Double(read.filter { $0 }.count) / Double(read.count)
     }
 
-    /// The last script token the reader got to (-1: none), counted over the
-    /// diff's script tokens.
-    static func reached(_ steps: [ShadowEngine.DiffStep]) -> Int {
+    /// Which script tokens lie in a stretch that was read. A stretch is
+    /// read where at least half of ten script tokens in a row matched, from
+    /// the first of those matches to the last: a word changed or dropped
+    /// inside it is still inside it (that is accuracy's and the slips'), and
+    /// so is a run of up to ten the transcriber got wrong. What is NOT read:
+    /// a sentence skipped, the script after the reader stopped, and a stray
+    /// word the alignment happened to place somewhere (twelve words of
+    /// nonsense matched a "you" near a script's end). A misread word at
+    /// either edge of a stretch belongs to it.
+    static func covered(_ steps: [ShadowEngine.DiffStep]) -> [Bool] {
         let ops = steps.filter { $0.op != .ins }.map(\.op)
+        let n = ops.count
+        guard n > 0 else { return [] }
+        var read = [Bool](repeating: false, count: n)
         var matchesBefore = [0]
         for op in ops { matchesBefore.append(matchesBefore[matchesBefore.count - 1] + (op == .match ? 1 : 0)) }
-        var reached = -1
-        for index in ops.indices.reversed() where ops[index] == .match {
-            let from = max(0, index - 9)
-            let window = index - from + 1
-            if (matchesBefore[index + 1] - matchesBefore[from]) * 2 >= window { reached = index; break }
+        func mark(_ start: Int, _ end: Int) {
+            guard (matchesBefore[end + 1] - matchesBefore[start]) * 2 >= end - start + 1,
+                  let first = (start...end).first(where: { ops[$0] == .match }),
+                  let last = (start...end).last(where: { ops[$0] == .match }) else { return }
+            for index in first...last { read[index] = true }
         }
-        // A misread word right after it is still the end.
-        while reached >= 0, reached + 1 < ops.count, ops[reached + 1] == .sub { reached += 1 }
-        return reached
+        for start in 0...max(0, n - 10) { mark(start, min(n - 1, start + 9)) }
+        // The script's two ends have no ten tokens on one side: a reading
+        // that stops after four words read four, and the last few words
+        // after a skipped stretch were read too.
+        for size in 1..<min(10, n) {
+            mark(0, size - 1)
+            mark(n - size, n - 1)
+        }
+        for index in 1..<max(1, n) where read[index - 1] && !read[index] && ops[index] == .sub { read[index] = true }
+        for index in stride(from: n - 2, through: 0, by: -1) where read[index + 1] && !read[index] && ops[index] == .sub {
+            read[index] = true
+        }
+        return read
     }
 
     /// Which rules a take was scored by, stored on its metrics. 2 = the
@@ -203,26 +214,28 @@ enum SpeechAnalyzer {
     }
 
     static func slips(_ steps: [ShadowEngine.DiffStep], language: String, names: Set<String> = []) -> Int {
-        // "The last word read" is where the reading got to (`reached`), not a
-        // stray match further on: a take stopped after one sentence matched
-        // an "a" near the script's end and counted everything between as
-        // slips (33 of them for eleven words read, stored take 2026-11-17).
-        let end = reached(steps)
-        var seen = -1
-        var last: Int?
-        for (i, step) in steps.enumerated() where step.op != .ins {
-            seen += 1
-            if step.op == .match, seen <= end { last = i }
-        }
-        guard let first = steps.firstIndex(where: { $0.op == .match }), let last, first < last else { return 0 }
+        // Only inside what was read (`covered`): a stretch never read is
+        // coverage's, and until 2026-11-17 a take stopped after one sentence
+        // matched an "a" near the script's end and counted everything between
+        // as slips (33 of them for eleven words read).
+        let read = covered(steps)
         let fillerWords = Set(SpeechLibrary.fillers(language).map { $0.lowercased() })
-        return steps[first...last].filter { step in
+        var index = -1
+        var count = 0
+        for step in steps {
             switch step.op {
-            case .match: return false
-            case .sub, .del: return !names.contains((step.target ?? "").lowercased())
-            case .ins: return !fillerWords.contains((step.learner ?? "").lowercased())
+            case .match:
+                index += 1
+            case .sub, .del:
+                index += 1
+                if read[index], !names.contains((step.target ?? "").lowercased()) { count += 1 }
+            case .ins:
+                // Added between two words that were read.
+                if index >= 0, index + 1 < read.count, read[index], read[index + 1],
+                   !fillerWords.contains((step.learner ?? "").lowercased()) { count += 1 }
             }
-        }.count
+        }
+        return count
     }
 
     /// The plain share of the script said as written, 0–100.

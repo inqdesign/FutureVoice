@@ -204,7 +204,18 @@ final class SpeechCoverageTests: XCTestCase {
         XCTAssertEqual(coverage(script), 1, accuracy: 0.001)
         XCTAssertEqual(coverage("Have you ever heard that learning language can slow down aging"), 12.0 / 53, accuracy: 0.03)
         XCTAssertEqual(coverage(script.replacingOccurrences(of: "hurt you.", with: "hurt me")), 1, accuracy: 0.001)
-        // A stretch skipped in the middle is accuracy's, not coverage's.
-        XCTAssertEqual(coverage(script.replacingOccurrences(of: "It sounds almost too good to be true, so let's look at what the research actually says. ", with: "")), 1, accuracy: 0.001)
+        // A dropped word and a changed one inside the reading are accuracy's.
+        XCTAssertEqual(coverage(script.replacingOccurrences(of: "almost too good", with: "too great")), 1, accuracy: 0.001)
+    }
+
+    /// What was not read is not covered: a sentence skipped in the middle,
+    /// or everything but the last line.
+    func testCoverageIsWhatWasRead() {
+        let skipped = script.replacingOccurrences(of: "It sounds almost too good to be true, so let's look at what the research actually says. ", with: "")
+        XCTAssertEqual(coverage(skipped), 35.0 / 54, accuracy: 0.04)
+        XCTAssertLessThan(coverage("were more likely to be ageing faster than expected, and that can't hurt you."), 0.3)
+        // The skipped sentence is coverage's, not eighteen slips.
+        let steps = ShadowEngine.analyze(target: script, learner: skipped, language: "en").steps
+        XCTAssertEqual(SpeechAnalyzer.slips(steps, language: "en"), 0)
     }
 }
