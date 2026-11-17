@@ -179,6 +179,64 @@ class SpeechTakeSession(
     /** The take's clock minus the fluent reading's, set at the first word. */
     private var guideOrigin: Double? = null
 
+    /** Listening first (iOS, 2026-11-17, founder): the fluent reading played on
+     *  the take screen before a take, the prompter rising with it and the
+     *  word being read highlighted ([guide]). Paused, the script stays put;
+     *  a take, or the reading's end, puts it back at the top. */
+    enum class ListenState { OFF, PLAYING, PAUSED }
+    private val _listenState = MutableStateFlow(ListenState.OFF)
+    val listenState: StateFlow<ListenState> = _listenState
+    private val _listenLoading = MutableStateFlow(false)
+    val listenLoading: StateFlow<Boolean> = _listenLoading
+    internal val listen = SpeechListenModel()
+    private var listenTicker: Job? = null
+
+    /** Play or pause the fluent reading. The first tap fetches its audio. */
+    suspend fun toggleListen() {
+        if (_phase.value != Phase.Ready || !_fluentPaceAvailable.value || _listenLoading.value) return
+        if (_listenState.value == ListenState.PLAYING) { pauseListen(); return }
+        if (listen.phase == SpeechListenModel.Phase.IDLE) {
+            _listenLoading.value = true
+            listen.load(context, _script.value)
+            _listenLoading.value = false
+        }
+        if (listen.phase != SpeechListenModel.Phase.READY || _phase.value != Phase.Ready) return
+        if (_listenState.value == ListenState.OFF) _guide.value = 0
+        listen.toggle()
+        _listenState.value = ListenState.PLAYING
+        listenTicker?.cancel()
+        listenTicker = scope.launch {
+            while (true) {
+                delay(50)
+                if (_listenState.value != ListenState.PLAYING) return@launch
+                if (!listen.player.isPlaying) {
+                    // Read to the end: back to the top.
+                    stopListen()
+                    return@launch
+                }
+                val t = listen.player.currentTime
+                val at = guideStarts.indexOfLast { (it ?: Double.POSITIVE_INFINITY) <= t }.coerceAtLeast(0)
+                if (at != _guide.value) _guide.value = at
+            }
+        }
+    }
+
+    /** Keeps the place (a sheet opening over the screen, or a second tap). */
+    fun pauseListen() {
+        if (_listenState.value != ListenState.PLAYING) return
+        listenTicker?.cancel()
+        listen.player.pause()
+        _listenState.value = ListenState.PAUSED
+    }
+
+    fun stopListen() {
+        listenTicker?.cancel()
+        if (_listenState.value == ListenState.OFF) return
+        listen.stop()
+        _listenState.value = ListenState.OFF
+        _guide.value = null
+    }
+
     fun setSpeed(value: Float) {
         _speed.value = value
         prefs.edit().putFloat(SPEED_KEY, value).apply()
@@ -195,6 +253,7 @@ class SpeechTakeSession(
 
     suspend fun start() {
         if (_phase.value != Phase.Ready && !isFailed) return
+        stopListen()
         _cursor.value = 0; position = 0.0; _elapsed.value = 0; clock = 0.0
         _script.value.let { takeCeiling = ceilingSeconds(it.targetSeconds, it.body, it.language) }
         // "3" goes up FIRST and the mic is set up while it shows (iOS
@@ -267,6 +326,7 @@ class SpeechTakeSession(
      *  top. Only between takes. */
     fun replaceScript(updated: SpeechScript) {
         if (_phase.value != Phase.Ready && !isFailed) return
+        stopListen()
         _script.value = updated
         _track.value = SpeechPrompterTrack(updated.body, updated.language)
         reset()
@@ -705,6 +765,7 @@ class SpeechTakeSession(
             Analytics.capture("speech_take_cancelled", followFacts() + mapOf("seconds" to clock.toInt(), "closed" to true))
         }
         discardRecording()
+        stopListen()
         camera.stop()
         scope.cancel()
     }

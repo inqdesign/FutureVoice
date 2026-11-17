@@ -40,6 +40,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Article
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Close
@@ -180,6 +181,9 @@ private fun SpeechTakeLayout(
     val fluent by session.fluentPace.collectAsStateWithLifecycle()
     val fluentAvailable by session.fluentPaceAvailable.collectAsStateWithLifecycle()
     val guide by session.guide.collectAsStateWithLifecycle()
+    val listenState by session.listenState.collectAsStateWithLifecycle()
+    val listenLoading by session.listenLoading.collectAsStateWithLifecycle()
+    val listenOn = listenState != SpeechTakeSession.ListenState.OFF
     // How the prompter scrolls: with the voice, at the fluent reading's tempo
     // (karaoke, iOS cddddcc0), or at a steady speed.
     val scrollMode = if (fluent) ScrollMode.FLUENT else if (follow) ScrollMode.VOICE else ScrollMode.STEADY
@@ -276,7 +280,11 @@ private fun SpeechTakeLayout(
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             Box(Modifier.weight(1f).fillMaxWidth()
                 .onGloballyPositioned { prompterWidthPx = it.size.width.toFloat() }) {
-                Teleprompter(session, if (fluent) guide else null, track, cursor, script.language, textSize, recording, follow, speed, holding)
+                // The fluent reading played before a take moves the script
+                // like a take does.
+                Teleprompter(session, if (fluent || listenOn) guide else null, track, cursor, script.language, textSize,
+                    recording || listenOn, follow || listenOn, speed, holding,
+                    speaking = if (listenOn) listenState == SpeechTakeSession.ListenState.PLAYING else null)
                 if (holding) {
                     Row(Modifier.align(Alignment.TopCenter).padding(top = 4.dp).background(Color.Black.copy(alpha = 0.6f), CircleShape)
                         .padding(horizontal = 12.dp, vertical = 6.dp),
@@ -323,11 +331,25 @@ private fun SpeechTakeLayout(
                     }
                     Spacer(Modifier.weight(1f))
                     Row(Modifier.hiddenWhile(recording), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Hear the fluent reading before a take: the script rises with it.
+                        if (fluentAvailable) {
+                            if (listenLoading) {
+                                Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp,
+                                        color = if (onCamera) Color.White else MaterialTheme.colorScheme.primary)
+                                }
+                            } else {
+                                val playing = listenState == SpeechTakeSession.ListenState.PLAYING
+                                ChromeButton(if (playing) Icons.Filled.Pause else Icons.AutoMirrored.Filled.VolumeUp,
+                                    stringResource(if (playing) R.string.pause else R.string.speech_listen_fluent_reading),
+                                    onCamera, size = 36.dp) { scope.launch { session.toggleListen() } }
+                            }
+                        }
                         ChromeButton(Icons.AutoMirrored.Outlined.Article, stringResource(R.string.whole_script),
-                            onCamera, size = 36.dp) { showScript = true }
+                            onCamera, size = 36.dp) { session.pauseListen(); showScript = true }
                         Box {
                             ChromeButton(Icons.Filled.History, stringResource(R.string.takes), onCamera,
-                                size = 36.dp) { showTakes = true }
+                                size = 36.dp) { session.pauseListen(); showTakes = true }
                             val count = takes.count { it.scriptId == script.id }
                             if (count > 0) {
                                 // iOS caption2 in a capsule: the line height is the
@@ -455,6 +477,9 @@ private fun Teleprompter(
     follow: Boolean,
     speed: Float,
     held: Boolean,
+    /** Listening first: whether the fluent reading is playing (paused, the
+     *  script stays put). null outside it. */
+    speaking: Boolean? = null,
 ) {
     val density = LocalDensity.current
     val ink = MaterialTheme.colorScheme.onSurface.toArgb()
@@ -488,7 +513,7 @@ private fun Teleprompter(
         LaunchedEffect(recording) {
             if (!recording && cursor == 0) { motion.snap(); position = motion.position }
         }
-        LaunchedEffect(column, recording, follow, speed, held, guide) {
+        LaunchedEffect(column, recording, follow, speed, held, guide, speaking) {
             var last = 0L
             while (true) {
                 withFrameNanos { now ->
@@ -496,7 +521,7 @@ private fun Teleprompter(
                         val dt = ((now - last) / 1e9f).coerceAtMost(0.05f)
                         motion.step(dt, com.roro.futurevoice.talk.PrompterMotion.Input(
                             // Karaoke keeps moving on the fluent clock, spoken or not.
-                            recording, follow, speed, (guide != null) || session.voiceActive(), held))
+                            recording, follow, speed, speaking ?: ((guide != null) || session.voiceActive()), held))
                         if (kotlin.math.abs(motion.position - position) > 0.01f) position = motion.position
                         // The video scrolls with the prompter the reader saw.
                         session.composer.offset = motion.position - readingLine
