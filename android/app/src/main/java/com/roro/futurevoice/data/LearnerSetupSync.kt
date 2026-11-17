@@ -35,7 +35,10 @@ import java.time.Instant
  */
 object LearnerSetupSync {
 
-    /** Skip the round trip when nothing has changed since the last push. */
+    /** Skip the round trip when nothing has changed since the last push.
+     *  The stamp names the ACCOUNT too (2026-11-17): it was the choices alone,
+     *  so a second account on the same phone with the same choices was never
+     *  written and its row kept the column default (ko → en). */
     private const val LAST_KEY = "futurevoice.profileSync.last"
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -43,12 +46,12 @@ object LearnerSetupSync {
     fun push(context: Context, target: String, native: String, level: String, force: Boolean = false) {
         val app = context.applicationContext
         val prefs = app.getSharedPreferences("futurevoice", 0)
-        val stamp = "$target|$native|$level"
-        if (!force && prefs.getString(LAST_KEY, null) == stamp) return
         scope.launch {
             runCatching {
                 val auth = AuthRepository()
                 val uid = auth.userId ?: return@runCatching
+                val stamp = "$uid|$target|$native|$level"
+                if (!force && prefs.getString(LAST_KEY, null) == stamp) return@runCatching
                 val token = auth.accessToken()
                 val now = Instant.now().toString()
                 val row = buildJsonObject {
