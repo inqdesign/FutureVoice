@@ -116,6 +116,9 @@ final class SpeechTakeSession: ObservableObject {
         /// The read-back lost words Azure heard, and Azure's hearing stands
         /// in for it (`pieceText`).
         var readBackReplaced = false
+        /// Script words put back where Azure heard them clearly and the
+        /// read-back wrote something else (`ShadowEngine.restoringClearWords`).
+        var restoredWords = 0
         /// Where this piece begins in the take (negative: it opened during
         /// the countdown).
         var startMs = 0
@@ -538,11 +541,13 @@ final class SpeechTakeSession: ObservableObject {
         var prons: [PronunciationResult] = []
         var assessed: [SpeechDelivery.Piece] = []
         var readBackFixed = 0
+        var restoredWords = 0
         var placedPieces = 0
         for piece in pieces {
             guard let piece = await piece.value else { texts = []; prons = []; assessed = []; break }
             texts.append(piece.text)
             if piece.readBackReplaced { readBackFixed += 1 }
+            restoredWords += piece.restoredWords
             if piece.placed { placedPieces += 1 }
             if let pron = piece.pron {
                 prons.append(pron)
@@ -743,6 +748,8 @@ final class SpeechTakeSession: ObservableObject {
             "scoring": metrics.scoring ?? 0,
             // Pieces whose read-back lost words Azure heard (`pieceText`).
             "readback_fixed": readBackFixed,
+            // Script words the read-back missed and Azure heard clearly.
+            "readback_restored": restoredWords,
             // Pieces whose script span came from their own words (the rest
             // fell back to the prompter's cursor).
             "placed_pieces": placedPieces,
@@ -836,8 +843,18 @@ final class SpeechTakeSession: ObservableObject {
         guard let piece = Self.pieceText(readBack: readBack, heard: result?.recognized,
                                          insertions: result?.words.filter(\.isInsertion).count ?? 0,
                                          language: language) else { return nil }
-        return Piece(text: piece.text, pron: result, reference: reference,
-                     readBackReplaced: piece.replaced, startMs: startMs, placed: placed)
+        // Only against a script span the piece was placed on, and only when
+        // Azure's alignment held (see `pieceText`).
+        var text = piece.text
+        var restored = 0
+        if !piece.replaced, placed, let result,
+           result.words.filter(\.isInsertion).count <= maxInsertionsToTrust {
+            (text, restored) = ShadowEngine.restoringClearWords(heard: text, reference: reference,
+                                                                words: result.words, language: language)
+        }
+        return Piece(text: text, pron: result, reference: reference,
+                     readBackReplaced: piece.replaced, restoredWords: restored,
+                     startMs: startMs, placed: placed)
     }
 
     /// A long take's pronunciation when it was read as one file: windows of

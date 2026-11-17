@@ -332,6 +332,94 @@ enum ShadowEngine {
         return owner[first]..<(owner[last] + 1)
     }
 
+    /// A piece's read-back with the script's words put back where the OTHER
+    /// witness heard them clearly. The read-back is never shown the script,
+    /// so a word it can't know comes back as something else: on 2026-11-17
+    /// the founder read "welcome aboard this nawana Air flight to London"
+    /// and the read-back wrote "welcome aboard to this fly to London", while
+    /// Azure, judging the same audio against the script, timed and scored
+    /// this · nawana · air · flight at 94–97 with no error. A stretch where
+    /// the two disagree is restored to the script only when EVERY script
+    /// word in it came back from Azure as `None` at `minAccuracy` or more;
+    /// a word Azure marked omitted, inserted or mispronounced ("phones"
+    /// omitted with "devices" inserted, "stowed" at 29) keeps the read-back's
+    /// version. Spaced languages only; anything it can't place cleanly on
+    /// the read-back's own words is left as it was.
+    static func restoringClearWords(heard: String, reference: String,
+                                    words: [PronunciationResult.Word], language: String,
+                                    minAccuracy: Int = 85) -> (text: String, restored: Int) {
+        let style = LanguageCatalog.tokenStyle(language)
+        guard style == .word, !heard.isEmpty, !reference.isEmpty, !words.isEmpty else { return (heard, 0) }
+        let key = soundKey(for: language)
+        func toks(_ s: String) -> [String] { tokenize(expandForDiff(s, language: language), style: style) }
+
+        var heardWords = heard.split(whereSeparator: \.isWhitespace).map(String.init)
+        var hTok: [String] = [], hOwner: [Int] = []
+        for (i, w) in heardWords.enumerated() { for t in toks(w) { hTok.append(t); hOwner.append(i) } }
+        let refTok = toks(reference)
+        var aTok: [String] = [], aClear: [Bool] = []
+        for w in words where !w.isInsertion {
+            let clear = w.error == "None" && (w.accuracy ?? 0) >= minAccuracy
+            for t in toks(w.word) { aTok.append(t); aClear.append(clear) }
+        }
+        guard !refTok.isEmpty, !hTok.isEmpty, !aTok.isEmpty else { return (heard, 0) }
+
+        // Which script tokens Azure heard clearly.
+        var refClear = Array(repeating: false, count: refTok.count)
+        var i = 0, j = 0
+        for step in align(refTok, aTok, key: key).1 {
+            switch step.op {
+            case .match: refClear[i] = aClear[j]; i += 1; j += 1
+            case .sub: i += 1; j += 1
+            case .del: i += 1
+            case .ins: j += 1
+            }
+        }
+
+        // Stretches where the read-back and the script disagree.
+        struct Hunk { var ref: Range<Int>; var heard: Range<Int> }
+        var hunks: [Hunk] = []
+        var open: Hunk?
+        i = 0; j = 0
+        for step in align(refTok, hTok, key: key).1 {
+            if step.op == .match {
+                if let h = open { hunks.append(h); open = nil }
+                i += 1; j += 1
+                continue
+            }
+            if open == nil { open = Hunk(ref: i..<i, heard: j..<j) }
+            switch step.op {
+            case .sub: i += 1; j += 1
+            case .del: i += 1
+            case .ins: j += 1
+            case .match: break
+            }
+            if let h = open { open = Hunk(ref: h.ref.lowerBound..<i, heard: h.heard.lowerBound..<j) }
+        }
+        if let h = open { hunks.append(h) }
+
+        func boundary(_ t: Int) -> Bool { t == 0 || t == hTok.count || hOwner[t - 1] != hOwner[t] }
+        var restored = 0
+        for hunk in hunks.reversed() {
+            guard !hunk.ref.isEmpty, hunk.ref.allSatisfy({ refClear[$0] }),
+                  boundary(hunk.heard.lowerBound), boundary(hunk.heard.upperBound) else { continue }
+            let put = Array(refTok[hunk.ref])
+            if hunk.heard.isEmpty {
+                let at = hunk.heard.lowerBound == 0 ? 0 : hOwner[hunk.heard.lowerBound - 1] + 1
+                heardWords.insert(contentsOf: put, at: at)
+            } else {
+                let first = hOwner[hunk.heard.lowerBound], last = hOwner[hunk.heard.upperBound - 1]
+                // The sentence's own punctuation stays with it.
+                let tail = String(heardWords[last].reversed().prefix { $0.isPunctuation }.reversed())
+                var replacement = put
+                replacement[replacement.count - 1] += tail
+                heardWords.replaceSubrange(first...last, with: replacement)
+            }
+            restored += put.count
+        }
+        return (restored > 0 ? heardWords.joined(separator: " ") : heard, restored)
+    }
+
     static func heardLineEnd(target: String, heard: String, language: String) -> Bool {
         let style = LanguageCatalog.tokenStyle(language)
         let t = tokenize(expandForDiff(target, language: language), style: .word)
