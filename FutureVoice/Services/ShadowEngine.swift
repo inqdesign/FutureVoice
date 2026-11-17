@@ -878,6 +878,15 @@ enum ShadowEngine {
             if word == "hundred" || (word == "thousand" && n % 1000 < 100) { withAnd.append("and") }
         }
         out.append(withAnd.joined(separator: " "))
+        // "a thousand" and a bare "thousand" are written "1000" too. A take
+        // cut between "eighty-six" and "thousand" came back "86" + "1000
+        // people" and showed an added "one" (speech challenge, 2026-11-17).
+        for base in [words, withAnd] where base.count >= 2 && base[0] == "one"
+            && ["hundred", "thousand", "million", "billion"].contains(base[1]) {
+            let rest = base.dropFirst().joined(separator: " ")
+            out.append("a " + rest)
+            out.append(rest)
+        }
         if digits.count == 4, n >= 1000 {
             let hi = n / 100, lo = n % 100
             if lo == 0 {

@@ -60,6 +60,22 @@ final class ShadowEngineTests: XCTestCase {
         }
     }
 
+    /// A transcriber writes "1000" for "a thousand" and for a bare
+    /// "thousand" (a take read in pieces, cut after "eighty-six").
+    func testThousandWrittenAsDigitsAddsNoOne() {
+        for (target, learner) in [
+            ("more than eighty-six thousand people, aged fifty-one to ninety",
+             "more than eighty-six 1000 people aged fifty-one to 90"),
+            ("about a thousand people came", "about 1000 people came"),
+            ("a hundred and five tickets", "105 tickets"),
+        ] {
+            let a = ShadowEngine.analyze(target: target, learner: learner)
+            XCTAssertTrue(a.steps.allSatisfy { $0.op == .match }, "\(target) | \(learner): \(a.steps)")
+        }
+        let wrong = ShadowEngine.analyze(target: "eighty-six thousand people", learner: "eighty-six 2000 people")
+        XCTAssertFalse(wrong.steps.allSatisfy { $0.op == .match })
+    }
+
     /// A different number is still a different number.
     func testWrongYearIsStillWrong() {
         let a = ShadowEngine.analyze(target: "in nineteen eleven", learner: "in 1912")
