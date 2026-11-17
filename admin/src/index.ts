@@ -531,7 +531,7 @@ async function latestAppBuilds(env: Env): Promise<unknown[]> {
 }
 
 async function profileLangs(env: Env): Promise<Record<string, { native: string | null; target: string | null }>> {
-  const r = await fetch(`${env.SUPABASE_URL}/rest/v1/profiles?select=id,native_language,target_language`, {
+  const r = await fetch(`${env.SUPABASE_URL}/rest/v1/profiles?select=id,native_language,target_language,setup_at`, {
     headers: {
       apikey: env.SUPABASE_SERVICE_ROLE_KEY,
       Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
@@ -539,7 +539,11 @@ async function profileLangs(env: Env): Promise<Record<string, { native: string |
   });
   if (!r.ok) throw new Error(`profiles ${r.status}`);
   const out: Record<string, { native: string | null; target: string | null }> = {};
-  for (const x of await r.json() as { id: string; native_language: string | null; target_language: string | null }[]) {
+  // setup_at null = no build ever wrote this row: the pair is the column
+  // default (ko → en), not a choice, and drawing it read a Mexican learner
+  // as Korean (2026-11-17). Unknown stays "?".
+  for (const x of await r.json() as { id: string; native_language: string | null; target_language: string | null; setup_at: string | null }[]) {
+    if (!x.setup_at) continue;
     out[x.id] = { native: x.native_language, target: x.target_language };
   }
   return out;

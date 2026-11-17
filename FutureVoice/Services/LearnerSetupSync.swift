@@ -35,7 +35,10 @@ enum LearnerSetupSync {
 
     /// Skip the round trip when nothing has changed since the last push. The
     /// values change on a language switch or a level move, both rare, so this
-    /// is one request per install rather than one per launch.
+    /// is one request per install rather than one per launch. The stamp names
+    /// the ACCOUNT too (2026-11-17): it was the choices alone, so a second
+    /// account on the same phone with the same choices was never written and
+    /// its row kept the column default (ko → en).
     private static let lastKey = "futurevoice.profileSync.last"
 
     /// Mirror the current setup. Silent on every failure — this is a
@@ -44,10 +47,11 @@ enum LearnerSetupSync {
     @MainActor
     static func push(target: String, native: String,
                      level: CEFRLevel, force: Bool = false) {
-        let stamp = "\(target)|\(native)|\(level.rawValue)"
-        if !force, UserDefaults.standard.string(forKey: lastKey) == stamp { return }
         Task.detached(priority: .utility) {
             guard let session = try? await SupabaseProvider.shared.auth.session else { return }
+            let stamp = "\(session.user.id.uuidString)|\(target)|\(native)|\(level.rawValue)"
+            let last = await MainActor.run { UserDefaults.standard.string(forKey: lastKey) }
+            if !force, last == stamp { return }
             let now = ISO8601DateFormatter().string(from: Date())
             let row = Row(id: session.user.id.uuidString,
                           native_language: native,
