@@ -53,6 +53,15 @@ final class SpeechTakeSession: ObservableObject {
     private var guideStarts: [Double?] = []
     /// The take's clock minus the fluent reading's, set at the first word.
     private var guideOrigin: Double?
+    /// Listening first (2026-11-17, founder): the fluent reading played on
+    /// the take screen before a take, the prompter rising with it and the
+    /// word being read highlighted (`guide`). Paused, the script stays put;
+    /// a take, or the reading's end, puts it back at the top.
+    enum ListenState { case off, playing, paused }
+    @Published private(set) var listenState: ListenState = .off
+    @Published private(set) var listenLoading = false
+    let listen = SpeechListenModel()
+    private var listenTicker: Task<Void, Never>?
     /// Fixed-speed multiplier (0.7…1.3), only read when not following.
     @Published var speed: Double {
         didSet { UserDefaults.standard.set(speed, forKey: Self.speedKey) }
@@ -228,10 +237,59 @@ final class SpeechTakeSession: ObservableObject {
         if cameraOn { await camera.start() }
     }
 
+    // MARK: - Listen first
+
+    /// Play or pause the fluent reading. The first tap fetches its audio.
+    func toggleListen() async {
+        guard phase == .ready, fluentPaceAvailable, !listenLoading else { return }
+        if listenState == .playing { pauseListen(); return }
+        if listen.phase == .idle {
+            listenLoading = true
+            await listen.load(script)
+            listenLoading = false
+        }
+        guard listen.phase == .ready, phase == .ready else { return }
+        if listenState == .off { guide = 0 }
+        listen.toggle()
+        listenState = .playing
+        listenTicker?.cancel()
+        listenTicker = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 50_000_000)
+                guard !Task.isCancelled, let self, self.listenState == .playing else { return }
+                guard self.listen.player.isPlaying else {
+                    // Read to the end: back to the top.
+                    self.stopListen()
+                    return
+                }
+                let t = self.listen.player.currentTime
+                let at = self.guideStarts.lastIndex { ($0 ?? .infinity) <= t } ?? 0
+                if at != self.guide { self.guide = at }
+            }
+        }
+    }
+
+    /// Keeps the place (a sheet opening over the screen, or a second tap).
+    func pauseListen() {
+        guard listenState == .playing else { return }
+        listenTicker?.cancel()
+        listen.player.pause()
+        listenState = .paused
+    }
+
+    func stopListen() {
+        listenTicker?.cancel()
+        guard listenState != .off else { return }
+        listen.stop()
+        listenState = .off
+        guide = nil
+    }
+
     // MARK: - Record
 
     func start() async {
         guard phase == .ready || isFailed else { return }
+        stopListen()
         guard await LiveTranscriber.requestPermissions() else {
             phase = .failed(explain("Microphone and speech recognition are needed to record. Turn them on in Settings."))
             return
@@ -297,6 +355,7 @@ final class SpeechTakeSession: ObservableObject {
     /// top. Only between takes — the edit sheet can't open mid-take.
     func replaceScript(_ updated: SpeechScript) {
         guard phase == .ready || isFailed else { return }
+        stopListen()
         script = updated
         track = SpeechPrompterTrack(script: updated.body, language: updated.language)
         reset()
@@ -896,6 +955,7 @@ final class SpeechTakeSession: ObservableObject {
             Analytics.capture("speech_take_cancelled", followFacts().merging(["seconds": Int(clock), "closed": true]) { a, _ in a })
         }
         discardRecording()
+        stopListen()
         camera.stop()
     }
 

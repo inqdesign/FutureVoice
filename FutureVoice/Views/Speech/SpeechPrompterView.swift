@@ -129,16 +129,19 @@ struct SpeechPrompterView: View {
             SpeechTeleprompter(track: session.track, cursor: session.cursor,
                                language: session.script.language, textSize: textSize,
                                composer: session.composer,
-                               recording: isRecording,
-                               follow: session.followVoice,
+                               // The fluent reading played before a
+                               // take moves the script like a take does.
+                               recording: isRecording || session.listenState != .off,
+                               follow: session.followVoice || session.listenState != .off,
                                speed: session.speed,
                                // Karaoke keeps moving on the fluent clock,
                                // spoken or not.
                                voiceActive: { [session] in
-                                   (session.fluentPace && session.guide != nil) || session.voiceActive
+                                   if session.listenState != .off { return session.listenState == .playing }
+                                   return (session.fluentPace && session.guide != nil) || session.voiceActive
                                },
                                held: holding,
-                               guide: session.fluentPace ? session.guide : nil)
+                               guide: session.fluentPace || session.listenState != .off ? session.guide : nil)
                 .overlay(alignment: .top) {
                     if holding {
                         Label("Paused", systemImage: "pause.fill")
@@ -217,6 +220,7 @@ struct SpeechPrompterView: View {
             Spacer()
 
             HStack(spacing: 8) {
+                if session.fluentPaceAvailable { listenButton }
                 cornerButton("doc.text", label: Text("Whole script")) { showingScript = true }
                 cornerButton("clock.arrow.circlepath", label: Text("Takes")) { showingTakes = true }
                     .overlay(alignment: .topTrailing) {
@@ -287,6 +291,28 @@ struct SpeechPrompterView: View {
             .environmentObject(appState)
         }
         .fullScreenCover(isPresented: $showingTakes) { SpeechTakesPager(scriptId: session.script.id) }
+        .onChange(of: showingScript) { _, open in if open { session.pauseListen() } }
+        .onChange(of: showingTakes) { _, open in if open { session.pauseListen() } }
+    }
+
+    /// Hear the fluent reading before a take: the script rises with it.
+    private var listenButton: some View {
+        Button {
+            Task { await session.toggleListen() }
+        } label: {
+            Group {
+                if session.listenLoading {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Image(systemName: session.listenState == .playing ? "pause.fill" : "speaker.wave.2.fill")
+                        .font(.body.weight(.semibold))
+                }
+            }
+            .frame(width: 36, height: 36)
+        }
+        .buttonStyle(SpeechChromeButtonStyle(onCamera: cameraShowing))
+        .disabled(isRecording)
+        .accessibilityLabel(session.listenState == .playing ? Text("Pause") : Text("Fluent reading"))
     }
 
     private func cornerButton(_ symbol: String, label: Text, action: @escaping () -> Void) -> some View {
