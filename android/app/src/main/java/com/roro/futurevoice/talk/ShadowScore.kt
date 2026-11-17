@@ -152,8 +152,42 @@ object ShadowScore {
     private fun soundKey(language: String): (String) -> String = when {
         language.startsWith("ja") -> com.roro.futurevoice.data.JapaneseMorph::soundSpelling
         language.startsWith("zh") -> com.roro.futurevoice.data.ChineseMorph::simplified
+        language.startsWith("en") -> ::englishSpelling
         else -> { t -> t }
     }
+
+    /**
+     * British and American spellings of one word are one word: a script says
+     * "ageing", the transcriber writes "aging", and the reader said it right
+     * (iOS `englishSpelling`, 2026-11-17). Both sides go through this; the
+     * steps still carry what each side wrote. Families with one sound only.
+     */
+    fun englishSpelling(token: String): String {
+        if (token.length < 4) return token
+        SPELLING_PAIRS[token]?.let { return it }
+        var t = token
+        for ((pattern, template) in SPELLING_RULES) t = pattern.replace(t, template)
+        return t
+    }
+
+    private val SPELLING_PAIRS = mapOf(
+        "ageing" to "aging", "grey" to "gray", "greys" to "grays", "programme" to "program", "programmes" to "programs",
+        "tyre" to "tire", "tyres" to "tires", "jewellery" to "jewelry", "judgement" to "judgment",
+        "catalogue" to "catalog", "dialogue" to "dialog", "analogue" to "analog", "cosy" to "cozy",
+        "pyjamas" to "pajamas", "plough" to "plow", "sceptical" to "skeptical", "mould" to "mold",
+        "moustache" to "mustache", "doughnut" to "donut", "yoghurt" to "yogurt", "storey" to "story",
+        "kerb" to "curb", "draught" to "draft", "enrol" to "enroll", "fulfil" to "fulfill", "skilful" to "skillful",
+        "wilful" to "willful", "instalment" to "installment", "practise" to "practice", "practised" to "practiced",
+        "practising" to "practicing",
+    )
+    private val SPELLING_RULES = listOf(
+        Regex("^(colo|favo|hono|neighbo|behavio|labo|flavo|humo|rumo|harbo|endeavo|savo|vigo|armo|odo|tumo|vapo|rigo|splendo|parlo|glamo)u(r.*)$") to "$1$2",
+        Regex("^(.{3,})is(e|ed|es|ing|er|ers|ation|ations)$") to "$1iz$2",
+        Regex("^(.{3,})ys(e|ed|es|ing)$") to "$1yz$2",
+        Regex("^(cent|theat|met|lit|fib|calib|somb|spect|lust|meag)re(s?)$") to "$1er$2",
+        Regex("^(travel|cancel|model|label|level|signal|counsel|fuel|quarrel|marvel|jewel|dial|equal|total|channel|tunnel|shovel|panel)l(ed|ing|er|ers)$") to "$1$2",
+        Regex("^(defen|offen|licen|preten)ce(s?)$") to "$1se$2",
+    )
 
     /** Ops in TARGET order (`ins` skipped) — indexes align with [tokenSpans]. */
     fun targetOps(steps: List<DiffStep>): List<DiffOp> =
@@ -402,6 +436,9 @@ object ShadowScore {
         "lemme" to "let me", "gimme" to "give me", "kinda" to "kind of",
         "sorta" to "sort of", "outta" to "out of", "dunno" to "do not know",
         "'cause" to "because", "cuz" to "because",
+        // One word or two is the transcriber's: "All right, everyone" came
+        // back "Alright" and was marked (iOS 2026-11-17).
+        "alright" to "all right", "okay" to "ok",
     )
     private val SUFFIXES = listOf(
         "n't" to " not", "'re" to " are", "'m" to " am", "'ve" to " have",
@@ -554,6 +591,51 @@ object ShadowScore {
      * carries no reading.
      */
     private fun heardTokens(
+        heard: String, target: String, targetTokens: List<String>,
+        language: String, style: LanguageCatalog.TokenStyle,
+    ): List<String> {
+        val tokens = numberedTokens(heard, target, targetTokens, language, style)
+        return if (style == LanguageCatalog.TokenStyle.WORD) joiningCompounds(tokens, targetTokens, language) else tokens
+    }
+
+    /**
+     * One word or two is the transcriber's choice, not the mouth's: a script's
+     * "shortcut" came back "short cut" and showed a wrong word and an added
+     * one, "every day" came back "everyday" (iOS `joiningCompounds`,
+     * 2026-11-17). Two heard words that make one of the target's, or one heard
+     * word that is two of the target's in a row, are written the target's way,
+     * wherever that brings the two closer.
+     */
+    private fun joiningCompounds(heard: List<String>, targetTokens: List<String>, language: String): List<String> {
+        if (heard.isEmpty() || targetTokens.size < 2) return heard
+        val key = soundKey(language)
+        val single = targetTokens.map(key).toSet()
+        val pairs = HashMap<String, Pair<String, String>>()
+        for (i in 0 until targetTokens.size - 1) pairs[key(targetTokens[i] + targetTokens[i + 1])] = targetTokens[i] to targetTokens[i + 1]
+        var tokens = heard
+        fun cost(t: List<String>): Int { val (matched, steps) = align(targetTokens, t, key); return steps.size - matched }
+        var best: Int? = null
+        var i = 0
+        while (i < tokens.size) {
+            var trial: List<String>? = null
+            val pair = pairs[key(tokens[i])]
+            if (i + 1 < tokens.size && key(tokens[i] + tokens[i + 1]) in single &&
+                !(key(tokens[i]) in single && key(tokens[i + 1]) in single)) {
+                trial = tokens.subList(0, i) + (tokens[i] + tokens[i + 1]) + tokens.subList(i + 2, tokens.size)
+            } else if (pair != null && key(tokens[i]) !in single) {
+                trial = tokens.subList(0, i) + pair.first + pair.second + tokens.subList(i + 1, tokens.size)
+            }
+            if (trial != null) {
+                val before = best ?: cost(tokens)
+                val after = cost(trial)
+                if (after < before) { tokens = trial; best = after } else best = before
+            }
+            i++
+        }
+        return tokens
+    }
+
+    private fun numberedTokens(
         heard: String, target: String, targetTokens: List<String>,
         language: String, style: LanguageCatalog.TokenStyle,
     ): List<String> {

@@ -93,6 +93,30 @@ class ShadowNumberReadingTest {
         org.junit.Assert.assertEquals(0..3, ShadowScore.scriptRange("the more you read", twice, "en", 0))
     }
 
+    @Test fun spellingAndCompoundsAreNotSlips() {
+        assertTrue(clean("more likely to be ageing faster", "more likely to be aging faster"))
+        assertTrue(clean("my favourite colour is grey", "my favorite color is gray"))
+        assertTrue(clean("we realised the centre was cancelled", "we realized the center was canceled"))
+        assertTrue(clean("she had a feeling about a shortcut", "she had a feeling about a short cut"))
+        assertTrue(clean("through every breakup, every bad haircut", "through every break up every bad hair cut"))
+        assertTrue(clean("a happy journey every day", "a happy journey everyday"))
+        assertTrue(clean("make sure your seatbelts are fastened", "make sure your seat belts are fastened"))
+        assertTrue(clean("All right, everyone, come closer", "Alright everyone come closer"))
+        assertTrue(clean("okay, e-books are fine", "OK ebooks are fine"))
+        assertFalse(clean("I learned it for four years", "I learnt it for for years"))
+        assertFalse(clean("she won the prize", "she won the price"))
+        assertFalse(clean("we went in to see him", "we went to see him"))
+    }
+
+    @Test fun coverageHasToBeReadTo() {
+        val script = "Have you ever heard that learning a language can slow down ageing? It sounds almost too good to be true, so let's look at what the research actually says. In the study, people who spoke only one language were more likely to be ageing faster than expected, and that can't hurt you."
+        fun coverage(said: String) = com.roro.futurevoice.talk.SpeechAnalyzer.coverage(ShadowScore.analyze(script, said, "en").steps)
+        assertTrue(coverage("chuchu chuchu thank you thank you hello hello anger hello boy boy") < 0.1)
+        assertTrue(coverage("you return home hello help help a car car car piece piece piece") < 0.1)
+        org.junit.Assert.assertEquals(1.0, coverage(script), 0.001)
+        org.junit.Assert.assertEquals(12.0 / 53, coverage("Have you ever heard that learning language can slow down aging"), 0.03)
+    }
+
     @Test fun wrongYearIsStillWrong() {
         assertFalse(clean("in nineteen eleven", "in 1912"))
     }

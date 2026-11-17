@@ -128,7 +128,16 @@ object SpeechAnalyzer {
 
     fun slips(steps: List<ShadowScore.DiffStep>, language: String, names: Set<String> = emptySet()): Int {
         val first = steps.indexOfFirst { it.op == ShadowScore.DiffOp.MATCH }
-        val last = steps.indexOfLast { it.op == ShadowScore.DiffOp.MATCH }
+        // "The last word read" is where the reading got to ([reached]), not a
+        // stray match further on (iOS 2026-11-17).
+        val end = reached(steps)
+        var seen = -1
+        var last = -1
+        for ((i, step) in steps.withIndex()) {
+            if (step.op == ShadowScore.DiffOp.INS) continue
+            seen++
+            if (step.op == ShadowScore.DiffOp.MATCH && seen <= end) last = i
+        }
         if (first < 0 || first >= last) return 0
         val fillerWords = SpeechLibrary.fillers(language).map { it.lowercase() }.toSet()
         return steps.subList(first, last + 1).count { step ->
@@ -167,20 +176,31 @@ object SpeechAnalyzer {
      * LAST token.
      */
     fun coverage(steps: List<ShadowScore.DiffStep>): Double {
-        var index = -1
-        var reached = -1
-        var extending = false
-        var total = 0
-        for (step in steps) {
-            when (step.op) {
-                ShadowScore.DiffOp.INS -> continue
-                ShadowScore.DiffOp.MATCH -> { index += 1; total += 1; reached = index; extending = true }
-                ShadowScore.DiffOp.SUB -> { index += 1; total += 1; if (extending) reached = index }
-                ShadowScore.DiffOp.DEL -> { index += 1; total += 1; extending = false }
-            }
-        }
+        val total = steps.count { it.op != ShadowScore.DiffOp.INS }
         if (total == 0) return 1.0
-        return (reached + 1).toDouble() / total
+        return (reached(steps) + 1).toDouble() / total
+    }
+
+    /**
+     * The last script token the reader got to (-1: none). The end has to be
+     * READ to, not landed on: the alignment may place a stray word anywhere,
+     * and twelve words of nonsense matched a "you" near a script's end and
+     * read as 95% of it (iOS, 2026-11-17). A match counts as reached only
+     * when at least half of the ten script tokens ending at it were matched.
+     */
+    fun reached(steps: List<ShadowScore.DiffStep>): Int {
+        val ops = steps.filter { it.op != ShadowScore.DiffOp.INS }.map { it.op }
+        val before = IntArray(ops.size + 1)
+        for (i in ops.indices) before[i + 1] = before[i] + (if (ops[i] == ShadowScore.DiffOp.MATCH) 1 else 0)
+        var reached = -1
+        for (index in ops.indices.reversed()) {
+            if (ops[index] != ShadowScore.DiffOp.MATCH) continue
+            val from = maxOf(0, index - 9)
+            if ((before[index + 1] - before[from]) * 2 >= index - from + 1) { reached = index; break }
+        }
+        // A misread word right after it is still the end.
+        while (reached >= 0 && reached + 1 < ops.size && ops[reached + 1] == ShadowScore.DiffOp.SUB) reached++
+        return reached
     }
 
     /** Which rules a take was scored by (iOS `scoringVersion`): 3 = with
