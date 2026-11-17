@@ -7569,9 +7569,17 @@ extension View {
     @ViewBuilder
     func fadingBottomBar<Bar: View>(@ViewBuilder _ bar: () -> Bar) -> some View {
         if #available(iOS 26, *) {
+            // The wash rides under the system effect too (2026-11-17): on a
+            // learner's iOS 26/27 phone the soft edge effect drew NOTHING,
+            // and a tall call bar (caption, translation, hint, pill) sat
+            // straight on top of the transcript, both unreadable. Where the
+            // system effect works the wash is the same page colour it fades
+            // to, so nothing changes there.
             self
                 .scrollEdgeEffectStyle(.soft, for: .bottom)
-                .safeAreaBar(edge: .bottom, spacing: 0, content: bar)
+                .safeAreaBar(edge: .bottom, spacing: 0) {
+                    bar().background(alignment: .top) { BottomBarWash() }
+                }
         } else {
             self.safeAreaInset(edge: .bottom, spacing: 0) {
                 bar().background(alignment: .top) { BottomBarWash() }
@@ -7580,7 +7588,8 @@ extension View {
     }
 }
 
-/// Pre-iOS-26 stand-in for the scroll-edge effect: page colour under the
+/// Stand-in for the scroll-edge effect (and, since 2026-11-17, its backing
+/// on iOS 26+ where the system effect can fail to draw): page colour under the
 /// bar (and on down through the home indicator), with a gradient into
 /// transparency reaching `fadeHeight` ABOVE the bar's top edge — the
 /// negative padding is what lets it overhang, which pins the fade to the bar
