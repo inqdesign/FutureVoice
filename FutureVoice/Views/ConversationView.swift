@@ -51,6 +51,12 @@ struct ConversationView: View {
     /// prompt is rebuilt every turn and the realtime gateway is handed it
     /// once, and both must describe the same call.
     @State private var promptClock: PromptClock?
+    /// A free talk's hello is written before the prompt carries the clock
+    /// (2026-11-17, founder: "it keeps saying the time"). Nobody has spoken
+    /// yet, so the hello was filled with whatever fact sat nearest, and that
+    /// was the day and the hour, on every call. The clock joins the prompt
+    /// once the hello is said (`giveClockAfterHello`).
+    @State private var helloBeforeClock = false
     /// How this call follows a hello answered with no subject — drawn with
     /// the clock, once per call (`ConversationEngine.FreeTalkCue`).
     @State private var freeTalkCue: ConversationEngine.FreeTalkCue = .plainQuestion
@@ -3150,6 +3156,7 @@ struct ConversationView: View {
                 // lines written ahead, whose fallback was the same line on
                 // every call.
                 if promptClock == nil { pinPromptClock() }
+                helloBeforeClock = true
                 await startRealtimeCall(opener: nil)
                 guard !isTornDown else { return }
                 realtime.nudge(FreeTalkOpeners.sayHelloNote)
@@ -3306,6 +3313,7 @@ struct ConversationView: View {
         }
         realtime.onUserTurn = { text, url, ms, fluency, flags in
             guard !isTornDown else { return }
+            giveClockAfterHello()
             // A turn whose correction is skipped (own language, a
             // pronunciation call) still ends the early one.
             if flags.native || pronThisCall { _ = takeEarlyCorrection(matching: "") }
@@ -3422,6 +3430,7 @@ struct ConversationView: View {
         }
         realtime.onReplyFinished = { context, text, url, ms in
             guard !isTornDown else { return }
+            giveClockAfterHello()
             guard let id = realtimeReplyTurns[context],
                   let idx = turns.firstIndex(where: { $0.id == id }) else { return }
             // A line still draining through the player is still being
@@ -7001,6 +7010,14 @@ struct ConversationView: View {
         realtime.setHoldReplies(tutorHolds)
     }
 
+    /// The hello is out (or the learner spoke over it): from here the prompt
+    /// knows the day, the hour and the talks before this one.
+    private func giveClockAfterHello() {
+        guard helloBeforeClock else { return }
+        helloBeforeClock = false
+        realtime.setSystem(systemPrompt() + realtimeStyleRules)
+    }
+
     private func systemPrompt() -> String {
         // Pinned in onAppear; a prompt asked for before that still gets a
         // clock rather than none.
@@ -7026,7 +7043,7 @@ struct ConversationView: View {
                 appState.scenarios.first { $0.id == sid }?.brief
             },
             firstMeeting: isFirstMeeting,
-            clock: promptClock,
+            clock: helloBeforeClock ? nil : promptClock,
             tutor: tutorThisCall,
             freeTalkCue: freeTalkCue,
             earlierToday: earlierToday,

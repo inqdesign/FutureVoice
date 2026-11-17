@@ -3165,6 +3165,16 @@ interviewer.
   before, 0/8 after; "You sound like you've had a busy morning" 7/8
   without the fact, 0/16 with it; the earlier talk is still known when the
   learner brings it up. Both are in the app, so they need a build.
+- **The hello is written before the prompt has the clock** (same day,
+  founder: "knowing the time is fine, saying it every call is the
+  problem"). Nobody has spoken yet, so the hello was filled with the nearest
+  fact: "It's Tuesday morning" on 8/10 hellos, wherever the clock sat in the
+  prompt and whatever wording was added. With no clock in the prompt, 0/20,
+  first and later calls. `ConversationView.helloBeforeClock`: the hello's
+  prompt carries no day, hour or talk counts, and the full prompt goes out
+  by `set.system` once the hello ends or the learner speaks
+  (`giveClockAfterHello`). The hello is nearly one line now ("It's good to
+  hear your voice. How's your day going so far?" 17/20). App only.
 - **"That wasn't me" works by voice** (same day, `MisheardJudge`). A line
   that disowns an earlier one ("you misheard", "that was someone else")
   flags that line the way the transcript page's swipe does: out of every
