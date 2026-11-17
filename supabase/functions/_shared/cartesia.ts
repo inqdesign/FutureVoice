@@ -253,9 +253,13 @@ export function lineLanguage(text: string, target: string | null | undefined): s
  *  at 1.0 speaks 15–35% slower than the app's rungs were tuned for, and its
  *  knob is weak — 1.0 → 1.5 is only 6–12% faster. So the rungs are stretched
  *  over Cartesia's whole upper range: Slow → 1.0, Relaxed → ~1.17,
- *  Normal → 1.5. Absent = the app's Normal, 1.0. */
+ *  Normal → 1.5. Absent = the app's Normal, 1.0.
+ *  Since 2026-11-17 Slow (and anything slower, e.g. an old build's 0.8) is
+ *  Cartesia's floor, 0.6: an A1 learner found Cartesia 1.0 too fast, and the
+ *  founder picked 0.6 by ear over 0.7–0.9 (~22% longer than 1.0). */
 export function cartesiaSpeed(speed: number | undefined): number {
   const s = typeof speed === "number" && speed >= 0.6 && speed <= 1.5 ? speed : 1.0
+  if (s <= 0.85) return 0.6
   return Math.max(0.6, Math.min(1.5, 1.0 + (s - 0.85) / 0.15 * 0.5))
 }
 
