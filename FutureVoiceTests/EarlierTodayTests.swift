@@ -42,6 +42,48 @@ final class EarlierTodayTests: XCTestCase {
         return try! JSONDecoder().decode(PronunciationEntry.self, from: data)
     }
 
+    // MARK: - The record a later call carries (2026-11-17, learner report)
+
+    private func line(_ role: TurnRole, _ text: String, _ at: Date, misheard: Bool = false) -> Turn {
+        var t = Turn(id: UUID(), role: role, audioURL: nil, transcript: text,
+                     durationMs: 1000, timestamp: at, suggestion: nil)
+        t.excludedFromScoring = misheard
+        return t
+    }
+
+    /// "On my way home" came early in a talk; the next call must still see it.
+    func testALongTalkCarriesMoreThanItsLastTenLines() throws {
+        let end = at(4, 8)
+        var turns = [line(.user, "I'm on my way back home from lunch", end.addingTimeInterval(-900))]
+        for i in 0..<14 {
+            turns.append(line(.fluentSelf, "reply \(i)", end.addingTimeInterval(Double(-800 + i * 50))))
+            turns.append(line(.user, "answer \(i)", end.addingTimeInterval(Double(-780 + i * 50))))
+        }
+        let s = Session(id: UUID(), userId: UUID(), targetLanguage: "en", mode: .conversation,
+                        topic: nil, startedAt: end.addingTimeInterval(-1000), endedAt: end,
+                        turns: turns, summary: nil)
+        let e = try XCTUnwrap(EarlierToday.latest(now: at(4, 11), sessions: [s], pronEntries: [], calendar: cal))
+        XCTAssertTrue(e.record.contains("on my way back home"))
+    }
+
+    /// A line flagged as misheard, and the reply built on it, never reach
+    /// the next call.
+    func testAMisheardLineAndItsReplyStayOut() throws {
+        let end = at(4, 8)
+        let turns = [
+            line(.user, "I'm on my way back home", end.addingTimeInterval(-120)),
+            line(.fluentSelf, "Nice, how was lunch?", end.addingTimeInterval(-100)),
+            line(.user, "She is here for six month.", end.addingTimeInterval(-60), misheard: true),
+            line(.fluentSelf, "Oh, your friend is in Singapore for six months?", end),
+        ]
+        let s = Session(id: UUID(), userId: UUID(), targetLanguage: "en", mode: .conversation,
+                        topic: nil, startedAt: end.addingTimeInterval(-300), endedAt: end,
+                        turns: turns, summary: nil)
+        let e = try XCTUnwrap(EarlierToday.latest(now: at(4, 11), sessions: [s], pronEntries: [], calendar: cal))
+        XCTAssertTrue(e.record.contains("how was lunch"))
+        XCTAssertFalse(e.record.contains("six month"))
+    }
+
     // MARK: - What came earlier
 
     func testNothingEarlierTodayIsNil() {

@@ -359,7 +359,13 @@ struct EarlierToday: Equatable {
                 .flatMap { $0.isEmpty ? nil : " about \"\($0)\"" } ?? ""
             head = "A talk\(about) that ended \(gap)."
         }
-        let lines = lastLines(s.turns, count: kind == .talk ? 10 : 6)
+        // A talk carries as much as a person's call history does
+        // (`PersonHistory`, 30 lines / 3,000 chars). It was the last 10 lines
+        // until 2026-11-17: a learner said "on my way home" earlier in a talk,
+        // the next call said it had "no clear record" of it, and opened
+        // instead on a street voice the mic had caught in the last lines.
+        let lines = kind == .talk ? lastLines(s.turns, count: 30, budget: 3000)
+                                  : lastLines(s.turns, count: 6)
         let record = lines.isEmpty ? head : head + "\nIts last lines, oldest first:\n" + lines
         return EarlierToday(kind: kind, key: s.id.uuidString, endedAt: endedAt, record: record)
     }
@@ -368,7 +374,15 @@ struct EarlierToday: Equatable {
     private static func lastLines(_ turns: [Turn], count: Int, budget: Int = 1400) -> String {
         var out: [String] = []
         var used = 0
-        for t in turns.reversed() {
+        // A line the learner flagged as misheard was never theirs (a street
+        // voice, a mishearing), and the reply right after it was built on it:
+        // both stay out, or the next call opens on them.
+        var dropped = Set<UUID>()
+        for (i, t) in turns.enumerated() where t.role == .user && t.excludedFromScoring {
+            dropped.insert(t.id)
+            if i + 1 < turns.count, turns[i + 1].role != .user { dropped.insert(turns[i + 1].id) }
+        }
+        for t in turns.reversed() where !dropped.contains(t.id) {
             let text = t.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !text.isEmpty else { continue }
             let line = "\(t.role == .user ? "them" : "you"): \"\(clip(text, 200))\""

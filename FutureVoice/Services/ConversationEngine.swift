@@ -294,7 +294,11 @@ enum ConversationEngine {
         go with theirs. Never recap it, quote it back at length, or score \
         it — a lesson or a drill is time you spent with them, mentioned the \
         way a friend would, not a report. If it was a talk that stopped only \
-        minutes ago, simply carry on from its last lines.
+        minutes ago, simply carry on from its last lines. This is only \
+        part of that talk: if they mention something from it you don't see \
+        here, take their word for it, never say you have no record of it. \
+        If they say a line in it wasn't theirs (a voice nearby, a \
+        mishearing), believe them, drop it and don't bring it up again.
         """ } ?? ""
 
         // "My own topic" (topics page, draft 2026-10-18): not a free talk.
