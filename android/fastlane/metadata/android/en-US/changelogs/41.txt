@@ -1,0 +1,2 @@
+Fixed
+• Idioms you say in a call now tick their chip more reliably.

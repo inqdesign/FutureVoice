@@ -140,6 +140,10 @@ data class SpeechTake(
      *  camera alone and the script is drawn when it is wanted. Null on earlier
      *  takes, whose video has the script burned into it (iOS 85fca8ba). */
     val prompter: SpeechPrompterRecord? = null,
+    /** The microphone the take came through, as iOS names its input port
+     *  ("MicrophoneBuiltIn", "BluetoothHFP"…). Android does not write it; it
+     *  is kept so a synced iOS take does not lose it here (iOS a145ef6c). */
+    val inputPort: String? = null,
 ) {
     /** The video is the camera alone. iOS also reads `scoring >= 7` as this;
      *  here takes scored 7 were still made with the script in the picture, so
