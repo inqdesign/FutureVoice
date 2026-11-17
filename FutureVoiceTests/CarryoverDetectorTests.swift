@@ -89,6 +89,65 @@ final class CarryoverDetectorTests: XCTestCase {
                                                   rejectingMistake: "here for six month"))
     }
 
+    /// An idiom is spent the way it is SAID (2026-11-17, a learner who builds
+    /// scenes around idioms: "the idiom often isn't recognised"). Two-word
+    /// expressions, a hyphen the transcriber drops, the dictionary's
+    /// "someone's" and leading "to", and expanded contractions.
+    func testAnIdiomTicksTheWayItIsSaid() {
+        let said: [(String, String)] = [
+            ("catch-22", "it is a catch 22 situation"),
+            ("catch-22", "it is a Catch-22 situation"),
+            ("a catch-22", "it is a catch-22 situation"),
+            ("sensible plan", "I think that is a sensible plan"),
+            ("no-brainer", "that was a no brainer for me"),
+            ("ballpark figure", "give me a ballpark figure"),
+            ("pull someone's leg", "are you pulling my leg"),
+            ("make up one's mind", "I can't make up my mind"),
+            ("get on someone's nerves", "he really gets on my nerves"),
+            ("strike a nerve", "that comment struck a nerve"),
+            ("strike a nerve", "it struck quite a raw nerve with her"),
+            ("hit the nail on the head", "you hit the nail right on the head"),
+            ("a blessing in disguise", "it was kind of a blessing in disguise"),
+            ("bite the bullet", "I just had to bite the bullet"),
+            ("take it with a grain of salt", "I took it with a grain of salt"),
+            ("take something with a grain of salt", "I took his advice with a grain of salt"),
+            ("be on the same page", "we are not on the same page"),
+            ("to cut corners", "they were cutting corners"),
+            ("cut corners", "they cut some corners"),
+            ("up in the air", "everything is still up in the air"),
+            ("touch base", "let's touch base next week"),
+            ("out of the blue", "he called me out of the blue"),
+            ("I couldn't agree more", "I could not agree more"),
+            ("it's not my cup of tea", "that is not my cup of tea"),
+            ("sensible plan", "we need some sensible plans"),
+            ("rule of thumb", "as a rule of thumb"),
+        ]
+        for (item, line) in said {
+            XCTAssertTrue(ticks(item, line), "\(item) ← \(line)")
+        }
+        let notSaid: [(String, String)] = [
+            ("cut corners", "I cut my finger on the corner of the table"),
+            ("sensible plan", "the plan was not sensible at all"),
+            ("pull someone's leg", "I pulled the door and hurt my leg on the way out of the room"),
+            ("strike a nerve", "the nerve of him to strike me"),
+        ]
+        for (item, line) in notSaid {
+            XCTAssertFalse(ticks(item, line), "\(item) ← \(line)")
+        }
+        // Small talk is still no chip at all.
+        for item in ["how are you", "thank you", "I think"] {
+            XCTAssertFalse(CarryoverDetector.isSpendable(item), item)
+        }
+    }
+
+    /// The chip row's own check (`TalkGoalChips`).
+    private func ticks(_ item: String, _ line: String) -> Bool {
+        WordSplitter.isSingleWord(item)
+            ? CarryoverDetector.saysWord(item, in: line)
+            : CarryoverDetector.isSpendable(item)
+                && CarryoverDetector.firstMatch(of: item, in: [userTurn(line)]) != nil
+    }
+
     // MARK: - A correction card is credited only when the mistake is gone
 
     private func correction(_ source: String, _ target: String) -> DrillCard {

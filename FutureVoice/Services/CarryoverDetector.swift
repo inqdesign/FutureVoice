@@ -256,16 +256,20 @@ enum CarryoverDetector {
         // correction (`source` set) stays exact, or "six month" would spend
         // the card "six months" (2026-11-17, learner report).
         let fold = source == nil && foldsInflection
-        let needle = tokens(item).map { politeFree ? strippingPolite($0) : $0 }
-            .map { fold ? folded($0) : $0 }
-        let core = politeFree ? needle : contentTokens(item).map { fold ? folded($0) : $0 }
-        guard needle.count >= minTokensNow, core.count >= minContentTokensNow else { return nil }
+        // The same spend reads an idiom the way it is said, not the way a
+        // dictionary lists it (`spendNeedle`).
+        let spent = fold ? spendNeedle(item) : nil
+        let needle = spent?.tokens ?? tokens(item).map { politeFree ? strippingPolite($0) : $0 }
+        let core = politeFree ? needle : (spent?.tokens.filter { !isFiller($0) } ?? contentTokens(item))
+        guard needle.count >= (fold ? minSpendTokens : minTokensNow),
+              core.count >= minContentTokensNow else { return nil }
+        let window = spent.map { spendWindow(tokens: $0.tokens.count, slots: $0.slots) }
         let koreanNeedle = korean ? koreanKey(item, politeFree: politeFree) : ""
         if korean, koreanNeedle.count < minKoreanSyllables { return nil }
         for turn in userTurns {
-            let hay = tokens(turn.transcript).map { politeFree ? strippingPolite($0) : $0 }
-                .map { fold ? folded($0) : $0 }
-            if let span = matchedSpan(needle, core: core, in: hay) {
+            let hay = fold ? spendTokens(turn.transcript).map(folded)
+                : tokens(turn.transcript).map { politeFree ? strippingPolite($0) : $0 }
+            if let span = matchedSpan(needle, core: core, in: hay, window: window) {
                 if let source, !showsTheFix(from: source, to: item, in: span) { continue }
             } else if korean, koreanKey(turn.transcript, politeFree: politeFree).contains(koreanNeedle) {
                 // Same syllables, spaced differently. The match is the
@@ -327,6 +331,69 @@ enum CarryoverDetector {
     /// offering "thanks a lot" as something to use today is a checkbox that
     /// cannot tick, and one of those teaches the learner the whole row is
     /// decorative.
+    /// Can a chip or a book expression reading `phrase` ever tick? The spend
+    /// path's own gate (`firstMatch` with no source): two words that both
+    /// carry meaning are enough ("sensible plan", "touch base"), and a slot
+    /// word is not one of them.
+    static func isSpendable(_ phrase: String) -> Bool {
+        guard foldsInflection else { return isCreditable(phrase) }
+        let needle = spendNeedle(phrase).tokens
+        return needle.count >= minSpendTokens
+            && needle.filter { !isFiller($0) }.count >= minContentTokensNow
+    }
+
+    /// An idiom being SPENT, as it is said (2026-11-17, a learner who builds
+    /// scenes around idioms: "the idiom often isn't recognised"). Of 25
+    /// idioms run through the chip matcher, 11 could not tick however they
+    /// were said. What is read differently here, and only here:
+    ///   • two words are a phrase when both carry meaning. Under three, an
+    ///     item was never offered as a chip at all ("sensible plan");
+    ///   • a hyphen is a space, since the transcriber writes "catch 22" and
+    ///     "no brainer";
+    ///   • the dictionary's slot words (someone's, one's, something) are a
+    ///     gap the learner fills: "pull someone's leg" is "pulling my leg";
+    ///   • a leading "to" is the dictionary's, not the idiom's;
+    ///   • English contractions are spelled out on both sides, since the
+    ///     transcriber expands them ("I could not agree more").
+    /// A correction card never comes through here: it is matched exactly.
+    static func spendNeedle(_ item: String) -> (tokens: [String], slots: Int) {
+        var words = spendTokens(item)
+        if words.count > 2, words.first == "to" { words.removeFirst() }
+        let kept = words.filter { !slotWords.contains($0) }
+        return (kept.map(folded), words.count - kept.count)
+    }
+
+    static func spendTokens(_ text: String) -> [String] {
+        let words = tokens(text.replacingOccurrences(of: "-", with: " ")
+            .replacingOccurrences(of: "\u{2011}", with: " "))
+        guard LanguageCatalog.base(LanguageScope.active) == "en" else { return words }
+        return words.flatMap { contractions[$0] ?? [$0] }
+    }
+
+    private static let minSpendTokens = 2
+
+    /// How far apart the words may sit. A two-word item gets one word of
+    /// padding ("cut some corners"), or "cut my finger on the corner" spends
+    /// "cut corners"; each slot adds room for what fills it.
+    private static func spendWindow(tokens: Int, slots: Int) -> Int {
+        (tokens <= 2 ? tokens + 1 : tokens * 2 + 4) + slots * 3
+    }
+
+    private static let slotWords: Set<String> = [
+        "someones", "someone", "somebodys", "somebody", "something", "ones", "sb", "sbs", "sth",
+    ]
+
+    private static let contractions: [String: [String]] = [
+        "dont": ["do", "not"], "doesnt": ["does", "not"], "didnt": ["did", "not"],
+        "cant": ["can", "not"], "cannot": ["can", "not"], "couldnt": ["could", "not"],
+        "wouldnt": ["would", "not"], "shouldnt": ["should", "not"], "wont": ["will", "not"],
+        "isnt": ["is", "not"], "arent": ["are", "not"], "wasnt": ["was", "not"],
+        "werent": ["were", "not"], "havent": ["have", "not"], "hasnt": ["has", "not"],
+        "hadnt": ["had", "not"], "im": ["i", "am"], "ive": ["i", "have"],
+        "youre": ["you", "are"], "youve": ["you", "have"], "theyre": ["they", "are"],
+        "thats": ["that", "is"], "theres": ["there", "is"], "lets": ["let", "us"],
+    ]
+
     static func isCreditable(_ phrase: String) -> Bool {
         tokens(phrase).count >= minTokensNow && contentTokens(phrase).count >= minContentTokensNow
             && (!isKorean || koreanKey(phrase, politeFree: false).count >= minKoreanSyllables)
@@ -403,6 +470,10 @@ enum CarryoverDetector {
         guard !key.isEmpty, !key.contains(" ") else { return false }
         let target = folded(key)
         if tokens(text).contains(where: { $0 == key || folded($0) == target }) { return true }
+        // "catch-22" and "no-brainer" are one word on the chip and two in
+        // the transcript ("catch 22", "no brainer").
+        let said = spendTokens(text)
+        if said.count > 1, zip(said, said.dropFirst()).contains(where: { $0 + $1 == key }) { return true }
         let inContext = VocabStore.lemmas(in: [text])
         return inContext.contains(key) || inContext.contains(target)
     }
@@ -434,11 +505,12 @@ enum CarryoverDetector {
     /// The learner's words that matched, trimmed to the phrase itself — from
     /// the first token of the item to its last — so a check on what was said
     /// AROUND the phrase can't be fooled by the rest of the window.
-    private static func matchedSpan(_ needle: [String], core: [String], in hay: [String]) -> [String]? {
-        guard !needle.isEmpty, hay.count >= minTokensNow else { return nil }
+    private static func matchedSpan(_ needle: [String], core: [String], in hay: [String],
+                                    window: Int? = nil) -> [String]? {
+        guard !needle.isEmpty, hay.count >= (window == nil ? minTokensNow : 1) else { return nil }
         // Room for the learner to pad the phrase out — "I'd rather just stay
         // in tonight, honestly" still counts.
-        let window = needle.count * 2 + 4
+        let window = window ?? needle.count * 2 + 4
         let required = Int((Double(needle.count) * minCoverage).rounded(.up))
         guard hay.count >= required else { return nil }
         for start in 0...(hay.count - required) {

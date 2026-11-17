@@ -76,7 +76,7 @@ enum TalkGoalPicker {
                 .sorted { (store.expressionRecords[$0]?.lastAt ?? .distantPast)
                         > (store.expressionRecords[$1]?.lastAt ?? .distantPast) },
             now: now, calendar: calendar)
-            .filter { CarryoverDetector.isCreditable($0) }
+            .filter { CarryoverDetector.isSpendable($0) }
             .map { TalkGoalItem(key: CarryoverDetector.normalized($0), text: $0,
                                 isWord: false, claimedKnown: true) }
         let knownWords = rotated(
@@ -85,11 +85,11 @@ enum TalkGoalPicker {
             now: now, calendar: calendar)
             .map { TalkGoalItem(key: CarryoverDetector.normalized($0), text: $0,
                                 isWord: WordSplitter.isSingleWord($0), claimedKnown: true) }
-            .filter { $0.isWord || CarryoverDetector.isCreditable($0.text) }
+            .filter { $0.isWord || CarryoverDetector.isSpendable($0.text) }
 
         let studyingPhrases = ordered(store.studyingExpressions.filter { !store.hasUsedExpression($0) },
                                       kind: .expression, now: now, calendar: calendar)
-            .filter { CarryoverDetector.isCreditable($0) }
+            .filter { CarryoverDetector.isSpendable($0) }
             .map { TalkGoalItem(key: CarryoverDetector.normalized($0), text: $0, isWord: false) }
 
         let studyingWords = ordered(store.practicedStudyingWords, kind: .word, now: now, calendar: calendar)
@@ -101,7 +101,7 @@ enum TalkGoalPicker {
                 return TalkGoalItem(key: CarryoverDetector.normalized(word),
                                     text: word, isWord: single)
             }
-            .filter { $0.isWord || CarryoverDetector.isCreditable($0.text) }
+            .filter { $0.isWord || CarryoverDetector.isSpendable($0.text) }
 
         return merge(words: knownWords + studyingWords,
                      phrases: knownPhrases + studyingPhrases, limit: limit)
@@ -149,10 +149,10 @@ enum TalkGoalPicker {
         let curriculum = scenario.curriculum
         let bookWords = rotated(by: runs, (curriculum?.words ?? [])
             .filter { $0.masteredAt == nil }.map(bookItem))
-            .filter { $0.isWord || CarryoverDetector.isCreditable($0.text) }
+            .filter { $0.isWord || CarryoverDetector.isSpendable($0.text) }
         let bookPhrases = rotated(by: runs, (curriculum?.expressions ?? [])
             .filter { $0.masteredAt == nil }.map(bookItem))
-            .filter { CarryoverDetector.isCreditable($0.text) }
+            .filter { CarryoverDetector.isSpendable($0.text) }
 
         // The previous talks, newest first: their offered phrases and pickup
         // words the learner still hasn't produced. The learner's own lemmas
@@ -161,7 +161,7 @@ enum TalkGoalPicker {
         let talks = previousTalks.sorted { $0.startedAt > $1.startedAt }
         let offered = talks
             .flatMap { $0.summary?.expressionsOffered ?? [] }
-            .filter { !store.hasUsedExpression($0) && CarryoverDetector.isCreditable($0) }
+            .filter { !store.hasUsedExpression($0) && CarryoverDetector.isSpendable($0) }
             .map { TalkGoalItem(key: CarryoverDetector.normalized($0), text: $0, isWord: false) }
         let fluentTexts = talks.flatMap { $0.turns.filter { $0.role == .fluentSelf }.map(\.transcript) }
         let userLemmas = VocabStore.lemmas(in: talks.flatMap { $0.turns.filter { $0.role == .user }.map(\.transcript) })
@@ -176,7 +176,7 @@ enum TalkGoalPicker {
         // out of it are the ones the call is there to try. Anything already
         // used in a talk has done its job and is not asked for again.
         let briefPhrases = rotated(by: runs, (scenario.brief?.keyExpressions ?? [])
-            .filter { !store.hasUsedExpression($0) && CarryoverDetector.isCreditable($0) }
+            .filter { !store.hasUsedExpression($0) && CarryoverDetector.isSpendable($0) }
             .map { TalkGoalItem(key: CarryoverDetector.normalized($0), text: $0,
                                 isWord: WordSplitter.isSingleWord($0)) })
 
