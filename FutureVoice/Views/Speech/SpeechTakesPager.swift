@@ -69,8 +69,10 @@ struct SpeechTakesPager: View {
         }
         // A picture swiped in shows its first frame before its player draws.
         .task {
-            for take in takes.reversed() where take.videoIsCameraOnly && take.videoFilename != nil {
-                if let url = SpeechVideoSync.playableURL(take) { await SpeechPosters.shared.warm(url) }
+            for take in takes.reversed() where take.videoFilename != nil {
+                if let url = SpeechVideoSync.playableURL(take) {
+                    await SpeechPosters.shared.warm(url, burnedIn: !take.videoIsCameraOnly)
+                }
             }
         }
     }

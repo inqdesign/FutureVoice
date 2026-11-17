@@ -1042,6 +1042,17 @@ enum DebugCapture {
             return AnyView(NavigationStack {
                 SpeechResultView(takeId: UUID(uuidString: "C4A11E00-0000-4000-8000-0000000000AA")!)
             })
+        case "speech-result-burned":
+            // A take from before 2026-11-08, whose video is the old split
+            // screen: a real one put in the simulator's Documents/Speech by
+            // hand as take-burned.mov. `-captureImmersive 1` plays it.
+            once("speech") { seedSpeech(appState) }
+            var take = SpeechStore.shared.takes.first!
+            take.videoFilename = "take-burned.mov"
+            take.prompter = nil
+            take.metrics.scoring = 3
+            SpeechStore.shared.save(take)
+            return AnyView(NavigationStack { SpeechResultView(takeId: take.id) })
         case "speech-takes":
             // The history button: the takes as pages, on the newest.
             let script = seedSpeechChallenges(appState)

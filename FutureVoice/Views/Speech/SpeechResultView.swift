@@ -1,5 +1,6 @@
 import AVKit
 import Combine
+import CoreImage.CIFilterBuiltins
 import Photos
 import SwiftUI
 
@@ -34,6 +35,8 @@ struct SpeechResultView: View {
     /// The reader on the whole page: a few seconds looping without sound,
     /// the whole take with sound behind the play button.
     @StateObject private var hero = SpeechHeroPlayer()
+    /// The whole page, in points: what a split video's camera is cut to fill.
+    @State private var pageSize: CGSize = .zero
     /// A take from before the camera was kept: its video has the script in it.
     @State private var watchingScriptVideo: URL?
     /// The script rolling over the camera while the take plays.
@@ -116,22 +119,35 @@ struct SpeechResultView: View {
 
     // MARK: - The page: the reader, the score, and a sheet of details
 
-    /// The camera on its own, for a take recorded that way.
-    private func cameraVideo(_ take: SpeechTake) -> URL? {
-        guard take.videoIsCameraOnly, take.videoFilename != nil else { return nil }
+    /// What is behind the score: the camera and nothing else (founder,
+    /// 2026-11-08). A take from before then has the old take screen for a
+    /// video, script above and camera below: `burnedInLook` cuts the camera
+    /// out of it (founder, 2026-11-17: a plain ground with only the voice
+    /// read as the video having gone).
+    private func heroVideo(_ take: SpeechTake) -> URL? {
+        guard !store.videoPending.contains(take.id), take.videoFilename != nil else { return nil }
         return SpeechVideoSync.playableURL(take)
     }
 
-    /// What is behind the score: the camera and nothing else (founder,
-    /// 2026-11-08). A take whose video has the script burned into it has a
-    /// plain ground.
-    private func heroVideo(_ take: SpeechTake) -> URL? {
-        guard !store.videoPending.contains(take.id) else { return nil }
-        return cameraVideo(take)
+    /// How a take with the script in its video is shown on this page; nil
+    /// for a camera-only take, and until the page has been measured.
+    private func burnedInLook(_ take: SpeechTake) -> SpeechBurnedInLook? {
+        guard !take.videoIsCameraOnly, pageSize.width > 0, pageSize.height > 0 else { return nil }
+        let top = UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.keyWindow }.first?.safeAreaInsets.top ?? 0
+        return SpeechBurnedInLook(size: pageSize, topInset: top)
+    }
+
+    private struct HeroKey: Equatable {
+        var video: URL?
+        var look: SpeechBurnedInLook?
     }
 
     private func page(_ take: SpeechTake, _ script: SpeechScript) -> some View {
-        let video = heroVideo(take)
+        let look = burnedInLook(take)
+        // A take with the script in its video waits for the page's size:
+        // shown as it is, it would be the old split screen.
+        let video = take.videoIsCameraOnly || look != nil ? heroVideo(take) : nil
         // Playing, everything but the reader steps aside.
         let immersive = hero.isPlaying || audio.isPlaying
         let stored = take.videoFilename != nil ? SpeechVideoSync.playableURL(take) : nil
@@ -208,7 +224,10 @@ struct SpeechResultView: View {
                 }
             }
         }
-        .task(id: video) { await hero.show(video, take: take.id) }
+        .task(id: HeroKey(video: video, look: look)) {
+            if let video, look != nil { await posters.warm(video, burnedIn: true) }
+            await hero.show(video, take: take.id, burnedIn: look)
+        }
         .onChange(of: takeId) { _, _ in
             audio.stop()
             scriptAudio.stop()
@@ -264,6 +283,10 @@ struct SpeechResultView: View {
                 .opacity(immersive ? 0 : 1)
                 .allowsHitTesting(false)
         }
+        // Measured inside the safe-area escape: the whole page, edge to edge.
+        .onGeometryChange(for: CGSize.self) { proxy in
+            CGSize(width: proxy.size.width.rounded(), height: proxy.size.height.rounded())
+        } action: { pageSize = $0 }
         .ignoresSafeArea()
     }
 
@@ -278,9 +301,22 @@ struct SpeechResultView: View {
             if let shown {
                 let video = heroVideo(shown)
                 if let video, let poster = posters.image(video) {
-                    Color.clear
-                        .overlay(Image(uiImage: poster).resizable().scaledToFill())
-                        .clipped()
+                    if shown.videoIsCameraOnly {
+                        Color.clear
+                            .overlay(Image(uiImage: poster).resizable().scaledToFill())
+                            .clipped()
+                    } else {
+                        // The camera cut from a split video, laid out as its
+                        // player draws it (`SpeechBurnedIn.composition`).
+                        Image(uiImage: poster).resizable().scaledToFit()
+                            .mask {
+                                LinearGradient(stops: [.init(color: .clear, location: 0),
+                                                       .init(color: .black, location: SpeechBurnedIn.edgeFade),
+                                                       .init(color: .black, location: 1 - SpeechBurnedIn.edgeFade),
+                                                       .init(color: .clear, location: 1)],
+                                               startPoint: .top, endPoint: .bottom)
+                            }
+                    }
                 }
                 if current, let player = hero.player {
                     PlayerLayerView(player: player, fill: true)
@@ -1749,19 +1785,39 @@ final class SpeechHeroPlayer: ObservableObject {
 
     private var url: URL?
     private var takeId: UUID?
+    /// Set for a take whose video is the old split screen: the loop is its
+    /// camera alone, and the whole take has its script over that.
+    private var look: SpeechBurnedInLook?
+    private var cameraOnly: AVVideoComposition?
+    private var withScript: AVVideoComposition?
+    private let script = SpeechBurnedInScript()
     private var looper: AVPlayerLooper?
     private var endObserver: NSObjectProtocol?
     private var generation = 0
 
-    func show(_ url: URL?, take: UUID? = nil) async {
-        guard url != self.url else { return }
+    func show(_ url: URL?, take: UUID? = nil, burnedIn look: SpeechBurnedInLook? = nil) async {
+        guard url != self.url || look != self.look else { return }
         // Switching videos while the take plays keeps its place, for the
         // same take only (a synced copy landing); another take starts over.
         let sameTake = take == nil || take == takeId
         takeId = take
         let resume = isFull && sameTake ? (time: player?.currentTime() ?? .zero, playing: isPlaying) : nil
         self.url = url
+        self.look = look
+        cameraOnly = nil
+        withScript = nil
         guard let url else { reset(); player = nil; return }
+        if let look {
+            let asset = AVURLAsset(url: url)
+            let light = await SpeechBurnedIn.isLight(asset)
+            let plain = await SpeechBurnedIn.composition(asset: asset, look: look, light: light, script: nil)
+            let scripted = await SpeechBurnedIn.composition(asset: asset, look: look, light: light, script: script)
+            guard self.url == url, self.look == look else { return }
+            // Without them the split screen itself would show: nothing does.
+            guard let plain, let scripted else { reset(); player = nil; return }
+            cameraOnly = plain
+            withScript = scripted
+        }
         if let resume {
             startFull(url, at: resume.time, playing: resume.playing)
         } else {
@@ -1774,6 +1830,14 @@ final class SpeechHeroPlayer: ObservableObject {
         if isFull, let player {
             if isPlaying { player.pause() } else { player.play() }
             isPlaying.toggle()
+            if look != nil {
+                // The script is over the picture only while it plays. Paused,
+                // the frame on screen is drawn again without it.
+                script.shown = isPlaying
+                if !isPlaying, let item = player.currentItem {
+                    item.videoComposition = item.videoComposition?.mutableCopy() as? AVVideoComposition
+                }
+            }
         } else {
             startFull(url, at: .zero, playing: true)
         }
@@ -1794,6 +1858,7 @@ final class SpeechHeroPlayer: ObservableObject {
         endObserver = nil
         isFull = false
         isPlaying = false
+        script.shown = false
     }
 
     private func startLoop(_ url: URL) async {
@@ -1807,7 +1872,9 @@ final class SpeechHeroPlayer: ObservableObject {
                                 duration: CMTime(seconds: min(Self.loopSeconds, duration - start), preferredTimescale: 600))
         let queue = AVQueuePlayer()
         queue.isMuted = true
-        looper = AVPlayerLooper(player: queue, templateItem: AVPlayerItem(asset: asset), timeRange: range)
+        let template = AVPlayerItem(asset: asset)
+        if look != nil { template.videoComposition = cameraOnly }
+        looper = AVPlayerLooper(player: queue, templateItem: template, timeRange: range)
         queue.play()
         player = queue
     }
@@ -1815,6 +1882,10 @@ final class SpeechHeroPlayer: ObservableObject {
     private func startFull(_ url: URL, at time: CMTime, playing: Bool) {
         reset()
         let item = AVPlayerItem(url: url)
+        if look != nil {
+            item.videoComposition = withScript
+            script.shown = playing
+        }
         let full = AVPlayer(playerItem: item)
         full.seek(to: time, toleranceBefore: .zero, toleranceAfter: .zero)
         endObserver = NotificationCenter.default.addObserver(
@@ -1828,6 +1899,123 @@ final class SpeechHeroPlayer: ObservableObject {
         isPlaying = playing
         player = full
         if playing { full.play() }
+    }
+}
+
+/// The page a split video is redrawn for.
+struct SpeechBurnedInLook: Equatable, Sendable {
+    /// The whole page, in points.
+    var size: CGSize
+    /// Where the page's safe area begins: the script starts under it.
+    var topInset: CGFloat
+}
+
+/// Whether the script is drawn into the frames being made right now.
+final class SpeechBurnedInScript: @unchecked Sendable {
+    private let lock = NSLock()
+    private var on = false
+    var shown: Bool {
+        get { lock.withLock { on } }
+        set { lock.withLock { on = newValue } }
+    }
+}
+
+/// A take recorded before 2026-11-08 has the take screen of the time for a
+/// video (`SpeechPrompterView.prepareVideo` then): 9:16, the rolling script
+/// on the top half and the camera in a rounded card on the bottom half. The
+/// page shows such a take as near a camera-only one as it can: the camera
+/// alone across the page, and while it plays, the script over it in white.
+/// Nothing is kept of how the script moved, so the script is the video's own
+/// top half, laid over the picture.
+enum SpeechBurnedIn {
+    /// The camera card and the script, as fractions of the frame, y up. The
+    /// card sat 12 pt from the sides with a 24 pt corner on a canvas as wide
+    /// as the screen: this is inside it, corners included, down to a 320 pt
+    /// screen.
+    static let card = CGRect(x: 64.0 / 1080, y: 64.0 / 1920, width: 952.0 / 1080, height: 852.0 / 1920)
+    static let panel = CGRect(x: 0, y: 980.0 / 1920, width: 1, height: 940.0 / 1920)
+    /// How much of the camera's height fades out at its top, and at its bottom.
+    static let edgeFade: CGFloat = 0.3
+
+    private static func part(_ fraction: CGRect, of extent: CGRect) -> CGRect {
+        CGRect(x: extent.minX + fraction.minX * extent.width, y: extent.minY + fraction.minY * extent.height,
+               width: fraction.width * extent.width, height: fraction.height * extent.height)
+    }
+
+    /// Whether the take screen was light (dark script on white): the strip
+    /// between the script and the card is the screen's own ground.
+    static func isLight(_ asset: AVAsset) async -> Bool {
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        generator.maximumSize = CGSize(width: 270, height: 480)
+        guard let frame = try? await generator.image(at: .zero).image else { return false }
+        var pixel = [UInt8](repeating: 0, count: 4)
+        guard let context = CGContext(data: &pixel, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
+                                      space: CGColorSpaceCreateDeviceRGB(),
+                                      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+        // The frame's left edge at mid height, drawn onto the one pixel.
+        let w = CGFloat(frame.width), h = CGFloat(frame.height)
+        context.draw(frame, in: CGRect(x: -1, y: -h / 2, width: w, height: h))
+        return Int(pixel[0]) + Int(pixel[1]) + Int(pixel[2]) > 382
+    }
+
+    /// The video redrawn for the page: the camera across it, and while
+    /// `script` says so, the script over it.
+    static func composition(asset: AVAsset, look: SpeechBurnedInLook, light: Bool,
+                            script: SpeechBurnedInScript?) async -> AVVideoComposition? {
+        let width: CGFloat = 1080
+        let render = CGSize(width: width, height: (width * look.size.height / look.size.width / 2).rounded() * 2)
+        let inset = look.topInset * width / look.size.width
+        let out = CGRect(origin: .zero, size: render)
+        let made = try? await AVMutableVideoComposition.videoComposition(with: asset) { request in
+            let source = request.sourceImage
+            let cardRect = part(card, of: source.extent)
+            // As wide as the page and no larger (founder, 2026-11-17: filling
+            // the page blew the face up 2.8 times), its top and bottom
+            // fading into the black around it.
+            let fit = min(render.width / cardRect.width, render.height / cardRect.height)
+            var picture = source.cropped(to: cardRect)
+                .transformed(by: CGAffineTransform(translationX: -cardRect.midX, y: -cardRect.midY))
+                .transformed(by: CGAffineTransform(scaleX: fit, y: fit))
+                .transformed(by: CGAffineTransform(translationX: render.width / 2, y: render.height / 2))
+                .composited(over: CIImage(color: .black))
+                .cropped(to: out)
+            let half = cardRect.height * fit / 2
+            let fade = half * 2 * edgeFade
+            for edge in [render.height / 2 - half, render.height / 2 + half] {
+                let toward: CGFloat = edge < render.height / 2 ? 1 : -1
+                // The eased ramp: a straight one reads as a hard edge.
+                let shade = CIFilter.smoothLinearGradient()
+                shade.point0 = CGPoint(x: 0, y: edge)
+                shade.color0 = CIColor(red: 0, green: 0, blue: 0, alpha: 1)
+                shade.point1 = CGPoint(x: 0, y: edge + toward * fade)
+                shade.color1 = CIColor(red: 0, green: 0, blue: 0, alpha: 0)
+                if let shade = shade.outputImage?.cropped(to: out) { picture = shade.composited(over: picture) }
+            }
+            if script?.shown == true {
+                // The veil the drawn script has behind it (`SpeechScriptOverlay`).
+                let veil = CIFilter.linearGradient()
+                veil.point0 = CGPoint(x: 0, y: render.height)
+                veil.color0 = CIColor(red: 0, green: 0, blue: 0, alpha: 0.6)
+                veil.point1 = CGPoint(x: 0, y: render.height * 0.4)
+                veil.color1 = CIColor(red: 0, green: 0, blue: 0, alpha: 0)
+                if let dark = veil.outputImage?.cropped(to: out) { picture = dark.composited(over: picture) }
+                let panelRect = part(panel, of: source.extent)
+                let k = render.width / panelRect.width
+                var text = source.cropped(to: panelRect)
+                if light { text = text.applyingFilter("CIColorInvert") }
+                text = text
+                    .transformed(by: CGAffineTransform(translationX: -panelRect.minX, y: -panelRect.minY))
+                    .transformed(by: CGAffineTransform(scaleX: k, y: k))
+                    .transformed(by: CGAffineTransform(translationX: 0, y: render.height - inset - panelRect.height * k))
+                // White on black, screened: only the letters land on the picture.
+                picture = text.applyingFilter("CIScreenBlendMode", parameters: [kCIInputBackgroundImageKey: picture])
+                    .cropped(to: out)
+            }
+            request.finish(with: picture, context: nil)
+        }
+        made?.renderSize = render
+        return made
     }
 }
 
@@ -2171,7 +2359,9 @@ final class SpeechPosters: ObservableObject {
 
     func image(_ url: URL) -> UIImage? { images[url] }
 
-    func warm(_ url: URL) async {
+    /// `burnedIn`: the video is the old split screen, and its poster is the
+    /// camera cut out of it.
+    func warm(_ url: URL, burnedIn: Bool = false) async {
         guard images[url] == nil else { return }
         let asset = AVURLAsset(url: url)
         let duration = (try? await asset.load(.duration))?.seconds ?? 0
@@ -2184,7 +2374,14 @@ final class SpeechPosters: ObservableObject {
         generator.requestedTimeToleranceBefore = .zero
         generator.requestedTimeToleranceAfter = .zero
         if let frame = try? await generator.image(at: CMTime(seconds: start, preferredTimescale: 600)).image {
-            images[url] = UIImage(cgImage: frame)
+            if burnedIn {
+                let w = CGFloat(frame.width), h = CGFloat(frame.height)
+                let card = SpeechBurnedIn.card
+                let rect = CGRect(x: card.minX * w, y: (1 - card.maxY) * h, width: card.width * w, height: card.height * h)
+                if let cut = frame.cropping(to: rect.integral) { images[url] = UIImage(cgImage: cut) }
+            } else {
+                images[url] = UIImage(cgImage: frame)
+            }
         }
     }
 }
