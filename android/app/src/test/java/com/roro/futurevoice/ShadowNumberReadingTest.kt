@@ -115,6 +115,12 @@ class ShadowNumberReadingTest {
         assertTrue(coverage("you return home hello help help a car car car piece piece piece") < 0.1)
         org.junit.Assert.assertEquals(1.0, coverage(script), 0.001)
         org.junit.Assert.assertEquals(12.0 / 53, coverage("Have you ever heard that learning language can slow down aging"), 0.03)
+        // What was not read is not covered, and is not slips either.
+        val skipped = script.replace("It sounds almost too good to be true, so let's look at what the research actually says. ", "")
+        org.junit.Assert.assertEquals(35.0 / 54, coverage(skipped), 0.04)
+        assertTrue(coverage("were more likely to be ageing faster than expected, and that can't hurt you.") < 0.3)
+        org.junit.Assert.assertEquals(0, com.roro.futurevoice.talk.SpeechAnalyzer.slips(ShadowScore.analyze(script, skipped, "en").steps, "en"))
+        org.junit.Assert.assertEquals(1.0, coverage(script.replace("almost too good", "too great")), 0.001)
     }
 
     @Test fun wrongYearIsStillWrong() {

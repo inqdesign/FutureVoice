@@ -127,26 +127,25 @@ object SpeechAnalyzer {
     }
 
     fun slips(steps: List<ShadowScore.DiffStep>, language: String, names: Set<String> = emptySet()): Int {
-        val first = steps.indexOfFirst { it.op == ShadowScore.DiffOp.MATCH }
-        // "The last word read" is where the reading got to ([reached]), not a
-        // stray match further on (iOS 2026-11-17).
-        val end = reached(steps)
-        var seen = -1
-        var last = -1
-        for ((i, step) in steps.withIndex()) {
-            if (step.op == ShadowScore.DiffOp.INS) continue
-            seen++
-            if (step.op == ShadowScore.DiffOp.MATCH && seen <= end) last = i
-        }
-        if (first < 0 || first >= last) return 0
+        // Only inside what was read ([covered]): a stretch never read is
+        // coverage's (iOS 2026-11-17).
+        val read = covered(steps)
         val fillerWords = SpeechLibrary.fillers(language).map { it.lowercase() }.toSet()
-        return steps.subList(first, last + 1).count { step ->
+        var index = -1
+        var count = 0
+        for (step in steps) {
             when (step.op) {
-                ShadowScore.DiffOp.MATCH -> false
-                ShadowScore.DiffOp.SUB, ShadowScore.DiffOp.DEL -> (step.target ?: "").lowercase() !in names
-                ShadowScore.DiffOp.INS -> (step.learner ?: "").lowercase() !in fillerWords
+                ShadowScore.DiffOp.MATCH -> index++
+                ShadowScore.DiffOp.SUB, ShadowScore.DiffOp.DEL -> {
+                    index++
+                    if (read[index] && (step.target ?: "").lowercase() !in names) count++
+                }
+                ShadowScore.DiffOp.INS ->
+                    if (index >= 0 && index + 1 < read.size && read[index] && read[index + 1] &&
+                        (step.learner ?: "").lowercase() !in fillerWords) count++
             }
         }
+        return count
     }
 
     /**
@@ -176,31 +175,45 @@ object SpeechAnalyzer {
      * LAST token.
      */
     fun coverage(steps: List<ShadowScore.DiffStep>): Double {
-        val total = steps.count { it.op != ShadowScore.DiffOp.INS }
-        if (total == 0) return 1.0
-        return (reached(steps) + 1).toDouble() / total
+        val read = covered(steps)
+        if (read.isEmpty()) return 1.0
+        return read.count { it }.toDouble() / read.size
     }
 
     /**
-     * The last script token the reader got to (-1: none). The end has to be
-     * READ to, not landed on: the alignment may place a stray word anywhere,
-     * and twelve words of nonsense matched a "you" near a script's end and
-     * read as 95% of it (iOS, 2026-11-17). A match counts as reached only
-     * when at least half of the ten script tokens ending at it were matched.
+     * Which script tokens lie in a stretch that was READ (iOS `covered`,
+     * 2026-11-17, founder: coverage is what was read, not how far the reader
+     * got — reading only a script's last line was 95% of it). A stretch is
+     * read where at least half of ten script tokens in a row matched, from
+     * the first of those matches to the last: a word changed or dropped
+     * inside it is still inside it, and so is a run of up to ten the
+     * transcriber got wrong. Not read: a sentence skipped, the script after
+     * the reader stopped, a stray word the alignment placed somewhere. A
+     * misread word at either edge of a stretch belongs to it.
      */
-    fun reached(steps: List<ShadowScore.DiffStep>): Int {
+    fun covered(steps: List<ShadowScore.DiffStep>): BooleanArray {
         val ops = steps.filter { it.op != ShadowScore.DiffOp.INS }.map { it.op }
-        val before = IntArray(ops.size + 1)
-        for (i in ops.indices) before[i + 1] = before[i] + (if (ops[i] == ShadowScore.DiffOp.MATCH) 1 else 0)
-        var reached = -1
-        for (index in ops.indices.reversed()) {
-            if (ops[index] != ShadowScore.DiffOp.MATCH) continue
-            val from = maxOf(0, index - 9)
-            if ((before[index + 1] - before[from]) * 2 >= index - from + 1) { reached = index; break }
+        val n = ops.size
+        val read = BooleanArray(n)
+        if (n == 0) return read
+        val before = IntArray(n + 1)
+        for (i in 0 until n) before[i + 1] = before[i] + (if (ops[i] == ShadowScore.DiffOp.MATCH) 1 else 0)
+        fun mark(start: Int, end: Int) {
+            if ((before[end + 1] - before[start]) * 2 < end - start + 1) return
+            val first = (start..end).firstOrNull { ops[it] == ShadowScore.DiffOp.MATCH } ?: return
+            val last = (start..end).last { ops[it] == ShadowScore.DiffOp.MATCH }
+            for (index in first..last) read[index] = true
         }
-        // A misread word right after it is still the end.
-        while (reached >= 0 && reached + 1 < ops.size && ops[reached + 1] == ShadowScore.DiffOp.SUB) reached++
-        return reached
+        for (start in 0..maxOf(0, n - 10)) mark(start, minOf(n - 1, start + 9))
+        // The script's two ends have no ten tokens on one side: a reading
+        // that stops after four words read four.
+        for (size in 1 until minOf(10, n)) {
+            mark(0, size - 1)
+            mark(n - size, n - 1)
+        }
+        for (index in 1 until n) if (read[index - 1] && !read[index] && ops[index] == ShadowScore.DiffOp.SUB) read[index] = true
+        for (index in n - 2 downTo 0) if (read[index + 1] && !read[index] && ops[index] == ShadowScore.DiffOp.SUB) read[index] = true
+        return read
     }
 
     /** Which rules a take was scored by (iOS `scoringVersion`): 3 = with
