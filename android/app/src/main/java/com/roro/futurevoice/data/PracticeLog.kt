@@ -63,6 +63,16 @@ object PracticeLog {
 
     private val serializer = MapSerializer(String.serializer(), Day.serializer())
 
+    /**
+     * Every field written, zeros included: iOS writes the whole day, and the
+     * sync reads this file as the record. With zeros dropped, every rep here
+     * rewrote every past day into a shorter shape, so all of them looked
+     * edited and went back up to Drive on the next pass; and iOS reads a
+     * missing `shadowDone` as `shadowReps`, which inflated finished shadowing
+     * on the other device.
+     */
+    private val fileJson = kotlinx.serialization.json.Json(StoreJson.json) { encodeDefaults = true }
+
     private fun file(c: Context) = File(c.filesDir, "practice-log.json")
 
     private fun read(c: Context): Map<String, Day> {
@@ -96,7 +106,7 @@ object PracticeLog {
         }
         val target = file(c)
         val tmp = File(target.parentFile, target.name + ".tmp")
-        tmp.writeText(StoreJson.json.encodeToString(serializer, days))
+        tmp.writeText(fileJson.encodeToString(serializer, days))
         if (!tmp.renameTo(target)) { target.delete(); tmp.renameTo(target) }
         // WHEN it happened, for the routine's day view (iOS: the same door).
         ActivityEventLog.record(c, ActivityEventLog.Kind.of(kind), at)

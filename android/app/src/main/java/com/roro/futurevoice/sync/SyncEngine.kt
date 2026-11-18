@@ -372,6 +372,14 @@ class SyncEngine(
 
     // ── Pull ────────────────────────────────────────────────────────────
 
+    /** "practiceDay:27,session:1" — which kinds a big push or pull carried
+     *  (iOS `SyncEngine.byKind`). Two devices echoing the same records show
+     *  up as one kind with the same count on both sides. */
+    private fun byKind(records: List<SyncRecord>): String =
+        records.groupingBy { it.kind.raw }.eachCount().entries
+            .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+            .joinToString(",") { "${it.key}:${it.value}" }
+
     private suspend fun pull(index: SyncIndex, zone: String) {
         _progress.value = Progress(Progress.Phase.PULLING, 0, 0)
         val batch = try {
@@ -416,7 +424,8 @@ class SyncEngine(
         index.save()
         if (applied.isNotEmpty()) {
             onApplied?.let { cb -> deliver { cb(applied) } }
-            Analytics.capture("sync_pull", mapOf("records" to batch.changed.size, "kinds" to applied.size))
+            Analytics.capture("sync_pull", mapOf("records" to batch.changed.size, "kinds" to applied.size,
+                "by_kind" to byKind(batch.changed)))
         }
     }
 
@@ -614,7 +623,8 @@ class SyncEngine(
         // Only the big pushes are worth an event (iOS 2026-09-26: a pass per
         // change made one learner 427 events a day).
         if (records.size >= REPORT_PUSH_FROM) {
-            Analytics.capture("sync_push", mapOf("records" to records.size, "blobs" to blobs))
+            Analytics.capture("sync_push", mapOf("records" to records.size, "blobs" to blobs,
+                "by_kind" to byKind(records)))
         }
     }
 
