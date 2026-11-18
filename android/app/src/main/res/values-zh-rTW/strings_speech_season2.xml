@@ -113,4 +113,6 @@
         <item>練習不會騙人。</item>
     </string-array>
     <string name="speech_rank_of">%2$d 人中第 %1$d 名</string>
+    <string name="speech_read_to_the_end_for_a_score">把稿子讀到最後，就會出現分數。</string>
+    <string name="speech_unfinished_entry">把稿子讀到最後，這次錄製就會進入排名。</string>
 </resources>

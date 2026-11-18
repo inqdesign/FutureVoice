@@ -1230,6 +1230,8 @@ internal fun SpeechChallengeEntrySection(entry: SpeechChallenges.Entry?, standin
                     stringResource(R.string.speech_new_scoring_entry), secondary, bold = false)
                 SpeechChallenges.Entry.Practice -> EntryLine(Icons.Filled.Mic,
                     stringResource(R.string.speech_practice_entry), secondary, bold = false)
+                SpeechChallenges.Entry.Unfinished -> EntryLine(Icons.Filled.Mic,
+                    stringResource(R.string.speech_unfinished_entry), secondary, bold = false)
                 null -> {
                     val rank = standing?.myRank
                     val best = standing?.myBest

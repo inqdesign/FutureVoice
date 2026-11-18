@@ -113,4 +113,6 @@
         <item>Practice pays off.</item>
     </string-array>
     <string name="speech_rank_of">#%1$d of %2$d</string>
+    <string name="speech_read_to_the_end_for_a_score">Read the script all the way to the end, and it gets a score.</string>
+    <string name="speech_unfinished_entry">Read the script to the end, and the take goes on the board.</string>
 </resources>

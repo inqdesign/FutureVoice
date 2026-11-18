@@ -162,6 +162,8 @@ class SpeechChallenges private constructor(private val context: Context) {
         data object NewScoring : Entry
         /** On a challenge that has ended: the board is frozen, so this was practice. */
         data object Practice : Entry
+        /** The script wasn't read to the end (iOS 2026-11-18). */
+        data object Unfinished : Entry
     }
 
     private val _scripts = MutableStateFlow<List<SpeechScript>>(emptyList())
@@ -391,6 +393,7 @@ class SpeechChallenges private constructor(private val context: Context) {
                             script.language)
                     }
                     if (kotlin.math.abs(com.roro.futurevoice.talk.SpeechAnalyzer.accuracy(diff) - take.metrics.accuracy) > 5) continue
+                    if (com.roro.futurevoice.talk.SpeechAnalyzer.coverage(diff.steps) < FULL_READING) continue
                     val m = take.metrics
                     val overall = com.roro.futurevoice.talk.SpeechAnalyzer.overall(m.accuracy, m.paceScore,
                         m.pauseScore, m.fillerScore, m.steadiness,
@@ -434,7 +437,8 @@ class SpeechChallenges private constructor(private val context: Context) {
         val challengeId = script.challengeId ?: return
         val season = season(challengeId)
         keptOff(isPast(challengeId), season, take.metrics.scoring, take.metrics.reading != null,
-            recordedOnCamera, take.metrics.overall)?.let { setEntry(take.id, it); return }
+            recordedOnCamera, take.metrics.overall,
+            take.metrics.reading?.coverage ?: take.metrics.coverage ?: 1.0)?.let { setEntry(take.id, it); return }
         val name = displayName(context) ?: run { setEntry(take.id, Entry.Failed); return }
         setEntry(take.id, Entry.Submitting)
         val seasonTwo = (season ?: 1) >= 2
@@ -639,7 +643,9 @@ class SpeechChallenges private constructor(private val context: Context) {
         /** Why a scored take stays off the board, in iOS `enter`'s order; null
          *  when it goes up. */
         fun keptOff(past: Boolean, season: Int?, scoring: Int?, hasReading: Boolean,
-                    onCamera: Boolean, overall: Int): Entry? {
+                    onCamera: Boolean, overall: Int, coverage: Double = 1.0): Entry? {
+            // The script is read to the end (iOS 2026-11-18).
+            if (coverage < FULL_READING) return Entry.Unfinished
             // An ended challenge can still be practised; its board is frozen.
             if (past) return Entry.Practice
             val seasonTwo = (season ?: 1) >= 2
@@ -651,6 +657,20 @@ class SpeechChallenges private constructor(private val context: Context) {
             if (!onCamera) return Entry.CameraOff
             return null
         }
+        /** How much of a challenge's script must be read for a take to count
+         *  (iOS `fullReading`, 2026-11-18, founder: "the script is read to the
+         *  end, always"). Not 1: [com.roro.futurevoice.talk.SpeechAnalyzer.coverage]
+         *  already lets a few misheard words through. A take under it is not
+         *  scored at all, and the server refuses one (`INCOMPLETE`). */
+        const val FULL_READING = 0.95
+
+        /** The share of [script] the transcript read. */
+        fun readShare(script: String, transcript: String, language: String): Double {
+            val spoken = com.roro.futurevoice.talk.SpeechAnalyzer.removingFillers(transcript, language, script)
+            val diff = com.roro.futurevoice.talk.ShadowScore.analyze(script, spoken, language)
+            return com.roro.futurevoice.talk.SpeechAnalyzer.coverage(diff.steps)
+        }
+
         /** The overall board is drawn as soon as one person is on it (iOS
          *  `overallMinEntrants`, founder 2026-11-10: a new season's board is
          *  there from its first day). */

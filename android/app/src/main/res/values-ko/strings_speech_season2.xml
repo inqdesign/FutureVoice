@@ -113,4 +113,6 @@
         <item>연습은 배신 안 해요.</item>
     </string-array>
     <string name="speech_rank_of">%2$d명 중 %1$d위</string>
+    <string name="speech_read_to_the_end_for_a_score">원고를 끝까지 읽으면 점수가 나와요.</string>
+    <string name="speech_unfinished_entry">원고를 끝까지 읽으면 순위에 올라가요.</string>
 </resources>

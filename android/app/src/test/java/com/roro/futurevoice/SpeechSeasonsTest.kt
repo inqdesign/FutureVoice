@@ -32,6 +32,12 @@ class SpeechSeasonsTest {
         assertEquals(Entry.CameraOff, keptOff(onCamera = false, overall = 10))
     }
 
+    /** iOS 2026-11-18: the script is read to the end, or the take stays off. */
+    @Test fun aTakeThatStoppedEarlyStaysOff() {
+        assertEquals(Entry.Unfinished, SpeechChallenges.keptOff(false, 2, 8, true, true, 80, coverage = 0.6))
+        assertNull(SpeechChallenges.keptOff(false, 2, 8, true, true, 80, coverage = 0.97))
+    }
+
     /** iOS picks by `take.uuid.15`, the id's last byte, so a take keeps its line. */
     @Test fun aTakeKeepsItsVerdictLine() {
         val index = com.roro.futurevoice.ui.speech.SpeechVerdict::index

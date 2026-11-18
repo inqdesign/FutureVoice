@@ -484,6 +484,26 @@ class SpeechTakeSession(
             return
         }
 
+        // A challenge is read to the END (iOS 2026-11-18, founder: "stopped
+        // halfway, it can't go up; don't even score it"). Once the words are
+        // back, a take that didn't read the whole script is not scored, saved
+        // or entered: the learner is asked to read it again.
+        suspend fun readTooLittle(transcript: String): Boolean {
+            if (!script.isChallenge) return false
+            val share = withContext(Dispatchers.Default) {
+                com.roro.futurevoice.data.SpeechChallenges.readShare(script.body, transcript, script.language)
+            }
+            if (share >= com.roro.futurevoice.data.SpeechChallenges.FULL_READING) return false
+            audio.delete()
+            scope.launch { videoStop.await()?.first?.delete() }
+            Analytics.capture("speech_take_unfinished", mapOf(
+                "seconds" to duration.toInt(), "coverage" to Math.round(share * 100).toInt(),
+                "cursor_end" to _cursor.value, "words" to _track.value.words.size, "camera" to fromCamera,
+            ))
+            _phase.value = Phase.Failed(context.getString(R.string.speech_read_to_the_end_for_a_score))
+            return true
+        }
+
         // The pieces were read during the take; only the tail is left. Any
         // piece that failed sends the whole file instead, so a hole is never
         // scored as skipped words.
@@ -518,11 +538,12 @@ class SpeechTakeSession(
             val joiner = if (LanguageCatalog.writesSpaces(script.language)) " " else ""
             transcript = texts.map { it.trim() }.filter { it.isNotEmpty() }.joinToString(joiner)
             audioGrounded = true; path = if (unassessed) "pieces_windows" else "pieces"
+            if (readTooLittle(transcript)) return
             // A reader who never pauses is never cut, and a piece over Azure's
             // 30 s is not assessed: the whole file is assessed in windows
             // instead, as a whole read is (iOS, 2026-11-18).
             if (unassessed) {
-                val windows = assessInWindows(audio, script.language)
+                val windows = assessInWindows(audio, _track.value.words, script.language)
                 if (windows.isNotEmpty()) {
                     assessed = windows
                     prons = windows.map { it.result }.toMutableList()
@@ -534,20 +555,27 @@ class SpeechTakeSession(
             // the sounds are still heard and the wait is the slower of the two
             // (iOS 247383e9).
             val language = script.language
+            val words = _track.value.words
             val long = if (duration > PronunciationAssessor.MAX_SECONDS)
-                scope.async(Dispatchers.IO) { assessInWindows(audio, language) } else null
+                scope.async(Dispatchers.IO) { assessInWindows(audio, words, language) } else null
             val reading = SpeechReader.read(audio, liveText, script.language)
             transcript = reading.text; audioGrounded = reading.audioGrounded; path = "whole"
+            if (readTooLittle(transcript)) { long?.cancel(); return }
             prons = mutableListOf()
             assessed = emptyList()
             if (long != null) {
                 assessed = long.await()
                 prons = assessed.map { it.result }.toMutableList()
             } else if (reading.audioGrounded) {
-                PronunciationAssessor.assess(context, audio, transcript, script.language, "speech")
+                // Judged against the script span the words were read from, as
+                // a piece is; the reader's own words only off the script.
+                val reference = com.roro.futurevoice.talk.ShadowScore.scriptRange(
+                    transcript, words.map { it.text }, language, null)
+                    ?.let { spanText(words, it, language) } ?: transcript
+                PronunciationAssessor.assess(context, audio, reference, script.language, "speech")
                     .result?.let {
                         prons = mutableListOf(it)
-                        assessed = listOf(SpeechDelivery.Piece(transcript, it))
+                        assessed = listOf(SpeechDelivery.Piece(reference, it))
                     }
             }
         }
@@ -707,42 +735,57 @@ class SpeechTakeSession(
             val seconds = WavPcm.read(file)?.let { it.samples.size.toDouble() / it.sampleRate } ?: 0.0
             val startMs = ((endedAt - seconds) * 1000).toInt()
             try {
-                val readBack = SpeechReader.readPiece(file, language)
-                val said = readBack?.trim().orEmpty()
-                var reference = cursorSpan
-                var placed = false
-                if (said.isNotEmpty()) {
-                    val range = com.roro.futurevoice.talk.ShadowScore.scriptRange(said, words.map { it.text }, language, cursor)
-                    if (range != null) {
-                        reference = spanText(words, range, language)
-                        placed = true
-                    } else {
-                        reference = said
-                    }
-                }
-                if (reference.isEmpty()) return@async readBack?.let { Piece(it, null, seconds = seconds) }
-                val result = PronunciationAssessor.assess(context, file, reference, language, "speech").result
-                val insertions = result?.words?.count { it.isInsertion } ?: 0
-                pieceText(readBack, result?.recognized, language, insertions)?.let { (text, replaced) ->
-                    // Only against a script span the piece was placed on, and
-                    // only when Azure's alignment held (iOS 0c738bf4).
-                    val (restoredText, restored) =
-                        if (!replaced && placed && result != null && insertions <= MAX_INSERTIONS_TO_TRUST)
-                            com.roro.futurevoice.talk.ShadowScore.restoringClearWords(text, reference, result.words, language)
-                        else text to 0
-                    Piece(restoredText, result, reference, replaced, startMs, placed, restored, seconds)
-                }
+                judge(file, words, language, cursorSpan, cursor, startMs, seconds)
             } finally { file.delete() }
+        }
+    }
+
+
+    /**
+     * One piece, read and judged (iOS `judge`): read first, placed in the
+     * script by its own words, and assessed against that span. Also how a
+     * window of a take read as one file is judged ([assessInWindows]).
+     */
+    private suspend fun judge(file: File, words: List<com.roro.futurevoice.talk.SpeechPrompterTrack.Word>,
+                              language: String, cursorSpan: String, cursor: Int?, startMs: Int,
+                              seconds: Double): Piece? {
+        val readBack = SpeechReader.readPiece(file, language)
+        val said = readBack?.trim().orEmpty()
+        var reference = cursorSpan
+        var placed = false
+        if (said.isNotEmpty()) {
+            val range = com.roro.futurevoice.talk.ShadowScore.scriptRange(said, words.map { it.text }, language, cursor)
+            if (range != null) {
+                reference = spanText(words, range, language)
+                placed = true
+            } else {
+                reference = said
+            }
+        }
+        if (reference.isEmpty()) return readBack?.let { Piece(it, null, seconds = seconds) }
+        val result = PronunciationAssessor.assess(context, file, reference, language, "speech").result
+        val insertions = result?.words?.count { it.isInsertion } ?: 0
+        return pieceText(readBack, result?.recognized, language, insertions)?.let { (text, replaced) ->
+            // Only against a script span the piece was placed on, and only
+            // when Azure's alignment held (iOS 0c738bf4).
+            val (restoredText, restored) =
+                if (!replaced && placed && result != null && insertions <= MAX_INSERTIONS_TO_TRUST)
+                    com.roro.futurevoice.talk.ShadowScore.restoringClearWords(text, reference, result.words, language)
+                else text to 0
+            Piece(restoredText, result, reference, replaced, startMs, placed, restored, seconds)
         }
     }
 
     /**
      * A long take's pronunciation when it was read as one file: windows of
-     * ~20 s ([PronunciationAssessor.windows]), each read for its own words and
-     * assessed, all at once. A window that can't be read or assessed is left
-     * out (iOS 247383e9).
+     * ~20 s ([PronunciationAssessor.windows]), each judged as a live piece is
+     * ([judge]): placed in the script and assessed against that span, all at
+     * once. Until iOS 2026-11-18 a window was assessed against its own
+     * read-back, which read the same reader's sounds ~7 points better than
+     * pieces did. A window that can't be read or assessed is left out.
      */
-    private suspend fun assessInWindows(audio: File, language: String): List<SpeechDelivery.Piece> {
+    private suspend fun assessInWindows(audio: File, words: List<com.roro.futurevoice.talk.SpeechPrompterTrack.Word>,
+                                        language: String): List<SpeechDelivery.Piece> {
         if (!PronunciationAssessor.supports(language)) return emptyList()
         val wav = withContext(Dispatchers.IO) { PronunciationAssessor.wav16kMono(audio) } ?: return emptyList()
         val windows = PronunciationAssessor.windows(wav)
@@ -755,10 +798,8 @@ class SpeechTakeSession(
                     val tmp = File(context.cacheDir, "pron-${java.util.UUID.randomUUID()}.wav")
                     if (runCatching { tmp.writeBytes(piece) }.isFailure) return@async null
                     try {
-                        val text = SpeechReader.readPiece(tmp, language)
-                        if (text.isNullOrEmpty()) null
-                        else PronunciationAssessor.assess(context, piece, text, language, "speech").result
-                            ?.let { SpeechDelivery.Piece(text, it, starts[index]) }
+                        judge(tmp, words, language, "", null, starts[index], 0.0)
+                            ?.let { j -> j.pron?.let { SpeechDelivery.Piece(j.reference, it, starts[index]) } }
                     } finally { tmp.delete() }
                 }
             }.awaitAll().filterNotNull()

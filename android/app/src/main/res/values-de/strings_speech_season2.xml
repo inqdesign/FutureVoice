@@ -113,4 +113,6 @@
         <item>Übung zahlt sich aus.</item>
     </string-array>
     <string name="speech_rank_of">Platz %1$d von %2$d</string>
+    <string name="speech_read_to_the_end_for_a_score">Lies das Skript bis zum Ende, dann bekommst du eine Punktzahl.</string>
+    <string name="speech_unfinished_entry">Lies das Skript bis zum Ende, dann kommt die Aufnahme in die Rangliste.</string>
 </resources>
