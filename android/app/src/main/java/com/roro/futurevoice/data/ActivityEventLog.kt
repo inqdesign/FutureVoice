@@ -80,6 +80,9 @@ object ActivityEventLog {
     }
 
     /** Events within `[start, end)`, oldest first. */
+    /** The whole log in file order — what the sync carries. */
+    fun snapshot(c: Context): List<Event> = all(c)
+
     fun events(c: Context, start: Long, end: Long): List<Event> =
         all(c).filter { it.at in start until end }.sortedBy { it.at }
 

@@ -51,6 +51,21 @@ data class StudyPlan(
      * on load. true = shadowing is a block of its own.
      */
     val shadowIsOwn: Boolean? = null,
+    /** iOS's legacy review slot and derived say-it-again (converted into
+     *  blocks on iOS load). Unused here; carried so a routine synced with an
+     *  iPhone or Mac goes back up exactly as it came (iOS `StudyPlan`). */
+    val autoReview: Boolean = false,
+    val reviewHour: Int = 21,
+    val reviewMinute: Int = 0,
+    val reviewMinutes: Int = 20,
+    val autoSayItAgain: Boolean = false,
+    /** The app wrote this routine on a fresh install (or in onboarding's
+     *  builder) and nobody has changed it since. A routine synced from
+     *  another device always beats it ([later]). */
+    val isSeed: Boolean? = null,
+    /** When the routine was last changed (epoch ms). Two devices' routines
+     *  merge to the later one. */
+    val editedAt: Long? = null,
 ) {
     @Serializable
     enum class Kind(val raw: String) {
@@ -431,6 +446,35 @@ data class StudyPlan(
         const val SAY_IT_AGAIN_MINUTES = 5
 
         fun newId(): String = UUID.randomUUID().toString().uppercase()
+
+        /**
+         * Which of two devices' routines stands (iOS `StudyPlan.later`): a
+         * real routine over a seed, then the later edit. With neither stamp
+         * (both from before them), the routine kept the longest; null when
+         * nothing tells them apart and the sync's own clock decides.
+         */
+        fun later(a: StudyPlan, b: StudyPlan): StudyPlan? {
+            val aSeed = a.isSeed == true
+            val bSeed = b.isSeed == true
+            if (aSeed != bSeed) return if (aSeed) b else a
+            val x = a.editedAt
+            val y = b.editedAt
+            return when {
+                x != null && y != null -> if (x >= y) a else b
+                x != null -> a
+                y != null -> b
+                else -> {
+                    val p = a.streakSince
+                    val q = b.streakSince
+                    when {
+                        p != null && q != null && p != q -> if (p < q) a else b
+                        p != null && q == null -> a
+                        p == null && q != null -> b
+                        else -> null
+                    }
+                }
+            }
+        }
 
         /**
          * The first routine: what the learner already told the app in

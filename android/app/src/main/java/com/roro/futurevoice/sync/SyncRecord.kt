@@ -56,6 +56,12 @@ enum class SyncKind(val raw: String, val isLanguageScoped: Boolean, val isBlob: 
      *  one record, so onboarding's answer and every later edit reach the other
      *  devices. An older build can't name this kind and skips it. */
     LEARNING_PURPOSE("learningPurpose", false),
+    /** The routine, its promise days and when each rep happened
+     *  ([RoutineSync], iOS `StudyPlanKind` / `promiseDay` / `ActivityEventKind`):
+     *  the streak is judged from these three. */
+    STUDY_PLAN("studyPlan", false),
+    PROMISE_DAY("promiseDay", false),
+    ACTIVITY_EVENT("activityEvent", false),
     BLOB_TURN("blobTurn", false, isBlob = true),
     BLOB_RECORDING("blobRecording", false, isBlob = true),
     BLOB_VOICE_SAMPLE("blobVoiceSample", false, isBlob = true),
@@ -193,4 +199,7 @@ data class SyncIndexState(
     val lastPullAt: Long? = null,
     val lastPushAt: Long? = null,
     val schema: Int = SyncSchema.VERSION,
+    /** Kinds this build learnt after the change token had already moved past
+     *  their records, once fetched ([SyncEngine.CATCH_UP_KINDS]). */
+    val caughtUp: Set<String> = emptySet(),
 )

@@ -68,6 +68,9 @@ object PromiseLedger {
 
     fun entry(c: Context, day: Long): Entry? = all(c)[StudyPlan.dayKey(day)]
 
+    /** Every day on file, keyed `yyyy-MM-dd` — what the sync carries. */
+    fun snapshot(c: Context): Map<String, Entry> = all(c)
+
     @Synchronized
     fun set(c: Context, day: Long, entry: Entry) {
         val next = all(c) + (StudyPlan.dayKey(day) to entry)

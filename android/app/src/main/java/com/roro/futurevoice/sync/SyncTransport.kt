@@ -23,6 +23,11 @@ interface SyncTransport {
     /** Everything changed since [token] (null = from the beginning). Blob
      *  records come back WITHOUT their bytes. */
     suspend fun changes(zone: String, token: String?): SyncChangeBatch
+    /** Every record of [kinds] on the server, whatever the change token says
+     *  — for a kind this build learnt to read after its token had already
+     *  moved past those records. */
+    suspend fun listKinds(zone: String, kinds: Set<SyncKind>): List<SyncRecord> =
+        changes(zone, null).changed.filter { it.kind in kinds }
     /** Full records including a blob's bytes (downloaded to a temp file the
      *  caller must move), keyed by record name; a name the server lacks is
      *  absent. */

@@ -216,6 +216,13 @@ private fun slot(kind: StudyPlan.Kind, callStart: Int, callMinutes: Int, selecte
 @Composable
 fun RoutineOnboardingOverlay(onFinished: () -> Unit, debugStep: String? = null) {
     val context = LocalContext.current
+    // What the builder writes stays a seed (iOS `buildingOnboardingRoutine`):
+    // a second device that lands here must never replace the routine the
+    // learner kept on another one.
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        com.roro.futurevoice.data.StudyPlanStore.buildingOnboardingRoutine = true
+        onDispose { com.roro.futurevoice.data.StudyPlanStore.buildingOnboardingRoutine = false }
+    }
     val scope = rememberCoroutineScope()
 
     var step by remember { mutableStateOf(RoutineStep.INTRO) }

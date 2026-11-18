@@ -108,6 +108,15 @@ class SyncKindRegistry(private val context: Context) : SyncRegistry {
             state = { com.roro.futurevoice.data.LearningPurposeStore.syncState(context) },
             adopt = { com.roro.futurevoice.data.LearningPurposeStore.adopt(context, it) }),
         counterpartKind(),
+        RoutineSync.PlanKind(
+            current = { com.roro.futurevoice.data.StudyPlanStore.current(context) },
+            adopt = { com.roro.futurevoice.data.StudyPlanStore.adoptSynced(context, it) }),
+        RoutineSync.PromiseKind(
+            current = { com.roro.futurevoice.data.PromiseLedger.snapshot(context) },
+            replace = { com.roro.futurevoice.data.PromiseLedger.replaceAll(context, it); touched(null) }),
+        RoutineSync.EventKind(
+            current = { com.roro.futurevoice.data.ActivityEventLog.snapshot(context) },
+            replace = { com.roro.futurevoice.data.ActivityEventLog.replaceAll(context, it); touched(null) }),
         DefaultsKind(context),
         BlobKind(SyncKind.BLOB_TURN, { File(root, "turn-audio") }, { it.endsWith(".wav") }),
         BlobKind(SyncKind.BLOB_RECORDING, { File(root, "shadow-takes") }, { it.endsWith(".wav") }),

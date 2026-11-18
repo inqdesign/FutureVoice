@@ -257,6 +257,28 @@ class DriveTransport(
         return SyncChangeBatch(changed = materialize(dedupe(files)), token = start)
     }
 
+    /** Only the files of [kinds] (their `k` property), payloads and all. */
+    override suspend fun listKinds(zone: String, kinds: Set<SyncKind>): List<SyncRecord> {
+        if (kinds.isEmpty()) return emptyList()
+        val parent = zoneId(zone)
+        val byKind = kinds.joinToString(" or ") { "appProperties has { key='k' and value='${it.raw}' }" }
+        val files = ArrayList<JsonObject>()
+        var page: String? = null
+        do {
+            val url = "$api/files".toHttpUrl().newBuilder()
+                .addQueryParameter("spaces", "appDataFolder")
+                .addQueryParameter("q", "'$parent' in parents and trashed = false and ($byKind)")
+                .addQueryParameter("pageSize", "1000")
+                .addQueryParameter("fields", "nextPageToken,files($fileFields)")
+                .apply { page?.let { addQueryParameter("pageToken", it) } }
+                .build()
+            val body = retrying { call(Request.Builder().url(url).get()) }.jsonObject
+            body["files"]?.jsonArray?.forEach { files.add(it.jsonObject) }
+            page = body["nextPageToken"]?.jsonPrimitive?.content
+        } while (page != null)
+        return materialize(dedupe(files))
+    }
+
     private suspend fun changeFeed(parent: String, token: String): SyncChangeBatch {
         val files = ArrayList<JsonObject>()
         val removed = ArrayList<String>()

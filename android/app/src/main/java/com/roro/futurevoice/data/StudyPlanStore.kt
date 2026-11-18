@@ -46,7 +46,21 @@ object StudyPlanStore {
 
     private fun seededNow(c: Context) = StudyPlan.seeded(
         callTimes = DailyCallStore.times(c), goalMinutes = goalMinutes(c),
-        callEnabled = DailyCallStore.isEnabled(c))
+        callEnabled = DailyCallStore.isEnabled(c)).copy(isSeed = true)
+
+    /**
+     * True while onboarding's routine builder is on screen (iOS
+     * `buildingOnboardingRoutine`). What it writes stays a SEED: a second
+     * device that lands in the builder must never replace the routine the
+     * learner kept on another one. A hand edit after onboarding is a real
+     * edit again.
+     */
+    @Volatile var buildingOnboardingRoutine = false
+
+    /** The stamps every local change carries, so the sync can tell which
+     *  device's routine is newer ([StudyPlan.later]). */
+    private fun stamped(plan: StudyPlan, now: Long) =
+        plan.copy(isSeed = if (buildingOnboardingRoutine) true else null, editedAt = now)
 
     fun goalMinutes(c: Context): Int =
         c.getSharedPreferences("futurevoice", 0).getInt("futurevoice.dailyGoalMinutes", 10)
@@ -80,7 +94,7 @@ object StudyPlanStore {
         val now = System.currentTimeMillis()
         // Whatever is handed in now is written in today's terms: its
         // shadowing blocks are shadowing (iOS `4c0d8d7c`).
-        var next = new.copy(shadowIsOwn = true).foldingIntoReview()
+        var next = stamped(new.copy(shadowIsOwn = true), now).foldingIntoReview()
         next = when {
             next.blocks.isEmpty() -> next.copy(streakSince = null)
             byLearner && next.streakSince == null -> next.copy(streakSince = StudyPlan.startOfDay(now))
@@ -116,14 +130,37 @@ object StudyPlanStore {
     /** The call times were set from somewhere other than the plan. */
     fun callTimesChanged(c: Context, times: List<Int>) {
         val plan = current(c)
-        val next = plan.adoptingCallTimes(times, goalMinutes(c))
-        if (next == plan) return
+        val adopted = plan.adoptingCallTimes(times, goalMinutes(c))
+        if (adopted == plan) return
+        val next = stamped(adopted, System.currentTimeMillis())
         _plan.value = next
         write(c, next)
         afterChange(c)
     }
 
-    private fun afterChange(c: Context, before: StudyPlan? = null) {
+    /**
+     * The routine another device synced (iOS `adoptSynced`). Taken as it is
+     * (the streak start, the edit stamp and the seed mark came with it), then
+     * everything that follows a routine follows it here: the day's promise,
+     * the call times, the reminders. Whether the call RINGS on this device
+     * is still this device's switch.
+     */
+    fun adoptSynced(c: Context, incoming: StudyPlan) {
+        ensure(c)
+        val old = _plan.value
+        val next = incoming.foldingIntoReview()
+        if (next == old || !next.isCallable) return
+        val callsChanged = next.callTimes != old.callTimes
+        _plan.value = next
+        write(c, next)
+        if (callsChanged) {
+            if (next.callTimes.isNotEmpty()) DailyCallStore.mirrorTimes(c, next.callTimes)
+            if (DailyCallStore.isEnabled(c)) DailyCallScheduler.schedule(c)
+        }
+        afterChange(c, before = old, fromSync = true)
+    }
+
+    private fun afterChange(c: Context, before: StudyPlan? = null, fromSync: Boolean = false) {
         val app = c.applicationContext
         scope.launch {
             // A day already kept under the plan being replaced is recorded
@@ -133,7 +170,7 @@ object StudyPlanStore {
             runCatching { PromiseJudge.refresh(app) }
             runCatching { DrillReminder.reschedule(app) }
             runCatching { PlanReminder.reschedule(app) }
-            StoreEvents.bump()
+            StoreEvents.bump(fromSync = fromSync)
         }
     }
 

@@ -389,6 +389,14 @@ class SyncEngine(
             transport.changes(zone, null)
         }
         coroutineContextActive()
+        // Kinds this build learnt to read after its change token had already
+        // moved past their records (they were skipped as unknown): fetched
+        // once by kind, never by re-listing everything.
+        val catchUp = CATCH_UP_KINDS.filter { it.raw !in index.state.caughtUp && registry.handler(it) != null }
+        val caughtUp = if (catchUp.isNotEmpty() && index.state.changeToken != null)
+            transport.listKinds(zone, catchUp.toSet()) else emptyList()
+        val changed = batch.changed + caughtUp
+        coroutineContextActive()
 
         // Files the server lost outright (never by this app): the index
         // forgets their handles so a re-push writes a fresh file.
@@ -400,7 +408,7 @@ class SyncEngine(
             }
         }
 
-        val groups = batch.changed.groupBy { "${it.kind.raw}|${it.lang ?: ""}" }
+        val groups = changed.groupBy { "${it.kind.raw}|${it.lang ?: ""}" }
         val applied = HashSet<SyncKind>()
         val cascades = ArrayList<SyncCascade>()
         var skipped = false
@@ -420,12 +428,13 @@ class SyncEngine(
         for (c in cascades) run(c, index)
         index.state = index.state.copy(
             changeToken = if (skipped) index.state.changeToken else batch.token,
-            lastPullAt = now)
+            lastPullAt = now,
+            caughtUp = if (skipped) index.state.caughtUp else index.state.caughtUp + catchUp.map { it.raw })
         index.save()
         if (applied.isNotEmpty()) {
             onApplied?.let { cb -> deliver { cb(applied) } }
-            Analytics.capture("sync_pull", mapOf("records" to batch.changed.size, "kinds" to applied.size,
-                "by_kind" to byKind(batch.changed)))
+            Analytics.capture("sync_pull", mapOf("records" to changed.size, "kinds" to applied.size,
+                "by_kind" to byKind(changed)))
         }
     }
 
@@ -771,6 +780,9 @@ class SyncEngine(
         const val BLOB_BATCH = 12
         const val BLOB_FETCH_BATCH = 10
         const val REPORT_PUSH_FROM = 20
+        /** Kinds added after builds were already syncing, whose records an
+         *  older build skipped and whose change token has moved past them. */
+        val CATCH_UP_KINDS = listOf(SyncKind.STUDY_PLAN, SyncKind.PROMISE_DAY, SyncKind.ACTIVITY_EVENT)
         const val QUOTA_BACKOFF_MS = 6 * 3600 * 1000L
 
         fun describe(e: SyncTransportError): String = e.message ?: "error"
