@@ -1212,6 +1212,98 @@
         }
       }
     },
+    "Read the script all the way to the end, and it gets a score." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lies das Skript bis zum Ende, dann bekommst du eine Punktzahl."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lee el guion hasta el final y tendrás una puntuación."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lis le texte jusqu’au bout pour obtenir un score."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原稿を最後まで読むと、スコアが出ます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "원고를 끝까지 읽으면 점수가 나와요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把稿子读到最后，就会出分数。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把稿子讀到最後，就會出現分數。"
+          }
+        }
+      }
+    },
+    "Read the script to the end, and the take goes on the board." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lies das Skript bis zum Ende, dann kommt die Aufnahme in die Rangliste."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lee el guion hasta el final y la toma entrará en la clasificación."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lis le texte jusqu’au bout pour que l’essai entre au classement."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原稿を最後まで読むと、順位に載ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "원고를 끝까지 읽으면 순위에 올라가요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把稿子读到最后，这次录制就会进入排名。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把稿子讀到最後，這次錄製就會進入排名。"
+          }
+        }
+      }
+    },
     "Remove me from this board" : {
       "localizations" : {
         "de" : {

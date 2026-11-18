@@ -919,6 +919,9 @@ struct SpeechChallengeEntrySection: View {
             case .practice:
                 Label("A practice take. It stays off the board.", systemImage: "mic")
                     .foregroundStyle(.secondary)
+            case .unfinished:
+                Label("Read the script to the end, and the take goes on the board.", systemImage: "text.alignleft")
+                    .foregroundStyle(.secondary)
             case nil:
                 if let rank = standing?.myRank, let best = standing?.myBest {
                     Label("Your best on the board: \(best) · #\(rank)", systemImage: "trophy")

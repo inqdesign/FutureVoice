@@ -544,6 +544,27 @@ final class SpeechTakeSession: ObservableObject {
         // The pieces were read during the take; only the tail is left. Any
         // piece that failed sends the whole file to the reader instead, so a
         // hole is never scored as skipped words.
+        // A challenge is read to the END (2026-11-18, founder: "stopped
+        // halfway, it can't go up; don't even score it"). Once the words
+        // are back, a take that didn't read the whole script is not scored,
+        // saved or entered: the learner is asked to read it again.
+        func readTooLittle(_ transcript: String) async -> Bool {
+            guard script.isChallenge else { return false }
+            let body = script.body, language = script.language
+            let share = await Task.detached {
+                SpeechChallenges.readShare(script: body, transcript: transcript, language: language)
+            }.value
+            guard share < SpeechChallenges.fullReading else { return false }
+            try? FileManager.default.removeItem(at: audioURL)
+            Task { if let v = await videoStop.value { try? FileManager.default.removeItem(at: v.0) } }
+            Analytics.capture("speech_take_unfinished", [
+                "seconds": Int(duration), "coverage": Int((share * 100).rounded()),
+                "cursor_end": cursor, "words": track.words.count, "camera": fromCamera,
+            ])
+            phase = .failed(explain("Read the script all the way to the end, and it gets a score."))
+            return true
+        }
+
         let readStart = Date()
         var texts: [String] = []
         var prons: [PronunciationResult] = []
@@ -576,13 +597,14 @@ final class SpeechTakeSession: ObservableObject {
                 .filter { !$0.isEmpty }.joined(separator: joiner)
             audioGrounded = true
             path = unassessed ? "pieces_windows" : "pieces"
+            if await readTooLittle(transcript) { return }
             // A reader who never pauses is never cut, and a piece over
             // Azure's 30 s is not assessed at all: the take's sounds and its
             // Season 2 reading then rested on the stop's 0.2 s tail
             // (2026-11-18: pronunciation 0, pace 31, off the board). The
             // whole file is assessed in windows instead, as a whole read is.
             if unassessed {
-                let windows = await Self.assessInWindows(audioURL: audioURL, language: script.language)
+                let windows = await Self.assessInWindows(audioURL: audioURL, track: track, language: script.language)
                 if !windows.isEmpty {
                     assessed = windows
                     prons = windows.map(\.result)
@@ -593,25 +615,32 @@ final class SpeechTakeSession: ObservableObject {
             // each is read and assessed on its own, BESIDE the whole read, so
             // the sounds are still heard and the wait is the slower of the two.
             let language = script.language
+            let track = track
             let long: Task<[SpeechDelivery.Piece], Never>? = duration > PronunciationAssessor.maxSeconds
-                ? Task { await Self.assessInWindows(audioURL: audioURL, language: language) }
+                ? Task { await Self.assessInWindows(audioURL: audioURL, track: track, language: language) }
                 : nil
             let reading = await SpeechReader.read(audioURL: audioURL, liveText: liveText, language: script.language)
             transcript = reading.text
             audioGrounded = reading.audioGrounded
             path = "whole"
+            if await readTooLittle(transcript) { long?.cancel(); return }
             prons = []
             assessed = []
             if let long {
                 assessed = await long.value
                 prons = assessed.map(\.result)
             } else if reading.audioGrounded {
+                // Judged against the script span the words were read from,
+                // as a piece is; the reader's own words only off the script.
+                let reference = ShadowEngine.scriptRange(of: transcript, in: track.words.map(\.text),
+                                                         language: script.language, near: nil)
+                    .map { Self.spanText(track, $0, language: script.language) } ?? transcript
                 let whole = await PronunciationAssessor.assess(
-                    audioURL: audioURL, reference: transcript,
+                    audioURL: audioURL, reference: reference,
                     language: script.language, surface: "speech")
                 if let r = whole.result {
                     prons = [r]
-                    assessed = [.init(reference: transcript, result: r)]
+                    assessed = [.init(reference: reference, result: r)]
                 }
             }
         }
@@ -884,10 +913,15 @@ final class SpeechTakeSession: ObservableObject {
     }
 
     /// A long take's pronunciation when it was read as one file: windows of
-    /// ~20 s (`PronunciationAssessor.windows`), each read for its own words
-    /// (the scripted reference, as for a live piece) and assessed, all at
-    /// once. A window that can't be read or assessed is left out.
-    nonisolated private static func assessInWindows(audioURL: URL, language: String) async -> [SpeechDelivery.Piece] {
+    /// ~20 s (`PronunciationAssessor.windows`), each judged exactly as a live
+    /// piece is (`judge`): read for its own words, placed in the script, and
+    /// assessed against THAT span, all at once. Until 2026-11-18 a window was
+    /// assessed against its own read-back, and a word said wrong that the
+    /// reader wrote as the script's was judged as said: the same reader's
+    /// sounds read ~7 points better this way than in pieces. A window that
+    /// can't be read or assessed is left out.
+    nonisolated private static func assessInWindows(audioURL: URL, track: SpeechPrompterTrack,
+                                                    language: String) async -> [SpeechDelivery.Piece] {
         guard PronunciationAssessor.supports(language),
               let wav = await Task.detached(operation: { AudioLoudness.wav16kMono(fromFileAt: audioURL) }).value
         else { return [] }
@@ -906,13 +940,11 @@ final class SpeechTakeSession: ObservableObject {
                         .appendingPathComponent("pron-\(UUID().uuidString).wav")
                     guard (try? piece.write(to: url)) != nil else { return (index, nil) }
                     defer { try? FileManager.default.removeItem(at: url) }
-                    guard let text = await SpeechReader.readPiece(audioURL: url, language: language),
-                          !text.isEmpty else { return (index, nil) }
-                    let assessed = await PronunciationAssessor.assess(
-                        wav: piece, reference: text, language: language, surface: "speech")
-                    return (index, assessed.result.map {
-                        SpeechDelivery.Piece(reference: text, result: $0, startMs: windowStarts[index])
-                    })
+                    guard let judged = await judge(url, track: track, language: language,
+                                                   startMs: windowStarts[index]),
+                          let result = judged.pron else { return (index, nil) }
+                    return (index, SpeechDelivery.Piece(reference: judged.reference, result: result,
+                                                        startMs: windowStarts[index]))
                 }
             }
             var got: [(Int, SpeechDelivery.Piece)] = []

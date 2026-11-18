@@ -109,6 +109,9 @@ final class SpeechChallenges: ObservableObject {
         /// On a challenge that has ended: the board is frozen, so this was
         /// practice.
         case practice
+        /// The script wasn't read to the end (a take scored before that was
+        /// refused at the stop, 2026-11-18).
+        case unfinished
     }
 
     @Published private(set) var scripts: [SpeechScript] = []
@@ -354,9 +357,28 @@ final class SpeechChallenges: ObservableObject {
 
     // MARK: - Entering a take
 
+    /// How much of a challenge's script must be read for a take to count
+    /// (2026-11-18, founder: "the script is read to the end, always"). Not
+    /// 1: `SpeechAnalyzer.covered` already lets a few misheard words
+    /// through, and a skipped sentence costs a 150-word script ~7%. A take
+    /// under it is not scored at all (`SpeechTakeSession.stop`), and the
+    /// server refuses one (`submit_speech_reading_take_v8`, `INCOMPLETE`).
+    static let fullReading = 0.95
+
+    /// The share of `script` the transcript read (`SpeechAnalyzer.coverage`).
+    nonisolated static func readShare(script: String, transcript: String, language: String) -> Double {
+        let spoken = SpeechAnalyzer.removingFillers(transcript, language: language, keepingThoseIn: script)
+        let diff = ShadowEngine.analyze(target: script, learner: spoken, language: language)
+        return SpeechAnalyzer.coverage(diff.steps)
+    }
+
     /// Called by the take session once a take on a challenge is scored.
     func enter(take: SpeechTake, script: SpeechScript, recordedOnCamera: Bool) {
         guard let challengeId = script.challengeId else { return }
+        guard (take.metrics.reading?.coverage ?? take.metrics.coverage ?? 1) >= Self.fullReading else {
+            entries[take.id] = .unfinished
+            return
+        }
         // An ended challenge can still be practised; its board is frozen.
         guard !isPast(challengeId) else {
             entries[take.id] = .practice
@@ -620,7 +642,8 @@ final class SpeechChallenges: ObservableObject {
                     ShadowEngine.analyze(target: body, learner: SpeechAnalyzer.removingFillers(transcript, language: language, keepingThoseIn: body),
                                          language: language)
                 }.value
-                guard abs(SpeechAnalyzer.accuracy(diff) - take.metrics.accuracy) <= 5 else { continue }
+                guard abs(SpeechAnalyzer.accuracy(diff) - take.metrics.accuracy) <= 5,
+                      SpeechAnalyzer.coverage(diff.steps) >= Self.fullReading else { continue }
                 let m = take.metrics
                 let overall = SpeechAnalyzer.overall(accuracy: m.accuracy, pace: m.paceScore, pause: m.pauseScore,
                                                      filler: m.fillerScore, steadiness: m.steadiness,
