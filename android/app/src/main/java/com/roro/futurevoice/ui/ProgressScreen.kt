@@ -200,18 +200,45 @@ fun ProgressBody(language: String, nativeLanguage: String,
         // Studied, then SAID — the loop closing, which is the one number that
         // proves the app worked. The detector already writes it onto every
         // summary; it had simply never been read back.
-        val carries = talks.flatMap { it.summary?.carryovers.orEmpty() }
-        carryoverTotal = carries.size
+        // Counted once per ITEM, the first time it was said (iOS
+        // `PracticeStats.carryoverSummary`): the same word used in three
+        // talks is one thing studied and then said, not three.
+        val firstByItem = HashMap<String, com.roro.futurevoice.talk.Carryover>()
+        for (s in talks.filter { it.endedAt != null }) {
+            for (c in s.summary?.carryovers.orEmpty()) {
+                val key = com.roro.futurevoice.talk.CarryoverDetector.normalized(c.item)
+                if (key.isEmpty()) continue
+                val seen = firstByItem[key]
+                if (seen == null || c.detectedAt < seen.detectedAt) firstByItem[key] = c
+            }
+        }
+        carryoverTotal = firstByItem.size
         val weekAgo = System.currentTimeMillis() - 7L * 86_400_000L
-        carryoverWeek = carries.count { it.detectedAt >= weekAgo }
-        // Whole-library mastery: "how far along am I" is THIS tab's question,
-        // which is why it lives here rather than on Practice.
-        val books = ScenarioStore.shared(context).load(language)
-            .filter { it.archivedAt == null }
-        material = books.sumOf { b ->
-            b.curriculum?.masteredCount ?: 0
-        } to books.sumOf { b ->
-            b.curriculum?.totalCount ?: 0
+        carryoverWeek = firstByItem.values.count { it.detectedAt > weekAgo }
+        // Whole-library mastery, iOS `loadMaterial`: every finished talk's
+        // book AND every scene book, archived or not. Off the main thread —
+        // a curriculum build per talk.
+        material = withContext(Dispatchers.Default) {
+            val prefs = context.getSharedPreferences("futurevoice", 0)
+            val level = CefrLevel.from(com.roro.futurevoice.data.LanguageScope.level(context, language,
+                prefs.getString("futurevoice.proficiency", null) ?: "b1"))
+            val vocab = VocabStore.shared(context)
+            val attempts = com.roro.futurevoice.data.ShadowAttemptStore.shared(context).load(language)
+            val cards = DrillStore.shared(context).load(language)
+            var mastered = 0
+            var total = 0
+            for (s in talks.filter { it.endedAt != null }) {
+                val snap = runCatching {
+                    TalkCurriculum.build(s, level, language, vocab, attempts, cards)
+                }.getOrNull() ?: continue
+                mastered += snap.masteredCount
+                total += snap.totalCount
+            }
+            for (b in ScenarioStore.shared(context).load(language)) {
+                mastered += b.curriculum?.masteredCount ?: 0
+                total += b.curriculum?.totalCount ?: 0
+            }
+            mastered to total
         }
         streak = TalkTimeLog.streakDays(context)
         val bands = VocabStore.shared(context).usedWordsByLevel(language)
