@@ -125,7 +125,15 @@ final class SpeechTakeSession: ObservableObject {
         /// The script span was found from the piece's own words, not taken
         /// from the prompter's cursor.
         var placed = false
+        /// How long the piece's audio is.
+        var seconds: Double = 0
     }
+
+    /// A piece shorter than this holds no sentence to judge: the tail cut
+    /// at the stop is often a fraction of a second, and judged against the
+    /// prompter's last span it scored 0 and became the take's whole
+    /// pronunciation (2026-11-18).
+    static let minAssessedSeconds: Double = 1.5
 
     /// A piece's words, from two witnesses. The read-back (Gemini) is the
     /// text the take is scored on, but it can come back short: on
@@ -543,15 +551,19 @@ final class SpeechTakeSession: ObservableObject {
         var readBackFixed = 0
         var restoredWords = 0
         var placedPieces = 0
+        var unassessed = false
         for piece in pieces {
             guard let piece = await piece.value else { texts = []; prons = []; assessed = []; break }
             texts.append(piece.text)
             if piece.readBackReplaced { readBackFixed += 1 }
             restoredWords += piece.restoredWords
             if piece.placed { placedPieces += 1 }
+            guard piece.seconds >= Self.minAssessedSeconds else { continue }
             if let pron = piece.pron {
                 prons.append(pron)
                 assessed.append(.init(reference: piece.reference, result: pron, startMs: piece.startMs))
+            } else {
+                unassessed = true
             }
         }
         let transcript: String
@@ -563,7 +575,19 @@ final class SpeechTakeSession: ObservableObject {
             transcript = texts.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                 .filter { !$0.isEmpty }.joined(separator: joiner)
             audioGrounded = true
-            path = "pieces"
+            path = unassessed ? "pieces_windows" : "pieces"
+            // A reader who never pauses is never cut, and a piece over
+            // Azure's 30 s is not assessed at all: the take's sounds and its
+            // Season 2 reading then rested on the stop's 0.2 s tail
+            // (2026-11-18: pronunciation 0, pace 31, off the board). The
+            // whole file is assessed in windows instead, as a whole read is.
+            if unassessed {
+                let windows = await Self.assessInWindows(audioURL: audioURL, language: script.language)
+                if !windows.isEmpty {
+                    assessed = windows
+                    prons = windows.map(\.result)
+                }
+            }
         } else {
             // A take longer than one assessment is cut into windows here and
             // each is read and assessed on its own, BESIDE the whole read, so
@@ -809,8 +833,10 @@ final class SpeechTakeSession: ObservableObject {
         let startMs = Int((endedAt - seconds) * 1000)
         return Task {
             defer { try? FileManager.default.removeItem(at: url) }
-            return await Self.judge(url, track: track, language: language,
-                                    cursorSpan: cursorSpan, cursor: cursor, startMs: startMs)
+            var piece = await Self.judge(url, track: track, language: language,
+                                         cursorSpan: cursorSpan, cursor: cursor, startMs: startMs)
+            piece?.seconds = seconds
+            return piece
         }
     }
 
@@ -900,7 +926,10 @@ final class SpeechTakeSession: ObservableObject {
     /// faulted word, worst first. nil when no piece was assessed.
     static func pronunciation(of pieces: [PronunciationResult])
     -> (score: Int, weakWords: [PronunciationResult.Word])? {
-        let weighted = pieces.map { (score: $0.soundScore, weight: max(1, $0.judgedWords.count)) }
+        // A piece with no word judged (all omitted or added) says nothing
+        // about the sounds; it scored 0 and pulled the take down with it.
+        let weighted = pieces.filter { !$0.judgedWords.isEmpty }
+            .map { (score: $0.soundScore, weight: $0.judgedWords.count) }
         let total = weighted.reduce(0) { $0 + $1.weight }
         guard total > 0 else { return nil }
         let score = weighted.reduce(0) { $0 + $1.score * $1.weight } / total

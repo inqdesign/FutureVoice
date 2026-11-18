@@ -133,6 +133,25 @@ final class ShadowEngineTests: XCTestCase {
         }
     }
 
+    /// Units the transcriber abbreviates are the words the reader said
+    /// (speech challenge, 2026-11-18: "mph", "9°").
+    func testUnitsAndDegreesAreNotSlips() {
+        for (target, learner) in [
+            ("with gusts of up to forty miles an hour by lunchtime", "with gusts of up to 40 mph by lunchtime"),
+            ("a top speed of ninety miles per hour", "a top speed of 90 mph"),
+            ("temperatures will struggle to get past nine degrees, and tonight",
+             "temperatures will struggle to get past 9°, and tonight"),
+            ("highs of fifteen degrees.", "highs of 15°C."),
+            ("we walked ten kilometres", "we walked 10 km"),
+        ] {
+            let a = ShadowEngine.analyze(target: target, learner: learner)
+            XCTAssertTrue(a.steps.allSatisfy { $0.op == .match }, "\(target) | \(learner): \(a.steps)")
+        }
+        // A unit the script doesn't have is still extra.
+        let a = ShadowEngine.analyze(target: "up to forty by lunchtime", learner: "up to 40 mph by lunchtime")
+        XCTAssertFalse(a.steps.allSatisfy { $0.op == .match })
+    }
+
     /// A different number is still a different number.
     func testWrongYearIsStillWrong() {
         let a = ShadowEngine.analyze(target: "in nineteen eleven", learner: "in 1912")

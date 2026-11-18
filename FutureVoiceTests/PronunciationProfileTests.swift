@@ -86,4 +86,14 @@ final class PronunciationProfileTests: XCTestCase {
         XCTAssertFalse(t.endsSentence(at: 5))
         XCTAssertFalse(t.endsSentence(at: 99))
     }
+
+    /// A piece with nothing judged (the stop's 0.2 s tail, every script word
+    /// omitted) is not a score of 0 for the take (2026-11-18).
+    @MainActor func testPieceWithNothingJudgedIsLeftOut() {
+        let heard = result([word("good", 90), word("morning", 88)], accuracy: 90)
+        let tail = result([word("sunny", nil, error: "Omission"), word("weekend", nil, error: "Omission")],
+                          accuracy: 0)
+        XCTAssertEqual(SpeechTakeSession.pronunciation(of: [heard, tail])?.score, 90)
+        XCTAssertNil(SpeechTakeSession.pronunciation(of: [tail]))
+    }
 }

@@ -848,6 +848,11 @@ enum ShadowEngine {
         if out.contains("%"), let percent = percentWord[code] {
             out = out.replacingOccurrences(of: "%", with: " \(percent) ")
         }
+        // "nine degrees" comes back "9°" (or "9°C"): the reader said the
+        // word, and it was marked skipped twice on one take (2026-11-18).
+        if out.contains("°"), let degrees = degreeWord[code] {
+            out = replace(out, #"°[cf]?(?![a-z])"#) { _ in " \(degrees) " }
+        }
         if hasDigit, let point = decimalWord[code] {
             out = replace(out, commaDecimal ? #"(\d+),(\d+)"# : #"(\d+)\.(\d+)"#) { g in
                 "\(g[1]) \(point) " + g[2].map(String.init).joined(separator: " ")
@@ -917,6 +922,7 @@ enum ShadowEngine {
         "zh": ["$": ("美元", "美元"), "€": ("欧元", "欧元"), "£": ("英镑", "英镑"),
                "₩": ("韩元", "韩元"), "¥": ("元", "元")],
     ]
+    private static let degreeWord = ["en": "degrees", "de": "grad", "es": "grados", "fr": "degrés"]
     private static let percentWord = ["en": "percent", "de": "prozent", "es": "por ciento", "fr": "pour cent",
                                       "ko": "퍼센트", "ja": "パーセント"]
     private static let decimalWord = ["en": "point", "de": "komma", "es": "coma", "fr": "virgule",
@@ -965,7 +971,54 @@ enum ShadowEngine {
     private static func heardTokens(_ heard: String, target: String, targetTokens: [String],
                                     language: String, style: LanguageCatalog.TokenStyle) -> [String] {
         let tokens = numberedTokens(heard, target: target, targetTokens: targetTokens, language: language, style: style)
-        return style == .word ? joiningCompounds(tokens, targetTokens: targetTokens, language: language) : tokens
+        guard style == .word else { return tokens }
+        let units = language.hasPrefix("en") ? spellingOutUnits(tokens, targetTokens: targetTokens, language: language) : tokens
+        return joiningCompounds(units, targetTokens: targetTokens, language: language)
+    }
+
+    /// A transcriber writes "mph" for "miles an hour": the reader said the
+    /// words, and three of them were marked (speech challenge, 2026-11-18).
+    /// A heard abbreviation is written out the way that brings it closest
+    /// to the target, and left alone when no way does.
+    private static let unitWords: [String: [[String]]] = [
+        "mph": [["miles", "an", "hour"], ["miles", "per", "hour"]],
+        "kph": [["kilometers", "an", "hour"], ["kilometers", "per", "hour"],
+                ["kilometres", "an", "hour"], ["kilometres", "per", "hour"]],
+        "kmh": [["kilometers", "an", "hour"], ["kilometers", "per", "hour"],
+                ["kilometres", "an", "hour"], ["kilometres", "per", "hour"]],
+        "km": [["kilometers"], ["kilometres"], ["kilometer"], ["kilometre"]],
+        "kg": [["kilograms"], ["kilos"], ["kilogram"], ["kilo"]],
+        "lbs": [["pounds"]], "lb": [["pounds"], ["pound"]],
+        "ft": [["feet"], ["foot"]],
+        "mins": [["minutes"]], "hrs": [["hours"]],
+    ]
+
+    private static func spellingOutUnits(_ heard: [String], targetTokens: [String], language: String) -> [String] {
+        guard heard.contains(where: { unitWords[$0] != nil }) else { return heard }
+        let key = soundKey(for: language)
+        func cost(_ t: [String]) -> Int {
+            let (matched, steps) = align(targetTokens, t, key: key)
+            return steps.count - matched
+        }
+        var tokens = heard
+        var i = 0
+        while i < tokens.count {
+            guard let options = unitWords[tokens[i]] else { i += 1; continue }
+            var best = cost(tokens), pick: [String]?
+            for words in options {
+                var trial = tokens
+                trial.replaceSubrange(i...i, with: words)
+                let c = cost(trial)
+                if c < best { best = c; pick = words }
+            }
+            if let pick {
+                tokens.replaceSubrange(i...i, with: pick)
+                i += pick.count
+            } else {
+                i += 1
+            }
+        }
+        return tokens
     }
 
     /// One word or two is the transcriber's choice, not the mouth's: a
