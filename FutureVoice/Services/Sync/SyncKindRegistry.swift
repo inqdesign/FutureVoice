@@ -784,8 +784,48 @@ struct StudyPlanKind: SyncKindHandler {
     func read(lang: String?) -> SyncSnapshot? {
         guard let data = try? Data(contentsOf: url) else { return [:] }
         guard let plan = try? JSONDecoder().decode(StudyPlan.self, from: data) else { return nil }
-        guard let payload = try? SyncCanonical.encode(plan) else { return nil }
+        guard let payload = Self.payload(plan) else { return nil }
         return [Self.key: payload]
+    }
+
+    /// The canonical bytes with the SETS sorted. A Swift `Set` encodes in no
+    /// fixed order, so the same routine came out as different bytes from
+    /// launch to launch, and Android (which writes them sorted) would push
+    /// the same routine back on every pass (2026-11-18).
+    static func payload(_ plan: StudyPlan) -> Data? {
+        guard let raw = try? SyncCanonical.encode(plan),
+              let tree = try? JSONSerialization.jsonObject(with: raw) else { return nil }
+        return try? JSONSerialization.data(withJSONObject: sortingSets(tree),
+                                           options: [.sortedKeys, .withoutEscapingSlashes])
+    }
+
+    private static let setKeys: Set<String> = ["weekdays", "restDays", "offWeekdays"]
+
+    private static func sortingSets(_ node: Any) -> Any {
+        if let dict = node as? [String: Any] {
+            var out: [String: Any] = [:]
+            for (k, v) in dict {
+                if setKeys.contains(k), let list = v as? [Any] {
+                    out[k] = list.sorted { a, b in
+                        if let x = a as? Int, let y = b as? Int { return x < y }
+                        return "\(a)" < "\(b)"
+                    }
+                } else {
+                    out[k] = sortingSets(v)
+                }
+            }
+            return out
+        }
+        if let list = node as? [Any] { return list.map(sortingSets) }
+        return node
+    }
+
+    /// Another device's routine in this device's bytes, so an equal routine
+    /// is an equal payload whichever device wrote it.
+    func normalize(_ payload: Data) -> Data {
+        guard let plan = try? SyncCanonical.decode(StudyPlan.self, from: payload),
+              let data = Self.payload(plan) else { return payload }
+        return data
     }
 
     func merge(local: SyncSide?, remote: SyncSide) -> Data? {
