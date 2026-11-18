@@ -78,7 +78,11 @@ object BackupService {
         val prefs = context.getSharedPreferences("futurevoice", 0).all
             .filterKeys { it.startsWith("futurevoice.") }
             .mapValues { (_, v) -> "${v!!::class.simpleName}:$v" }
-        val out = File(context.cacheDir, "nawana-backup.json")
+        // Under share/: the FileProvider exposes only that folder and
+        // book-export/, and a file at the cache root made "Share backup"
+        // throw (no configured root) and close the app.
+        val out = File(File(context.cacheDir, "share").apply { mkdirs() }, "nawana-backup.json")
+        File(context.cacheDir, "nawana-backup.json").delete()
         out.outputStream().buffered().use { stream ->
             BackupStream.write(root, all, prefs, stream) { i -> onStep(Step.Packing(i, all.size)) }
         }
