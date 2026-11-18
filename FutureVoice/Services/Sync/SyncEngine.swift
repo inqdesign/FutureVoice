@@ -212,6 +212,17 @@ final class SyncEngine: ObservableObject {
     static let itemBatch = 150
     static let blobBatch = 20
 
+    /// "practiceDay:27,session:1" — which kinds a big push or pull carried.
+    /// Two devices that echo the same records every pass show up as one kind
+    /// with the same count on both sides (2026-11-18, a Mac and an Android
+    /// phone on Google Drive moving ~27 records each way on every pass).
+    static func byKind(_ records: [SyncRecord]) -> String {
+        var counts: [String: Int] = [:]
+        for r in records { counts[r.kind.rawValue, default: 0] += 1 }
+        return counts.sorted { $0.value != $1.value ? $0.value > $1.value : $0.key < $1.key }
+            .map { "\($0.key):\($0.value)" }.joined(separator: ",")
+    }
+
     /// How many records a push needs before it is worth an analytics event.
     /// See the note at the capture in `push`.
     static let reportPushFrom = 20
@@ -735,7 +746,8 @@ final class SyncEngine: ObservableObject {
         index.save()
         if !applied.isEmpty {
             onApplied?(applied)
-            Analytics.capture("sync_pull", ["records": batch.changed.count, "kinds": applied.count])
+            Analytics.capture("sync_pull", ["records": batch.changed.count, "kinds": applied.count,
+                                            "by_kind": Self.byKind(batch.changed)])
         }
     }
 
@@ -996,7 +1008,8 @@ final class SyncEngine: ObservableObject {
         // whether devices are fighting, so only those are recorded; `sync_error`
         // is untouched and keeps every failure.
         if records.count >= Self.reportPushFrom || conflicts {
-            Analytics.capture("sync_push", ["records": records.count, "blobs": isBlobPush, "conflicts": conflicts])
+            Analytics.capture("sync_push", ["records": records.count, "blobs": isBlobPush, "conflicts": conflicts,
+                                            "by_kind": Self.byKind(records)])
         }
         return conflicts
     }
