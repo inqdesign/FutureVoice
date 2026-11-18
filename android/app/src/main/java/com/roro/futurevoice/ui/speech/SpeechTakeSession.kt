@@ -494,6 +494,7 @@ class SpeechTakeSession(
         var readBackFixed = 0
         var restoredWords = 0
         var placedPieces = 0
+        var unassessed = false
         for (p in reads) {
             val piece = p.await()
             if (piece == null) { texts.clear(); prons.clear(); assessed = emptyList(); break }
@@ -501,10 +502,14 @@ class SpeechTakeSession(
             if (piece.readBackReplaced) readBackFixed++
             restoredWords += piece.restoredWords
             if (piece.placed) placedPieces++
-            piece.pron?.let {
-                prons += it
-                assessed = assessed + SpeechDelivery.Piece(piece.reference, it, piece.startMs)
-            }
+            // The tail cut at the stop is often a fraction of a second; judged
+            // against the prompter's last span it scored 0 (iOS, 2026-11-18).
+            if (piece.seconds < MIN_ASSESSED_SECONDS) continue
+            val pron = piece.pron
+            if (pron != null) {
+                prons += pron
+                assessed = assessed + SpeechDelivery.Piece(piece.reference, pron, piece.startMs)
+            } else unassessed = true
         }
         val transcript: String
         val audioGrounded: Boolean
@@ -512,7 +517,17 @@ class SpeechTakeSession(
         if (reads.isNotEmpty() && texts.size == reads.size && texts.joinToString("").isNotBlank()) {
             val joiner = if (LanguageCatalog.writesSpaces(script.language)) " " else ""
             transcript = texts.map { it.trim() }.filter { it.isNotEmpty() }.joinToString(joiner)
-            audioGrounded = true; path = "pieces"
+            audioGrounded = true; path = if (unassessed) "pieces_windows" else "pieces"
+            // A reader who never pauses is never cut, and a piece over Azure's
+            // 30 s is not assessed: the whole file is assessed in windows
+            // instead, as a whole read is (iOS, 2026-11-18).
+            if (unassessed) {
+                val windows = assessInWindows(audio, script.language)
+                if (windows.isNotEmpty()) {
+                    assessed = windows
+                    prons = windows.map { it.result }.toMutableList()
+                }
+            }
         } else {
             // A take longer than one assessment is cut into windows here and
             // each is read and assessed on its own, BESIDE the whole read, so
@@ -705,7 +720,7 @@ class SpeechTakeSession(
                         reference = said
                     }
                 }
-                if (reference.isEmpty()) return@async readBack?.let { Piece(it, null) }
+                if (reference.isEmpty()) return@async readBack?.let { Piece(it, null, seconds = seconds) }
                 val result = PronunciationAssessor.assess(context, file, reference, language, "speech").result
                 val insertions = result?.words?.count { it.isInsertion } ?: 0
                 pieceText(readBack, result?.recognized, language, insertions)?.let { (text, replaced) ->
@@ -715,7 +730,7 @@ class SpeechTakeSession(
                         if (!replaced && placed && result != null && insertions <= MAX_INSERTIONS_TO_TRUST)
                             com.roro.futurevoice.talk.ShadowScore.restoringClearWords(text, reference, result.words, language)
                         else text to 0
-                    Piece(restoredText, result, reference, replaced, startMs, placed, restored)
+                    Piece(restoredText, result, reference, replaced, startMs, placed, restored, seconds)
                 }
             } finally { file.delete() }
         }
@@ -839,10 +854,14 @@ class SpeechTakeSession(
         val placed: Boolean = false,
         /** Script words put back where Azure heard them clearly ([ShadowScore.restoringClearWords]). */
         val restoredWords: Int = 0,
+        /** How long the piece's audio is. */
+        val seconds: Double = 0.0,
     )
 
     companion object {
         private const val CAMERA_KEY = "speech.cameraOn"
+        /** A piece shorter than this holds no sentence to judge. */
+        const val MIN_ASSESSED_SECONDS = 1.5
         private const val SPEED_KEY = "speech.speed"
         const val CHUNK_SECONDS = 12.0
         /** A piece is cut at a SENTENCE END once it is CHUNK_SECONDS long, and
@@ -951,7 +970,8 @@ class SpeechTakeSession(
          *  by each piece's judged words, and every faulted word, worst first
          *  (at most 12). Null when no piece was assessed. */
         fun pronunciation(pieces: List<PronunciationResult>): Pair<Int, List<PronunciationResult.Word>>? {
-            val weighted = pieces.map { it.soundScore to maxOf(1, it.judgedWords.size) }
+            // A piece with no word judged says nothing about the sounds.
+            val weighted = pieces.filter { it.judgedWords.isNotEmpty() }.map { it.soundScore to it.judgedWords.size }
             val total = weighted.sumOf { it.second }
             if (total <= 0) return null
             val score = weighted.sumOf { it.first * it.second } / total

@@ -92,4 +92,12 @@ class PronunciationProfileTest {
         assertFalse(t.endsSentence(5))
         assertFalse(t.endsSentence(99))
     }
+
+    /** A piece with nothing judged (the stop's tail) is not a 0 for the take (iOS, 2026-11-18). */
+    @Test fun pieceWithNothingJudgedIsLeftOut() {
+        val heard = result(listOf(word("good", 90), word("morning", 88)), accuracy = 90)
+        val tail = result(listOf(word("sunny", null, error = "Omission"), word("weekend", null, error = "Omission")), accuracy = 0)
+        assertEquals(90, com.roro.futurevoice.ui.speech.SpeechTakeSession.pronunciation(listOf(heard, tail))?.first)
+        assertEquals(null, com.roro.futurevoice.ui.speech.SpeechTakeSession.pronunciation(listOf(tail)))
+    }
 }

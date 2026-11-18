@@ -557,6 +557,8 @@ object ShadowScore {
             out = MONEY_SIGN.replace(out) { m -> units[m.value]?.let { " ${it.second} " } ?: m.value }
         }
         PERCENT_WORD[code]?.let { if ('%' in out) out = out.replace("%", " $it ") }
+        // "nine degrees" comes back "9°" (or "9°C"): the reader said the word.
+        DEGREE_WORD[code]?.let { degrees -> if ('°' in out) out = DEGREE.replace(out) { " $degrees " } }
         DECIMAL_WORD[code]?.let { point ->
             if (hasDigit) out = (if (commaDecimal) DECIMAL_COMMA else DECIMAL_DOT).replace(out) { m ->
                 "${m.groupValues[1]} $point " + m.groupValues[2].map { it.toString() }.joinToString(" ")
@@ -624,6 +626,8 @@ object ShadowScore {
         "zh" to mapOf("$" to ("美元" to "美元"), "€" to ("欧元" to "欧元"), "£" to ("英镑" to "英镑"),
             "₩" to ("韩元" to "韩元"), "¥" to ("元" to "元")),
     )
+    private val DEGREE = Regex("°[cf]?(?![a-z])")
+    private val DEGREE_WORD = mapOf("en" to "degrees", "de" to "grad", "es" to "grados", "fr" to "degrés")
     private val PERCENT_WORD = mapOf("en" to "percent", "de" to "prozent", "es" to "por ciento", "fr" to "pour cent",
         "ko" to "퍼센트", "ja" to "パーセント")
     private val DECIMAL_WORD = mapOf("en" to "point", "de" to "komma", "es" to "coma", "fr" to "virgule",
@@ -678,7 +682,52 @@ object ShadowScore {
         language: String, style: LanguageCatalog.TokenStyle,
     ): List<String> {
         val tokens = numberedTokens(heard, target, targetTokens, language, style)
-        return if (style == LanguageCatalog.TokenStyle.WORD) joiningCompounds(tokens, targetTokens, language) else tokens
+        if (style != LanguageCatalog.TokenStyle.WORD) return tokens
+        val units = if (language.startsWith("en")) spellingOutUnits(tokens, targetTokens, language) else tokens
+        return joiningCompounds(units, targetTokens, language)
+    }
+
+    /** A transcriber writes "mph" for "miles an hour": a heard abbreviation
+     *  is written out the way that brings it closest to the target, and left
+     *  alone when no way does (iOS, 2026-11-18). */
+    private val UNIT_WORDS: Map<String, List<List<String>>> = run {
+        val kmh = listOf(
+            listOf("kilometers", "an", "hour"), listOf("kilometers", "per", "hour"),
+            listOf("kilometres", "an", "hour"), listOf("kilometres", "per", "hour"),
+        )
+        mapOf(
+            "mph" to listOf(listOf("miles", "an", "hour"), listOf("miles", "per", "hour")),
+            "kph" to kmh, "kmh" to kmh,
+            "km" to listOf(listOf("kilometers"), listOf("kilometres"), listOf("kilometer"), listOf("kilometre")),
+            "kg" to listOf(listOf("kilograms"), listOf("kilos"), listOf("kilogram"), listOf("kilo")),
+            "lbs" to listOf(listOf("pounds")), "lb" to listOf(listOf("pounds"), listOf("pound")),
+            "ft" to listOf(listOf("feet"), listOf("foot")),
+            "mins" to listOf(listOf("minutes")), "hrs" to listOf(listOf("hours")),
+        )
+    }
+
+    private fun spellingOutUnits(heard: List<String>, targetTokens: List<String>, language: String): List<String> {
+        if (heard.none { it in UNIT_WORDS }) return heard
+        val key = soundKey(language)
+        fun cost(t: List<String>): Int { val (matched, steps) = align(targetTokens, t, key); return steps.size - matched }
+        var tokens = heard
+        var i = 0
+        while (i < tokens.size) {
+            val options = UNIT_WORDS[tokens[i]]
+            if (options == null) { i++; continue }
+            var best = cost(tokens)
+            var pick: List<String>? = null
+            for (words in options) {
+                val trial = tokens.subList(0, i) + words + tokens.subList(i + 1, tokens.size)
+                val c = cost(trial)
+                if (c < best) { best = c; pick = words }
+            }
+            if (pick != null) {
+                tokens = tokens.subList(0, i) + pick + tokens.subList(i + 1, tokens.size)
+                i += pick.size
+            } else i++
+        }
+        return tokens
     }
 
     /**

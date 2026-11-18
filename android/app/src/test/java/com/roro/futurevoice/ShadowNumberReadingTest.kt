@@ -123,6 +123,18 @@ class ShadowNumberReadingTest {
         org.junit.Assert.assertEquals(1.0, coverage(script.replace("almost too good", "too great")), 0.001)
     }
 
+    /** Units the transcriber abbreviates are the words the reader said (iOS, 2026-11-18). */
+    @Test fun unitsAndDegreesAreNotSlips() = withSpeller(mapOf(40 to "forty", 90 to "ninety", 9 to "nine", 15 to "fifteen", 10 to "ten")) {
+        for ((target, learner) in listOf(
+            "with gusts of up to forty miles an hour by lunchtime" to "with gusts of up to 40 mph by lunchtime",
+            "a top speed of ninety miles per hour" to "a top speed of 90 mph",
+            "temperatures will struggle to get past nine degrees, and tonight" to "temperatures will struggle to get past 9°, and tonight",
+            "highs of fifteen degrees." to "highs of 15°C.",
+            "we walked ten kilometres" to "we walked 10 km",
+        )) org.junit.Assert.assertTrue("$target | $learner", clean(target, learner))
+        org.junit.Assert.assertFalse(clean("up to forty by lunchtime", "up to 40 mph by lunchtime"))
+    }
+
     @Test fun wrongYearIsStillWrong() {
         assertFalse(clean("in nineteen eleven", "in 1912"))
     }
