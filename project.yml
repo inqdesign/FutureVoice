@@ -53,6 +53,7 @@ targets:
       - path: SpeechApp/SpeechArena.swift
       - path: SpeechApp/SpeechArenaDetail.swift
       - path: SpeechApp/SpeechMedalCalendar.swift
+      - path: SpeechApp/ChallengeArtDefringe.swift
       - path: SpeechApp/Illustrations
     dependencies:
       # DeepFilterNet noise removal for the clone recording, on the phone

@@ -85,6 +85,7 @@ struct ChallengeCardFace: View {
     var figureHeight: CGFloat? = nil
     var titleSize: CGFloat = 17
     var titleLines: Int = 2
+    @Environment(\.colorScheme) private var scheme
     /// One of the learner's own scripts (2026-11-13, founder: My scripts
     /// wears the challenge cards): its kind drawn where a challenge has its
     /// picture, and its length where a challenge says who is on it.
@@ -100,7 +101,7 @@ struct ChallengeCardFace: View {
 
     var body: some View {
         VStack(spacing: large ? 12 : 8) {
-            if let art = ChallengeArt.image(for: script.id) {
+            if let art = ChallengeArt.image(for: script.id, dark: scheme == .dark) {
                 Image(uiImage: art)
                     .resizable()
                     .scaledToFit()
@@ -217,6 +218,7 @@ struct SpeechArenaDetail: View {
     var covering: Bool = false
 
     @EnvironmentObject private var appState: AppState
+    @Environment(\.colorScheme) private var scheme
     @ObservedObject private var challenges = SpeechChallenges.shared
     @ObservedObject private var store = SpeechStore.shared
     #if SPEECH_APP
@@ -274,8 +276,8 @@ struct SpeechArenaDetail: View {
         .background(Look.page.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
         // Clock and battery against the picture's ground: light over the
-        // speech app's graphite, dark over nawana's cream.
-        .toolbarColorScheme(SpeechAppFlags.isSpeechApp ? .dark : .light, for: .navigationBar)
+        // graphite card, dark over nawana's white one.
+        .toolbarColorScheme(SpeechAppFlags.isSpeechApp || scheme == .dark ? .dark : .light, for: .navigationBar)
         // The page draws its own back and ⋯ (`pageButtons`): the system's
         // glass buttons are drawn apart from the page, and while it zooms
         // open or is dragged shut they showed as grey blocks on the picture.
@@ -393,7 +395,7 @@ struct SpeechArenaDetail: View {
         // rebuilds this block (it did every frame, and the open stuttered).
         ZStack(alignment: .top) {
             ChallengeArt.paper
-            if let art = ChallengeArt.image(for: script.id) {
+            if let art = ChallengeArt.image(for: script.id, dark: scheme == .dark) {
                 Image(uiImage: art)
                     .resizable()
                     .scaledToFit()

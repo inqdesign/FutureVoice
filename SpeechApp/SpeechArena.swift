@@ -850,11 +850,13 @@ enum ChallengeArt {
     /// on every frame of a card's zoom, so nothing here may touch storage.
     /// In nawana's light mode they are white, like every other card there
     /// (2026-11-13, founder); the pictures are transparent, so nothing else
-    /// changes. Dark mode and the speech app keep the cream.
+    /// changes.
     /// The speech app's cards are graphite on its black stage (2026-11-16,
     /// founder picked #1C1C1E over a warm charcoal and a near-black), with
     /// light words; its pictures are cleaned for a dark ground
-    /// (`ChallengeArtDefringe`). nawana keeps cream/white cards.
+    /// (`ChallengeArtDefringe`). nawana's dark mode wears the same graphite
+    /// and the same cleaned pictures (2026-11-18, founder); its light mode
+    /// stays white.
     #if SPEECH_APP
     static let paper = Color(red: 28 / 255, green: 28 / 255, blue: 30 / 255)
     static let inkText = Color(red: 0.96, green: 0.95, blue: 0.93)
@@ -864,13 +866,18 @@ enum ChallengeArt {
     /// A leader's initial sits on this when they have no photo.
     static let faceFill = Color(white: 0.27)
     #else
-    static let paper = Color(uiColor: UIColor { traits in
-        traits.userInterfaceStyle == .dark ? UIColor(cream) : .white
-    })
-    static let inkText = Color(red: 0.13, green: 0.12, blue: 0.11)
-    static let buttonFill = Color(red: 0.13, green: 0.12, blue: 0.11)
-    static let buttonText = Color.white
-    static let faceFill = Color(red: 0.90, green: 0.87, blue: 0.80)
+    static let paper = byMode(light: .white, dark: UIColor(red: 28 / 255, green: 28 / 255, blue: 30 / 255, alpha: 1))
+    static let inkText = byMode(light: UIColor(red: 0.13, green: 0.12, blue: 0.11, alpha: 1),
+                                dark: UIColor(red: 0.96, green: 0.95, blue: 0.93, alpha: 1))
+    static let buttonFill = byMode(light: UIColor(red: 0.13, green: 0.12, blue: 0.11, alpha: 1),
+                                   dark: UIColor(red: 0.96, green: 0.95, blue: 0.93, alpha: 1))
+    static let buttonText = byMode(light: .white, dark: UIColor(red: 0.11, green: 0.11, blue: 0.12, alpha: 1))
+    static let faceFill = byMode(light: UIColor(red: 0.90, green: 0.87, blue: 0.80, alpha: 1),
+                                 dark: UIColor(white: 0.27, alpha: 1))
+
+    private static func byMode(light: UIColor, dark: UIColor) -> Color {
+        Color(uiColor: UIColor { $0.userInterfaceStyle == .dark ? dark : light })
+    }
     #endif
     static let cream = Color(red: 251 / 255, green: 248 / 255, blue: 240 / 255)
 
@@ -892,7 +899,7 @@ enum ChallengeArt {
     /// The picture, already decoded: the downloaded one, else the one the app
     /// was built with. Never touches storage or the network on the caller's
     /// thread; a picture not checked yet this launch is fetched behind it.
-    static func image(for id: UUID) -> UIImage? {
+    static func image(for id: UUID, dark: Bool = SpeechAppFlags.isSpeechApp) -> UIImage? {
         _ = arrivals.count
         #if SPEECH_APP
         // A learner's own script wears its own cover (`ScriptCover`).
@@ -905,11 +912,51 @@ enum ChallengeArt {
         let needsCheck = checked.insert(full).inserted
         lock.unlock()
         if needsCheck { Task.detached(priority: .utility) { await refresh(full) } }
-        if let hit { return hit }
-        guard let image = load(key) else { return nil }
-        lock.lock(); decoded[key] = image; lock.unlock()
-        return image
+        let picture: UIImage
+        if let hit { picture = hit } else {
+            guard let image = load(key) else { return nil }
+            lock.lock(); decoded[key] = image; lock.unlock()
+            picture = image
+        }
+        #if SPEECH_APP
+        return picture
+        #else
+        guard dark else { return picture }
+        return cleanedForDark(full: full, key: key) ?? picture
+        #endif
     }
+
+    #if !SPEECH_APP
+    /// nawana's dark mode: the picture cleaned for the graphite card, keyed
+    /// by the bytes it came from, so a newer R2 copy is cleaned again. The
+    /// first time is done off the main thread; until then the plain picture
+    /// draws, and the cleaned one replaces it when it lands.
+    nonisolated(unsafe) private static var cleaned: [String: (source: Int, image: UIImage)] = [:]
+    nonisolated(unsafe) private static var cleaning: Set<String> = []
+
+    private static func cleanedForDark(full: String, key: String) -> UIImage? {
+        lock.lock()
+        let source = remote[full] != nil ? 1 : 0
+        let have = cleaned[full]
+        let start = have?.source != source && cleaning.insert(full).inserted
+        lock.unlock()
+        if start {
+            Task.detached(priority: .utility) {
+                let file = cacheDir.appendingPathComponent("\(full).png")
+                let data = source == 1 ? try? Data(contentsOf: file)
+                    : Bundle.main.url(forResource: "challenge-\(key)", withExtension: "png")
+                        .flatMap { try? Data(contentsOf: $0) }
+                let image = data.flatMap { cleanedCopy($0) }
+                lock.lock()
+                cleaning.remove(full)
+                if let image { cleaned[full] = (source, image) }
+                lock.unlock()
+                if image != nil { await MainActor.run { arrivals.count += 1 } }
+            }
+        }
+        return have?.image
+    }
+    #endif
 
     private static func load(_ key: String) -> UIImage? {
         guard let url = Bundle.main.url(forResource: "challenge-\(key)", withExtension: "png"),
@@ -923,6 +970,16 @@ enum ChallengeArt {
     /// hash of the bytes and the next launch reads it straight back.
     private static func forCard(_ data: Data) -> UIImage? {
         #if SPEECH_APP
+        return cleanedCopy(data)
+        #else
+        guard let raw = UIImage(data: data) else { return nil }
+        return raw.preparingForDisplay() ?? raw
+        #endif
+    }
+
+    /// The picture cleaned for a dark card, kept in Caches under a hash of
+    /// the bytes it came from.
+    private static func cleanedCopy(_ data: Data) -> UIImage? {
         let hash = SHA256.hash(data: data).prefix(8).map { String(format: "%02x", $0) }.joined()
         let file = cacheDir.appendingPathComponent("clean-v1-\(hash).png")
         if let done = UIImage(contentsOfFile: file.path) { return done.preparingForDisplay() ?? done }
@@ -930,10 +987,6 @@ enum ChallengeArt {
         let clean = ChallengeArtDefringe.clean(raw) ?? raw
         if let png = clean.pngData() { try? png.write(to: file, options: .atomic) }
         return clean.preparingForDisplay() ?? clean
-        #else
-        guard let raw = UIImage(data: data) else { return nil }
-        return raw.preparingForDisplay() ?? raw
-        #endif
     }
 
     private static var cacheDir: URL {

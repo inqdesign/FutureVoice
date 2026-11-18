@@ -178,6 +178,7 @@ struct ArenaMedalCalendar: View {
 struct ArenaDayCollage: View {
     let items: [ArenaDayItem]
     private let gap: CGFloat = 1.5
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         GeometryReader { geo in
@@ -232,7 +233,7 @@ struct ArenaDayCollage: View {
     private func tile(_ item: ArenaDayItem) -> some View {
         ZStack {
             ChallengeArt.paper
-            if let art = ChallengeArt.image(for: item.script.id) {
+            if let art = ChallengeArt.image(for: item.script.id, dark: scheme == .dark) {
                 Image(uiImage: art)
                     .resizable()
                     .scaledToFill()
