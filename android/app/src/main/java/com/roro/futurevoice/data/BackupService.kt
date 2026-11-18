@@ -77,7 +77,10 @@ object BackupService {
             .toList()
         val prefs = context.getSharedPreferences("futurevoice", 0).all
             .filterKeys { it.startsWith("futurevoice.") }
-            .mapValues { (_, v) -> "${v!!::class.simpleName}:$v" }
+            // Kotlin names a stored Int "Int", which the restore below never
+            // matched, so number settings (the daily goal) were left behind.
+            // Written as "Integer", the tag every build's restore knows.
+            .mapValues { (_, v) -> "${if (v is Int) "Integer" else v!!::class.simpleName}:$v" }
         // Under share/: the FileProvider exposes only that folder and
         // book-export/, and a file at the cache root made "Share backup"
         // throw (no configured root) and close the app.
@@ -140,7 +143,7 @@ object BackupService {
                 val raw = tagged.substringAfter(':')
                 when (type) {
                     "String" -> edit.putString(k, raw)
-                    "Integer" -> raw.toIntOrNull()?.let { edit.putInt(k, it) }
+                    "Integer", "Int" -> raw.toIntOrNull()?.let { edit.putInt(k, it) }
                     "Long" -> raw.toLongOrNull()?.let { edit.putLong(k, it) }
                     "Float", "Double" -> raw.toFloatOrNull()?.let { edit.putFloat(k, it) }
                     "Boolean" -> edit.putBoolean(k, raw.toBoolean())

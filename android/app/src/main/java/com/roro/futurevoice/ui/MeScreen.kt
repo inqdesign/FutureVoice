@@ -364,7 +364,10 @@ fun MeScreen(
                 }
             },
             onShare = { BookExport.share(context, it, "application/json") },
-            onImport = { importPicker.launch(arrayOf("application/json")) },
+            // Any file, as iOS (`.item`): a backup that came through a
+            // messenger or mail is often typed octet-stream or plain text,
+            // and a JSON-only picker showed it greyed out.
+            onImport = { importPicker.launch(arrayOf("*/*")) },
             onBack = { page = null },
         )
         null -> Scaffold(
