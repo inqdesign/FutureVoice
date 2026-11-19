@@ -1,3 +1,9 @@
 New
-• Your tutor now answers in the language you're learning, at your level. One tap shows the translation.
-• Shortcuts above the tutor's box open your upcoming goals, today's plan and your routine.
+• Ask your personal tutor for what you need. Say "make me a quiz from last week's mistakes" and you get a quiz built from your own slips.
+• Your goals, today's plan, your routine and call settings are always one tap away on the tutor page.
+• Use an Android phone with an iPhone or Mac and your routine and streak now match on both.
+• Speech challenge cards go dark in dark mode.
+
+Improved
+• A scene you wrote stays on the situation you wrote.
+• A speech challenge is scored once you read the script to the end.

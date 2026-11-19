@@ -1,3 +1,9 @@
 Neu
-• Dein Tutor antwortet jetzt in der Sprache, die du lernst, auf deinem Niveau. Ein Tipp zeigt die Übersetzung.
-• Über dem Eingabefeld des Tutors öffnest du direkt deine nächsten Ziele, „Heute dran“ und deine Routine.
+• Bitte deinen persönlichen Tutor um das, was du brauchst. Sag „Mach mir ein Quiz aus meinen Fehlern von letzter Woche“ und du bekommst ein Quiz aus deinen eigenen Fehlern.
+• Deine Ziele, Heute dran, Meine Routine und die Anruf-Einstellungen sind auf der Tutor-Seite immer einen Tipp entfernt.
+• Nutzt du ein Android-Handy zusammen mit iPhone oder Mac, stimmen Routine und Serie jetzt auf beiden überein.
+• Im Dunkelmodus sind auch die Karten der Rede-Challenges dunkel.
+
+Verbessert
+• Eine Szene bleibt bei der Situation, die du geschrieben hast.
+• Eine Rede-Challenge wird gewertet, wenn du den Text bis zum Ende liest.
