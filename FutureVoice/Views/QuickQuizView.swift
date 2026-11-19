@@ -59,6 +59,9 @@ struct GlassCircleButton: ViewModifier {
 struct QuickQuizView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
+    /// Made to order from the learner's own recent mistakes (the tutor's
+    /// button), not the level's stock. Never parked: it is written per tap.
+    var mistakes = false
 
     private enum Stage { case loading, empty, asking, done }
     @State private var stage: Stage = .loading
@@ -103,7 +106,7 @@ struct QuickQuizView: View {
             advance?.cancel()
             // Closed mid-quiz: kept for the next open. An answered question
             // counts as done, since its auto-advance was just cancelled.
-            if stage == .asking {
+            if stage == .asking, !mistakes {
                 QuickQuizEngine.park(items: items, index: chosen == nil ? index : index + 1,
                                      missed: missed, language: appState.targetLanguage)
             }
@@ -125,7 +128,8 @@ struct QuickQuizView: View {
             face
             Text("Not much to quiz yet")
                 .font(.headline)
-            Text("Save a few words or have another talk, and the quiz fills up.")
+            Text(mistakes ? "This quiz is made from the corrections in your talks. Have a talk, then ask again."
+                          : "Save a few words or have another talk, and the quiz fills up.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -318,6 +322,15 @@ struct QuickQuizView: View {
             return
         }
         #endif
+        if mistakes {
+            let built = await QuickQuizStock.mistakeQuiz(appState: appState)
+            guard !Task.isCancelled else { return }
+            items = built
+            setMood(.waiting)
+            stage = built.isEmpty ? .empty : .asking
+            Analytics.capture("quick_quiz_started", ["items": built.count, "kind": "mistakes"])
+            return
+        }
         if let paused = QuickQuizEngine.takeUnfinished(language: appState.targetLanguage) {
             items = paused.items
             index = paused.index

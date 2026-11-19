@@ -1192,6 +1192,52 @@
         }
       }
     },
+    "Quiz on my mistakes" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quiz zu meinen Fehlern"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quiz de mis errores"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quiz sur mes erreurs"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自分のミスでクイズ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 실수로 퀴즈"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用我的错误出题"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用我的錯誤出題"
+          }
+        }
+      }
+    },
     "Ranking" : {
       "localizations" : {
         "ko" : {
@@ -1716,6 +1762,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "이 그룹 원고"
+          }
+        }
+      }
+    },
+    "This quiz is made from the corrections in your talks. Have a talk, then ask again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses Quiz entsteht aus den Korrekturen in deinen Gesprächen. Führe ein Gespräch und frag dann noch einmal."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Este quiz se hace con las correcciones de tus conversaciones. Habla una vez y pídelo de nuevo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce quiz est fait à partir des corrections de tes conversations. Fais une conversation, puis redemande-le."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このクイズは、トークで直した文から作ります。一度トークしてから、もう一度頼んでください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 퀴즈는 대화에서 고쳐 드린 문장으로 만들어요. 대화를 한 번 하고 다시 요청해 주세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这份测验是用对话中修正过的句子做的。先聊一次，再让我出题。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這份測驗是用對話中修正過的句子做的。先聊一次，再請我出題。"
           }
         }
       }

@@ -100,10 +100,19 @@ enum TutorAgent {
         {"type":"word","text":"…"} / {"type":"expression","text":"…"} its card · \
         {"type":"review"} the waiting cards · {"type":"shadow"} · {"type":"sayItAgain"} · \
         {"type":"listen"} · {"type":"speech"} · {"type":"test"} the weekly test · \
-        {"type":"quiz"} one-minute quiz · {"type":"routine"} their weekly plan · \
+        {"type":"quiz"} one-minute quiz on NEW words and expressions at their level · \
+        {"type":"mistakeQuiz"} a quiz the app writes from the corrections in their last \
+        week of talks (new sentences on the same points, tapped through, about two \
+        minutes) · {"type":"routine"} their weekly plan · \
         {"type":"settings"} call settings · {"type":"purposes"} why they are learning. Add "label" (2–4 words, native language) when the \
         default wording would be vague. An id is copied EXACTLY as printed after "id" in the \
         data or a lookup (a long code like 8d1c…); never write a name in its place.
+
+        A QUIZ IS A BUTTON, NEVER TEXT
+        Asked for a quiz, a test or questions on their mistakes, never write questions in \
+        "reply": they cannot be answered there. Say in one or two sentences what the quiz \
+        will cover (name the points, from the data), and give {"type":"mistakeQuiz"} for \
+        their mistakes or {"type":"quiz"} for new material.
         """
 }
 
@@ -114,7 +123,7 @@ enum TutorAgent {
 struct TutorAction: Codable, Equatable, Hashable {
     enum Kind: String, Codable {
         case talk, lesson, book, goal, goalReading, goalAnswer, word, expression,
-             review, shadow, sayItAgain, listen, speech, test, quiz, routine, settings, purposes
+             review, shadow, sayItAgain, listen, speech, test, quiz, mistakeQuiz, routine, settings, purposes
     }
     var type: Kind
     var topic: String? = nil
@@ -158,6 +167,7 @@ struct TutorAction: Codable, Equatable, Hashable {
         case .speech: return StudyPlan.Kind.speech.symbol
         case .test: return StudyPlan.Kind.test.symbol
         case .quiz: return "questionmark.circle"
+        case .mistakeQuiz: return "checklist.checked"
         case .routine: return "calendar"
         case .settings: return "slider.horizontal.3"
         case .purposes: return "target"
@@ -183,6 +193,7 @@ struct TutorAction: Codable, Equatable, Hashable {
         case .speech: return TutorCopy.startTitle(.speech)
         case .test: return TutorCopy.startTitle(.test)
         case .quiz: return explain("Quick quiz")
+        case .mistakeQuiz: return explain("Quiz on my mistakes")
         case .routine: return explain("My routine")
         case .settings: return explain("Call settings")
         case .purposes: return explain("Why are you learning?")
@@ -211,6 +222,8 @@ struct TutorAction: Codable, Equatable, Hashable {
             guard let text else { return false }
             let v = VocabStore.shared
             return v.isStudyingExpression(text) || v.isKnownExpression(text) || v.hasUsedExpression(text)
+        // Written from their corrections: with none on file it opens empty.
+        case .mistakeQuiz: return !QuickQuizStock.mistakeSources(appState: appState).isEmpty
         default: return true
         }
     }

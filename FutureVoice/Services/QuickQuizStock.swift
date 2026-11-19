@@ -586,3 +586,144 @@ enum QuickQuizStock {
                       answer: answer, wrong: wrong, createdAt: Date())
     }
 }
+
+// MARK: - A quiz made to order from the learner's own mistakes
+
+/// The quiz the tutor hands over when asked for one "from my mistakes"
+/// (2026-11-19, founder: a quiz written into the chat as text is worth
+/// nothing; it has to be tapped through). Each question is a NEW sentence
+/// on the point of one correction from their last week of talks, written and
+/// then checked like every stock question (`validated`, `check`), so a
+/// misheard line never becomes the right answer. Nothing is stored: it is
+/// written when the button is tapped, for that sitting.
+extension QuickQuizStock {
+    struct Mistake: Equatable {
+        let was: String
+        let now: String
+        let why: String
+    }
+
+    static let mistakeQuizSize = 8
+    /// Under this many corrections in the last week, the window widens.
+    static let mistakeQuizThin = 4
+
+    /// What a mistake quiz would be written from: the corrections of the last
+    /// 7 days of talks, then 30 when that is thin, then the recurring ones.
+    static func mistakeSources(appState: AppState, now: Date = Date()) -> [Mistake] {
+        let sessions = SessionStore.shared.load()
+            .filter { $0.endedAt != nil }
+            .sorted { $0.startedAt > $1.startedAt }
+        var seen = Set<String>()
+        var out: [Mistake] = []
+        func add(_ was: String, _ fixed: String, _ why: String) {
+            let w = was.trimmingCharacters(in: .whitespacesAndNewlines)
+            let f = fixed.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !w.isEmpty, !f.isEmpty, TextScript.isInTargetScript(f, language: appState.targetLanguage),
+                  seen.insert(CarryoverDetector.normalized(w)).inserted else { return }
+            out.append(Mistake(was: w, now: f, why: why))
+        }
+        for days in [7.0, 30.0] {
+            let since = now.addingTimeInterval(-days * 86_400)
+            for s in sessions where s.startedAt >= since {
+                for fix in s.turns.filter(\.isEvidence).flatMap({ $0.suggestion?.fixes ?? [] }) {
+                    add(fix.was, fix.now, fix.why)
+                }
+            }
+            if out.count >= mistakeQuizThin { break }
+        }
+        if out.count < mistakeQuizThin {
+            for c in GrammarFocus.candidates(from: appState.learnerProfile, sessions: sessions, now: now) {
+                add(c.pattern.mistake, c.pattern.correction, c.pattern.context)
+            }
+        }
+        return Array(out.prefix(14))
+    }
+
+    private struct MistakePayload: Decodable {
+        struct Item: Decodable {
+            let n: Int?
+            let point: String?
+            let tip: String?
+            let sentence: String?
+            let answer: String?
+            let wrong: [String]?
+        }
+        let items: [Item]
+    }
+
+    static func mistakeQuiz(appState: AppState) async -> [QuickQuizItem] {
+        let sources = mistakeSources(appState: appState)
+        guard !sources.isEmpty else { return [] }
+        let target = appState.targetLanguage
+        let targetName = LanguageCatalog.englishName(target)
+        let nativeName = LanguageCatalog.englishName(appState.nativeLanguage)
+        let level = appState.proficiency.rawValue.uppercased()
+        let system = """
+            You write a short quiz from a \(targetName) learner's OWN recent mistakes. \
+            Their own language is \(nativeName), their level \(level). The user message \
+            lists numbered corrections from their talks: what they said → the right form.
+
+            For each correction that shows a RULE (grammar, a fixed word pairing, word \
+            form, word order), write ONE question on the SAME point in a NEW everyday \
+            \(targetName) sentence, never their own sentence: exactly one blank \
+            "\(WeeklyTestEngine.blankMark)" and four choices, exactly ONE correct. Skip a \
+            correction that is only taste, a name, or looks misheard. Two corrections on \
+            one point get one question. At most \(mistakeQuizSize) questions.
+
+            Return {"items":[{"n":<the correction's number>,"point":"...","tip":"...","sentence":"...","answer":"...","wrong":["...","...","..."]}]}
+            - sentence: spoken and ordinary, \(WordSplitter.spaced ? "5–12 words" : "8–25 characters"), at their level.
+            - The blank replaces the 1–3 words the point decides. The sentence must leave \
+              ONLY the answer possible: if a tense is tested, put a time word in it; if a \
+              particle, article or preposition, make the meaning clear. Keep one speech \
+              level; never let choices differ only in politeness.
+            - wrong: three forms that are clearly wrong here, the same kind of word as the \
+              answer. One of them is the form THEY used, fitted to this sentence, whenever \
+              that form is clearly wrong here.
+            - point: the point in \(nativeName), 2–5 words. tip: one line in \(nativeName), \
+              at most 14 words, on why the answer fits.
+            - Every sentence, answer and choice is in \(targetName). JSON only.
+            """
+        let user = sources.enumerated().map { i, m in
+            "\(i + 1). \"\(m.was)\" → \"\(m.now)\"" + (m.why.isEmpty ? "" : " (\(m.why))")
+        }.joined(separator: "\n")
+        let key = SHA256.hash(data: Data((user + "\(Date().timeIntervalSince1970)").utf8))
+            .prefix(8).map { String(format: "%02x", $0) }.joined()
+        let payload: MistakePayload
+        do {
+            payload = try await GeminiClient.shared.sendJSON(
+                system: system, messages: [.init(role: .user, content: user)],
+                maxTokens: 6000, purpose: "quiz",
+                idempotencyKey: "quiz-stock:\(key)", requestTimeout: 45)
+        } catch {
+            Telemetry.log("mistake_quiz", ["stage": "write", "error": String(describing: error).prefix(200).description])
+            return []
+        }
+        var from: [UUID: Mistake] = [:]
+        var seen = Set<String>()
+        var written: [Stored] = []
+        for it in payload.items {
+            guard let sentence = it.sentence, let answer = it.answer,
+                  let q = validated(Payload.Item(kind: .grammar, point: it.point ?? "", tip: it.tip,
+                                                 sentence: sentence, answer: answer, wrong: it.wrong ?? []),
+                                    language: target),
+                  seen.insert(CarryoverDetector.normalized(q.sentence)).inserted else { continue }
+            written.append(q)
+            if let n = it.n, sources.indices.contains(n - 1) { from[q.id] = sources[n - 1] }
+        }
+        let kept = await check(written, targetName: targetName, key: key)
+        Telemetry.log("mistake_quiz", ["stage": "done", "sources": "\(sources.count)",
+                                       "written": "\(payload.items.count)", "valid": "\(written.count)",
+                                       "kept": "\(kept.count)", "lang": target])
+        return kept.prefix(mistakeQuizSize).map { q in
+            // The note says why, then shows the line it came from.
+            var note = q.tip
+            if let m = from[q.id] {
+                note += (note.isEmpty ? "" : "\n") + "\(explain("Last time you said")): \(m.was) → \(m.now)"
+            }
+            return QuickQuizItem(kind: .grammar, prompt: q.sentence, answer: q.answer,
+                                 options: ([q.answer] + q.wrong).shuffled(),
+                                 heading: q.point.isEmpty ? nil : q.point,
+                                 note: note.isEmpty ? nil : note, isOwn: true)
+        }
+    }
+}

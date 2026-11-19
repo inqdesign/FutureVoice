@@ -469,7 +469,8 @@ final class TutorBot: ObservableObject {
         case .listen: start(.listen, appState: appState)
         case .speech: start(.speech, appState: appState)
         case .test: start(.test, appState: appState)
-        case .quiz: start(nil, appState: appState)
+        // The chat opens the mistake quiz over itself (`TutorChatView`).
+        case .quiz, .mistakeQuiz: start(nil, appState: appState)
         case .routine:
             afterChatCloses { appState.openRoutinePage = true }
         case .settings:

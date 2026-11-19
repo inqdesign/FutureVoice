@@ -324,6 +324,7 @@ struct TutorChatView: View {
     @ObservedObject private var chat = TutorChat.shared
     /// Tutor replies whose translation is unfolded.
     @State private var translated: Set<UUID> = []
+    @State private var mistakeQuizOpen = false
     @State private var draft = ""
     @State private var dictationLocale = ""
     @FocusState private var typing: Bool
@@ -423,6 +424,9 @@ struct TutorChatView: View {
             UpcomingGoalPage(goal: goal).environmentObject(appState)
         }
         .sheet(isPresented: $todayOpen) { todaySheet.environmentObject(appState) }
+        .fullScreenCover(isPresented: $mistakeQuizOpen) {
+            QuickQuizView(mistakes: true).environmentObject(appState)
+        }
         .onChange(of: goals.goals) { _, _ in bot.loadPicks(appState: appState) }
         .presentationDragIndicator(.visible)
         .onAppear {
@@ -513,7 +517,16 @@ struct TutorChatView: View {
                 if !m.actions.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
                         ForEach(Array(m.actions.enumerated()), id: \.offset) { i, action in
-                            Button { bot.perform(action, appState: appState) } label: {
+                            Button {
+                                // A quiz made to order opens over the chat and
+                                // closes back onto it.
+                                if action.type == .mistakeQuiz {
+                                    Analytics.capture("tutor_bot_action", ["type": action.type.rawValue])
+                                    mistakeQuizOpen = true
+                                } else {
+                                    bot.perform(action, appState: appState)
+                                }
+                            } label: {
                                 Label(action.title, systemImage: action.symbol)
                             }
                             .buttonStyle(SoftChipStyle(selected: i == 0))
