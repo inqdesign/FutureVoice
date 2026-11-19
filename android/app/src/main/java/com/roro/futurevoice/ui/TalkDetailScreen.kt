@@ -269,19 +269,25 @@ private fun TalkDetailPage(
             .count { it.sourceSessionId == sessionId }
     }
     /** Every correction was ingested as a card at session end, so this is a
-     *  lookup — text first (one turn's several fixes share a turn id), then the
-     *  turn, then containment — with a save as the safety net (iOS `openCard`). */
+     *  lookup — text first (one turn's several fixes share a turn id), then
+     *  containment, then the turn when it has one card — with a save as the safety net (iOS `openCard`). */
     fun openCard(item: com.roro.futurevoice.talk.ScenarioCurriculum.Item) {
         scope.launch {
             val store = com.roro.futurevoice.data.DrillStore.shared(context)
-            val cards = store.load(language).filter { it.sourceSessionId == sessionId }
+            val all = store.load(language)
+            val cards = all.filter { it.sourceSessionId == sessionId }
             val needle = com.roro.futurevoice.talk.CarryoverDetector.normalized(item.text)
             val turnId = com.roro.futurevoice.data.TalkCurriculum.turnIdOfCorrection(item.id)
             fun norm(c: com.roro.futurevoice.talk.DrillCard) =
                 com.roro.futurevoice.talk.CarryoverDetector.normalized(c.targetPhrase)
+            // The whole store after this talk's cards: one card per sentence,
+            // so this line's card may have been minted by another talk. The
+            // turn alone names a card only when it has ONE: with several, a
+            // line whose own card was missing opened the turn's first card.
             val hit = cards.firstOrNull { norm(it) == needle }
-                ?: turnId?.let { id -> cards.firstOrNull { it.sourceTurnId == id } }
+                ?: all.firstOrNull { norm(it) == needle }
                 ?: cards.firstOrNull { norm(it).isNotEmpty() && needle.contains(norm(it)) }
+                ?: turnId?.let { id -> cards.filter { it.sourceTurnId == id }.singleOrNull() }
             if (hit != null) { enrichmentCard = hit; return@launch }
             // Minted the way ingest would: the same one-sentence trim.
             val original = originalOf(item).orEmpty()
