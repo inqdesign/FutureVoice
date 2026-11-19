@@ -734,22 +734,49 @@ private struct PlayerOptionsMenu: View {
         AppMenu {
             Toggle(isOn: $showCaptions) { Label("Captions", systemImage: "captions.bubble") }.toggleStyle(.automatic)
             Toggle(isOn: $showTranslation) { Label("Translation", systemImage: "character.bubble") }.toggleStyle(.automatic)
+            #if targetEnvironment(macCatalyst)
             Picker(selection: $player.gap) {
-                Text("No pause").tag(PlaylistPlayer.Gap.none)
-                Text("1 second").tag(PlaylistPlayer.Gap.short)
-                Text("Time to say it back").tag(PlaylistPlayer.Gap.echo)
+                ForEach(PlaylistPlayer.Gap.allCases, id: \.self) { g in
+                    Self.gapName(g).tag(g)
+                }
             } label: {
                 Label("Pause between lines", systemImage: "pause")
             }
             .submenuPicker()
             Picker(selection: $player.speed) {
                 ForEach(PlaylistPlayer.speeds, id: \.self) { s in
-                    Text(verbatim: s == 1 ? "1×" : String(format: "%.2g×", s)).tag(s)
+                    Text(verbatim: Self.speedName(s)).tag(s)
                 }
             } label: {
                 Label("Speed", systemImage: "gauge.with.dots.needle.33percent")
             }
             .submenuPicker()
+            #else
+            // Plain submenus of buttons on the phone. A `.menu` picker
+            // nested in this menu drew a second, empty checked row and
+            // stretched rows on iOS 26, and a pick did not always land
+            // (founder, 2026-11-19).
+            Menu {
+                ForEach(PlaylistPlayer.Gap.allCases, id: \.self) { g in
+                    Button { player.gap = g } label: {
+                        Self.gapName(g)
+                        if player.gap == g { Image(systemName: "checkmark") }
+                    }
+                }
+            } label: {
+                Label("Pause between lines", systemImage: "pause")
+            }
+            Menu {
+                ForEach(PlaylistPlayer.speeds, id: \.self) { s in
+                    Button { player.speed = s } label: {
+                        Text(verbatim: Self.speedName(s))
+                        if player.speed == s { Image(systemName: "checkmark") }
+                    }
+                }
+            } label: {
+                Label("Speed", systemImage: "gauge.with.dots.needle.33percent")
+            }
+            #endif
             if player.hasQueue {
                 Divider()
                 Button(role: .destructive) { player.close() } label: {
@@ -760,5 +787,17 @@ private struct PlayerOptionsMenu: View {
             Image(systemName: "ellipsis")
         }
         .accessibilityLabel(Text("Options"))
+    }
+
+    private static func gapName(_ gap: PlaylistPlayer.Gap) -> Text {
+        switch gap {
+        case .none: return Text("No pause")
+        case .short: return Text("1 second")
+        case .echo: return Text("Time to say it back")
+        }
+    }
+
+    private static func speedName(_ speed: Float) -> String {
+        speed == 1 ? "1×" : String(format: "%.2g×", speed)
     }
 }
