@@ -36,12 +36,34 @@ enum PronunciationContrast {
     private static let initials: [Character] = Array("ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ")
     private static let tenseToPlain: [Character: Character] =
         ["ㄲ": "ㄱ", "ㄸ": "ㄷ", "ㅃ": "ㅂ", "ㅆ": "ㅅ", "ㅉ": "ㅈ"]
+    private static let aspiratedToPlain: [Character: Character] =
+        ["ㅋ": "ㄱ", "ㅌ": "ㄷ", "ㅍ": "ㅂ", "ㅊ": "ㅈ"]
+    private static func reversed(_ t: [Character: Character]) -> [Character: Character] {
+        Dictionary(uniqueKeysWithValues: t.map { ($1, $0) })
+    }
 
-    /// Each alternate is one table: the lesson's consonant → what it is
-    /// swapped for.
-    private static func swaps(topicId: String) -> [[Character: Character]]? {
+    /// One alternate: the lesson's consonants and vowels → what each is
+    /// swapped for. Vowels by their index in a syllable (ㅓ 4, ㅗ 8, ㅜ 13,
+    /// ㅡ 18).
+    private struct Swap {
+        var consonants: [Character: Character] = [:]
+        var vowels: [Int: Int] = [:]
+    }
+
+    /// Every swap here was measured the same day on FLEURS (right / wrong /
+    /// within the margin): tense ↔ plain 926 / 11 / 150, aspirated ↔ plain
+    /// 180 / 2 / 20, ㅓ ↔ ㅗ 279 / 1 / 18, ㅡ ↔ ㅜ 244 / 2 / 21. Tense ↔
+    /// aspirated was not, so the three-way topic compares each with plain.
+    private static func swaps(topicId: String) -> [Swap]? {
         switch topicId {
-        case "ko.tense": return [tenseToPlain]
+        case "ko.tense": return [Swap(consonants: tenseToPlain)]
+        case "ko.asp": return [Swap(consonants: aspiratedToPlain)]
+        case "ko.three":
+            return [Swap(consonants: tenseToPlain.merging(aspiratedToPlain) { a, _ in a }
+                            .merging(reversed(tenseToPlain)) { a, _ in a }),
+                    Swap(consonants: reversed(aspiratedToPlain))]
+        case "ko.eoo": return [Swap(vowels: [4: 8, 8: 4])]
+        case "ko.eu": return [Swap(vowels: [18: 13])]
         default: return nil
         }
     }
@@ -67,18 +89,17 @@ enum PronunciationContrast {
         return [0, 4, 16, 21].contains(p.final)
     }
 
-    private static func swapped(_ word: String, previousWord: String?,
-                                table: [Character: Character]) -> String {
+    private static func swapped(_ word: String, previousWord: String?, table: Swap) -> String {
         var out = ""
         var before: Character? = previousWord?.last(where: { parts($0) != nil })
         for c in word {
             defer { if parts(c) != nil { before = c } }
-            guard let p = parts(c), let to = table[initials[p.initial]],
-                  let toIndex = initials.firstIndex(of: to), leavesNextAsWritten(before) else {
+            guard let p = parts(c), leavesNextAsWritten(before) else {
                 out.append(c)
                 continue
             }
-            out.append(syllable(toIndex, p.vowel, p.final))
+            let initial = table.consonants[initials[p.initial]].flatMap { initials.firstIndex(of: $0) } ?? p.initial
+            out.append(syllable(initial, table.vowels[p.vowel] ?? p.vowel, p.final))
         }
         return out
     }

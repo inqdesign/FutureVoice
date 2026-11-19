@@ -48,6 +48,15 @@ final class PronunciationContrastTests: XCTestCase {
         XCTAssertEqual(PronunciationContrast.alternates(for: "think", topicId: "en.th"), [])
     }
 
+    func testEachMeasuredSoundHasItsSwap() {
+        XCTAssertEqual(PronunciationContrast.alternates(for: "커피 포도", topicId: "ko.asp"), ["거비 보도"])
+        XCTAssertEqual(PronunciationContrast.alternates(for: "거기 고기", topicId: "ko.eoo"), ["고기 거기"])
+        XCTAssertEqual(PronunciationContrast.alternates(for: "그림", topicId: "ko.eu"), ["구림"])
+        // The three-way topic: each of the three against plain, plain against both.
+        XCTAssertEqual(PronunciationContrast.alternates(for: "가 까 카", topicId: "ko.three"),
+                       ["까 가 가", "카 까 카"])
+    }
+
     // MARK: The verdict
 
     func testALowScoreAloneNeverStopsANativeReading() {
@@ -100,7 +109,8 @@ final class PronunciationContrastTests: XCTestCase {
         for other in ["ja", "de", "es", "fr", "zh"] {
             XCTAssertFalse(PronunciationCall.isOffered(for: other), other)
         }
-        XCTAssertEqual(PronunciationCourse.topics(for: "ko").map(\.id), ["ko.tense"])
+        XCTAssertEqual(PronunciationCourse.topics(for: "ko").map(\.id),
+                       ["ko.tense", "ko.asp", "ko.three", "ko.eoo", "ko.eu"])
         XCTAssertFalse(PronunciationCourse.topics(for: "en").isEmpty)
     }
 }
