@@ -64,7 +64,8 @@ python3 "$TMP/scripts/invite-event.py" texts
 if ask "push these texts"; then python3 "$TMP/scripts/invite-event.py" texts --send; fi
 
 say "5. The store offers"
-python3 "$TMP/scripts/invite-event.py" offers
+python3 "$TMP/scripts/invite-event.py" offers 2>/dev/null \
+  || echo "   (the preview needs the migrations of step 1 applied first)"
 if ask "create these offers and point the event at them"; then
   python3 "$TMP/scripts/invite-event.py" offers --send
 fi
