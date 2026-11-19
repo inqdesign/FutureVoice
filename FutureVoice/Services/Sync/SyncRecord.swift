@@ -45,6 +45,10 @@ enum SyncKind: String, Codable, CaseIterable, Hashable {
     case practiceDay
     case talkDay
     case usageDay
+    /// App time per day PER DEVICE (`AppUsageLog`, `day|device` keys), so two
+    /// devices used on one day add up instead of the bigger one winning.
+    /// An older build can't name this kind and skips it, so no schema bump.
+    case usageDevice
     case persona
     case personaNote
     case profile
@@ -111,7 +115,7 @@ enum SyncKind: String, Codable, CaseIterable, Hashable {
              .speechScript, .speechTake,
              .tutorLesson, .tutorChat, .tutorProgress, .learnerState, .pronunciation:
             return true
-        case .practiceDay, .talkDay, .usageDay, .persona, .personaNote, .profile,
+        case .practiceDay, .talkDay, .usageDay, .usageDevice, .persona, .personaNote, .profile,
              .counterpart, .dayCard, .defaults, .upcomingGoal, .learningPurpose,
              .studyPlan, .promiseDay, .activityEvent, .goalPrep, .goalPlan, .weekRecap,
              .blobCounterpartPhoto,

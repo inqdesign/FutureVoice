@@ -87,6 +87,7 @@ enum SyncKindRegistry {
                                   afterWrite: { _ in PracticeLog.shared.reloadFromDisk() }),
         DefaultsCountKind(kind: .talkDay, defaultsKey: "futurevoice.talkSecondsByDay"),
         DefaultsCountKind(kind: .usageDay, defaultsKey: "futurevoice.foregroundSecondsByDay"),
+        DefaultsCountKind(kind: .usageDevice, defaultsKey: AppUsageLog.deviceKey),
         PersonaKind(),
         PersonaNoteKind(),
         ArrayKind<UpcomingGoal>(kind: .upcomingGoal, filename: UpcomingGoalStore.filename,
