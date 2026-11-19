@@ -365,25 +365,38 @@ def play_offer(product: str, percent: int, months: int, send: bool):
           f"in {len(regions)} regions{shown}")
     if not send:
         return offer_id
-    play("POST", play_offers_path(product)
-         + f"?offerId={offer_id}&regionsVersion.version={urllib.parse.quote(PLAY_REGIONS_VERSION, safe='')}", {
-        "packageName": PLAY_PACKAGE, "productId": product,
-        "basePlanId": PLAY_BASE_PLAN, "offerId": offer_id,
-        "offerTags": [{"tag": PLAY_TAG}],
-        # Play's own gate: listed ONLY to someone who holds this same
-        # subscription on a monthly period now. A new buyer is never offered
-        # it, on any build. Not once per person: one month per friend.
-        "targeting": {"upgradeRule": {"oneTimeUpgrade": False,
-                                      "scope": {"thisSubscription": {}},
-                                      "billingPeriodDuration": "P1M"}},
-        "phases": [{
-            "recurrenceCount": months, "duration": "P1M",
-            "regionalConfigs": [{"regionCode": r, "relativeDiscount": pays} for r in regions],
-            "otherRegionsConfig": {"relativeDiscount": pays},
-        }],
-        "regionalConfigs": [{"regionCode": r, "newSubscriberAvailability": True} for r in regions],
-        "otherRegionsConfig": {"otherRegionsNewSubscriberAvailability": True},
-    })
+    # Play rejects a region its regions version does not bill yet (new
+    # countries arrive first on the base plan). Such a region is left to
+    # `otherRegionsConfig`, which carries the same discount.
+    import re
+    while True:
+        try:
+            play("POST", play_offers_path(product)
+                 + f"?offerId={offer_id}&regionsVersion.version={urllib.parse.quote(PLAY_REGIONS_VERSION, safe='')}", {
+                "packageName": PLAY_PACKAGE, "productId": product,
+                "basePlanId": PLAY_BASE_PLAN, "offerId": offer_id,
+                "offerTags": [{"tag": PLAY_TAG}],
+                # Play's own gate: listed ONLY to someone who holds this same
+                # subscription on a monthly period now. A new buyer is never offered
+                # it, on any build. Not once per person: one month per friend.
+                "targeting": {"upgradeRule": {"oncePerUser": False,
+                                              "scope": {"thisSubscription": {}},
+                                              "billingPeriodDuration": "P1M"}},
+                "phases": [{
+                    "recurrenceCount": months, "duration": "P1M",
+                    "regionalConfigs": [{"regionCode": r, "relativeDiscount": pays} for r in regions],
+                    "otherRegionsConfig": {"relativeDiscount": pays},
+                }],
+                "regionalConfigs": [{"regionCode": r, "newSubscriberAvailability": True} for r in regions],
+                "otherRegionsConfig": {"otherRegionsNewSubscriberAvailability": True},
+            })
+            break
+        except RuntimeError as err:
+            refused = re.search(r"Region code (\w+) is not billable", str(err))
+            if not refused or refused.group(1) not in regions:
+                raise
+            regions.remove(refused.group(1))
+            print(f"      {refused.group(1)}: not in Play's regions version, left to 'other regions'")
     return offer_id
 
 
