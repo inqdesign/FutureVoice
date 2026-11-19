@@ -2426,6 +2426,10 @@ class TalkViewModel(context: Context) : ViewModel() {
                 "fluency" to (result?.fluency?.toString() ?: ""),
                 "prosody" to (result?.prosody?.toString() ?: ""),
                 "outcome" to outcome.raw, "try" to (line.tries + 1).toString(),
+                // Judged by comparison: how many other spellings came back,
+                // and by how much one beat the sentence (empty = none did).
+                "alts" to (result?.alternates?.size?.toString() ?: ""),
+                "gap" to (result?.let { PronunciationContrast.misses(it).firstOrNull()?.gap?.toString() } ?: ""),
                 "assess_ms" to pronAssessMs.toString(), "early" to if (pronEarlyUsed) "1" else "0"))
             val fb = PronunciationJudge.feedback(verdict, result, line, now.topic.phonemes)
             val heard = (verdict as? PronunciationJudge.Verdict.NotYet)?.takeIf { it.heard != null }

@@ -58,7 +58,10 @@ data class PronunciationResult(
 ) {
     @Serializable
     data class Alternate(val reference: String, val words: List<Scored> = emptyList()) {
-        @Serializable data class Scored(val word: String, val accuracy: Int? = null, val error: String = "None")
+        /** [phonemes]: the score of each sound in the word, in order
+         *  (Chinese: one per character). */
+        @Serializable data class Scored(val word: String, val accuracy: Int? = null, val error: String = "None",
+                                        val phonemes: List<Int?>? = null)
     }
 
     @Serializable
@@ -168,7 +171,8 @@ object PronunciationAssessor {
         val alternates: List<A>? = null,
     ) {
         @Serializable data class A(val reference: String, val words: List<AW>? = null)
-        @Serializable data class AW(val word: String, val accuracy: Int? = null, val error: String? = null)
+        @Serializable data class AW(val word: String, val accuracy: Int? = null, val error: String? = null,
+                                    val phonemes: List<Int?>? = null)
         @Serializable data class W(
             val word: String,
             val accuracy: Int? = null,
@@ -255,7 +259,7 @@ object PronunciationAssessor {
                     },
                     alternates = wire.alternates?.map { a ->
                         PronunciationResult.Alternate(a.reference, a.words.orEmpty().map {
-                            PronunciationResult.Alternate.Scored(it.word, it.accuracy, it.error ?: "None")
+                            PronunciationResult.Alternate.Scored(it.word, it.accuracy, it.error ?: "None", it.phonemes)
                         })
                     },
                 ), Outcome.SCORED)

@@ -30,21 +30,21 @@ class PronunciationContrastTest {
         PronunciationJudge.verdict(r, line, "", emptyList(), "ko", only)
 
     @Test fun theTenseConsonantIsSwappedForThePlainOne() {
-        assertEquals(listOf("예븐 카페에서 방을 샀어요."),
+        assertEquals(listOf("예븐 카페에서 방을 샀어요.", "예픈 카페에서 팡을 샀어요."),
             PronunciationContrast.alternates("예쁜 카페에서 빵을 샀어요.", "ko.tense"))
     }
 
     @Test fun aFinalConsonantBeforeItLeavesNothingToCompare() {
-        assertEquals(listOf("작꿍이랑"), PronunciationContrast.alternates("짝꿍이랑", "ko.tense"))
+        assertEquals(listOf("작꿍이랑", "착꿍이랑"), PronunciationContrast.alternates("짝꿍이랑", "ko.tense"))
         assertEquals(emptyList<String>(), PronunciationContrast.alternates("먹을 때", "ko.tense"))
         assertEquals(emptyList<String>(), PronunciationContrast.alternates("있어요", "ko.tense"))
     }
 
     @Test fun eachMeasuredSoundHasItsSwap() {
-        assertEquals(listOf("거비 보도"), PronunciationContrast.alternates("커피 포도", "ko.asp"))
+        assertEquals(listOf("거비 보도", "꺼삐 뽀도"), PronunciationContrast.alternates("커피 포도", "ko.asp"))
         assertEquals(listOf("고기 거기"), PronunciationContrast.alternates("거기 고기", "ko.eoo"))
         assertEquals(listOf("구림"), PronunciationContrast.alternates("그림", "ko.eu"))
-        assertEquals(listOf("까 가 가", "카 까 카"), PronunciationContrast.alternates("가 까 카", "ko.three"))
+        assertEquals(listOf("까 카 가 싸 사", "카 가 까 싸 사"), PronunciationContrast.alternates("가 까 카 사 싸", "ko.three"))
     }
 
     @Test fun spanishFrenchGermanSwapInsideTheWord() {
@@ -69,6 +69,30 @@ class PronunciationContrastTest {
         assertEquals(listOf("切手を買て待っています。", "切手を買って待ています。"),
             PronunciationContrast.alternates("切手を買って待っています。", "ja.tsu"))
         assertEquals(emptyList<String>(), PronunciationContrast.alternates("おばあさんが来ました。", "ja.long"))
+    }
+
+    @Test fun chineseSwapsOneCharacterForAnotherTone() {
+        assertEquals(listOf("我像买东西。", "我想埋东西。"), PronunciationContrast.alternates("我想买东西。", "zh.t3"))
+        assertEquals(emptyList<String>(), PronunciationContrast.alternates("我想买东西。", "zh.sandhi"))
+    }
+
+    @Test fun chineseIsComparedCharacterByCharacter() {
+        fun zh(words: List<Pair<String, List<Pair<String, Int>>>>, alt: List<Pair<String, List<Int>>>) =
+            PronunciationResult(score = 80, accuracy = 80, fluency = 80, completeness = 100, locale = "zh-CN",
+                words = words.map { w -> PronunciationResult.Word(w.first, w.second.minOf { it.second },
+                    phonemes = w.second.map { PronunciationResult.Phoneme(it.first, it.second) }) },
+                alternates = listOf(PronunciationResult.Alternate("", alt.map {
+                    PronunciationResult.Alternate.Scored(it.first, it.second.min(), "None", it.second) })))
+        fun v(r: PronunciationResult) = PronunciationJudge.verdict(r, line, "", emptyList(), "zh")
+        assertEquals(Verdict.NotYet("想买", null, 80, "卖"),
+            v(zh(listOf("我" to listOf("wo 3" to 95), "想买" to listOf("xiang 3" to 90, "mai 3" to 55)),
+                 listOf("我" to listOf(95), "想卖" to listOf(90, 96)))))
+        assertEquals(Verdict.Pass(80),
+            v(zh(listOf("我" to listOf("wo 3" to 95), "想买" to listOf("xiang 3" to 90, "mai 3" to 94)),
+                 listOf("我" to listOf(95), "想卖" to listOf(90, 60)))))
+        assertEquals(Verdict.Pass(80),
+            v(zh(listOf("不" to listOf("bu 2" to 60), "是" to listOf("shi 4" to 95)),
+                 listOf("布" to listOf(99), "是" to listOf(95)))))
     }
 
     @Test fun japaneseIsLinedUpByLetter() {
@@ -128,12 +152,13 @@ class PronunciationContrastTest {
         assertTrue(PronunciationCall.isOffered("en"))
         assertTrue(PronunciationCall.isOffered("ko"))
         for (other in listOf("ja", "de", "es", "fr")) assertTrue(other, PronunciationCall.isOffered(other))
-        assertFalse(PronunciationCall.isOffered("zh"))
+        assertTrue(PronunciationCall.isOffered("zh"))
+        assertFalse(PronunciationCall.isOffered("it"))
         assertEquals(listOf("es.rr", "es.r", "es.j", "es.ny"), PronunciationCourse.topics("es").map { it.id })
         assertEquals(listOf("fr.u", "fr.nasal", "fr.eu"), PronunciationCourse.topics("fr").map { it.id })
         assertEquals(listOf("de.eiie", "de.ich", "de.oe", "de.ue"), PronunciationCourse.topics("de").map { it.id }.sorted())
         assertEquals(listOf("ja.long", "ja.tsu"), PronunciationCourse.topics("ja").map { it.id })
-        assertEquals(emptyList<String>(), PronunciationCourse.topics("zh").map { it.id })
+        assertEquals(listOf("zh.t1", "zh.t2", "zh.t3", "zh.t4"), PronunciationCourse.topics("zh").map { it.id })
         assertEquals(listOf("ko.tense", "ko.asp", "ko.three", "ko.eoo", "ko.eu"),
             PronunciationCourse.topics("ko").map { it.id })
     }

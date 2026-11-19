@@ -28,11 +28,11 @@ object PronunciationContrast {
     /** Topics judged by comparison. A topic is added once its own swap has
      *  been measured on native recordings. */
     fun isOffered(topicId: String): Boolean =
-        swaps(topicId) != null || wordRules(topicId) != null || occurrenceRule(topicId) != null
+        swaps(topicId) != null || wordRules(topicId) != null || occurrenceRule(topicId) != null || tone(topicId) != null
 
     /** The languages with at least one such topic. */
     fun isOfferedLanguage(language: String): Boolean =
-        language.substringBefore('-') in setOf("ko", "es", "fr", "ja", "de")
+        language.substringBefore('-') in setOf("ko", "es", "fr", "ja", "de", "zh")
 
     // Spanish, French, German: a swap inside a word.
 
@@ -87,13 +87,18 @@ object PronunciationContrast {
 
     /** Every swap here was measured on FLEURS (right / wrong / within the
      *  margin): tense ↔ plain 926 / 11 / 150, aspirated ↔ plain 180 / 2 / 20,
-     *  ㅓ ↔ ㅗ 279 / 1 / 18, ㅡ ↔ ㅜ 244 / 2 / 21. Tense ↔ aspirated was not,
-     *  so the three-way topic compares each with plain. */
+     *  tense ↔ aspirated 743 / 15 / 126, ㅓ ↔ ㅗ 279 / 1 / 18, ㅡ ↔ ㅜ 244 /
+     *  2 / 21. A consonant lesson is compared with BOTH other kinds: with
+     *  plain alone, an aspirated consonant read tense passed. */
+    private val TENSE_TO_ASPIRATED = mapOf('ㄲ' to 'ㅋ', 'ㄸ' to 'ㅌ', 'ㅃ' to 'ㅍ', 'ㅉ' to 'ㅊ')
     private fun swaps(topicId: String): List<Swap>? = when (topicId) {
-        "ko.tense" -> listOf(Swap(TENSE_TO_PLAIN))
-        "ko.asp" -> listOf(Swap(ASPIRATED_TO_PLAIN))
-        "ko.three" -> listOf(Swap(reversed(TENSE_TO_PLAIN) + ASPIRATED_TO_PLAIN + TENSE_TO_PLAIN),
-                             Swap(reversed(ASPIRATED_TO_PLAIN)))
+        "ko.tense" -> listOf(Swap(TENSE_TO_PLAIN), Swap(TENSE_TO_ASPIRATED))
+        "ko.asp" -> listOf(Swap(ASPIRATED_TO_PLAIN), Swap(reversed(TENSE_TO_ASPIRATED)))
+        // Each of the three turned one way round, then the other: plain →
+        // tense → aspirated → plain, and back. ㅅ and ㅆ swap with each other.
+        "ko.three" -> listOf(
+            Swap(reversed(TENSE_TO_PLAIN) + TENSE_TO_ASPIRATED + ASPIRATED_TO_PLAIN + ('ㅆ' to 'ㅅ')),
+            Swap(reversed(ASPIRATED_TO_PLAIN) + reversed(TENSE_TO_ASPIRATED) + TENSE_TO_PLAIN + ('ㅅ' to 'ㅆ')))
         "ko.eoo" -> listOf(Swap(vowels = mapOf(4 to 8, 8 to 4)))
         "ko.eu" -> listOf(Swap(vowels = mapOf(18 to 13)))
         else -> null
@@ -125,7 +130,81 @@ object PronunciationContrast {
 
     /** [text] with the topic's sound swapped in every word that carries it:
      *  one sentence per swap, the same number of words as [text]. */
+    // Chinese: one character said in another tone.
+
+    /** The four tone topics. A tone is a character, so the swap is another
+     *  character of the same syllable (买 mǎi → 埋 mái), from the app's own
+     *  HSK list ([ChineseToneTable]). One character per alternate; the
+     *  measurements are on iOS `PronunciationContrast.tone`. */
+    private fun tone(topicId: String): Int? = when (topicId) {
+        "zh.t1" -> 1; "zh.t2" -> 2; "zh.t3" -> 3; "zh.t4" -> 4
+        else -> null
+    }
+
+    private val toneOf: Map<Char, Pair<String, Int>> by lazy {
+        ChineseToneTable.DATA.split(';').filter { it.length >= 3 }
+            .associate { it[0] to (it.substring(1, it.length - 1) to it.last().digitToInt()) }
+    }
+    /** The first of a syllable and tone is the most basic word. */
+    private val bySyllable: Map<String, Map<Int, Char>> by lazy {
+        val out = mutableMapOf<String, MutableMap<Int, Char>>()
+        ChineseToneTable.DATA.split(';').filter { it.length >= 3 }.forEach {
+            out.getOrPut(it.substring(1, it.length - 1)) { mutableMapOf() }.putIfAbsent(it.last().digitToInt(), it[0])
+        }
+        out
+    }
+    /** The tone a learner is most likely to say instead, first. */
+    private val CONFUSED_WITH = mapOf(1 to listOf(4, 2, 3), 2 to listOf(3, 1, 4), 3 to listOf(2, 4, 1), 4 to listOf(1, 2, 3))
+
+    private fun toneAlternates(text: String, tone: Int): List<String> {
+        val out = mutableListOf<String>()
+        for ((i, c) in text.withIndex()) {
+            if (out.size >= MAX_ALTERNATES) break
+            val (syllable, t) = toneOf[c] ?: continue
+            if (t != tone) continue
+            val other = CONFUSED_WITH[tone]?.firstNotNullOfOrNull { bySyllable[syllable]?.get(it) } ?: continue
+            out.add(text.substring(0, i) + other + text.substring(i + 1))
+        }
+        return out
+    }
+
+    private fun isHan(c: Char) = c in '\u4E00'..'\u9FFF'
+
+    private class Sound(val character: Char, val score: Int?, val name: String?, val word: String)
+
+    /** One character of the take that fit another tone better: each read
+     *  laid out character by character with that character's own score. */
+    private fun toneMiss(reference: List<PronunciationResult.Word>,
+                         other: List<PronunciationResult.Alternate.Scored>, margin: Int): Miss? {
+        val mine = reference.flatMap { w ->
+            val han = w.word.filter { isHan(it) }
+            val per = w.phonemes.size == han.length
+            han.mapIndexed { i, c ->
+                Sound(c, if (w.isJudged) (if (per) w.phonemes[i].accuracy else w.accuracy) else null,
+                      if (per) w.phonemes[i].phoneme else null, w.word)
+            }
+        }
+        val theirs = other.flatMap { w ->
+            val han = w.word.filter { isHan(it) }
+            val scores = w.phonemes.orEmpty()
+            han.mapIndexed { i, c -> c to (if (w.error == "Omission") null else if (scores.size == han.length) scores[i] else w.accuracy) }
+        }
+        if (mine.size != theirs.size) return null
+        for ((m, t) in mine.zip(theirs)) {
+            if (m.character == t.first) continue
+            val score = m.score ?: return null
+            val otherScore = t.second ?: return null
+            if (otherScore - score <= margin) return null
+            // Azure must have read the character with the tone the swap was made from.
+            val expected = toneOf[m.character]?.second
+            if (m.name != null && expected != null && m.name.lastOrNull()?.digitToIntOrNull() != expected) return null
+            return Miss(m.word, t.first.toString(), otherScore - score)
+        }
+        return null
+    }
+
     fun alternates(text: String, topicId: String): List<String> {
+        tone(topicId)?.let { return toneAlternates(text, it) }
         occurrenceRule(topicId)?.let { re ->
             return re.findAll(text).take(MAX_ALTERNATES).map { text.removeRange(it.range) }.toList()
         }
@@ -153,6 +232,11 @@ object PronunciationContrast {
     fun misses(result: PronunciationResult): List<Miss> {
         val reference = result.referenceWords
         val margin = margin(result.locale)
+        if (result.locale.startsWith("zh")) {
+            return result.alternates.orEmpty().mapNotNull { alt ->
+                toneMiss(reference, alt.words.filter { it.error != "Insertion" }, margin)
+            }.sortedByDescending { it.gap }
+        }
         if (result.locale.startsWith("ja")) {
             return result.alternates.orEmpty().mapNotNull { alt ->
                 unspacedMiss(reference, alt.words.filter { it.error != "Insertion" }, margin)
