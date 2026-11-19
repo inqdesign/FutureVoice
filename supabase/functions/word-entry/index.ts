@@ -325,7 +325,13 @@ contain the chunk word-for-word as sent. 0-2 variants; none is fine. \
 Keep everything concise.`
 }
 
-const MODEL = "gemini-3.6-flash"
+// 3.1 flash-lite since 2026-11-19 (was 3.6-flash, which doubles in price on
+// 2027-01-01 and wrote Korean typos into the cache: "해깔리게", "코를 벼르다").
+// Measured with scripts/dictionary-models-probe.py, 68 entries a model, a
+// blind Opus reader: entries with a serious error 6 vs 12, Korean spelling
+// notes 3 vs 13, about half the cost. Haiku 5.5 was 16 (and wrote Korean for
+// a Japanese reader). Re-run the probe before changing this again.
+const MODEL = "gemini-3.1-flash-lite"
 
 async function generate(
   word: string, native: string, target: string, kind: Kind, apiKey: string,
