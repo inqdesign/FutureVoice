@@ -29,12 +29,12 @@ final class PronunciationContrastTests: XCTestCase {
 
     func testTheTenseConsonantIsSwappedForThePlainOne() {
         XCTAssertEqual(PronunciationContrast.alternates(for: "예쁜 카페에서 빵을 샀어요.", topicId: "ko.tense"),
-                       ["예븐 카페에서 방을 샀어요."])
+                       ["예븐 카페에서 방을 샀어요.", "예픈 카페에서 팡을 샀어요."])
     }
 
     func testAfinalConsonantBeforeItLeavesNothingToCompare() {
         // "짝궁" is said "짝꿍" anyway: only the first syllable is swapped.
-        XCTAssertEqual(PronunciationContrast.alternates(for: "짝꿍이랑", topicId: "ko.tense"), ["작꿍이랑"])
+        XCTAssertEqual(PronunciationContrast.alternates(for: "짝꿍이랑", topicId: "ko.tense"), ["작꿍이랑", "착꿍이랑"])
         // The same across two words: "먹을 때" after ㄹ.
         XCTAssertEqual(PronunciationContrast.alternates(for: "먹을 때", topicId: "ko.tense"), [])
     }
@@ -49,12 +49,12 @@ final class PronunciationContrastTests: XCTestCase {
     }
 
     func testEachMeasuredSoundHasItsSwap() {
-        XCTAssertEqual(PronunciationContrast.alternates(for: "커피 포도", topicId: "ko.asp"), ["거비 보도"])
+        XCTAssertEqual(PronunciationContrast.alternates(for: "커피 포도", topicId: "ko.asp"), ["거비 보도", "꺼삐 뽀도"])
         XCTAssertEqual(PronunciationContrast.alternates(for: "거기 고기", topicId: "ko.eoo"), ["고기 거기"])
         XCTAssertEqual(PronunciationContrast.alternates(for: "그림", topicId: "ko.eu"), ["구림"])
-        // The three-way topic: each of the three against plain, plain against both.
-        XCTAssertEqual(PronunciationContrast.alternates(for: "가 까 카", topicId: "ko.three"),
-                       ["까 가 가", "카 까 카"])
+        // The three-way topic: each of the three against both others.
+        XCTAssertEqual(PronunciationContrast.alternates(for: "가 까 카 사 싸", topicId: "ko.three"),
+                       ["까 카 가 싸 사", "카 가 까 싸 사"])
     }
 
     func testSpanishFrenchGermanSwapInsideTheWord() {
@@ -83,6 +83,42 @@ final class PronunciationContrastTests: XCTestCase {
         XCTAssertEqual(PronunciationContrast.alternates(for: "切手を買って待っています。", topicId: "ja.tsu"),
                        ["切手を買て待っています。", "切手を買って待ています。"])
         XCTAssertEqual(PronunciationContrast.alternates(for: "おばあさんが来ました。", topicId: "ja.long"), [])
+    }
+
+    func testChineseSwapsOneCharacterForAnotherTone() {
+        // 想 xiǎng → 像 xiàng, 买 mǎi → 埋 mái: the second tone first, where the list has one.
+        XCTAssertEqual(PronunciationContrast.alternates(for: "我想买东西。", topicId: "zh.t3"),
+                       ["我像买东西。", "我想埋东西。"])
+        XCTAssertEqual(PronunciationContrast.alternates(for: "我想买东西。", topicId: "zh.sandhi"), [])
+    }
+
+    func testChineseIsComparedCharacterByCharacter() {
+        func zh(_ words: [(String, [(String, Int)])], alt: [(String, [Int])]) -> PronunciationResult {
+            var r = PronunciationResult(
+                score: 80, accuracy: 80, fluency: 80, completeness: 100, prosody: nil, locale: "zh-CN",
+                recognized: "", words: words.map { w in
+                    .init(word: w.0, accuracy: w.1.map(\.1).min(), error: "None", offsetMs: 0, durationMs: 300,
+                          phonemes: w.1.map { .init(phoneme: $0.0, accuracy: $0.1, heard: nil) })
+                })
+            r.alternates = [.init(reference: "", words: alt.map {
+                .init(word: $0.0, accuracy: $0.1.min(), error: "None", phonemes: $0.1)
+            })]
+            return r
+        }
+        func v(_ r: PronunciationResult) -> PronunciationJudge.Verdict {
+            PronunciationJudge.verdict(result: r, line: .init(id: UUID(), text: "", focus: []), said: "",
+                                       phonemes: [], language: "zh")
+        }
+        // 买 said as 卖: the fourth tone fits better.
+        XCTAssertEqual(v(zh([("我", [("wo 3", 95)]), ("想买", [("xiang 3", 90), ("mai 3", 55)])],
+                            alt: [("我", [95]), ("想卖", [90, 96])])),
+                       .notYet(word: "想买", sound: nil, score: 80, heard: "卖"))
+        // A native 买.
+        XCTAssertEqual(v(zh([("我", [("wo 3", 95)]), ("想买", [("xiang 3", 90), ("mai 3", 94)])],
+                            alt: [("我", [95]), ("想卖", [90, 60])])), .pass(score: 80))
+        // Azure read the character with another tone than the table's: not compared.
+        XCTAssertEqual(v(zh([("不", [("bu 2", 60)]), ("是", [("shi 4", 95)])],
+                            alt: [("布", [99]), ("是", [95])])), .pass(score: 80))
     }
 
     func testJapaneseIsLinedUpByLetter() {
@@ -159,13 +195,13 @@ final class PronunciationContrastTests: XCTestCase {
         for other in ["ja", "de", "es", "fr"] {
             XCTAssertTrue(PronunciationCall.isOffered(for: other), other)
         }
-        XCTAssertFalse(PronunciationCall.isOffered(for: "zh"))
+        XCTAssertTrue(PronunciationCall.isOffered(for: "zh"))
         XCTAssertEqual(PronunciationCourse.topics(for: "es").map(\.id), ["es.rr", "es.r", "es.j", "es.ny"])
         XCTAssertEqual(PronunciationCourse.topics(for: "fr").map(\.id), ["fr.u", "fr.nasal", "fr.eu"])
         XCTAssertEqual(PronunciationCourse.topics(for: "de").map(\.id).sorted(),
                        ["de.eiie", "de.ich", "de.oe", "de.ue"])
         XCTAssertEqual(PronunciationCourse.topics(for: "ja").map(\.id), ["ja.long", "ja.tsu"])
-        XCTAssertEqual(PronunciationCourse.topics(for: "zh"), [])
+        XCTAssertEqual(PronunciationCourse.topics(for: "zh").map(\.id), ["zh.t1", "zh.t2", "zh.t3", "zh.t4"])
         XCTAssertEqual(PronunciationCourse.topics(for: "ko").map(\.id),
                        ["ko.tense", "ko.asp", "ko.three", "ko.eoo", "ko.eu"])
         XCTAssertFalse(PronunciationCourse.topics(for: "en").isEmpty)

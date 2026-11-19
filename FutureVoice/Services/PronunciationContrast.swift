@@ -33,12 +33,12 @@ enum PronunciationContrast {
     /// been measured on native recordings.
     static func isOffered(topicId: String) -> Bool {
         swaps(topicId: topicId) != nil || wordRules(topicId: topicId) != nil
-            || occurrenceRule(topicId: topicId) != nil
+            || occurrenceRule(topicId: topicId) != nil || tone(topicId: topicId) != nil
     }
 
     /// The languages with at least one such topic.
     static func isOffered(language: String) -> Bool {
-        ["ko", "es", "fr", "ja", "de"].contains(LanguageCatalog.base(language))
+        ["ko", "es", "fr", "ja", "de", "zh"].contains(LanguageCatalog.base(language))
     }
 
     // MARK: - Spanish, French, German: a swap inside a word
@@ -131,16 +131,24 @@ enum PronunciationContrast {
 
     /// Every swap here was measured the same day on FLEURS (right / wrong /
     /// within the margin): tense ↔ plain 926 / 11 / 150, aspirated ↔ plain
-    /// 180 / 2 / 20, ㅓ ↔ ㅗ 279 / 1 / 18, ㅡ ↔ ㅜ 244 / 2 / 21. Tense ↔
-    /// aspirated was not, so the three-way topic compares each with plain.
+    /// 180 / 2 / 20, tense ↔ aspirated 743 / 15 / 126, ㅓ ↔ ㅗ 279 / 1 / 18,
+    /// ㅡ ↔ ㅜ 244 / 2 / 21. A consonant lesson is compared with BOTH other
+    /// kinds: with plain alone, an aspirated consonant read tense passed
+    /// (the founder's first try on a phone, the same evening).
     private static func swaps(topicId: String) -> [Swap]? {
+        let tenseToAspirated: [Character: Character] = ["ㄲ": "ㅋ", "ㄸ": "ㅌ", "ㅃ": "ㅍ", "ㅉ": "ㅊ"]
         switch topicId {
-        case "ko.tense": return [Swap(consonants: tenseToPlain)]
-        case "ko.asp": return [Swap(consonants: aspiratedToPlain)]
+        case "ko.tense": return [Swap(consonants: tenseToPlain), Swap(consonants: tenseToAspirated)]
+        case "ko.asp": return [Swap(consonants: aspiratedToPlain), Swap(consonants: reversed(tenseToAspirated))]
         case "ko.three":
-            return [Swap(consonants: tenseToPlain.merging(aspiratedToPlain) { a, _ in a }
-                            .merging(reversed(tenseToPlain)) { a, _ in a }),
-                    Swap(consonants: reversed(aspiratedToPlain))]
+            // Each of the three turned one way round, then the other:
+            // plain → tense → aspirated → plain, and back. ㅅ and ㅆ have
+            // no aspirated partner and swap with each other both times.
+            let forward = reversed(tenseToPlain).merging(tenseToAspirated) { a, _ in a }
+                .merging(aspiratedToPlain) { a, _ in a }.merging(["ㅆ": "ㅅ"]) { _, b in b }
+            let back = reversed(aspiratedToPlain).merging(reversed(tenseToAspirated)) { a, _ in a }
+                .merging(tenseToPlain) { a, _ in a }.merging(["ㅅ": "ㅆ"]) { _, b in b }
+            return [Swap(consonants: forward), Swap(consonants: back)]
         case "ko.eoo": return [Swap(vowels: [4: 8, 8: 4])]
         case "ko.eu": return [Swap(vowels: [18: 13])]
         default: return nil
@@ -183,12 +191,104 @@ enum PronunciationContrast {
         return out
     }
 
+    // MARK: - Chinese: one character said in another tone
+
+    /// The four tone topics. A tone is a character, so the swap is another
+    /// character of the same syllable (买 mǎi → 卖 mài), from the app's own
+    /// HSK list (`ChineseToneTable`). One character per alternate. Measured
+    /// at a margin of 10 on FLEURS, the character's own sound score: tone 1
+    /// 119 right / 2 wrong of 151, tone 2 133 / 3 of 175, tone 3 150 / 3 of
+    /// 167, tone 4 145 / 2 of 169. Only where Azure reads the character with
+    /// the table's tone (不 and 一 change theirs, 长 has two readings).
+    private static func tone(topicId: String) -> Int? {
+        switch topicId {
+        case "zh.t1": return 1
+        case "zh.t2": return 2
+        case "zh.t3": return 3
+        case "zh.t4": return 4
+        default: return nil
+        }
+    }
+
+    private static let chineseTones: (byCharacter: [Character: (syllable: String, tone: Int)],
+                                      bySyllable: [String: [Int: Character]]) = {
+        var byCharacter: [Character: (syllable: String, tone: Int)] = [:]
+        var bySyllable: [String: [Int: Character]] = [:]
+        for entry in ChineseToneTable.data.split(separator: ";") {
+            guard let c = entry.first, let tone = entry.last?.wholeNumberValue else { continue }
+            let syllable = String(entry.dropFirst().dropLast())
+            byCharacter[c] = (syllable, tone)
+            // The first of a syllable and tone is the most basic word.
+            if bySyllable[syllable]?[tone] == nil { bySyllable[syllable, default: [:]][tone] = c }
+        }
+        return (byCharacter, bySyllable)
+    }()
+
+    /// The tone a learner is most likely to say instead, first.
+    private static let confusedWith: [Int: [Int]] = [1: [4, 2, 3], 2: [3, 1, 4], 3: [2, 4, 1], 4: [1, 2, 3]]
+
+    private static func toneAlternates(for text: String, tone: Int) -> [String] {
+        var out: [String] = []
+        let characters = Array(text)
+        for (i, c) in characters.enumerated() where out.count < maxAlternates {
+            guard let entry = chineseTones.byCharacter[c], entry.tone == tone,
+                  let other = confusedWith[tone]?.lazy.compactMap({ chineseTones.bySyllable[entry.syllable]?[$0] }).first
+            else { continue }
+            var swapped = characters
+            swapped[i] = other
+            out.append(String(swapped))
+        }
+        return out
+    }
+
+    private static func isHan(_ c: Character) -> Bool {
+        c.unicodeScalars.first.map { (0x4E00...0x9FFF).contains($0.value) } ?? false
+    }
+
+    /// One character of the take that fit another tone better. Each read is
+    /// laid out character by character with that character's own score (the
+    /// word's, when the sounds don't line up with the characters).
+    private static func toneMiss(reference: [PronunciationResult.Word],
+                                 other: [PronunciationResult.Alternate.Scored], margin: Int) -> Miss? {
+        struct Piece { let character: Character; let score: Int?; let name: String?; let word: String }
+        var mine: [Piece] = []
+        for w in reference {
+            let han = w.word.filter(isHan)
+            let perCharacter = w.phonemes.count == han.count
+            for (i, c) in han.enumerated() {
+                mine.append(Piece(character: c,
+                                  score: w.isJudged ? (perCharacter ? w.phonemes[i].accuracy : w.accuracy) : nil,
+                                  name: perCharacter ? w.phonemes[i].phoneme : nil, word: w.word))
+            }
+        }
+        var theirs: [(Character, Int?)] = []
+        for w in other {
+            let han = w.word.filter(isHan)
+            let scores = w.phonemes ?? []
+            for (i, c) in han.enumerated() {
+                theirs.append((c, w.error == "Omission" ? nil : (scores.count == han.count ? scores[i] : w.accuracy)))
+            }
+        }
+        guard mine.count == theirs.count else { return nil }
+        for (m, t) in zip(mine, theirs) where m.character != t.0 {
+            guard let score = m.score, let otherScore = t.1, otherScore - score > margin else { return nil }
+            // Azure must have read the character with the tone the swap was
+            // made from, or the two spellings were never that tone against
+            // another.
+            if let name = m.name, let expected = chineseTones.byCharacter[m.character]?.tone,
+               name.last?.wholeNumberValue != expected { return nil }
+            return Miss(word: m.word, cameOutAs: String(t.0), gap: otherScore - score)
+        }
+        return nil
+    }
+
     // MARK: - The alternates
 
     /// `text` with the topic's sound swapped in every word that carries it:
     /// one sentence per swap, the same number of words as `text`. Empty when
     /// the topic isn't judged this way or `text` has nothing to swap.
     static func alternates(for text: String, topicId: String) -> [String] {
+        if let tone = tone(topicId: topicId) { return toneAlternates(for: text, tone: tone) }
         if let pattern = occurrenceRule(topicId: topicId) {
             guard let re = try? NSRegularExpression(pattern: pattern) else { return [] }
             return re.matches(in: text, range: NSRange(text.startIndex..., in: text))
@@ -230,6 +330,11 @@ enum PronunciationContrast {
     static func misses(in result: PronunciationResult) -> [Miss] {
         let reference = result.referenceWords
         let margin = margin(locale: result.locale)
+        if result.locale.hasPrefix("zh") {
+            return (result.alternates ?? []).compactMap {
+                toneMiss(reference: reference, other: $0.words.filter { $0.error != "Insertion" }, margin: margin)
+            }.sorted { $0.gap > $1.gap }
+        }
         if result.locale.hasPrefix("ja") {
             return (result.alternates ?? []).compactMap {
                 unspacedMiss(reference: reference, other: $0.words.filter { $0.error != "Insertion" },

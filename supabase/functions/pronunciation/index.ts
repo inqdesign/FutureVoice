@@ -266,6 +266,9 @@ Deno.serve(async (req) => {
           word: w.Word,
           accuracy: score(pick(w, "AccuracyScore") as number | undefined),
           error: (pick(w, "ErrorType") as string | undefined) ?? "None",
+          // Each sound's score: in Chinese one per character, which is
+          // what a tone is compared on.
+          phonemes: (w.Phonemes ?? []).map((ph) => score(pick(ph, "AccuracyScore") as number | undefined) ?? null),
         })),
       }
     } catch { return null }

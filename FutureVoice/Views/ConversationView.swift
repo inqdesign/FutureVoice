@@ -5813,6 +5813,10 @@ struct ConversationView: View {
                 "fluency": result.map { String($0.fluency) } ?? "",
                 "prosody": result?.prosody.map(String.init) ?? "",
                 "outcome": outcome.rawValue,
+                // Judged by comparison: how many other spellings came back,
+                // and by how much one beat the sentence (empty = none did).
+                "alts": result?.alternates.map { String($0.count) } ?? "",
+                "gap": result.flatMap { PronunciationContrast.misses(in: $0).first.map { String($0.gap) } } ?? "",
                 "try": String(line.tries + 1),
                 "assess_ms": String(pronAssessMs),
                 "early": pronEarlyUsed ? "1" : "0",

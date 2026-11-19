@@ -45,6 +45,9 @@ struct PronunciationResult: Codable, Hashable {
             var word: String
             var accuracy: Int?
             var error: String
+            /// The score of each sound in the word, in order (Chinese: one
+            /// per character).
+            var phonemes: [Int?]? = nil
         }
     }
 
@@ -213,6 +216,7 @@ enum PronunciationAssessor {
                     let word: String
                     let accuracy: Int?
                     let error: String?
+                    let phonemes: [Int?]?
                 }
             }
         }
@@ -274,7 +278,8 @@ enum PronunciationAssessor {
                 },
                 alternates: wire.alternates?.map { a in
                     .init(reference: a.reference, words: (a.words ?? []).map {
-                        .init(word: $0.word, accuracy: $0.accuracy, error: $0.error ?? "None")
+                        .init(word: $0.word, accuracy: $0.accuracy, error: $0.error ?? "None",
+                              phonemes: $0.phonemes)
                     })
                 }
             )
