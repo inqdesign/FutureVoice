@@ -50,6 +50,9 @@ struct InviteOffer {
     ///     so it stops being shown.
     static func load(for account: AccountStatus) async -> InviteOffer? {
         guard account.isEntitled, !account.isUncappedTalk else { return nil }
+        // While the invite event is on, an invite pays a half-price month,
+        // not minutes: this offer would promise the wrong thing.
+        guard !InviteEvent.shared.state.enabled else { return nil }
         let referral = await ReferralService.fetchMine()
         guard let code = referral.code,
               referral.invitesUsed < ReferralService.rewardedInviteCap else { return nil }

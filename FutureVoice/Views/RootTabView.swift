@@ -93,6 +93,8 @@ struct RootTabView: View {
     /// "Your week" — the closed week's cards, raised once per week on the
     /// first open after the week turns (and on the week-turn notification).
     @State private var weekRecap: WeekRecap?
+    /// The friend-invite event's announcement, or a half-price month to take.
+    @State private var inviteSheet: InviteEventSheetKind?
     @State private var weekRecapAction: WeekRecapSheet.Action?
     /// The free minutes' report, raised again on a later open when the call
     /// that spent them closed before its last card (`TrialReport`).
@@ -372,6 +374,8 @@ struct RootTabView: View {
         }
         .onAppear { offerWeekRecap() }
         .onAppear { offerTrialReport() }
+        .onAppear { offerInviteEvent() }
+        .inviteEventSheets($inviteSheet)
         .sheet(isPresented: Binding(get: { trialReport != nil },
                                     set: { if !$0 { trialReport = nil } })) {
             if let trialReport {
@@ -410,7 +414,7 @@ struct RootTabView: View {
         }
         #endif
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { offerWeekRecap(); offerTrialReport() }
+            if phase == .active { offerWeekRecap(); offerTrialReport(); offerInviteEvent() }
         }
         .onChange(of: callInbox.pendingWeekRecap) { _, _ in offerWeekRecap() }
         .onChange(of: callInbox.pendingTrialReport) { _, asked in
@@ -770,6 +774,37 @@ struct RootTabView: View {
         }
     }
 
+    /// The invite event speaks up by itself twice, once each: a half-price
+    /// month that is waiting to be taken, and the announcement (once per
+    /// `announce_version`). `asked` is a tap on its push, which always opens.
+    private func offerInviteEvent(asked: Bool = false) {
+        guard appState.setupComplete else { return }
+        Task { @MainActor in
+            let event = InviteEvent.shared
+            await event.refresh()
+            try? await Task.sleep(nanoseconds: asked ? 300_000_000 : 2_500_000_000)
+            guard asked || UIApplication.shared.applicationState == .active else { return }
+            guard event.phase != .off, inviteSheet == nil else { return }
+            if asked {
+                inviteSheet = event.phase == .claim ? .claim : .about
+                if event.phase == .claim { event.markClaimOffered() }
+                return
+            }
+            guard weekRecap == nil, freeTalkCallId == nil, !freeTalkClosing,
+                  callInbox.pendingAnswer == nil, answeredCall == nil,
+                  !showingAgeCheck, !showingPaywall, !showingWelcome, !showingIntroPreview,
+                  appState.levelUpAnnouncement == nil, referralInbox.pendingJoin == nil,
+                  updates.pending == nil, trialReport == nil, !TrialReportStore.isShowing else { return }
+            if event.owesClaimOffer {
+                event.markClaimOffered()
+                inviteSheet = .claim
+            } else if event.owesAnnouncement {
+                event.markAnnounced()
+                inviteSheet = .about
+            }
+        }
+    }
+
     private func offerWeekRecap() {
         let asked = callInbox.pendingWeekRecap
         callInbox.pendingWeekRecap = false
@@ -900,6 +935,9 @@ struct RootTabView: View {
         case "consent":
             // The consent reminder push (`consent-reminder`).
             priceConsent.open()
+        case "invite":
+            // A friend subscribed (`invite-reward`).
+            offerInviteEvent(asked: true)
         case "freetalk":
             selection = .home
             appState.requestFreeTalk(from: .widget)

@@ -149,6 +149,9 @@ enum ReferralService {
     /// First run records the high-water mark WITHOUT announcing: a fresh
     /// install must not replay every friend who ever joined.
     static func announceJoins() async {
+        // The invite event tells the inviter itself, when the friend subscribes.
+        if !InviteEvent.shared.state.enabled { await InviteEvent.shared.refresh() }
+        guard !InviteEvent.shared.state.enabled else { return }
         guard let session = try? await SupabaseProvider.shared.auth.session else { return }
         let uid = session.user.id.uuidString
         let defaults = UserDefaults.standard

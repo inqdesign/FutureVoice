@@ -414,7 +414,8 @@ struct WelcomeView: View {
                     .background(RoundedRectangle(cornerRadius: 12).fill(Color.storyInk.opacity(0.06)))
                     .padding(.horizontal, 32)
                     .onChange(of: inviteCode) { _, _ in savePendingInvite() }
-                Text(explain("You'll both get \(ReferralService.bonusMinutes) minutes of talk time when you sign in."))
+                InviteEventLine(key: "join_note",
+                                fallback: explain("You'll both get \(ReferralService.bonusMinutes) minutes of talk time when you sign in."))
                     .font(.caption).foregroundStyle(Color.storyInk.opacity(0.6))
             }
             .padding(.top, 4)

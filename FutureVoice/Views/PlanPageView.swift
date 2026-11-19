@@ -214,7 +214,7 @@ struct PlanPageView: View {
                 // two invitations on one page is the page arguing with
                 // itself, and the card carries everything the row promised
                 // plus the action.
-                if inviteCard == nil {
+                if inviteCard == nil, !InviteEvent.shared.state.enabled {
                     NavigationLink {
                         InviteView()
                     } label: {

@@ -114,19 +114,32 @@ struct FutureVoiceApp: App {
         }
     }
 
+    private var rootContent: some View {
+        RootView()
+            .environmentObject(appState)
+            .environmentObject(auth)
+            .preferredColorScheme(appState.appearance.colorScheme)
+            // The chrome locale is applied inside RootView, not here:
+            // it changes when onboarding ends (UILanguage.isOnboarding),
+            // and RootView's body is the one that already reads every
+            // flag that gate turns on.
+            // The Mac's centred column and text size (no-op elsewhere).
+            .macPage()
+            .onAppear { MacWindow.configure() }
+    }
+
     var body: some Scene {
         WindowGroup {
-            RootView()
-                .environmentObject(appState)
-                .environmentObject(auth)
-                .preferredColorScheme(appState.appearance.colorScheme)
-                // The chrome locale is applied inside RootView, not here:
-                // it changes when onboarding ends (UILanguage.isOnboarding),
-                // and RootView's body is the one that already reads every
-                // flag that gate turns on.
-                // The Mac's centred column and text size (no-op elsewhere).
-                .macPage()
-                .onAppear { MacWindow.configure() }
+            #if PROMO_TEST
+            // A one-off sandbox build (never a shipping one): the offer test alone.
+            NavigationStack { PromoOfferSandboxTest() }
+            #else
+            #if DEBUG
+            if InviteEventDemo.isRequested { InviteEventDemo() } else { rootContent }
+            #else
+            rootContent
+            #endif
+            #endif
         }
         #if targetEnvironment(macCatalyst)
         .commands { MacViewCommands() }

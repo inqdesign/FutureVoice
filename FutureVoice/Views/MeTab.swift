@@ -62,6 +62,10 @@ struct MeTab: View {
     @ObservedObject private var syncEngine = SyncEngine.shared
     /// Apple waiting on the learner's consent before it charges.
     @ObservedObject private var priceConsent = PriceConsent.shared
+    /// The friend-invite event: its banner sits right under the subscription
+    /// row, and its sheets are raised from this page.
+    @ObservedObject private var inviteEvent = InviteEvent.shared
+    @State private var inviteSheet: InviteEventSheetKind?
     @State private var importingBackup = false
     @State private var backupResult: String?
     /// Non-nil while an export or import is running — it's both the progress
@@ -154,6 +158,12 @@ struct MeTab: View {
                                 title: explain("Confirm with Apple"),
                                 subtitle: explain("Needed to keep your plan going"))
                         }
+                    }
+                }
+
+                if inviteEvent.phase != .off {
+                    Section {
+                        InviteEventBanner(event: inviteEvent) { inviteSheet = $0 }
                     }
                 }
 
@@ -420,6 +430,34 @@ struct MeTab: View {
                             title: explain("Slide up Your week again"),
                             subtitle: explain("Next time the app opens, as if the week just turned"))
                     }
+                    Menu {
+                        ForEach(InviteEventDemo.phases, id: \.self) { phase in
+                            Button { InviteEventDemo.hold(phase) } label: { Text(verbatim: phase) }
+                        }
+                        Button { InviteEventDemo.hold("off") } label: {
+                            Text(verbatim: "Off (what the server says)")
+                        }
+                        Divider()
+                        Button {
+                            if InviteEvent.shared.phase == .off { InviteEventDemo.hold("invite") }
+                            inviteSheet = .about
+                        } label: { Text(verbatim: "Announcement sheet") }
+                        Button {
+                            InviteEventDemo.hold("claim")
+                            inviteSheet = .claim
+                        } label: { Text(verbatim: "Claim sheet") }
+                    } label: {
+                        row(icon: "gift",
+                            title: "Preview invite event",
+                            subtitle: "Pick a state; the banner appears under Subscription")
+                    }
+                    NavigationLink {
+                        PromoOfferSandboxTest()
+                    } label: {
+                        row(icon: "tag",
+                            title: "Sandbox: half-price offer",
+                            subtitle: "Does a promotional offer start at the next renewal?")
+                    }
                     Button {
                         Task { await WeeklyTestReminder.fireTest() }
                     } label: {
@@ -447,6 +485,8 @@ struct MeTab: View {
             // with the row — it opened and closed at once.
             .fullScreenCover(isPresented: $editingRoutine) { WeeklyPlanEditor() }
             .sheet(isPresented: $showingPriceConsent) { PriceConsentSheet() }
+            .inviteEventSheets($inviteSheet)
+            .task { await inviteEvent.refresh() }
             .sheet(isPresented: $showingPaywall, onDismiss: {
                 Task { account = await AccountStatus.fetch() }
             }) {

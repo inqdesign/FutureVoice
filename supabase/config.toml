@@ -558,6 +558,13 @@ enabled = true
 verify_jwt = false
 entrypoint = "./functions/consent-reminder/index.ts"
 
+[functions.invite-reward]
+enabled = true
+# Called by the database (CLEANUP_SECRET header) and by the app (the
+# learner's JWT, checked inside): two callers, so no gateway check.
+verify_jwt = false
+entrypoint = "./functions/invite-reward/index.ts"
+
 [functions.owner-watch]
 enabled = true
 # Called by pg_cron every minute, which has no Supabase JWT to send —

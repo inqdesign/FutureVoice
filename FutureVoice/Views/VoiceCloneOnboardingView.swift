@@ -676,8 +676,12 @@ struct VoiceCloneOnboardingView: View {
             // The code was typed on the Welcome screen, several steps back.
             // Showing it here is the only sign it's still coming.
             if let code = AuthService.pendingInviteCode() {
-                Label(explain("Invite code \(code) · \(ReferralService.bonusMinutes) min when you sign up"),
-                      systemImage: "gift")
+                Label {
+                    InviteEventLine(key: "join_note",
+                                    fallback: explain("Invite code \(code) · \(ReferralService.bonusMinutes) min when you sign up"))
+                } icon: {
+                    Image(systemName: "gift")
+                }
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -1222,8 +1226,12 @@ struct VoiceCloneOnboardingView: View {
                     .font(.footnote)
                     .foregroundStyle(.green)
             } else if auth.redeemedInviteBalance != nil {
-                Label(explain("Invite applied · \(ReferralService.bonusMinutes) min of talk time"),
-                      systemImage: "gift.fill")
+                Label {
+                    InviteEventLine(key: "join_applied",
+                                    fallback: explain("Invite applied · \(ReferralService.bonusMinutes) min of talk time"))
+                } icon: {
+                    Image(systemName: "gift.fill")
+                }
                     .font(.footnote)
                     .foregroundStyle(.green)
             }
