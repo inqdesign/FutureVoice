@@ -286,7 +286,7 @@ private fun marked(line: PronunciationRound.Line, accent: Color): AnnotatedStrin
  *  that decided it, and "Nice" / "Not yet" (iOS `PronunciationFeedbackPill`). */
 @Composable
 fun PronunciationFeedbackPill(feedback: PronunciationRound.Feedback) {
-    val color = if (feedback.ok) PronGreen else if (feedback.score < 50) PronRed else PronOrange
+    val color = if (feedback.ok) PronGreen else if (feedback.scored && feedback.score < 50) PronRed else PronOrange
     Row(
         Modifier.background(color.copy(alpha = 0.12f), RoundedCornerShape(50))
             .padding(horizontal = 12.dp, vertical = 6.dp),
@@ -304,10 +304,11 @@ fun PronunciationFeedbackPill(feedback: PronunciationRound.Feedback) {
                     null -> {}
                 }
             }
-        } else {
+            feedback.cameOutAs?.let { Text("→ $it", style = style, color = color) }
+        } else if (feedback.scored) {
             Text(stringResource(R.string.flow), style = style, fontWeight = FontWeight.SemiBold)
         }
-        Text("${feedback.score}", style = style, fontWeight = FontWeight.Bold, color = color)
+        if (feedback.scored) Text("${feedback.score}", style = style, fontWeight = FontWeight.Bold, color = color)
         Text(stringResource(if (feedback.ok) R.string.nice else R.string.not_yet), style = style,
             fontWeight = FontWeight.SemiBold, color = color)
     }

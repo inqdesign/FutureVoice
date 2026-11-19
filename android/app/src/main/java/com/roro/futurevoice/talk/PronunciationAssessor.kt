@@ -52,7 +52,15 @@ data class PronunciationResult(
     val locale: String = "",
     val recognized: String = "",
     val words: List<Word> = emptyList(),
+    /** The same take read against the sentence with the lesson's sound
+     *  swapped ([PronunciationContrast]). null unless the app asked. */
+    val alternates: List<Alternate>? = null,
 ) {
+    @Serializable
+    data class Alternate(val reference: String, val words: List<Scored> = emptyList()) {
+        @Serializable data class Scored(val word: String, val accuracy: Int? = null, val error: String = "None")
+    }
+
     @Serializable
     data class Word(
         val word: String,
@@ -143,6 +151,8 @@ object PronunciationAssessor {
         val reference: String,
         val accent: String? = null,
         val surface: String,
+        /** null (left out of the body) when there are none. */
+        val alternates: List<String>? = null,
     )
 
     @Serializable
@@ -155,7 +165,10 @@ object PronunciationAssessor {
         val prosody: Int? = null,
         val recognized: String? = null,
         val words: List<W>? = null,
+        val alternates: List<A>? = null,
     ) {
+        @Serializable data class A(val reference: String, val words: List<AW>? = null)
+        @Serializable data class AW(val word: String, val accuracy: Int? = null, val error: String? = null)
         @Serializable data class W(
             val word: String,
             val accuracy: Int? = null,
@@ -188,6 +201,7 @@ object PronunciationAssessor {
         language: String,
         surface: String,
         timeoutMs: Long = 15_000,
+        alternates: List<String> = emptyList(),
     ): Answer = withContext(Dispatchers.IO) {
         val ref = reference.trim()
         if (ref.isEmpty() || wav.size <= 1_000 || wav.size > MAX_WAV_BYTES || !supports(language)) {
@@ -203,6 +217,7 @@ object PronunciationAssessor {
         val body = Body(
             audio_b64 = android.util.Base64.encodeToString(wav, android.util.Base64.NO_WRAP),
             language = code, reference = ref, accent = accent, surface = surface,
+            alternates = alternates.ifEmpty { null },
         )
         runCatching {
             val token = AuthRepository().accessToken()
@@ -238,6 +253,11 @@ object PronunciationAssessor {
                             offsetMs = w.offset_ms ?: 0, durationMs = w.duration_ms ?: 0,
                             phonemes = w.phonemes.orEmpty().map { PronunciationResult.Phoneme(it.phoneme, it.accuracy, it.heard) })
                     },
+                    alternates = wire.alternates?.map { a ->
+                        PronunciationResult.Alternate(a.reference, a.words.orEmpty().map {
+                            PronunciationResult.Alternate.Scored(it.word, it.accuracy, it.error ?: "None")
+                        })
+                    },
                 ), Outcome.SCORED)
             }
         }.getOrElse { if (it is kotlinx.coroutines.CancellationException) throw it; Answer(null, Outcome.FAILED) }
@@ -259,10 +279,10 @@ object PronunciationAssessor {
     /** Reads the WAV file (as 16 kHz mono) and assesses it. */
     suspend fun assess(
         context: Context, audio: File, reference: String, language: String,
-        surface: String, timeoutMs: Long = 15_000,
+        surface: String, timeoutMs: Long = 15_000, alternates: List<String> = emptyList(),
     ): Answer {
         val wav = withContext(Dispatchers.IO) { wav16kMono(audio) } ?: return Answer(null, Outcome.SKIPPED)
-        return assess(context, wav, reference, language, surface, timeoutMs)
+        return assess(context, wav, reference, language, surface, timeoutMs, alternates)
     }
 
     /** A canonical 44-byte-header 16 kHz mono PCM16 WAV of the file

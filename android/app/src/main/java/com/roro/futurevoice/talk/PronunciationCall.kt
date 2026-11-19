@@ -50,7 +50,8 @@ object PronunciationCall {
      * Spanish, and a native Korean speaker was drilled on a word he said
      * right. A language comes back once native recordings pass in it.
      */
-    fun isOffered(language: String): Boolean = language.substringBefore('-') == "en"
+    fun isOffered(language: String): Boolean =
+        language.substringBefore('-') == "en" || PronunciationContrast.isOfferedLanguage(language)
 
     /** The ring's page is showing AND the language being learned has one. */
     fun isOn(context: Context): Boolean = prefs(context).getBoolean(KEY, false) &&
@@ -107,7 +108,18 @@ object PronunciationCourse {
     private fun t(id: String, symbol: String, examples: String, phonemes: List<String>, english: String) =
         Topic(id, symbol, examples, phonemes, english)
 
+    /** The course as offered: outside English, only the sounds judged by
+     *  comparison ([PronunciationContrast.isOffered]). */
     fun chapters(language: String): List<Chapter> {
+        val all = allChapters(language)
+        if (language.substringBefore('-') == "en") return all
+        return all.mapNotNull { c ->
+            val kept = c.topics.filter { PronunciationContrast.isOffered(it.id) }
+            if (kept.isEmpty()) null else c.copy(topics = kept)
+        }
+    }
+
+    fun allChapters(language: String): List<Chapter> {
         val consonants = R.string.consonants
         val vowels = R.string.vowels
         val flow = R.string.endings_and_flow
@@ -366,7 +378,14 @@ data class PronunciationRound(
         val ok: Boolean,
         /** How that sound came out, when Azure heard something else. */
         val heardAs: PronunciationJudge.HeardAs? = null,
-    )
+        /** false when the take was judged by comparison
+         *  ([PronunciationContrast]): there is no score to show or say. */
+        val scored: Boolean = true,
+        /** The spelling the word fit better ("방을"), judged by comparison. */
+        val cameOutAs: String? = null,
+    ) {
+        val spokenScore: Int? get() = if (scored) score else null
+    }
 
     data class Carried(val word: String?, val sound: String?, val laterInRound: Boolean)
 
@@ -524,6 +543,9 @@ object PronunciationJudge {
                 phonemes: List<String>, language: String,
                 only: Set<String>? = null, excluding: Set<String> = emptySet(),
                 wordDrill: Boolean = false): Verdict {
+        // Outside English no score is held to a bar: the lesson's sound is
+        // judged by comparison, and nothing else stops a reading.
+        if (language.substringBefore('-') != "en") return PronunciationContrast.verdict(result, only, excluding)
         result ?: return Verdict.Unheard
         if ((result.completeness ?: 100) < COMPLETENESS_BAR) return Verdict.OffScript
         fun inScope(w: PronunciationResult.Word): Boolean {
@@ -631,6 +653,14 @@ object PronunciationJudge {
     fun feedback(verdict: Verdict, result: PronunciationResult?, line: PronunciationRound.Line,
                  phonemes: List<String>): PronunciationRound.Feedback? {
         result ?: return null
+        // Judged by comparison: the word and what it came out as, no score.
+        if (!result.locale.startsWith("en")) return when (verdict) {
+            is Verdict.NotYet -> PronunciationRound.Feedback(verdict.word, null, 0, ok = false,
+                scored = false, cameOutAs = verdict.heard)
+            is Verdict.Pass -> PronunciationRound.Feedback(
+                result.referenceWords.singleOrNull()?.word, null, 0, ok = true, scored = false)
+            else -> null
+        }
         val words = result.referenceWords.filter { it.isJudged }
         fun scoreOf(word: String, sound: String?): Int? {
             val w = words.firstOrNull { key(it.word) == key(word) } ?: return null
