@@ -1202,9 +1202,15 @@ private fun PersonChip(p: Counterpart?, host: ComposerHost, fixed: Boolean, onCl
 /** The dictation language, wearing the same fill as the buttons beside it —
  *  bare, it read as loose text rather than a control. */
 @Composable
-internal fun DictationLanguagePill(current: String, onPick: (String) -> Unit) {
+internal fun DictationLanguagePill(
+    current: String,
+    /** A host that only ever wants a few languages offered (the tutor page:
+     *  the one being learned and the learner's own). null = every language. */
+    choices: List<String>? = null,
+    onPick: (String) -> Unit,
+) {
     var open by remember { mutableStateOf(false) }
-    val choices = remember { LanguageCatalog.nativeChoices() }
+    val choices = choices ?: remember { LanguageCatalog.nativeChoices() }
     Box {
         Row(
             Modifier.height(36.dp).clip(CircleShape)
@@ -1431,6 +1437,9 @@ internal fun SoftChip(
     back: Boolean = false,
     /** An icon that is not an SF name (a routine kind's own glyph). */
     vector: androidx.compose.ui.graphics.vector.ImageVector? = null,
+    /** The capsule's fill when the host's ground is not the grouped grey
+     *  (the default white vanishes on a plain white sheet). */
+    fill: Color? = null,
     onClick: () -> Unit,
 ) {
     val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
@@ -1439,7 +1448,7 @@ internal fun SoftChip(
     Row(
         Modifier.graphicsLayer { alpha = if (pressed) 0.6f else 1f }
             .clip(CircleShape)
-            .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f) else AppSurfaces.card)
+            .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f) else fill ?: AppSurfaces.card)
             .clickable(interaction, indication = null, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically,

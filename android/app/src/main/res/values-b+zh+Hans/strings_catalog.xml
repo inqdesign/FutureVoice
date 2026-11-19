@@ -1195,6 +1195,7 @@
     <string name="hide_meaning">"隐藏意思"</string>
     <!-- "Hide the subtitles, the corrections or the words to use if they distract you. Nothing is lost: your talk's book keeps every correction." -->
     <string name="hide_the_subtitles_the_corrections_or_the_words_to_use_if_th_33a1d0">"字幕、纠正或要用的单词如果让你分心，可以隐藏。什么都不会丢：这次对话的教材会保留每一条纠正。"</string>
+    <string name="hide_translation">"隐藏翻译"</string>
     <string name="hide_words_i_know">"隐藏我会的字"</string>
     <!-- 'Highlighted words are worth picking up — tap one to check it out.' -->
     <string name="highlighted_words_are_worth_picking_up_tap_one_to_check_it_o_7964d7">"标示的单词值得学起来。点击看看。"</string>
@@ -2733,6 +2734,7 @@
     <string name="show_me_today">"看看今天做什么"</string>
     <string name="show_my_photo">"显示我的照片"</string>
     <string name="show_the_talk">"看那次通话"</string>
+    <string name="show_translation">"显示翻译"</string>
     <string name="showing_earlier_stories">"目前显示的是先前的新闻"</string>
     <string name="shown_beside_your_score_on_every_challenge_board">"在每个挑战的排行榜上，都会显示在分数旁边。"</string>
     <!-- 'Shown over their face on the Watch map. Left empty, one is written for you.' -->

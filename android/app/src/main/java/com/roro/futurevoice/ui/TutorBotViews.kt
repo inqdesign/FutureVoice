@@ -99,6 +99,10 @@ import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.outlined.Delete
@@ -456,13 +460,23 @@ fun TutorChatView(state: AppState, onDismiss: () -> Unit) {
     var dictationLocale by remember { mutableStateOf(state.nativeLanguage) }
     val tutorName = stringResource(R.string.tutor)
     val youName = stringResource(R.string.you)
-    val suggestions = listOf(
-        stringResource(R.string.what_should_i_do_now),
-        stringResource(R.string.why_do_i_keep_making_the_same_mistake),
-        stringResource(R.string.i_only_have_5_minutes),
-        stringResource(R.string.am_i_getting_better),
-        stringResource(R.string.how_do_i_reach_the_next_level),
-    )
+    // Tutor replies whose translation is unfolded.
+    var translated by remember { mutableStateOf(setOf<String>()) }
+    var todayOpen by remember { mutableStateOf(false) }
+    val focus = androidx.compose.ui.platform.LocalFocusManager.current
+    // The two languages the box's mic can dictate in: the one being learned
+    // first (the tutor speaks it), then the learner's own.
+    val voiceLocales = remember(state.targetLanguage, state.nativeLanguage) {
+        val out = ArrayList<String>()
+        for (code in listOf(state.targetLanguage, state.nativeLanguage)) {
+            if (out.none { LanguageCatalog.sameLanguage(it, code) }) out += code
+        }
+        out
+    }
+    // This page offers two languages only: the one being learned and their own.
+    LaunchedEffect(voiceLocales) {
+        if (voiceLocales.isNotEmpty() && dictationLocale !in voiceLocales) dictationLocale = voiceLocales.last()
+    }
     val latest by rememberUpdatedState(state)
     var addingGoal by remember { mutableStateOf(false) }
     var goalPage by remember { mutableStateOf<com.roro.futurevoice.data.UpcomingGoal?>(null) }
@@ -511,6 +525,7 @@ fun TutorChatView(state: AppState, onDismiss: () -> Unit) {
     TutorBot.reading?.let { r -> if (TutorBot.chatOpen) TutorReadingSheet(r, state) }
     if (addingGoal) UpcomingGoalEditor(goal = null, language = state.targetLanguage, onDismiss = { addingGoal = false })
     goalPage?.let { g -> UpcomingGoalPage(g, state, onDismiss = { goalPage = null }) }
+    if (todayOpen) TutorTodaySheet(state, onDismiss = { todayOpen = false })
     PageSheet(onDismiss = onDismiss) {
         Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).imePadding()) {
             SheetHeader(stringResource(R.string.personal_tutor),
@@ -587,7 +602,35 @@ fun TutorChatView(state: AppState, onDismiss: () -> Unit) {
                                         }
                                     }
                                 }) {
-                                    SelectionContainer { Text(m.text) }
+                                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        SelectionContainer { Text(m.text) }
+                                        // The tutor speaks the language being learned; its
+                                        // words in the learner's own are one tap away,
+                                        // never in the way.
+                                        m.translation?.let { translation ->
+                                            val shown = m.id in translated
+                                            if (shown) {
+                                                SelectionContainer {
+                                                    Text(translation, style = MaterialTheme.typography.bodyMedium,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                }
+                                            }
+                                            Row(Modifier.clickable(
+                                                interactionSource = remember { MutableInteractionSource() },
+                                                indication = null, role = androidx.compose.ui.semantics.Role.Button,
+                                            ) { translated = if (shown) translated - m.id else translated + m.id },
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                Icon(Icons.Filled.Translate, contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.size(14.dp))
+                                                Text(stringResource(if (shown) R.string.hide_translation
+                                                    else R.string.show_translation),
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -623,11 +666,46 @@ fun TutorChatView(state: AppState, onDismiss: () -> Unit) {
                 .background(surface)
                 .padding(top = 8.dp).windowInsetsPadding(WindowInsets.navigationBars)) {
                 if (draft.isBlank()) {
+                    // Always within reach above the box (iOS 183419f0,
+                    // founder): what the tutor works FROM, and where the
+                    // learner sets it. The goals and today's plan open the
+                    // thread, and a long conversation scrolled them away;
+                    // canned questions sat here before and read as filler.
+                    val ahead = remember(com.roro.futurevoice.data.UpcomingGoalStore.goals, state.targetLanguage) {
+                        com.roro.futurevoice.data.UpcomingGoalStore.active(context, state.targetLanguage)
+                    }
+                    val left = today.left.size
+                    // The box's own fill (iOS `secondarySystemBackground`):
+                    // grey on the sheet's white, where the card white vanishes.
+                    val chipFill = if (appIsDark()) MaterialTheme.colorScheme.surfaceContainerHigh
+                        else MaterialTheme.colorScheme.surfaceContainer
+                    @Composable fun chip(title: String, vector: androidx.compose.ui.graphics.vector.ImageVector,
+                                         kind: String, selected: Boolean = false, action: () -> Unit) {
+                        SoftChip(title, selected = selected, vector = vector, fill = chipFill) {
+                            focus.clearFocus()
+                            Analytics.capture("tutor_bot_shortcut", mapOf("kind" to kind))
+                            action()
+                        }
+                    }
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
                         .padding(horizontal = 16.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        suggestions.forEach { q ->
-                            SoftChip(q, selected = true) { if (!TutorChat.thinking) send(q) }
+                        ahead.take(2).forEach { goal ->
+                            chip(goal.countdown(context)?.let { "${goal.title} · $it" } ?: goal.title,
+                                Icons.Filled.Flag, "goal") { goalPage = goal }
+                        }
+                        chip(stringResource(R.string.add_a_goal), Icons.Filled.Add, "add_goal",
+                            selected = ahead.isEmpty()) { addingGoal = true }
+                        val plan = stringResource(R.string.today_s_plan)
+                        chip(if (left > 0) "$plan · $left" else plan, Icons.Filled.Checklist, "today") { todayOpen = true }
+                        chip(stringResource(R.string.my_routine), Icons.Filled.CalendarMonth, "routine") {
+                            TutorBot.perform(context, TutorAction(TutorAction.Kind.ROUTINE))
+                        }
+                        chip(stringResource(R.string.why_are_you_learning), Icons.Filled.TrackChanges, "purposes") {
+                            TutorBot.purposesOpen = true
+                        }
+                        chip(stringResource(R.string.call_settings), Icons.Filled.Tune, "settings") {
+                            TutorBot.callSettingsOpen = true
                         }
                     }
                     Spacer(Modifier.height(10.dp))
@@ -642,7 +720,7 @@ fun TutorChatView(state: AppState, onDismiss: () -> Unit) {
                         locale = LanguageCatalog.sttLocale(dictationLocale),
                         plainMic = true,
                         trailingControls = {
-                            DictationLanguagePill(dictationLocale) { dictationLocale = it }
+                            DictationLanguagePill(dictationLocale, choices = voiceLocales) { dictationLocale = it }
                         },
                         // The box's own CTA (iOS `ScenarioComposerSheet.inlineCTA`):
                         // a filled accent circle, shown once there is
@@ -664,6 +742,38 @@ fun TutorChatView(state: AppState, onDismiss: () -> Unit) {
                         },
                     )
                 }
+            }
+        }
+    }
+}
+
+/** Today's plan as its own sheet (iOS `todaySheet`): the same rows the
+ *  thread opens with. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TutorTodaySheet(state: AppState, onDismiss: () -> Unit) {
+    val res = LocalContext.current.resources
+    val today = TutorBot.today
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 16.dp)
+            .windowInsetsPadding(WindowInsets.navigationBars)
+            .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SheetHeader(stringResource(R.string.today_s_plan), leading = {
+                val close = stringResource(R.string.close)
+                IosGlassButton(onClick = onDismiss, circle = true,
+                    modifier = Modifier.semantics { contentDescription = close }) {
+                    Icon(Icons.Filled.Close, contentDescription = null, modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurface)
+                }
+            }, modifier = Modifier.padding(bottom = 8.dp))
+            Text(TutorCopy.opening(res), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            TutorCopy.why(res, today)?.let { why ->
+                Text(why, style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (TutorBot.picks.isNotEmpty() || today.items.isNotEmpty()) {
+                Box(Modifier.padding(top = 6.dp)) { TutorTodayRows(state) }
             }
         }
     }

@@ -4,6 +4,7 @@ import com.roro.futurevoice.data.StudyPlan
 import com.roro.futurevoice.talk.SuggestedTopic
 import com.roro.futurevoice.talk.TutorAction
 import com.roro.futurevoice.talk.TutorAgentPrompts
+import com.roro.futurevoice.talk.TutorChat
 import com.roro.futurevoice.talk.TutorBot
 import com.roro.futurevoice.talk.TutorPick
 import com.roro.futurevoice.talk.TutorToday
@@ -55,10 +56,21 @@ class TutorAgentTest {
 
     /** The lifted rules carry the protocol and the Korean line only for ko. */
     @Test fun rulesCarryTheProtocol() {
-        val ko = TutorAgentPrompts.rules("Korean", "English", TutorAgentPrompts.korean("ko"))
+        val ko = TutorChat.rules("ko", "en")
         assertTrue(ko.contains("HOW THIS CHAT WORKS"))
         assertTrue(ko.contains("THE APP (what each part is for"))
         assertTrue(ko.contains("해요체"))
-        assertTrue(!TutorAgentPrompts.rules("English", "German", TutorAgentPrompts.korean("en")).contains("해요체"))
+        assertTrue(ko.contains("in Korean in \"translation\""))
+        assertTrue(!TutorChat.rules("en", "de").contains("해요체"))
+        // One language on both sides: nothing to translate.
+        assertTrue(TutorChat.rules("en", "en").contains("No \"translation\"."))
+    }
+
+    /** A reply cut off mid-JSON shows what was written, never raw JSON (iOS 183419f0). */
+    @Test fun aCutOffReplyIsSalvaged() {
+        assertEquals("Hello.\nSay \"hi\"", TutorChat.salvagedReply("{\"reply\": \"Hello.\\nSay \\\"hi\\\"\\"))
+        assertEquals("Done", TutorChat.salvagedReply(" {\"reply\":\"Done\", \"translation\": \"끝"))
+        assertEquals(null, TutorChat.salvagedReply("Just text with \"reply\": \"x"))
+        assertEquals(null, TutorChat.salvagedReply("{\"lookup\": ["))
     }
 }

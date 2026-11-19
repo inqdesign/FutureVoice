@@ -1192,6 +1192,7 @@
     <string name="hide_meaning">"Ocultar el significado"</string>
     <!-- "Hide the subtitles, the corrections or the words to use if they distract you. Nothing is lost: your talk's book keeps every correction." -->
     <string name="hide_the_subtitles_the_corrections_or_the_words_to_use_if_th_33a1d0">"Oculta los subtítulos, las correcciones o las palabras para usar si te distraen. No se pierde nada: el cuaderno de tu conversación guarda todas las correcciones."</string>
+    <string name="hide_translation">"Ocultar traducción"</string>
     <string name="hide_words_i_know">"Ocultar las palabras que sé"</string>
     <!-- 'Highlighted words are worth picking up — tap one to check it out.' -->
     <string name="highlighted_words_are_worth_picking_up_tap_one_to_check_it_o_7964d7">"Las palabras resaltadas vale la pena aprenderlas — toca una para verla."</string>
@@ -2729,6 +2730,7 @@
     <string name="show_me_today">"Ver lo de hoy"</string>
     <string name="show_my_photo">"Mostrar mi foto"</string>
     <string name="show_the_talk">"Ver la conversación"</string>
+    <string name="show_translation">"Ver traducción"</string>
     <string name="showing_earlier_stories">"Mostrando noticias anteriores"</string>
     <string name="shown_beside_your_score_on_every_challenge_board">"Aparece junto a tu puntuación en todas las clasificaciones."</string>
     <!-- 'Shown over their face on the Watch map. Left empty, one is written for you.' -->

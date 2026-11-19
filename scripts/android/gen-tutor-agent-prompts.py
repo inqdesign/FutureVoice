@@ -30,8 +30,14 @@ protocol = kotlin(literal_at(agent, 'static let protocolBlock = """'), {"TutorTo
 
 rf = bot.index("static func rules(native nativeCode: String, target targetCode: String)")
 korean = re.search(r'let korean = nativeCode == "ko"\s*\? ' + LIT + r' : ""', bot[rf:]).group(1)
+# The tutor speaks the target language (iOS 183419f0): the translation rule is
+# one of two plain literals, the first carrying \(native) and \(korean).
+tr = re.search(r'let translationRule = translated\s*\? ' + LIT + r'\s*: ' + LIT, bot[rf:])
+tr_yes, tr_no = tr.group(1), tr.group(2)
+tr_parts = re.split(r'\\\((native|korean)\)', tr_yes)
+translation_rule = " + ".join(p if n % 2 else kt(unescape(p)) for n, p in enumerate(tr_parts) if n % 2 or p)
 rules = kotlin(literal_at(bot, 'return """', rf), {
-    "target": "target", "native": "native", "korean": "korean",
+    "target": "target", "native": "native", "translationRule": "translationRule",
     "TutorAgent.manual": "MANUAL", "TutorAgent.protocolBlock": "protocolBlock",
 })
 
@@ -47,7 +53,7 @@ for name, body in tools.items():
     pinned[f"TutorTools.{name}"] = (body, f"PIN_{name.upper()}")
 FINGERPRINTS = {
     "TutorChat.context": "3cff0fa71a5b",
-    "TutorChat.ask": "7291fe3a7d88",
+    "TutorChat.ask": "fd4435973577",
     "TutorAction.title": "aeb288861665",
     "TutorAction.isValid": "2e79b08b3006",
     "TutorTools.progressLine": "05daf3e31ad4",
@@ -87,8 +93,13 @@ object TutorAgentPrompts {{
     /** iOS `TutorChat.rules(native:target:)`'s Korean line. */
     fun korean(nativeCode: String): String = if (nativeCode == "ko") {kt(unescape(korean))} else ""
 
+    /** iOS `TutorChat.rules(native:target:)`'s translation rule: the reply's
+     *  own words in the learner's language, unless the two are one language. */
+    fun translationRule(translated: Boolean, native: String, korean: String): String =
+        if (translated) {translation_rule} else {kt(unescape(tr_no))}
+
     /** iOS `TutorChat.rules(native:target:)`: everything but the learner. */
-    fun rules(native: String, target: String, korean: String): String =
+    fun rules(native: String, target: String, translationRule: String): String =
         {rules}
 }}
 ''')

@@ -565,6 +565,9 @@ object TutorChat {
         val actions: List<TutorAction> = emptyList(),
         @Serializable(with = com.roro.futurevoice.data.IsoDateMillisSerializer::class)
         val at: Long = System.currentTimeMillis(),
+        /** The tutor's reply in the learner's own language, folded under it
+         *  (iOS 183419f0: the tutor speaks the language being learned). */
+        val translation: String? = null,
     )
 
     val messages = mutableStateListOf<Message>()
@@ -613,10 +616,11 @@ object TutorChat {
         Analytics.capture("tutor_bot_cleared")
     }
 
+    /** Returns the tutor's message, null when it could not answer. */
     suspend fun ask(c: Context, question: String, targetLanguage: String, nativeLanguage: String,
-                    level: CefrLevel, persona: UserPersona?) {
+                    level: CefrLevel, persona: UserPersona?): Message? {
         val q = question.trim()
-        if (q.isEmpty() || thinking) return
+        if (q.isEmpty() || thinking) return null
         load(c, targetLanguage)
         messages += Message(fromLearner = true, text = q)
         save(c)
@@ -644,7 +648,7 @@ object TutorChat {
                             GeminiClient(AuthRepository()).sendJson(
                                 system = system, messages = history,
                                 serializer = kotlinx.serialization.json.JsonObject.serializer(),
-                                model = GeminiClient.Model.FLASH_36, maxTokens = 2048, purpose = "tutor-bot",
+                                model = GeminiClient.Model.FLASH_36, maxTokens = 4096, purpose = "tutor-bot",
                                 idempotencyKey = "tutor-bot:${UUID.randomUUID().toString().uppercase()}",
                             )
                         }
@@ -652,8 +656,11 @@ object TutorChat {
                         // The model answered in plain text instead of JSON
                         // (Haiku did on 3 of 10 probe questions): the answer
                         // is still the answer, it just has no buttons.
+                        // A JSON answer cut off before it closed is not shown
+                        // raw: what was written of the reply is the answer.
                         if (e.raw.isBlank()) throw e
-                        kotlinx.serialization.json.JsonObject(mapOf("reply" to kotlinx.serialization.json.JsonPrimitive(e.raw)))
+                        kotlinx.serialization.json.JsonObject(mapOf("reply" to
+                            kotlinx.serialization.json.JsonPrimitive(salvagedReply(e.raw) ?: e.raw)))
                     }
                     val calls = ((r["lookup"] as? kotlinx.serialization.json.JsonArray) ?: emptyList())
                         .mapNotNull { TutorTools.Call.decode(it) }.take(4)
@@ -685,15 +692,21 @@ object TutorChat {
                     val actions = ArrayList<TutorAction>()
                     for (a in decoded) if (a !in actions && a.isValid(c)) actions += a
                     val answer = text.ifEmpty { c.getString(R.string.i_couldn_t_answer_that_just_now_try_again_in_a_moment) }
-                    messages += Message(fromLearner = false, text = answer, actions = actions.take(2))
+                    val translation = ((r["translation"] as? kotlinx.serialization.json.JsonPrimitive)
+                        ?.takeIf { it.isString }?.content ?: "").trim()
+                        .takeIf { it.isNotEmpty() && text.isNotEmpty() }
+                    val message = Message(fromLearner = false, text = answer, actions = actions.take(2),
+                        translation = translation)
+                    messages += message
                     save(c)
                     Analytics.capture("tutor_bot_asked", mapOf(
                         "actions" to actions.joinToString(",") { it.type.raw },
                         "lookups" to lookups.joinToString(","),
                         "rounds" to round + 1))
-                    return
+                    return if (text.isEmpty()) null else message
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
+                // Cancelled (the page went away): no apology line.
                 throw e
             } catch (e: Exception) {
                 Analytics.capture("tutor_bot_failed", mapOf("error" to e.toString().take(120),
@@ -702,10 +715,30 @@ object TutorChat {
             messages += Message(fromLearner = false,
                 text = c.getString(R.string.i_couldn_t_answer_that_just_now_try_again_in_a_moment))
             save(c)
+            return null
         } finally {
             thinking = false
             status = ""
         }
+    }
+
+    /** The "reply" of a JSON object that never closed (the answer ran out of
+     *  room), unescaped; null when [raw] is not that. */
+    fun salvagedReply(raw: String): String? {
+        if (!raw.trim().startsWith("{")) return null
+        return salvagedField("reply", raw)
+    }
+
+    fun salvagedField(name: String, raw: String): String? {
+        val body = Regex("\"" + Regex.escape(name) + "\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)")
+            .find(raw)?.groupValues?.get(1) ?: return null
+        // Unescape through JSON itself; a dangling backslash at a cut is dropped.
+        val closed = if (body.endsWith("\\") && !body.endsWith("\\\\")) body.dropLast(1) else body
+        val text = runCatching {
+            kotlinx.serialization.json.Json.decodeFromString(
+                kotlinx.serialization.json.JsonPrimitive.serializer(), "\"$closed\"").content
+        }.getOrNull() ?: return null
+        return text.trim().ifEmpty { null }
     }
 
     // MARK: Prompt
@@ -719,9 +752,15 @@ object TutorChat {
     /** Everything but the learner (iOS `TutorChat.rules`): who the tutor is,
      *  how it answers, the app, the protocol — lifted by
      *  gen-tutor-agent-prompts.py. */
-    fun rules(nativeCode: String, targetCode: String): String =
-        TutorAgentPrompts.rules(native = LanguageCatalog.englishName(nativeCode),
-            target = LanguageCatalog.englishName(targetCode), korean = TutorAgentPrompts.korean(nativeCode))
+    fun rules(nativeCode: String, targetCode: String): String {
+        val native = LanguageCatalog.englishName(nativeCode)
+        // The tutor SPEAKS the language being learned (iOS 183419f0, founder:
+        // "you are abroad, not at an institute in your own country"); the
+        // same reply in the learner's language rides beside it, folded.
+        val translated = !LanguageCatalog.sameLanguage(nativeCode, targetCode)
+        return TutorAgentPrompts.rules(native = native, target = LanguageCatalog.englishName(targetCode),
+            translationRule = TutorAgentPrompts.translationRule(translated, native, TutorAgentPrompts.korean(nativeCode)))
+    }
 
     /** Everything the tutor may say about the learner, in plain lines. */
     suspend fun context(c: Context, targetLanguage: String, nativeLanguage: String, level: CefrLevel,

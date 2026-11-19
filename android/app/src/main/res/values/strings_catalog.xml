@@ -1195,6 +1195,7 @@
     <string name="hide_meaning">"Hide meaning"</string>
     <!-- "Hide the subtitles, the corrections or the words to use if they distract you. Nothing is lost: your talk's book keeps every correction." -->
     <string name="hide_the_subtitles_the_corrections_or_the_words_to_use_if_th_33a1d0">"Hide the subtitles, the corrections or the words to use if they distract you. Nothing is lost: your talk's book keeps every correction."</string>
+    <string name="hide_translation">"Hide translation"</string>
     <string name="hide_words_i_know">"Hide words I know"</string>
     <!-- 'Highlighted words are worth picking up — tap one to check it out.' -->
     <string name="highlighted_words_are_worth_picking_up_tap_one_to_check_it_o_7964d7">"Highlighted words are worth picking up — tap one to check it out."</string>
@@ -2743,6 +2744,7 @@
     <string name="show_me_today">"Show me today"</string>
     <string name="show_my_photo">"Show my photo"</string>
     <string name="show_the_talk">"Show the talk"</string>
+    <string name="show_translation">"Show translation"</string>
     <string name="showing_earlier_stories">"Showing earlier stories"</string>
     <string name="shown_beside_your_score_on_every_challenge_board">"Shown beside your score on every challenge board."</string>
     <!-- 'Shown over their face on the Watch map. Left empty, one is written for you.' -->
