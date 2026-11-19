@@ -20,9 +20,15 @@
 --   * one reward per friend who subscribes, no cap, spent one billing period
 --     at a time (`claimable`).
 --   * the stores only carry out what the table says: Stripe gets a coupon
---     from the `invite-reward` function with no tap; the App Store and Play
---     need the subscriber's own confirmation, so the app asks that function
---     for the offer and reports the claim back.
+--     from the `invite-reward` function with no tap. The App Store needs the
+--     subscriber's own confirmation: the app asks `invite_reward_code` for a
+--     one-time OFFER CODE from the pool (`invite_offer_codes`), Apple's
+--     redeem page applies it to the next renewal, and the reward is marked
+--     claimed when APPLE says so (the offer on `user_subscriptions`'
+--     renewal info, written by `apple-webhook`), never on the app's word.
+--     Measured in the sandbox the same day: a signed promotional offer does
+--     nothing for an active subscriber through StoreKit 2, an offer code
+--     prices the next renewal.
 --
 -- Nothing here reaches a build that does not know the event: `invite_event`
 -- starts OFF, and an older build never calls `invite_event_state`.
@@ -35,7 +41,8 @@ create table if not exists public.invite_event (
   months           int not null default 1 check (months between 1 and 12),
   -- Raising it shows the announcement sheet once more on every install.
   announce_version int not null default 1,
-  -- Apple product id -> promotional offer id; Play product id -> offer id.
+  -- Apple product id -> the offer-code offer's NAME (what Apple's renewal
+  -- info calls it); Play product id -> offer id.
   apple_offers     jsonb not null default '{}'::jsonb,
   google_offers    jsonb not null default '{}'::jsonb,
   stripe_coupon_id text,
@@ -75,6 +82,47 @@ alter table public.invite_rewards enable row level security;
 drop policy if exists invite_rewards_read_own on public.invite_rewards;
 create policy invite_rewards_read_own on public.invite_rewards
   for select to authenticated using (user_id = auth.uid());
+
+-- The App Store's one-time offer codes, made ahead by scripts/invite-event.py
+-- (`codes`) and handed out one per reward. Service role only: no policy.
+create table if not exists public.invite_offer_codes (
+  code             text primary key,
+  apple_product_id text not null,
+  expires_on       date not null,
+  reward_id        uuid references public.invite_rewards(id) on delete set null,
+  assigned_at      timestamptz,
+  created_at       timestamptz not null default now()
+);
+
+create index if not exists invite_offer_codes_free
+  on public.invite_offer_codes (apple_product_id, expires_on) where reward_id is null;
+create index if not exists invite_offer_codes_reward on public.invite_offer_codes (reward_id);
+
+alter table public.invite_offer_codes enable row level security;
+
+-- One reward per billing period: the oldest waiting one, unless one was
+-- already claimed in this period. THE rule, read by the state, the code
+-- hand-out and (in its own words) the `invite-reward` function.
+create or replace function public.invite_claimable(p_user uuid)
+returns uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select (select r.id from invite_rewards r
+           where r.user_id = p_user and r.status = 'ready'
+           order by r.created_at limit 1)
+    from user_subscriptions s
+   where s.user_id = p_user
+     and s.status in ('trialing', 'active', 'grace')
+     and not exists (
+       select 1 from invite_rewards c
+        where c.user_id = p_user and c.status = 'claimed'
+          and c.claimed_at >= coalesce(s.current_period_start, '-infinity'));
+$$;
+
+revoke all on function public.invite_claimable(uuid) from public, anon, authenticated;
 
 -- Tells the `invite-reward` function that these people have something to be
 -- told or given. Never allowed to fail the write it rides on.
@@ -234,16 +282,7 @@ begin
     select * into v_plan from subscription_plans where id = v_sub.plan_id;
   end if;
 
-  -- One reward per billing period: the oldest waiting one, unless one was
-  -- already claimed in this period.
-  if v_entitled and not exists (
-       select 1 from invite_rewards r
-        where r.user_id = v_uid and r.status = 'claimed'
-          and r.claimed_at >= coalesce(v_sub.current_period_start, '-infinity')) then
-    select id into v_claimable from invite_rewards
-     where user_id = v_uid and status = 'ready'
-     order by created_at limit 1;
-  end if;
+  v_claimable := public.invite_claimable(v_uid);
 
   return jsonb_build_object(
     'enabled', true,
@@ -279,21 +318,86 @@ $$;
 revoke all on function public.invite_event_state() from public, anon;
 grant execute on function public.invite_event_state() to authenticated;
 
--- The app's word that the store took the offer (the App Store and Play ask
--- the subscriber; Stripe is marked by the function that applied the coupon).
-create or replace function public.invite_reward_claimed(p_id uuid, p_store text)
-returns boolean
+-- The App Store claim, step one: the code for the reward that can be taken
+-- now. The same code is answered again until it is redeemed, so a tap that
+-- went nowhere costs nothing. Null when there is nothing to take or the
+-- pool is empty.
+create or replace function public.invite_reward_code()
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid     uuid := auth.uid();
+  v_reward  uuid;
+  v_product text;
+  v_code    text;
+begin
+  if v_uid is null then raise exception 'NOT_AUTHENTICATED'; end if;
+  if not coalesce((select enabled from invite_event where id = 1), false) then return null; end if;
+  v_reward := public.invite_claimable(v_uid);
+  if v_reward is null then return null; end if;
+
+  select p.apple_product_id into v_product
+    from user_subscriptions s join subscription_plans p on p.id = s.plan_id
+   where s.user_id = v_uid and s.source = 'apple';
+  if v_product is null then return null; end if;
+
+  select code into v_code from invite_offer_codes
+   where reward_id = v_reward and apple_product_id = v_product and expires_on > current_date
+   order by assigned_at desc limit 1;
+  if v_code is null then
+    update invite_offer_codes set reward_id = v_reward, assigned_at = now()
+     where code = (select code from invite_offer_codes
+                    where reward_id is null and apple_product_id = v_product
+                      and expires_on > current_date + 1
+                    order by expires_on, code limit 1
+                    for update skip locked)
+    returning code into v_code;
+  end if;
+  if v_code is null then return null; end if;
+  return jsonb_build_object('code', v_code, 'reward_id', v_reward);
+end;
+$$;
+
+revoke all on function public.invite_reward_code() from public, anon;
+grant execute on function public.invite_reward_code() to authenticated;
+
+-- Step two is Apple's: once the code is redeemed, the subscription's renewal
+-- info names the event's offer (`renewal_offer_type` 3 = offer code,
+-- `renewal_offer_id` = the offer's name). That change, and nothing the app
+-- says, marks the reward claimed. Only a CHANGE counts: the webhook rewrites
+-- these columns on every notification.
+create or replace function public.invite_reward_on_offer()
+returns trigger
 language plpgsql
 security definer
 set search_path = public
 as $$
 begin
-  update invite_rewards
-     set status = 'claimed', claimed_at = now(), store = p_store
-   where id = p_id and user_id = auth.uid() and status = 'ready';
-  return found;
+  if new.renewal_offer_type = 3 and new.renewal_offer_id is not null
+     and (old.renewal_offer_id is distinct from new.renewal_offer_id
+          or old.renewal_offer_type is distinct from 3)
+     and exists (select 1 from invite_event e, jsonb_each_text(e.apple_offers) o
+                  where e.id = 1 and o.value = new.renewal_offer_id) then
+    begin
+      update invite_rewards set status = 'claimed', claimed_at = now(), store = 'apple'
+       where id = (select r.id from invite_rewards r
+                    where r.user_id = new.user_id and r.status = 'ready'
+                    -- the one a code was handed out for, else the oldest
+                    order by exists (select 1 from invite_offer_codes c where c.reward_id = r.id) desc,
+                             r.created_at
+                    limit 1);
+    exception when others then
+      raise warning 'invite_reward_on_offer failed for %: %', new.user_id, sqlerrm;
+    end;
+  end if;
+  return new;
 end;
 $$;
 
-revoke all on function public.invite_reward_claimed(uuid, text) from public, anon;
-grant execute on function public.invite_reward_claimed(uuid, text) to authenticated;
+drop trigger if exists user_subscriptions_invite_offer on public.user_subscriptions;
+create trigger user_subscriptions_invite_offer
+  after update of renewal_offer_id, renewal_offer_type on public.user_subscriptions
+  for each row execute function public.invite_reward_on_offer();

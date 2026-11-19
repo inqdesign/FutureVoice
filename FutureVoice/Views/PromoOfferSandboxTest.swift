@@ -11,23 +11,38 @@ struct PromoOfferSandboxTest: View {
     private static let productID = "com.roro.futurevoice.daily_monthly"
     private static let offerID = "friend_half_test"
     private static let keyID = "JJ45CCH6HV"
+    /// Signed into every signature below, the way the real app attaches the account.
+    private static let username = "b172a993-780d-4da0-bc69-bd1e8674909d"
     private static let signatures: [(String, Int, String)] = [
-        ("cace4404-89c0-4ee7-bcea-96eac166737b", 1795084637294, "MEQCIGr9PodQ3YnkxW6ZEMzgfRvcVrp8drVg3aYpg4ZY+JSWAiBGe/Wng6tuEa5utFzYpro7XAA/dKdtyGRl8Rz72iE0GA=="),
-        ("a8f6a3f4-a06b-40bc-a32c-5fd161541d11", 1795084637305, "MEUCIAttChTd2BVCuwvQzNpZ2EQpHQ70YjnlFkL0ESCvOvtuAiEA2BDCHqK67fYapOQcz+mnly3b1wIkPeAcuAdv8+m0i/A="),
-        ("55f41d90-db39-4be9-8b36-8046c81dc2bb", 1795084637311, "MEYCIQCpSVU/ZnKYimy4O7lx1vKBVbH8Pg56iUC3ajYF3Po4bAIhAJeouVDJU7ey0eip0ncZuFeD6xb3VHPe9q5H5L7lc7Sw"),
-        ("6519bd94-98ff-4ee8-8503-d683bce14765", 1795084637317, "MEYCIQCQIuEkLMWhRwP6NnUV8J1kK+7hUzx+NPqJeYayCJn0ugIhAPWG5/Wy8ZdkYDdg7yWCY4Nwaog+AAr107YyPmE/KbtG"),
-        ("924b9e11-dab2-4062-88e2-3e291bf2586a", 1795084637323, "MEUCIBWyiBDHni45jEKI85GmuqEhV0EFcsJcEyVg0n5148KqAiEA1oEfpdmw6VstgMy2TS9UGLjfIu3UMklh3IqRkbeaEUI="),
-        ("2bc4d289-8e9a-43c3-a7cc-cee6a3ce9fda", 1795084637329, "MEUCIQCX4wpx5f7YCI/yGOuIdP+Uwxga+t7qvRQ2c6ccsfsp0AIgEt0+AcGGfmOx0bi9u7VlySk+zyNSG8DStrKqzO6c9JY="),
+        ("ee115da0-6f13-4e81-87dd-e5fa32a30c99", 1795118683980, "MEUCIF5arhGpemQYz6MtYcCemc3HREOPujGwqzjeTBj8jf1uAiEAwig9UMBqiEYUZr4biqqTdD+cCKWxaWSgT10y5mnmlt0="),
+        ("c799c5c6-0d74-4fa1-9d44-c5b76ef263e7", 1795118684020, "MEYCIQD+rD/rVzjk4fL2BeypZbDwGfWsmETXu3bg411yBa3F+wIhAN4W+7wv6b05Qq0jFgLPOGgRPG5jHPNUH9Vbmou189bk"),
+        ("81297fc6-b5a1-49df-971a-51adec7e05b8", 1795118684041, "MEUCIQD9jJTEiyPhp/gJKTGbz9lYgNUfk8NbEuYNOd/PGJyfegIgd11vLpZAC/KC3nUi2TUcskJvjOuB0bw0HAm1Rad9V0U="),
+        ("11a77741-f405-4967-8a8e-0baf0a098539", 1795118684067, "MEUCIQC68EPo1Qo3DxJO7x6EzyhFtnWeDYdn78sLKDjoIq8pGgIgQyXe2gGRab2C3FpVUoroJr/MOdZGaJ0kRJ8ggGoXmZY="),
+        ("f9260825-e3f9-4bc2-a3f0-068f05a39114", 1795118684089, "MEUCIHT21iSvhUjtHRPiKKqPT4r/s4U2xzro+bgtpZH2XsF2AiEAvukrUENhGbwahROTZqbRNy+cictZ5nrzajRr/vBHxTc="),
+        ("f7b0a0c3-3ddd-472f-9a51-4e9605cda115", 1795118684109, "MEYCIQCgSDN9AvTk4nQescizCTEzBRjjnbr8RVSLcLINGPawkgIhAN+bDEHLNekBYaMX2tQbAvLHNyZyaEwKDixU0hJVtk2V"),
     ]
-    @AppStorage("debug.promoOffer.used") private var used = 0
+    @AppStorage("debug.promoOffer.used2") private var used = 0
     @State private var log = ""
     @State private var busy = false
+    @State private var oldNote = ""
+    @State private var redeeming = false
+    /// Sandbox one-time codes of the test offer for EXISTING subscribers
+    /// (App Store Connect, "Friend half month code (sandbox test)").
+    private static let codes = ["HX6PP7EFFY3X76JYAP", "MHM36JA8HNXPN7K4PK", "AHA7T3X33NFYENNFML",
+                                "AMNF3W3RRLYJMMMAHP", "L8Y34Y3HEERKJWK63Y", "76NXTNMEPFMEXK7HFL"]
+    @AppStorage("debug.promoOffer.codesUsed") private var codesUsed = 0
+    private var code: String { Self.codes[min(codesUsed, Self.codes.count - 1)] }
 
     var body: some View {
         List {
             Section {
                 Button("1. Buy Light monthly (plain)") { run { try await buy(offer: false) } }
-                Button("2. Take the half-price offer") { run { try await buy(offer: true) } }
+                Button("3. Take the offer (old StoreKit API)") { run { try await buyOld() } }
+                Button("4. Redeem an offer code (copies \(code))") {
+                    UIPasteboard.general.string = code
+                    redeeming = true
+                }
+                Button("Next code") { codesUsed += 1 }
                 Button("Refresh") { run { } }
             } footer: {
                 Text(verbatim: "Sandbox only. A month is 5 minutes. Signatures used: \(used)/\(Self.signatures.count)")
@@ -41,6 +56,14 @@ struct PromoOfferSandboxTest: View {
         .disabled(busy)
         .navigationTitle(Text(verbatim: "Half-price offer"))
         .task { await show("opened") }
+        .offerCodeRedemption(isPresented: $redeeming) { result in
+            Task {
+                switch result {
+                case .success: await show("redeem sheet closed: success")
+                case .failure(let error): await show("redeem sheet closed: \(error)")
+                }
+            }
+        }
     }
 
     private func run(_ work: @escaping () async throws -> Void) {
@@ -81,8 +104,25 @@ struct PromoOfferSandboxTest: View {
         }
     }
 
+    /// The same offer through StoreKit 1 (SKPaymentQueue + SKPaymentDiscount):
+    /// StoreKit 2 answered "already subscribed" without asking Apple.
+    private func buyOld() async throws {
+        guard used < Self.signatures.count else {
+            throw NSError(domain: "promo", code: 2, userInfo: [NSLocalizedDescriptionKey: "no signature left, rebuild"])
+        }
+        let (nonce, timestamp, signature) = Self.signatures[used]
+        used += 1
+        let note = try await OldStoreKitBuyer.shared.buy(
+            productID: Self.productID, username: Self.username,
+            discount: SKPaymentDiscount(identifier: Self.offerID, keyIdentifier: Self.keyID,
+                                        nonce: UUID(uuidString: nonce)!, signature: signature,
+                                        timestamp: NSNumber(value: timestamp)))
+        oldNote = note
+    }
+
     private func show(_ note: String) async {
         var lines = ["\(Date().formatted(date: .omitted, time: .standard))  \(note)"]
+        if !oldNote.isEmpty { lines.append("old API: \(oldNote)") }
         for await result in Transaction.currentEntitlements {
             guard case .verified(let t) = result else { continue }
             lines.append("")
@@ -109,6 +149,65 @@ struct PromoOfferSandboxTest: View {
                 handle.seekToEndOfFile(); handle.write(entry); try? handle.close()
             } else { try? entry.write(to: url) }
         }
+    }
+}
+/// StoreKit 1, for the one test above.
+final class OldStoreKitBuyer: NSObject, SKProductsRequestDelegate, SKPaymentTransactionObserver {
+    static let shared = OldStoreKitBuyer()
+    private var productWaiter: CheckedContinuation<SKProduct?, Never>?
+    private var resultWaiter: CheckedContinuation<String, Never>?
+    private var request: SKProductsRequest?
+
+    func buy(productID: String, username: String, discount: SKPaymentDiscount) async throws -> String {
+        let product: SKProduct? = await withCheckedContinuation { waiter in
+            productWaiter = waiter
+            let request = SKProductsRequest(productIdentifiers: [productID])
+            request.delegate = self
+            self.request = request
+            request.start()
+        }
+        guard let product else { return "product not found" }
+        SKPaymentQueue.default().add(self)
+        let payment = SKMutablePayment(product: product)
+        payment.applicationUsername = username
+        payment.paymentDiscount = discount
+        return await withCheckedContinuation { waiter in
+            resultWaiter = waiter
+            SKPaymentQueue.default().add(payment)
+        }
+    }
+
+    func productsRequest(_ request: SKProductsRequest, didReceive response: SKProductsResponse) {
+        productWaiter?.resume(returning: response.products.first)
+        productWaiter = nil
+    }
+
+    func request(_ request: SKRequest, didFailWithError error: Error) {
+        productWaiter?.resume(returning: nil)
+        productWaiter = nil
+    }
+
+    func paymentQueue(_ queue: SKPaymentQueue, updatedTransactions transactions: [SKPaymentTransaction]) {
+        for transaction in transactions {
+            let offer = transaction.payment.paymentDiscount?.identifier ?? "-"
+            switch transaction.transactionState {
+            case .purchased, .restored:
+                queue.finishTransaction(transaction)
+                finish("purchased id \(transaction.transactionIdentifier ?? "-") offer \(offer)")
+            case .failed:
+                queue.finishTransaction(transaction)
+                finish("failed: \(transaction.error.map { String(describing: $0) } ?? "-")")
+            case .deferred:
+                finish("deferred")
+            default:
+                break
+            }
+        }
+    }
+
+    private func finish(_ note: String) {
+        resultWaiter?.resume(returning: note)
+        resultWaiter = nil
     }
 }
 #endif

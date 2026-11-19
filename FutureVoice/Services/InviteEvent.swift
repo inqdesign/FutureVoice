@@ -1,6 +1,7 @@
 import Foundation
 import StoreKit
 import Supabase
+import UIKit
 
 /// The friend-invite event (2026-11-19): a friend who subscribes makes the
 /// next month half price for both.
@@ -85,7 +86,7 @@ final class InviteEvent: ObservableObject {
         /// Nothing to draw: the event is off or could not be read.
         case off
         /// A half-price month is waiting for the subscriber's own yes (the
-        /// App Store and Play ask them).
+        /// App Store asks them, on its redeem page).
         case claim
         /// A half-price month is on its way: taken here, or applied by the
         /// web store with no tap.
@@ -192,6 +193,10 @@ final class InviteEvent: ObservableObject {
         state = fresh
     }
 
+    /// The claimable month's price is worked out here (an offer-code offer
+    /// is not listed on the product), cut DOWN to the currency's own
+    /// decimals: 9.99 at 50% is 4.99 on the App Store, never 5.00. Apple's
+    /// redeem page states the real figure before anything is confirmed.
     private func loadPrices() async {
         guard let productId = state.appleProductId,
               let product = try? await Product.products(for: [productId]).first else {
@@ -200,13 +205,11 @@ final class InviteEvent: ObservableObject {
             return
         }
         fullPrice = product.displayPrice
-        if let offerId = state.appleOfferId,
-           let offer = product.subscription?.promotionalOffers.first(where: { $0.id == offerId }) {
-            offerPrice = offer.displayPrice
-        } else {
-            let cut = product.price * Decimal(100 - state.percent) / 100
-            offerPrice = cut.formatted(product.priceFormatStyle)
-        }
+        var cut = product.price * Decimal(100 - state.percent) / 100
+        var rounded = Decimal()
+        let places = product.price == product.price.rounded0 ? 0 : 2
+        NSDecimalRound(&rounded, &cut, places, .down)
+        offerPrice = rounded.formatted(product.priceFormatStyle)
     }
 
     // MARK: - Words
@@ -262,23 +265,16 @@ final class InviteEvent: ObservableObject {
 
     // MARK: - Taking the month (App Store)
 
-    private struct OfferRequest: Encodable { let action = "apple_offer" }
-    private struct Offer: Decodable {
-        let reward_id: UUID
-        let product_id: String
-        let offer_id: String
-        let key_id: String
-        let nonce: UUID
-        let timestamp: Int
-        let signature: String
-    }
-    private struct ClaimedParams: Encodable {
-        let p_id: UUID
-        let p_store: String
-    }
+    private struct CodeAnswer: Decodable { let code: String }
+    private static let appStoreId = "6792794655"
+    private var awaitingRedeem = false
+    private var foregroundWatch: NSObjectProtocol?
 
-    /// Apple's own sheet asks the subscriber; the offer then prices their
-    /// next renewal. True once the store said yes.
+    /// The server hands this reward its one-time offer code and Apple's own
+    /// redeem page, opened with the code filled in, applies it to the next
+    /// renewal. Nothing is reported from here: the reward turns "claimed"
+    /// when Apple's renewal info names the offer, so the banner changes a
+    /// moment after the learner comes back. True once the page was opened.
     @discardableResult
     func claim() async -> Bool {
         guard !claiming else { return false }
@@ -286,42 +282,56 @@ final class InviteEvent: ObservableObject {
         claimError = nil
         defer { claiming = false }
         do {
-            guard let session = try? await SupabaseProvider.shared.auth.session else { return false }
-            let offer: Offer = try await SupabaseProvider.shared.functions.invoke(
-                "invite-reward",
-                options: FunctionInvokeOptions(
-                    headers: try await SupabaseProvider.authorizedHeaders(),
-                    body: OfferRequest()
-                )
-            )
-            guard let product = try await Product.products(for: [offer.product_id]).first,
-                  let signature = Data(base64Encoded: offer.signature) else {
-                claimError = text("claim_failed")
-                return false
-            }
-            let result = try await product.purchase(options: [
-                .appAccountToken(session.user.id),
-                .promotionalOffer(offerID: offer.offer_id, keyID: offer.key_id,
-                                  nonce: offer.nonce, signature: signature,
-                                  timestamp: offer.timestamp),
-            ])
-            guard case .success(let verification) = result,
-                  case .verified(let transaction) = verification else {
-                // Cancelled or pending: nothing was taken, nothing to say.
-                return false
-            }
-            await transaction.finish()
-            _ = try? await SupabaseProvider.shared
-                .rpc("invite_reward_claimed",
-                     params: ClaimedParams(p_id: offer.reward_id, p_store: "apple"))
+            let answer: CodeAnswer? = try await SupabaseProvider.shared
+                .rpc("invite_reward_code")
                 .execute()
-            Analytics.capture("invite_reward_claimed", ["store": "apple"])
-            await refresh()
+                .value
+            guard let code = answer?.code,
+                  let url = URL(string: "https://apps.apple.com/redeem?ctx=offercodes&id=\(Self.appStoreId)&code=\(code)"),
+                  await UIApplication.shared.open(url) else {
+                claimError = text("claim_failed")
+                Analytics.capture("invite_reward_claim_failed", ["error": answer == nil ? "no_code" : "no_open"])
+                return false
+            }
+            Analytics.capture("invite_reward_claim_opened", ["store": "apple"])
+            watchForReturn()
             return true
         } catch {
             claimError = text("claim_failed")
             Analytics.capture("invite_reward_claim_failed", ["error": String(describing: error).prefix(120).description])
             return false
         }
+    }
+
+    /// Back from Apple's page: Apple tells the server within seconds, not at
+    /// once, so the state is read a few times until the claim shows.
+    private func watchForReturn() {
+        awaitingRedeem = true
+        guard foregroundWatch == nil else { return }
+        foregroundWatch = NotificationCenter.default.addObserver(
+            forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, self.awaitingRedeem else { return }
+                self.awaitingRedeem = false
+                for pause in [1, 4, 10, 20] {
+                    try? await Task.sleep(for: .seconds(pause))
+                    await self.refresh()
+                    if self.phase != .claim {
+                        Analytics.capture("invite_reward_claimed", ["store": "apple"])
+                        return
+                    }
+                }
+            }
+        }
+    }
+}
+
+private extension Decimal {
+    /// The value with no fraction, to tell a currency priced in whole units.
+    var rounded0: Decimal {
+        var value = self, out = Decimal()
+        NSDecimalRound(&out, &value, 0, .plain)
+        return out
     }
 }
