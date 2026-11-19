@@ -272,6 +272,12 @@ private struct MacCardColumn<Item: Identifiable, Card: View>: ViewModifier {
                 }
             }
             .onChange(of: item == nil) { _, closed in if closed { onDismiss?() } }
+            // The card goes with its page: a deck pushed over the book left
+            // the book's card beside it (2026-11-19).
+            .onDisappear {
+                MacCardHost.shared.release(owner: owner)
+                if item != nil { item = nil }
+            }
     }
 }
 #endif
