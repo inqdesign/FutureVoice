@@ -430,6 +430,15 @@ struct WatchTab: View {
                                           focusOnAppear: dockNoChips) { scenario in
                         appState.saveScenario(scenario)
                         watchScene = WatchTarget(scenario: scenario, fresh: false)
+                        // The box is done once the scene is on screen. Left
+                        // open, Back from the scene landed on the box with the
+                        // situation still in it. Closed after the push has
+                        // covered it, so nothing moves under the transition.
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                            creating = false
+                            dockFill = ""
+                            dockPerson = nil
+                        }
                     }
                     .environmentObject(appState)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
