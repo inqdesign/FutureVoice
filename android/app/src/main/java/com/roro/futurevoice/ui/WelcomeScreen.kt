@@ -456,8 +456,9 @@ private fun InviteArea(tint: Color) {
                 }
             },
         )
-        Text(stringResource(R.string.you_ll_both_get_lld_minutes_of_talk_time_when_you_sign_in,
-            com.roro.futurevoice.net.ReferralClient.bonusMinutes),
+        Text(inviteEventLine("join_note", fallback = stringResource(
+            R.string.you_ll_both_get_lld_minutes_of_talk_time_when_you_sign_in,
+            com.roro.futurevoice.net.ReferralClient.bonusMinutes)),
             fontSize = 12.sp, color = StoryInk.copy(alpha = 0.6f), textAlign = TextAlign.Center)
     }
 }

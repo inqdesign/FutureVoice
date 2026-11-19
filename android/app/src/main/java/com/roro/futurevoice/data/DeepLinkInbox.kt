@@ -114,6 +114,9 @@ object DeepLinkInbox {
             // The week-turn notice spoke about the week: its cards, raised
             // over whatever is on screen (the deck's last card is the test).
             "weekrecap" -> { WeekRecapInbox.asked.value = true; return }
+            // The invite event (iOS `futurevoice://invite`): a tap, so its
+            // sheet always opens.
+            "invite" -> { InviteEvent.asked.value += 1; return }
             else -> return          // login, and anything we don't own
         }
     }

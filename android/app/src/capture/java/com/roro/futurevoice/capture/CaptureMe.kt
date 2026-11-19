@@ -81,7 +81,32 @@ object CaptureMe {
             seedLadder()
             PaywallScreen(onDismiss = {}, preselectTier = "pack")
         },
-        "me" to { context -> Me(context) },
+        "me" to { context ->
+            // An invite preview held by an earlier shot must not leak in.
+            androidx.compose.runtime.remember {
+                com.roro.futurevoice.data.InviteEventDemo.hold(context, "off")
+            }
+            Me(context)
+        },
+        // The friend-invite event on a made-up account (iOS `-inviteDemo
+        // <phase>`): the real Settings page with the banner under the
+        // subscription row, then its two sheets. Android-only mode names;
+        // iOS previews these outside its capture harness.
+        "invite-banner" to { context -> InviteDemo(context, "invite") },
+        "invite-banner-needsplan" to { context -> InviteDemo(context, "needsPlan") },
+        "invite-banner-invited" to { context -> InviteDemo(context, "invited") },
+        "invite-banner-claim" to { context -> InviteDemo(context, "claim") },
+        "invite-banner-applied" to { context -> InviteDemo(context, "applied") },
+        "invite-banner-auto" to { context -> InviteDemo(context, "auto") },
+        "invite-sheet" to { context ->
+            InviteDemo(context, "invite", com.roro.futurevoice.ui.InviteEventSheetKind.ABOUT)
+        },
+        "invite-sheet-needsplan" to { context ->
+            InviteDemo(context, "needsPlan", com.roro.futurevoice.ui.InviteEventSheetKind.ABOUT)
+        },
+        "invite-claim-sheet" to { context ->
+            InviteDemo(context, "claim", com.roro.futurevoice.ui.InviteEventSheetKind.CLAIM)
+        },
         // Me → Add a language (iOS `AddLanguageSheet`).
         "me-add-language" to { _ ->
             Box(Modifier.fillMaxSize().background(AppSurfaces.ground)) {
@@ -250,6 +275,16 @@ object CaptureMe {
             onRestored = {},
             onBack = {},
         )
+    }
+
+    @Composable
+    private fun InviteDemo(context: Context, phase: String,
+                           sheet: com.roro.futurevoice.ui.InviteEventSheetKind? = null) {
+        androidx.compose.runtime.remember(phase) {
+            com.roro.futurevoice.data.InviteEventDemo.hold(context, phase)
+        }
+        if (sheet == null) Me(context)
+        else OverGround { com.roro.futurevoice.ui.InviteEventSheets(sheet) {} }
     }
 
     /** iOS `InviteOffer(code: "K3MQ9F", invitesUsed: 2)`. */

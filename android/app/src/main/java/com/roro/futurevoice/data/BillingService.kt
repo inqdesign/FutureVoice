@@ -346,8 +346,108 @@ class BillingService private constructor(context: Context) : PurchasesUpdatedLis
         }
     }
 
+    // ── The invite event's half-price month ──────────────────────────────
+
+    /** Where a claim of the invite event's offer stands ([claimInviteOffer]). */
+    enum class InviteClaimOutcome { OPENED, PURCHASED, CANCELLED, NO_OFFER, NO_PURCHASE, FAILED }
+
+    /** The claim in flight: the purchase callback carries no word of what
+     *  the flow was for. */
+    @Volatile private var inviteClaim: ((InviteClaimOutcome) -> Unit)? = null
+
+    /**
+     * (full, offer) for the invite event's texts: the base plan's price as
+     * Play prints it, and the first pricing phase of the offer whose id is
+     * [offerId] when Play lists it on the product. Null where Play has not
+     * answered or the offer is not there.
+     */
+    fun inviteOfferPrices(productId: String, offerId: String?): Pair<String?, String?> {
+        val all = _offers.value.firstOrNull { it.details.productId == productId }
+            ?.details?.subscriptionOfferDetails ?: return null to null
+        val full = (all.firstOrNull { it.offerId == null } ?: all.lastOrNull())
+            ?.pricingPhases?.pricingPhaseList?.lastOrNull()?.formattedPrice
+        val offer = offerId?.let { id -> all.firstOrNull { it.offerId == id } }
+            ?.pricingPhases?.pricingPhaseList?.firstOrNull()?.formattedPrice
+        return full to offer
+    }
+
+    /**
+     * The invite event's half-price month, taken on the subscription the
+     * learner ALREADY holds (iOS: Apple's offer-code page). The billing flow
+     * is launched for the same product, on the `subscriptionOfferDetails`
+     * entry whose `offerId` is [offerId], as an update of the existing
+     * purchase token (the pattern of [changePlan]) with
+     * `ReplacementMode.WITHOUT_PRORATION`: the current period is left as it
+     * is and the offer's price starts at the next renewal.
+     *
+     * THIS PATH HAS NOT BEEN TRIED AGAINST PLAY YET. The server lists no Play
+     * offer for the event today, so nothing reaches it; whether Play accepts
+     * a same-product offer change this way, and what the renewal then costs,
+     * is still to be seen on a test account.
+     *
+     * [onResult] hears OPENED once Play's sheet is up, then PURCHASED or
+     * CANCELLED / FAILED; NO_OFFER when the product does not list the offer,
+     * NO_PURCHASE when this device's Google account holds no such subscription.
+     */
+    fun claimInviteOffer(
+        activity: Activity,
+        productId: String,
+        offerId: String,
+        onResult: (InviteClaimOutcome) -> Unit,
+    ) {
+        val userId = auth.userId ?: run { onResult(InviteClaimOutcome.FAILED); return }
+        val details = _offers.value.firstOrNull { it.details.productId == productId }?.details
+        val offerToken = details?.subscriptionOfferDetails
+            ?.firstOrNull { it.offerId == offerId }?.offerToken
+        if (details == null || offerToken == null) { onResult(InviteClaimOutcome.NO_OFFER); return }
+        if (!client.isReady) { onResult(InviteClaimOutcome.FAILED); return }
+        client.queryPurchasesAsync(
+            QueryPurchasesParams.newBuilder()
+                .setProductType(BillingClient.ProductType.SUBS).build()
+        ) { result, purchases ->
+            val live = if (result.responseCode == BillingClient.BillingResponseCode.OK)
+                purchases.filter { it.purchaseState == Purchase.PurchaseState.PURCHASED }
+            else emptyList()
+            val old = live.firstOrNull { productId in it.products }
+            scope.launch {
+                if (old == null) { onResult(InviteClaimOutcome.NO_PURCHASE); return@launch }
+                val params = BillingFlowParams.newBuilder()
+                    .setProductDetailsParamsList(listOf(
+                        BillingFlowParams.ProductDetailsParams.newBuilder()
+                            .setProductDetails(details)
+                            .setOfferToken(offerToken)
+                            .build()))
+                    .setSubscriptionUpdateParams(
+                        BillingFlowParams.SubscriptionUpdateParams.newBuilder()
+                            .setOldPurchaseToken(old.purchaseToken)
+                            .setSubscriptionReplacementMode(
+                                BillingFlowParams.SubscriptionUpdateParams.ReplacementMode.WITHOUT_PRORATION)
+                            .build())
+                    // Same account mapping as a purchase: the new token's
+                    // notification must land on the same user row.
+                    .setObfuscatedAccountId(userId)
+                    .build()
+                inviteClaim = onResult
+                val launched = client.launchBillingFlow(activity, params)
+                if (launched.responseCode == BillingClient.BillingResponseCode.OK) {
+                    onResult(InviteClaimOutcome.OPENED)
+                } else {
+                    inviteClaim = null
+                    onResult(InviteClaimOutcome.FAILED)
+                }
+            }
+        }
+    }
+
     override fun onPurchasesUpdated(result: BillingResult, purchases: MutableList<Purchase>?) {
         if (result.responseCode != BillingClient.BillingResponseCode.OK || purchases == null) {
+            // An invite-offer claim that ended without a purchase.
+            inviteClaim?.let { claim ->
+                inviteClaim = null
+                claim(if (result.responseCode == BillingClient.BillingResponseCode.USER_CANCELED)
+                    InviteClaimOutcome.CANCELLED else InviteClaimOutcome.FAILED)
+                return
+            }
             reportResult(if (result.responseCode == BillingClient.BillingResponseCode.USER_CANCELED)
                 "cancelled" else "failed")
             // The flow ended without a purchase. Only a pack flow has a state
@@ -365,6 +465,21 @@ class BillingService private constructor(context: Context) : PurchasesUpdatedLis
                 continue
             }
             if (purchase.purchaseState != Purchase.PurchaseState.PURCHASED) continue
+            // The invite event's offer on the plan they already hold: not a
+            // new subscription, so the paywall's "You're in" stays quiet.
+            val claim = inviteClaim
+            if (claim != null) {
+                inviteClaim = null
+                if (!purchase.isAcknowledged) {
+                    client.acknowledgePurchase(
+                        AcknowledgePurchaseParams.newBuilder()
+                            .setPurchaseToken(purchase.purchaseToken).build()) { ack ->
+                        Log.d(TAG, "acknowledge (invite offer): ${ack.responseCode}")
+                    }
+                }
+                claim(InviteClaimOutcome.PURCHASED)
+                continue
+            }
             reportResult("purchased")
             // What the account may spend just changed: the gate's cached
             // answer is stale, and a PARKED voice is re-read (iOS invalidate).

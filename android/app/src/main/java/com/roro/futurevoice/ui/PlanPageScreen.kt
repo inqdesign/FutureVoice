@@ -371,8 +371,14 @@ fun PlanPageScreen(
                     stringResource(R.string.what_uses_talk_time),
                     stringResource(R.string.and_what_s_always_free),
                     onClick = onOpenCreditGuide)
-                if (inviteOffer == null) GroupedRowDivider()
-                if (inviteOffer == null) LineRow(Icons.Filled.CardGiftcard,
+                // While the invite event is on, its banner in Settings is the
+                // invitation; this row would promise minutes.
+                val inviteEventOn = androidx.compose.runtime.produceState(
+                    com.roro.futurevoice.data.InviteEvent.state.value.enabled) {
+                    com.roro.futurevoice.data.InviteEvent.state.collect { value = it.enabled }
+                }.value
+                if (inviteOffer == null && !inviteEventOn) GroupedRowDivider()
+                if (inviteOffer == null && !inviteEventOn) LineRow(Icons.Filled.CardGiftcard,
                     stringResource(R.string.invite_earn_talk_time),
                     stringResource(R.string.lld_minutes_each_per_friend, ReferralClient.bonusMinutes),
                     onClick = onOpenInvite)

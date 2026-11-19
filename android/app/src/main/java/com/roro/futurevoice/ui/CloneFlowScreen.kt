@@ -1526,8 +1526,9 @@ fun CloneFlowScreen(
                                 Icon(Icons.Filled.CardGiftcard, null, Modifier.size(16.dp), tint = green)
                                 Text(if (r.compPlanId != null) stringResource(R.string.applied_1_month,
                                         stringResource(com.roro.futurevoice.data.AccountStatus.tierNameRes(r.compPlanId)))
-                                    else stringResource(R.string.invite_applied_lld_min_of_talk_time,
-                                        com.roro.futurevoice.net.ReferralClient.bonusMinutes),
+                                    else inviteEventLine("join_applied", fallback = stringResource(
+                                        R.string.invite_applied_lld_min_of_talk_time,
+                                        com.roro.futurevoice.net.ReferralClient.bonusMinutes)),
                                     style = MaterialTheme.typography.bodySmall, color = green)
                             }
                         }
@@ -1553,8 +1554,9 @@ fun CloneFlowScreen(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Icon(Icons.Filled.CardGiftcard, null, Modifier.size(16.dp),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text(stringResource(R.string.invite_code_lld_min_when_you_sign_up, code,
-                                    com.roro.futurevoice.net.ReferralClient.bonusMinutes),
+                                Text(inviteEventLine("join_note", fallback = stringResource(
+                                    R.string.invite_code_lld_min_when_you_sign_up, code,
+                                    com.roro.futurevoice.net.ReferralClient.bonusMinutes)),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }

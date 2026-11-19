@@ -812,6 +812,14 @@ fun RootScreen() {
         voiceId = state.speakingVoiceId,
         onShowing = { trialReportUp = it },
     )
+    // The friend-invite event: its announcement (once per announce_version)
+    // and a half-price month waiting to be taken (iOS `offerInviteEvent`).
+    InviteEventHost(
+        ready = state.setupComplete && tabsArrived,
+        blocked = inCall || weekRecapUp || trialReportUp || paywalled || showIntroPreview ||
+            state.levelUp != null || referralJoin != null || welcomeMinutes != null ||
+            updatePending != null || guideUp || showAgeCheck || showWhatsNew || coreNews != null,
+    )
 
     // The Core's welcome, once per seat per device (iOS `offerCoreWelcome`):
     // asked on arrival and whenever a call ends, raised once nothing else is up.

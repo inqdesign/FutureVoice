@@ -53,6 +53,9 @@ data class InviteOffer(val code: String, val invitesUsed: Int) {
     companion object {
         suspend fun load(account: AccountStatus): InviteOffer? {
             if (!account.isEntitled || account.monthlyCapSeconds == null) return null
+            // While the invite event is on, an invite pays a half-price month,
+            // not minutes: this offer would promise the wrong thing.
+            if (com.roro.futurevoice.data.InviteEvent.state.value.enabled) return null
             val status = runCatching { ReferralClient(com.roro.futurevoice.data.AuthRepository()).status() }
                 .getOrNull() ?: return null
             val code = status.code ?: return null

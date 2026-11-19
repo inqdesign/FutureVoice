@@ -185,6 +185,11 @@ fun MeScreen(
     val notifPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()) { }
     var account by remember { mutableStateOf<AccountStatus?>(null) }
+    /** The friend-invite event: its banner sits right under the subscription
+     *  row, and its sheets are raised from this page (iOS `MeTab`). */
+    var inviteSheet by remember { mutableStateOf<InviteEventSheetKind?>(null) }
+    LaunchedEffect(Unit) { com.roro.futurevoice.data.InviteEvent.refresh(context) }
+    InviteEventSheets(inviteSheet) { inviteSheet = null }
     var addingLanguage by remember { mutableStateOf(false) }
     var pickingAccent by remember { mutableStateOf(false) }
     var comparingVoice by remember { mutableStateOf(false) }
@@ -427,6 +432,10 @@ fun MeScreen(
                     }
                 }
 
+                // ── The friend-invite event ── its own section, and nothing
+                // at all while the event is off.
+                InviteEventBanner { inviteSheet = it }
+
                 // ── Usage, and the club ──
                 GroupedSectionSpacer()
                 GroupedCard {
@@ -615,6 +624,46 @@ fun MeScreen(
                         MeRow(Icons.Filled.NotificationsActive, "Ring now (debug)",
                             kind = MeRowKind.ACTION,
                             onClick = { com.roro.futurevoice.data.DailyCallScheduler.ring(context) })
+                        GroupedRowDivider()
+                        // The invite event on a made-up account (iOS
+                        // Developer → Preview invite event).
+                        var inviteDemoMenu by remember { mutableStateOf(false) }
+                        Box {
+                            MeRow(Icons.Filled.NotificationsActive, "Preview invite event",
+                                subtitle = "Pick a state; the banner appears under Subscription",
+                                kind = MeRowKind.ACTION,
+                                onClick = { inviteDemoMenu = true })
+                            androidx.compose.material3.DropdownMenu(expanded = inviteDemoMenu,
+                                onDismissRequest = { inviteDemoMenu = false }) {
+                                val demo = com.roro.futurevoice.data.InviteEventDemo
+                                (demo.phases + "off").forEach { phase ->
+                                    androidx.compose.material3.DropdownMenuItem(
+                                        text = { Text(if (phase == "off") "Off (what the server says)" else phase) },
+                                        onClick = {
+                                            inviteDemoMenu = false
+                                            demo.hold(context, phase)
+                                            if (phase == "off") scope.launch {
+                                                com.roro.futurevoice.data.InviteEvent.refresh(context)
+                                            }
+                                        })
+                                }
+                                androidx.compose.material3.DropdownMenuItem(
+                                    text = { Text("Announcement sheet") },
+                                    onClick = {
+                                        inviteDemoMenu = false
+                                        if (com.roro.futurevoice.data.InviteEvent.phase ==
+                                            com.roro.futurevoice.data.InviteEvent.Phase.Off) demo.hold(context, "invite")
+                                        inviteSheet = InviteEventSheetKind.ABOUT
+                                    })
+                                androidx.compose.material3.DropdownMenuItem(
+                                    text = { Text("Claim sheet") },
+                                    onClick = {
+                                        inviteDemoMenu = false
+                                        demo.hold(context, "claim")
+                                        inviteSheet = InviteEventSheetKind.CLAIM
+                                    })
+                            }
+                        }
                         GroupedRowDivider()
                         // "Your week" rings once a week and slides up once a
                         // week; these three reach every path of it on demand.

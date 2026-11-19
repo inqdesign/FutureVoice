@@ -43,6 +43,9 @@ object ReferralJoins {
     @Serializable private data class NameRow(val display_name: String = "")
 
     suspend fun announce(context: Context) = withContext(Dispatchers.IO) {
+        // The invite event tells the inviter itself, when the friend subscribes.
+        if (!InviteEvent.state.value.enabled) InviteEvent.refresh(context)
+        if (InviteEvent.state.value.enabled) return@withContext
         val auth = AuthRepository()
         val uid = auth.userId ?: return@withContext
         val token = runCatching { auth.accessToken() }.getOrNull() ?: return@withContext
