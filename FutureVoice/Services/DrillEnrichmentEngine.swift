@@ -43,11 +43,16 @@ enum DrillEnrichmentEngine {
             // opened from a card that no longer exists (see
             // `DrillEnrichmentStore`), and a card id made every such open a
             // separate charge.
+            // The ten-minute slot: the server takes a key again only within
+            // ten minutes of its first use and answers 409 after that, and
+            // the payload is cached per device. Without it a second device
+            // (or a retry of a failed call the next day) asked under a key
+            // the first had used and could never load (2026-11-19).
             idempotencyKey: "enrichment:" + DrillEnrichmentStore.key(
                 phrase: card.targetPhrase,
                 targetLanguage: targetLanguage,
                 nativeLanguage: nativeLanguage
-            )
+            ) + ":\(Int(Date().timeIntervalSince1970 / 600))"
         )
 
         return DrillCardEnrichment(

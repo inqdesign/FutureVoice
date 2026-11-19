@@ -816,25 +816,34 @@ struct ConversationDetailView: View {
     /// session end, so this is a lookup, with a save as the safety net for
     /// cards the ingest filtered (and it stays a card from then on).
     private func openCard(for item: CorrectionItem) {
-        let cards = DrillStore.shared.load().filter { $0.sourceSessionId == session.id }
+        let all = DrillStore.shared.load()
+        let cards = all.filter { $0.sourceSessionId == session.id }
         let needle = CarryoverDetector.normalized(item.fluent)
         // Text first: a turn with several fixes minted several cards under
         // ONE turn id, so the turn alone would open whichever came first.
-        if let hit = cards.first(where: { CarryoverDetector.normalized($0.targetPhrase) == needle }) {
-            enrichmentCard = hit
-            return
-        }
-        if let turnId = item.sourceTurnId,
-           let hit = cards.first(where: { $0.sourceTurnId == turnId }) {
+        // The whole store second: the store keeps one card per sentence, so
+        // this line's card may have been minted by another talk.
+        if let hit = cards.first(where: { CarryoverDetector.normalized($0.targetPhrase) == needle })
+            ?? all.first(where: { CarryoverDetector.normalized($0.targetPhrase) == needle }) {
             enrichmentCard = hit
             return
         }
         if let hit = cards.first(where: {
             let target = CarryoverDetector.normalized($0.targetPhrase)
-            return target == needle || needle.contains(target)
+            return !target.isEmpty && needle.contains(target)
         }) {
             enrichmentCard = hit
             return
+        }
+        // The turn alone names a card only when it has ONE. With several, a
+        // line whose own card is missing opened the turn's first card, so
+        // every such row showed the same card (2026-11-19).
+        if let turnId = item.sourceTurnId {
+            let ofTurn = cards.filter { $0.sourceTurnId == turnId }
+            if ofTurn.count == 1 {
+                enrichmentCard = ofTurn[0]
+                return
+            }
         }
         // Mint it the way `ingest` would: the same one-sentence trim, and only
         // if the store can read it back. Saving the raw correction meant a
