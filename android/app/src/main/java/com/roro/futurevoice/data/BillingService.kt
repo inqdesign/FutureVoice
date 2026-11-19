@@ -239,8 +239,7 @@ class BillingService private constructor(context: Context) : PurchasesUpdatedLis
      * subscriber the half-price month meant for an invited pair. It carries
      * the tag [INVITE_OFFER_TAG] (scripts/invite-event.py puts it there).
      */
-    private fun buyable(details: ProductDetails): ProductDetails.SubscriptionOfferDetails? =
-        details.subscriptionOfferDetails?.firstOrNull { INVITE_OFFER_TAG !in it.offerTags }
+    private fun buyable(details: ProductDetails) = buyableOffer(details)
 
     /** How many free days the chosen offer carries, 0 if none. A trial is a
      *  pricing phase priced at zero; Play states its length as ISO-8601. */
@@ -670,3 +669,10 @@ class BillingService private constructor(context: Context) : PurchasesUpdatedLis
     @Serializable
     private data class TopUpReply(val applied: Boolean = false, val seconds: Int = 0, val balance: Int = 0)
 }
+
+/** What a plan's Buy button buys and what its price label reads: never the
+ *  invite event's offer (see [BillingService.INVITE_OFFER_TAG]). Play lists
+ *  that offer to someone already on the plan, and the plans page showed
+ *  them their own plan at half price (seen on Play, 2026-11-20). */
+fun buyableOffer(details: ProductDetails): ProductDetails.SubscriptionOfferDetails? =
+    details.subscriptionOfferDetails?.firstOrNull { BillingService.INVITE_OFFER_TAG !in it.offerTags }

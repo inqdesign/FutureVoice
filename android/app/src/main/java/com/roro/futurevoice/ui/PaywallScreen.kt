@@ -1065,7 +1065,7 @@ private fun annualSavingLabel(
  * of a plan that costs money.
  */
 private fun recurringPhase(details: ProductDetails): ProductDetails.PricingPhase? =
-    details.subscriptionOfferDetails?.firstOrNull()
+    com.roro.futurevoice.data.buyableOffer(details)
         ?.pricingPhases?.pricingPhaseList?.firstOrNull { it.priceAmountMicros > 0 }
 
 /**
@@ -1105,7 +1105,7 @@ private fun SubscriptionLegal() {
  * priced at zero; Play states its length as ISO-8601.
  */
 private fun trialDaysOf(details: ProductDetails): Int {
-    val phase = details.subscriptionOfferDetails?.firstOrNull()
+    val phase = com.roro.futurevoice.data.buyableOffer(details)
         ?.pricingPhases?.pricingPhaseList?.firstOrNull { it.priceAmountMicros == 0L } ?: return 0
     val p = phase.billingPeriod
     val n = p.filter { it.isDigit() }.toIntOrNull() ?: return 0
