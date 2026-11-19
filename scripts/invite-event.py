@@ -26,9 +26,9 @@ A discount needs three things outside the database, and `offers` /
     (500 at a time, six months' life; run it again whenever `show` says a
     plan is under 100);
   * Stripe: one coupon (`friend_<N>_once`), N% off, once;
-  * Google Play: one developer-determined offer per MONTHLY plan
-    (`friend-<N>`), made as a DRAFT. `play on` activates them and tells the
-    app; read the warning above the Play section first.
+  * Google Play: one offer per MONTHLY plan (`friend-<N>`), which Play lists
+    only to people already on that plan, made as a DRAFT. `play on`
+    activates them and tells the app.
 Annual plans get no offer: "one month at N%" has no meaning on a year.
 
 Uses the keys scripts/billing-switch.py uses (App Store Connect, the
@@ -265,18 +265,22 @@ def codes(send: bool):
 
 # ── Google Play ────────────────────────────────────────────────────────────
 #
-# One developer-determined offer per MONTHLY plan (`friend-<N>`, on the base
-# plan `monthly`): N% off for the event's months, in every region the base
-# plan is sold in, as a relative discount so no price is typed here.
+# One offer per MONTHLY plan (`friend-<N>`, on the base plan `monthly`): N%
+# off for the event's months, in every region the base plan is sold in, as a
+# relative discount so no price is typed here.
 #
-# TWO THINGS TO KNOW BEFORE `play on`:
-#   * An ACTIVE developer-determined offer is listed to every install, and
-#     Android builds before feat/android dd8607e4+1 buy "the first offer Play
-#     lists". On those builds a NEW subscriber could be sold the half-price
-#     month. `offers` therefore only makes DRAFTS (sold to nobody); `play on`
-#     activates them and is for when those builds are out of use.
-#   * Taking the offer on a subscription already held has not been tried
-#     against Play.
+# WHO CAN BE SOLD IT is Play's decision, not the app's: the offer is targeted
+# at people who ALREADY hold that same subscription (an "upgrade" rule scoped
+# to this subscription). A new buyer is not eligible, so Play never lists it
+# to them, whatever build they run. That matters because Android builds
+# before feat/android 333b73f7 buy "the first offer Play lists": an offer
+# anyone could be listed (developer-determined) would have sold new
+# subscribers their first month at half price.
+#
+# `offers` makes DRAFTS (sold to nobody); `play on` activates them.
+# NOT TRIED AGAINST PLAY YET: that Play lists such an offer to a holder of
+# the same base plan, and that taking it prices only the next renewal. If
+# Play lists it to nobody, the claim says "try later" and nothing is sold.
 
 PLAY_PACKAGE = "com.roro.futurevoice"
 PLAY_API = f"https://androidpublisher.googleapis.com/androidpublisher/v3/applications/{PLAY_PACKAGE}"
@@ -366,7 +370,12 @@ def play_offer(product: str, percent: int, months: int, send: bool):
         "packageName": PLAY_PACKAGE, "productId": product,
         "basePlanId": PLAY_BASE_PLAN, "offerId": offer_id,
         "offerTags": [{"tag": PLAY_TAG}],
-        # No `targeting`: eligibility is the app's (developer-determined).
+        # Play's own gate: listed ONLY to someone who holds this same
+        # subscription on a monthly period now. A new buyer is never offered
+        # it, on any build. Not once per person: one month per friend.
+        "targeting": {"upgradeRule": {"oneTimeUpgrade": False,
+                                      "scope": {"thisSubscription": {}},
+                                      "billingPeriodDuration": "P1M"}},
         "phases": [{
             "recurrenceCount": months, "duration": "P1M",
             "regionalConfigs": [{"regionCode": r, "relativeDiscount": pays} for r in regions],
@@ -400,10 +409,6 @@ def play_switch(on: bool, send: bool):
                       "basePlanId": PLAY_BASE_PLAN, "offerId": offer_id})
         if on:
             mapping[product] = offer_id
-    if on:
-        print("NOTE: an active offer is listed to EVERY install. Android builds that buy "
-              "\"the first offer Play lists\" could sell it to a new subscriber. "
-              "Do this only when those builds are out of use.")
     write(f"google_offers = {lit(json.dumps(mapping))}::jsonb", send)
 
 
