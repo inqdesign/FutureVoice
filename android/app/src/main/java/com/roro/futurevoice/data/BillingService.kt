@@ -51,6 +51,9 @@ class BillingService private constructor(context: Context) : PurchasesUpdatedLis
     companion object {
         private const val TAG = "BillingService"
         @Volatile private var instance: BillingService? = null
+        /** The offer tag of the invite event's Play offers. */
+        const val INVITE_OFFER_TAG = "friend-invite"
+
         fun shared(context: Context): BillingService =
             instance ?: synchronized(this) {
                 instance ?: BillingService(context.applicationContext).also { instance = it }
@@ -229,10 +232,20 @@ class BillingService private constructor(context: Context) : PurchasesUpdatedLis
         }.getOrElse { emptyList() }
     }
 
+    /**
+     * What a plan's Buy button buys: the first entry Play lists that is NOT
+     * the invite event's offer. That offer is developer-determined, so Play
+     * lists it for everyone, and taking "the first one" would sell a new
+     * subscriber the half-price month meant for an invited pair. It carries
+     * the tag [INVITE_OFFER_TAG] (scripts/invite-event.py puts it there).
+     */
+    private fun buyable(details: ProductDetails): ProductDetails.SubscriptionOfferDetails? =
+        details.subscriptionOfferDetails?.firstOrNull { INVITE_OFFER_TAG !in it.offerTags }
+
     /** How many free days the chosen offer carries, 0 if none. A trial is a
      *  pricing phase priced at zero; Play states its length as ISO-8601. */
     private fun trialDays(offer: Offer): Int {
-        val phase = offer.details.subscriptionOfferDetails?.firstOrNull()
+        val phase = buyable(offer.details)
             ?.pricingPhases?.pricingPhaseList?.firstOrNull { it.priceAmountMicros == 0L } ?: return 0
         val p = phase.billingPeriod
         val n = p.filter { it.isDigit() }.toIntOrNull() ?: return 0
@@ -268,7 +281,7 @@ class BillingService private constructor(context: Context) : PurchasesUpdatedLis
 
     fun purchase(activity: Activity, offer: Offer, facts: FlowFacts? = null) {
         val userId = auth.userId ?: return
-        val offerToken = offer.details.subscriptionOfferDetails?.firstOrNull()?.offerToken ?: return
+        val offerToken = buyable(offer.details)?.offerToken ?: return
         pendingTrialDays = trialDays(offer)
         flowFacts = facts
         val params = BillingFlowParams.newBuilder()
@@ -304,7 +317,7 @@ class BillingService private constructor(context: Context) : PurchasesUpdatedLis
         onNoPurchase: () -> Unit,
     ) {
         val userId = auth.userId ?: return
-        val offerToken = offer.details.subscriptionOfferDetails?.firstOrNull()?.offerToken ?: return
+        val offerToken = buyable(offer.details)?.offerToken ?: return
         if (!client.isReady) { onNoPurchase(); return }
         val heldProduct = _plans.value.firstOrNull { it.id == currentPlanId }?.google_product_id
         client.queryPurchasesAsync(
@@ -364,7 +377,7 @@ class BillingService private constructor(context: Context) : PurchasesUpdatedLis
     fun inviteOfferPrices(productId: String, offerId: String?): Pair<String?, String?> {
         val all = _offers.value.firstOrNull { it.details.productId == productId }
             ?.details?.subscriptionOfferDetails ?: return null to null
-        val full = (all.firstOrNull { it.offerId == null } ?: all.lastOrNull())
+        val full = (all.firstOrNull { it.offerId == null } ?: all.lastOrNull { INVITE_OFFER_TAG !in it.offerTags })
             ?.pricingPhases?.pricingPhaseList?.lastOrNull()?.formattedPrice
         val offer = offerId?.let { id -> all.firstOrNull { it.offerId == id } }
             ?.pricingPhases?.pricingPhaseList?.firstOrNull()?.formattedPrice
