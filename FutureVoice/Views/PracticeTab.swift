@@ -1564,7 +1564,16 @@ struct PracticeTab: View {
         // reload cancels the pass it replaces.
         let toSnapshot = finished
         snapshotTask?.cancel()
+        // With an earlier pass on screen, this one waits for the tab switch
+        // to finish: started at once, its books were rebuilt between the
+        // frames of the transition (150 ms of every return to this tab on a
+        // Mac with a few months of talks, 2026-11-19).
+        let settle = !talkSnapshots.isEmpty
         snapshotTask = Task { @MainActor in
+            if settle {
+                try? await Task.sleep(for: .milliseconds(400))
+                if Task.isCancelled { return }
+            }
             var out: [UUID: TalkCurriculum.Snapshot] = [:]
             let drillCards = DrillStore.shared.load()
             for s in toSnapshot {

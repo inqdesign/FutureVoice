@@ -25,6 +25,11 @@ settings:
     # the catalog can't silently drift from the code.
     SWIFT_EMIT_LOC_STRINGS: "YES"
     LOCALIZATION_PREFERS_STRING_CATALOGS: "YES"
+    # A Mac build writes .strings as UTF-16 XML by default (iOS: binary).
+    # A Text in the app language is looked up with an explicit localization,
+    # which CoreFoundation never caches, so every first lookup parsed the
+    # whole 768 KB table: 4.6 s of 8.2 s over eight tab switches (2026-11-19).
+    STRINGS_FILE_OUTPUT_ENCODING: binary
     ENABLE_USER_SCRIPT_SANDBOXING: NO
     ENABLE_DEBUG_DYLIB: NO
     CODE_SIGN_STYLE: Automatic

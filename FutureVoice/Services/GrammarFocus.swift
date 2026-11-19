@@ -75,11 +75,57 @@ struct GrammarFocus: Equatable {
     /// first. Grammar or not is decided later, by `describe`.
     static func candidates(from profile: LearnerProfile, sessions: [Session],
                            now: Date = Date()) -> [(pattern: LearnerPattern, talks: Int)] {
-        profile.recurringMistakes
+        let stamp = candidatesStamp(profile, sessions, now)
+        memoLock.lock()
+        if let memo, memo.stamp == stamp {
+            memoLock.unlock()
+            return memo.value
+        }
+        memoLock.unlock()
+        let value = profile.recurringMistakes
             .filter { !isRetired($0, sessions: sessions) }
             .map { (pattern: $0, talks: evidence($0, sessions: sessions, now: now)) }
             .filter { $0.talks >= minTalks }
             .sorted { ($0.talks, $0.pattern.lastSeenAt) > ($1.talks, $1.pattern.lastSeenAt) }
+        memoLock.lock()
+        memo = (stamp, value)
+        memoLock.unlock()
+        return value
+    }
+
+    // The last answer, kept while nothing it reads has changed. The count
+    // walks every pattern over every line of 45 days of talks, and the Talk
+    // tab's tutor asked for it on every visit: 130 ms of each switch to Talk
+    // on a Mac with a few months of talks (2026-11-19).
+    private static let memoLock = NSLock()
+    private static var memo: (stamp: Int, value: [(pattern: LearnerPattern, talks: Int)])?
+
+    /// Everything `candidates` reads, cheaply: the patterns, the day (the
+    /// 45-day window moves), and per talk its dates, its focus record and
+    /// each line's text length and flags.
+    private static func candidatesStamp(_ profile: LearnerProfile, _ sessions: [Session],
+                                        _ now: Date) -> Int {
+        var h = Hasher()
+        h.combine(Int(now.timeIntervalSince1970 / 86_400))
+        for p in profile.recurringMistakes {
+            h.combine(p.mistake)
+            h.combine(p.correction)
+            h.combine(p.lastSeenAt)
+        }
+        for s in sessions {
+            h.combine(s.id)
+            h.combine(s.endedAt)
+            h.combine(s.archivedAt)
+            h.combine(s.grammarFocus?.patternKey)
+            h.combine(s.grammarFocus?.repeats)
+            for t in s.turns where t.role == .user {
+                h.combine(t.transcript.utf8.count)
+                h.combine(t.excludedFromScoring)
+                h.combine(t.coachLine?.utf8.count)
+                h.combine(t.tutorRole == .drill)
+            }
+        }
+        return h.finalize()
     }
 
     /// This call's focus: the first candidate that is a GRAMMAR point
