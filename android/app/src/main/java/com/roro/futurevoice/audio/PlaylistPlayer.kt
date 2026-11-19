@@ -131,10 +131,11 @@ object PlaylistPlayer {
     }
 
     /** The speed for a learner who never picked one (iOS 2026-10-22: 1x was
-     *  too fast for most learners). 0.9 is the default, a beginner hears it
-     *  slower, C1+ at the speed it was made. Saved only by [chooseSpeed]. */
+     *  too fast for most learners). 0.9 is the default, a beginner (A1, and
+     *  A2 since 2026-11-19) hears it slower, C1+ at the speed it was made.
+     *  Saved only by [chooseSpeed]. */
     fun levelSpeed(level: com.roro.futurevoice.data.CefrLevel): Float = when (level) {
-        com.roro.futurevoice.data.CefrLevel.A1 -> 0.75f
+        com.roro.futurevoice.data.CefrLevel.A1, com.roro.futurevoice.data.CefrLevel.A2 -> 0.75f
         com.roro.futurevoice.data.CefrLevel.C1, com.roro.futurevoice.data.CefrLevel.C2 -> 1.0f
         else -> 0.9f
     }
