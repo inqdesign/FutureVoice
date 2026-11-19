@@ -782,7 +782,8 @@ class SyncEngine(
         const val REPORT_PUSH_FROM = 20
         /** Kinds added after builds were already syncing, whose records an
          *  older build skipped and whose change token has moved past them. */
-        val CATCH_UP_KINDS = listOf(SyncKind.STUDY_PLAN, SyncKind.PROMISE_DAY, SyncKind.ACTIVITY_EVENT)
+        val CATCH_UP_KINDS = listOf(SyncKind.STUDY_PLAN, SyncKind.PROMISE_DAY, SyncKind.ACTIVITY_EVENT,
+            SyncKind.USAGE_DEVICE)
         const val QUOTA_BACKOFF_MS = 6 * 3600 * 1000L
 
         fun describe(e: SyncTransportError): String = e.message ?: "error"

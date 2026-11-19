@@ -93,6 +93,8 @@ class SyncKindRegistry(private val context: Context) : SyncRegistry {
             { putPacked("futurevoice.talkSecondsByDay", it); StoreEvents.bump(fromSync = true) }),
         PrefsCountKind(SyncKind.USAGE_DAY, { packed("futurevoice.appSecondsByDay") },
             { putPacked("futurevoice.appSecondsByDay", it); StoreEvents.bump(fromSync = true) }),
+        PrefsCountKind(SyncKind.USAGE_DEVICE, { packed(com.roro.futurevoice.data.AppUsageLog.DEVICE_KEY) },
+            { putPacked(com.roro.futurevoice.data.AppUsageLog.DEVICE_KEY, it); StoreEvents.bump(fromSync = true) }),
         PersonaKind(paths, ::touched),
         PersonaNoteKind(paths, ::touched),
         ArrayKind(SyncKind.UPCOMING_GOAL, com.roro.futurevoice.data.UpcomingGoalStore.FILENAME, paths,
