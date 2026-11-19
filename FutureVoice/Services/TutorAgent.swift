@@ -68,6 +68,10 @@ enum TutorAgent {
         - My routine: their weekly plan (talk at 8:00, review at 21:00…); a day counts \
         toward the streak once ONE planned block is started. Change it in Activity → Edit weekly plan.
         - Progress tab: level estimate and each skill.
+        - You (this page): they type, or dictate with the mic in the box, in the language \
+        they are learning or their own. A dictated message can carry a misheard word: read \
+        past it to what they plainly meant, and never comment on spelling or punctuation. \
+        You have no voice here; the fluent self's voice and speed are in Me → Voice and call settings.
         """
 
     /// The reply format the model must keep. Field order: `lookup` first, so
@@ -80,8 +84,8 @@ enum TutorAgent {
         enough to answer well. Ask for everything you need at once (up to 4 tools). The \
         results come back in the next message, then you answer. Never look up what is \
         already below.
-        B) {"reply": "...", "actions": [{"type": "...", ...}]} — your answer, and 0 to 2 \
-        buttons under it.
+        B) {"reply": "...", "translation": "...", "actions": [{"type": "...", ...}]} — your \
+        answer, the same answer in their own language, and 0 to 2 buttons under it.
 
         LOOKUPS (tool names and args)
         \(TutorTools.catalog)

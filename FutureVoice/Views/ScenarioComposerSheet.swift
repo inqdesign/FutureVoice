@@ -1834,6 +1834,9 @@ private struct SkeletonChip: View {
 /// (where you are — a breadcrumb, the chosen tab) wears the accent.
 struct SoftChipStyle: ButtonStyle {
     var selected = false
+    /// The capsule's fill when the host's ground is not the grouped grey
+    /// (the default white vanishes on a plain white sheet).
+    var fill: Color? = nil
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -1842,7 +1845,7 @@ struct SoftChipStyle: ButtonStyle {
             .padding(.horizontal, 16)
             .padding(.vertical, 11)
             .background(Capsule().fill(selected ? Color.themeAccent.opacity(0.14)
-                                                : Color(.secondarySystemGroupedBackground)))
+                                                : fill ?? Color(.secondarySystemGroupedBackground)))
             .opacity(configuration.isPressed ? 0.6 : 1)
             .contentShape(Capsule())
     }

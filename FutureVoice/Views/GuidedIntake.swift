@@ -208,6 +208,7 @@ struct SpeakOrTypeField: View {
     }
 
     private var dictationChoices: [String] {
+        if let localeChoices { return localeChoices }
         let all = LanguageCatalog.dictatableLanguages()
         var preferred: [String] = []
         for code in [appState.nativeLanguage, appState.targetLanguage]
@@ -225,6 +226,10 @@ struct SpeakOrTypeField: View {
     /// ONE shared toggle above several stacked fields (PersonaDeepenSheet) —
     /// three copies of the same picker read as clutter.
     var showsLocalePicker = true
+    /// A host that only ever wants a few languages offered (the tutor page:
+    /// the one being learned and the learner's own). nil = every language
+    /// the device can dictate in.
+    var localeChoices: [String]? = nil
     /// Field height, in lines. Intake narration wants room (5–10); a one-line
     /// scenario prompt wants a compact field.
     var lineRange: ClosedRange<Int> = 5...10

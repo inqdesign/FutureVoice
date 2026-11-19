@@ -162,8 +162,11 @@ enum SyncSchema {
     /// Last writer won, so the phone lost its Season 2 result and its video
     /// on the result page six minutes after the take. Every build already
     /// shipped freezes a record stamped above 1, so none can do that again.
+    ///
+    /// The tutor chat is 2 as well (2026-11-18): a message gained
+    /// `translation`, and the kind is last-writer-wins.
     static func stamp(for kind: SyncKind) -> Int {
-        kind == .speechTake ? 2 : version
+        kind == .speechTake || kind == .tutorChat ? 2 : version
     }
 
     /// Per record, for a single key added to a kind older builds already

@@ -322,20 +322,15 @@ struct TutorChatView: View {
     @Environment(\.inTalkSideColumn) private var inColumn
     @ObservedObject private var bot = TutorBot.shared
     @ObservedObject private var chat = TutorChat.shared
+    /// Tutor replies whose translation is unfolded.
+    @State private var translated: Set<UUID> = []
     @State private var draft = ""
     @State private var dictationLocale = ""
     @FocusState private var typing: Bool
     @ObservedObject private var goals = UpcomingGoalStore.shared
     @State private var addingGoal = false
     @State private var goalPage: UpcomingGoal?
-
-    private var suggestions: [String] {
-        [explain("What should I do now?"),
-         explain("Why do I keep making the same mistake?"),
-         explain("I only have 5 minutes"),
-         explain("Am I getting better?"),
-         explain("How do I reach the next level?")]
-    }
+    @State private var todayOpen = false
 
     private var tutorName: String { explain("Tutor") }
 
@@ -407,13 +402,7 @@ struct TutorChatView: View {
                 }
                 if !chat.messages.isEmpty {
                     ToolbarItem(placement: .primaryAction) {
-                        AppMenu {
-                            Button(role: .destructive) { chat.clear() } label: {
-                                Label("Clear this chat", systemImage: "trash")
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis")
-                        }
+                        moreMenu
                         .accessibilityLabel(Text("More"))
                     }
                 }
@@ -433,6 +422,7 @@ struct TutorChatView: View {
         .sheet(item: $goalPage) { goal in
             UpcomingGoalPage(goal: goal).environmentObject(appState)
         }
+        .sheet(isPresented: $todayOpen) { todaySheet.environmentObject(appState) }
         .onChange(of: goals.goals) { _, _ in bot.loadPicks(appState: appState) }
         .presentationDragIndicator(.visible)
         .onAppear {
@@ -440,10 +430,24 @@ struct TutorChatView: View {
                 dictationLocale = SpeakOrTypeField.defaultLocale(appLanguage: appState.nativeLanguage,
                                                                  targetLanguage: appState.targetLanguage)
             }
+            // This page offers two languages only: the one being learned and their own.
+            if !voiceLocales.isEmpty, !voiceLocales.contains(dictationLocale) {
+                dictationLocale = voiceLocales.last ?? dictationLocale
+            }
             chat.load(language: appState.targetLanguage)
             bot.refresh(appState: appState, visible: false)
             Analytics.capture("tutor_bot_opened")
         }
+    }
+
+    private var moreMenu: some View {
+    AppMenu {
+        Button(role: .destructive) { chat.clear() } label: {
+            Label("Clear this chat", systemImage: "trash")
+        }
+    } label: {
+        Image(systemName: "ellipsis")
+    }
     }
 
     /// What the learner is preparing for, first: the goals ahead (tap one
@@ -485,7 +489,26 @@ struct TutorChatView: View {
             DialogueLine(speaker: .user, name: chrome("You")) { Text(m.text) }
         } else {
             DialogueLine(speaker: .other, name: tutorName) {
-                Text(m.text).textSelection(.enabled)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(m.text).textSelection(.enabled)
+                    // The tutor speaks the language being learned; its words
+                    // in the learner's own are one tap away, never in the way.
+                    if let translation = m.translation {
+                        if translated.contains(m.id) {
+                            Text(translation).font(.subheadline).foregroundStyle(.secondary)
+                                .textSelection(.enabled)
+                        }
+                        Button {
+                            if !translated.insert(m.id).inserted { translated.remove(m.id) }
+                        } label: {
+                            Label(translated.contains(m.id) ? "Hide translation" : "Show translation",
+                                  systemImage: "translate")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                    }
+                }
             } accessory: {
                 if !m.actions.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
@@ -503,20 +526,21 @@ struct TutorChatView: View {
 
     /// Watch's situation box: suggestion chips above, one field whose row
     /// carries the mic, the dictation language and the send button.
+    /// The two languages the box's mic can dictate in: the one being
+    /// learned first (the tutor speaks it), then the learner's own.
+    private var voiceLocales: [String] {
+        var out: [String] = []
+        for code in [appState.targetLanguage, appState.nativeLanguage]
+        where LanguageCatalog.canDictate(code) && !out.contains(where: { LanguageCatalog.sameLanguage($0, code) }) {
+            out.append(code)
+        }
+        return out
+    }
+
     private var composer: some View {
         VStack(spacing: 0) {
             if draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
-                        ForEach(suggestions, id: \.self) { q in
-                            Button(q) { send(q) }
-                                .buttonStyle(SoftChipStyle(selected: true))
-                                .disabled(chat.thinking)
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 4)
-                }
+                shortcutChips
                 .padding(.bottom, 10)
                 .transition(.opacity)
             }
@@ -524,6 +548,7 @@ struct TutorChatView: View {
                              locale: $dictationLocale,
                              placeholder: explain("Ask me anything…"),
                              showsLocalePicker: true,
+                             localeChoices: voiceLocales,
                              lineRange: 1...5,
                              externalFocus: $typing,
                              cardBackground: Color.clear,
@@ -544,6 +569,73 @@ struct TutorChatView: View {
         }
         .padding(.top, 8)
         .animation(.easeInOut(duration: 0.2), value: draft.isEmpty)
+    }
+
+    /// Always within reach above the box (2026-11-19, founder): what the
+    /// tutor works FROM, and where the learner sets it. The goals and
+    /// today's plan open the thread, and a long conversation scrolled them
+    /// away; canned questions sat here before and read as filler.
+    private var shortcutChips: some View {
+        let ahead = goals.active(language: appState.targetLanguage)
+        let left = bot.today.left.count
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(ahead.prefix(2)) { goal in
+                    chip(goal.countdown().map { "\(goal.title) · \($0)" } ?? goal.title, "flag.fill", "goal") {
+                        goalPage = goal
+                    }
+                }
+                chip(explain("Add a goal"), "plus", "add_goal", selected: ahead.isEmpty) { addingGoal = true }
+                chip(left > 0 ? "\(explain("Today's plan")) · \(left)" : explain("Today's plan"),
+                     "checklist", "today") { todayOpen = true }
+                chip(explain("My routine"), "calendar", "routine") { bot.perform(TutorAction(type: .routine), appState: appState) }
+                chip(explain("Why are you learning?"), "target", "purposes") { bot.purposesOpen = true }
+                chip(explain("Call settings"), "slider.horizontal.3", "settings") { bot.callSettingsOpen = true }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 4)
+        }
+    }
+
+    private func chip(_ title: String, _ symbol: String, _ kind: String, selected: Bool = false,
+                      action: @escaping () -> Void) -> some View {
+        Button {
+            typing = false
+            Analytics.capture("tutor_bot_shortcut", ["kind": kind])
+            action()
+        } label: {
+            Label(title, systemImage: symbol).lineLimit(1)
+        }
+        // The box's own fill: grey on the sheet's white, the grouped card
+        // white in the Mac's Talk column, whose ground is that grey.
+        .buttonStyle(SoftChipStyle(selected: selected,
+                                   fill: inColumn ? Color(.secondarySystemGroupedBackground)
+                                                  : Color(.secondarySystemBackground)))
+    }
+
+    /// Today's plan as its own sheet: the same rows the thread opens with.
+    private var todaySheet: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(TutorCopy.opening(bot)).font(.headline)
+                    if let why = TutorCopy.why(bot.today) {
+                        Text(why).font(.subheadline).foregroundStyle(.secondary)
+                    }
+                    if !bot.picks.isEmpty || !bot.today.items.isEmpty {
+                        TutorTodayRows().padding(.top, 6)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
+            }
+            .navigationTitle(Text("Today's plan"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { BarCloseButton(action: { todayOpen = false }) }
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 
     /// The box's own CTA (`ScenarioComposerSheet.inlineCTA`): a filled

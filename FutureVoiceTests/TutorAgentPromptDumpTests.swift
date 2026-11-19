@@ -32,6 +32,14 @@ final class TutorAgentPromptDumpTests: XCTestCase {
         XCTAssertNil(decoded[1].label)
     }
 
+    /// An answer cut off mid-JSON shows what was written, never the raw JSON.
+    func testCutOffAnswerIsSalvaged() {
+        let raw = #"{"translation": "여기요.", "reply": "First line.\nShe said \"hi\" and le"#
+        XCTAssertEqual(TutorChat.salvagedReply(raw), "First line.\nShe said \"hi\" and le")
+        XCTAssertEqual(TutorChat.salvagedField("translation", in: raw), "여기요.")
+        XCTAssertNil(TutorChat.salvagedReply("Just a plain answer."))
+    }
+
     func testTodayRanksNowThenGoalThenRoutine() {
         let day = Calendar.current.startOfDay(for: Date())
         let now = day.addingTimeInterval(10 * 3600)
