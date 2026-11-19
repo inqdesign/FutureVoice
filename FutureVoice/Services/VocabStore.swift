@@ -25,7 +25,13 @@ final class VocabStore: ObservableObject {
     }
 
     /// lemma → record. Absent = not yet used/known.
-    @Published private(set) var records: [String: Record] = [:]
+    @Published private(set) var records: [String: Record] = [:] {
+        didSet { masteryRevision &+= 1 }
+    }
+    /// Moves whenever the word records, the expression records or the
+    /// dismissed expressions change: what `TalkCurriculum.build` keeps a
+    /// book's snapshot by.
+    private(set) var masteryRevision = 0
     /// Words the user collected into their notebook to keep studying.
     @Published private(set) var studying: [String] = []
     /// Words the learner took OUT of the notebook by hand.
@@ -42,7 +48,9 @@ final class VocabStore: ObservableObject {
     /// hand, snoozes it in a deck, takes it out).
     @Published private(set) var autoKept: Set<String> = []
     /// Multi-word expressions the user has used (lowercased key -> record).
-    @Published private(set) var expressionRecords: [String: Record] = [:]
+    @Published private(set) var expressionRecords: [String: Record] = [:] {
+        didSet { masteryRevision &+= 1 }
+    }
     /// Expressions the user bookmarked to keep studying — the phrase-level
     /// analogue of `studying`. Lowercased keys, newest first.
     @Published private(set) var studyingExpressions: [String] = []
@@ -59,7 +67,9 @@ final class VocabStore: ObservableObject {
     /// for letter). So the learner is the last judge, and their verdict is
     /// kept rather than just deleting the record — the next talk misheard the
     /// same way would otherwise put the same junk straight back.
-    @Published private(set) var dismissedExpressions: Set<String> = []
+    @Published private(set) var dismissedExpressions: Set<String> = [] {
+        didSet { masteryRevision &+= 1 }
+    }
     /// Session id → how many of its user texts are already folded in. A
     /// resumed talk is summarized AGAIN over its whole transcript; counting
     /// texts (instead of the old all-or-nothing session set) lets the second

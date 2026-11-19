@@ -227,6 +227,77 @@ enum TalkCurriculum {
                       proficiency: CEFRLevel,
                       shadowAttempts: [ShadowAttempt],
                       drillCards: [DrillCard]) -> Snapshot {
+        let stamp = buildStamp(session: session, proficiency: proficiency,
+                               shadowAttempts: shadowAttempts, drillCards: drillCards)
+        memoLock.lock()
+        if let hit = memo[session.id], hit.stamp == stamp {
+            memoLock.unlock()
+            return hit.snapshot
+        }
+        memoLock.unlock()
+        let snapshot = buildFresh(session: session, proficiency: proficiency,
+                                  shadowAttempts: shadowAttempts, drillCards: drillCards)
+        memoLock.lock()
+        if memo.count >= memoLimit { memo.removeAll(keepingCapacity: true) }
+        memo[session.id] = (stamp, snapshot)
+        memoLock.unlock()
+        return snapshot
+    }
+
+    // A book's last snapshot, kept while nothing it is built from has
+    // changed. Review rebuilt every talk book on every visit to the tab:
+    // about 225 ms a visit on a Mac with a few months of talks (2026-11-19).
+    // In memory only, so a launch always builds fresh.
+    private static let memoLock = NSLock()
+    private static var memo: [UUID: (stamp: Int, snapshot: Snapshot)] = [:]
+    private static let memoLimit = 600
+
+    /// Everything `buildFresh` reads: the talk's lines and summary lists,
+    /// the level, the language, the word and expression records
+    /// (`VocabStore.masteryRevision`), the shadow takes and this talk's cards.
+    private static func buildStamp(session: Session, proficiency: CEFRLevel,
+                                   shadowAttempts: [ShadowAttempt],
+                                   drillCards: [DrillCard]) -> Int {
+        var h = Hasher()
+        h.combine(session.id)
+        h.combine(session.startedAt)
+        h.combine(session.endedAt)
+        h.combine(proficiency)
+        h.combine(LanguageScope.active)
+        h.combine(VocabStore.shared.masteryRevision)
+        for t in session.turns {
+            h.combine(t.id)
+            h.combine(t.role)
+            h.combine(t.transcript)
+            h.combine(t.excludedFromScoring)
+            h.combine(t.suggestion)
+        }
+        h.combine(session.summary?.expressionsUsed)
+        h.combine(session.summary?.expressionsOffered)
+        h.combine(session.summary?.carryovers.map(\.item))
+        for p in session.summary?.phrasesUsed ?? [] {
+            h.combine(p.fluentAlternative)
+            h.combine(p.reason)
+        }
+        // Takes are appended and never re-scored, so the ends say whether
+        // the list moved.
+        h.combine(shadowAttempts.count)
+        h.combine(shadowAttempts.first?.id)
+        h.combine(shadowAttempts.last?.id)
+        for c in drillCards where c.sourceSessionId == session.id {
+            h.combine(c.id)
+            h.combine(c.box)
+            h.combine(c.lastReviewedAt)
+            h.combine(c.sourceTurnId)
+            h.combine(c.targetPhrase)
+        }
+        return h.finalize()
+    }
+
+    private static func buildFresh(session: Session,
+                                   proficiency: CEFRLevel,
+                                   shadowAttempts: [ShadowAttempt],
+                                   drillCards: [DrillCard]) -> Snapshot {
         var snap = Snapshot()
 
         // Lemma membership, not a substring regex: the pickup words ARE
