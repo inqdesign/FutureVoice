@@ -733,6 +733,9 @@ struct AccountStatus {
             let bonus: Int?
             let period_start: String?
             let period_end: String?
+            /// The moment the period ends. Servers before 2026-11-18 send
+            /// only the date above.
+            let period_end_at: String?
             let free_used: Int?
             let free_cap: Int?
             let scene_billing: String?
@@ -748,7 +751,12 @@ struct AccountStatus {
             // RPC says which via `metered_by`, and `used` is real either way.
             out.monthlyCapSeconds = talk.cap
             out.periodStart = talk.period_start.flatMap(Self.day(from:))
-            out.periodEnd = talk.period_end.flatMap(Self.day(from:))
+            // The refill is a moment, shown on the learner's own calendar.
+            // The bare date is that moment's UTC day; read as UTC midnight
+            // it was drawn a day early west of UTC ("Refills on Nov 18"
+            // for a Nov 19 renewal in Texas).
+            out.periodEnd = talk.period_end_at.flatMap(Self.timestamp(from:))
+                ?? talk.period_end.flatMap(Self.localDay(from:))
             if !out.unlimited, let cap = talk.cap { out.fullTankSeconds = cap }
         }
 
@@ -827,5 +835,15 @@ struct AccountStatus {
         f.timeZone = TimeZone(identifier: "UTC")
         f.dateFormat = "yyyy-MM-dd"
         return f.date(from: raw)
+    }
+
+    /// A bare `yyyy-MM-dd` kept as the SAME day on this phone's calendar
+    /// (noon, so no time zone can move it), for a date that is only shown.
+    private static func localDay(from raw: String) -> Date? {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = .current
+        f.dateFormat = "yyyy-MM-dd HH:mm"
+        return f.date(from: raw.prefix(10) + " 12:00")
     }
 }
