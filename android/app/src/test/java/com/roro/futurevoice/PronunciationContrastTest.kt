@@ -40,6 +40,13 @@ class PronunciationContrastTest {
         assertEquals(emptyList<String>(), PronunciationContrast.alternates("있어요", "ko.tense"))
     }
 
+    @Test fun eachMeasuredSoundHasItsSwap() {
+        assertEquals(listOf("거비 보도"), PronunciationContrast.alternates("커피 포도", "ko.asp"))
+        assertEquals(listOf("고기 거기"), PronunciationContrast.alternates("거기 고기", "ko.eoo"))
+        assertEquals(listOf("구림"), PronunciationContrast.alternates("그림", "ko.eu"))
+        assertEquals(listOf("까 가 가", "카 까 카"), PronunciationContrast.alternates("가 까 카", "ko.three"))
+    }
+
     @Test fun otherTopicsAreNotJudgedThisWay() {
         assertEquals(emptyList<String>(), PronunciationContrast.alternates("빵을 먹어요", "ko.batchim"))
         assertEquals(emptyList<String>(), PronunciationContrast.alternates("think", "en.th"))
@@ -84,6 +91,7 @@ class PronunciationContrastTest {
         assertTrue(PronunciationCall.isOffered("en"))
         assertTrue(PronunciationCall.isOffered("ko"))
         for (other in listOf("ja", "de", "es", "fr", "zh")) assertFalse(other, PronunciationCall.isOffered(other))
-        assertEquals(listOf("ko.tense"), PronunciationCourse.topics("ko").map { it.id })
+        assertEquals(listOf("ko.tense", "ko.asp", "ko.three", "ko.eoo", "ko.eu"),
+            PronunciationCourse.topics("ko").map { it.id })
     }
 }

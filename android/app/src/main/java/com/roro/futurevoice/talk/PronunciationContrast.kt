@@ -29,14 +29,30 @@ object PronunciationContrast {
     private const val INITIALS = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ"
     private val TENSE_TO_PLAIN = mapOf('ㄲ' to 'ㄱ', 'ㄸ' to 'ㄷ', 'ㅃ' to 'ㅂ', 'ㅆ' to 'ㅅ', 'ㅉ' to 'ㅈ')
 
-    private fun swaps(topicId: String): List<Map<Char, Char>>? = when (topicId) {
-        "ko.tense" -> listOf(TENSE_TO_PLAIN)
+    private val ASPIRATED_TO_PLAIN = mapOf('ㅋ' to 'ㄱ', 'ㅌ' to 'ㄷ', 'ㅍ' to 'ㅂ', 'ㅊ' to 'ㅈ')
+    private fun reversed(t: Map<Char, Char>) = t.entries.associate { it.value to it.key }
+
+    /** One alternate: the lesson's consonants and vowels → what each is
+     *  swapped for. Vowels by their index in a syllable (ㅓ 4, ㅗ 8, ㅜ 13, ㅡ 18). */
+    private data class Swap(val consonants: Map<Char, Char> = emptyMap(), val vowels: Map<Int, Int> = emptyMap())
+
+    /** Every swap here was measured on FLEURS (right / wrong / within the
+     *  margin): tense ↔ plain 926 / 11 / 150, aspirated ↔ plain 180 / 2 / 20,
+     *  ㅓ ↔ ㅗ 279 / 1 / 18, ㅡ ↔ ㅜ 244 / 2 / 21. Tense ↔ aspirated was not,
+     *  so the three-way topic compares each with plain. */
+    private fun swaps(topicId: String): List<Swap>? = when (topicId) {
+        "ko.tense" -> listOf(Swap(TENSE_TO_PLAIN))
+        "ko.asp" -> listOf(Swap(ASPIRATED_TO_PLAIN))
+        "ko.three" -> listOf(Swap(reversed(TENSE_TO_PLAIN) + ASPIRATED_TO_PLAIN + TENSE_TO_PLAIN),
+                             Swap(reversed(ASPIRATED_TO_PLAIN)))
+        "ko.eoo" -> listOf(Swap(vowels = mapOf(4 to 8, 8 to 4)))
+        "ko.eu" -> listOf(Swap(vowels = mapOf(18 to 13)))
         else -> null
     }
 
     private fun isSyllable(c: Char) = c in '가'..'힣'
     private fun initial(c: Char) = (c - '가') / 588
-    private fun rest(c: Char) = (c - '가') % 588
+    private fun vowel(c: Char) = ((c - '가') % 588) / 28
     private fun final(c: Char) = (c - '가') % 28
 
     /** The syllable before leaves the consonant as written: no final
@@ -44,13 +60,15 @@ object PronunciationContrast {
      *  said tense anyway ("짝궁" and "짝꿍" sound the same). */
     private fun leavesNextAsWritten(c: Char?): Boolean = c == null || final(c) in setOf(0, 4, 16, 21)
 
-    private fun swapped(word: String, previousWord: String?, table: Map<Char, Char>): String {
+    private fun swapped(word: String, previousWord: String?, table: Swap): String {
         val out = StringBuilder()
         var before: Char? = previousWord?.lastOrNull { isSyllable(it) }
         for (c in word) {
-            val to = if (isSyllable(c)) table[INITIALS[initial(c)]] else null
-            val ok = leavesNextAsWritten(before)
-            if (to != null && ok) out.append('가' + INITIALS.indexOf(to) * 588 + rest(c)) else out.append(c)
+            if (isSyllable(c) && leavesNextAsWritten(before)) {
+                val i = table.consonants[INITIALS[initial(c)]]?.let { INITIALS.indexOf(it) } ?: initial(c)
+                val v = table.vowels[vowel(c)] ?: vowel(c)
+                out.append('가' + (i * 588 + v * 28 + final(c)))
+            } else out.append(c)
             if (isSyllable(c)) before = c
         }
         return out.toString()
