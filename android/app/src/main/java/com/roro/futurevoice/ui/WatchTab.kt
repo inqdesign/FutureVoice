@@ -525,7 +525,22 @@ internal fun WatchTabBody(
                 existingCategories = scenarios.mapNotNull { it.category }.distinct(),
                 host = ComposerHost.WATCH,
                 mode = ComposerMode.CUSTOM,
-                onCommitted = { sc -> if (enabled) onWatch(sc.id) },
+                onCommitted = { sc ->
+                    if (enabled) {
+                        onWatch(sc.id)
+                        // The box is done once the scene is on screen. Left
+                        // open, Back from the scene landed on the box with the
+                        // situation still in it (iOS 2026-11-19). Closed after
+                        // the scene has covered it; the shared flag is set
+                        // outside this page's scope, which the scene may end.
+                        scope.launch { kotlinx.coroutines.delay(600); dockFill = ""; dockPerson = null }
+                        kotlinx.coroutines.MainScope().launch {
+                            kotlinx.coroutines.delay(600)
+                            WatchCreation.creating.value = false
+                            WatchCreation.dockPerson = null
+                        }
+                    }
+                },
                 onDismiss = {},
                 embedded = true,
                 partnerSync = dockPerson,
