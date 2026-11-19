@@ -401,3 +401,31 @@ drop trigger if exists user_subscriptions_invite_offer on public.user_subscripti
 create trigger user_subscriptions_invite_offer
   after update of renewal_offer_id, renewal_offer_type on public.user_subscriptions
   for each row execute function public.invite_reward_on_offer();
+
+-- Google Play has no renewal info on the subscription row to read, so there
+-- the app says the offer was taken, after Play's own purchase sheet said
+-- yes. Only the reward that can be taken now, and only for a Play
+-- subscriber: a false word here spends the caller's own reward and nothing
+-- else. (The App Store never goes through this: `invite_reward_on_offer`.)
+create or replace function public.invite_reward_claimed(p_id uuid, p_store text)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_store <> 'google'
+     or p_id is distinct from public.invite_claimable(auth.uid())
+     or not exists (select 1 from user_subscriptions s
+                     where s.user_id = auth.uid() and s.source = 'google') then
+    return false;
+  end if;
+  update invite_rewards
+     set status = 'claimed', claimed_at = now(), store = 'google'
+   where id = p_id and user_id = auth.uid() and status = 'ready';
+  return found;
+end;
+$$;
+
+revoke all on function public.invite_reward_claimed(uuid, text) from public, anon;
+grant execute on function public.invite_reward_claimed(uuid, text) to authenticated;
