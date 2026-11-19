@@ -1285,12 +1285,20 @@ private struct TalkHeroSection: View {
     /// the call pill's cell size, so the eventual morph onto the call screen
     /// never changes pixel scale.
     private var talkRing: some View {
-        ZStack {
+        // The stroke's width (20 until 2026-11-19, founder: thicker). Its
+        // OUTER edge stays 150 pt from the centre, where it has always been,
+        // so the ring grows inward and the page's layout does not move: the
+        // path is inset by `ringInset` and the surface shrinks to meet it.
+        let ringWidth: CGFloat = 28
+        let ringInset = ringWidth / 2 - 10
+        let ringRadius = 150 - ringWidth / 2
+        return ZStack {
             // Whisper of a track: primary at 1.5% — all but invisible. The
             // full circle is merely SENSED against the background on a good
             // display, never seen as a shape of its own.
             Circle()
-                .stroke(Color.primary.opacity(0.015), lineWidth: 20)
+                .inset(by: ringInset)
+                .stroke(Color.primary.opacity(0.015), lineWidth: ringWidth)
             // Accent, even at goal — the ring follows the app's palette
             // (green-at-goal clashed with non-green Futureself themes).
             // ONE gradient stroke: the tail FADES IN from near-transparent
@@ -1327,8 +1335,9 @@ private struct TalkHeroSection: View {
             let solidBelow = 0.12
             let fadeSpan = min(60.0 / 360, progress * 0.4)
             let fadeEnd = progress > solidBelow ? fadeSpan / max(progress, 0.001) : 0
-            let capDegrees: Double = 360 * (10 / (2 * Double.pi * 130))
+            let capDegrees: Double = 360 * Double(ringWidth / 2) / (2 * Double.pi * Double(ringRadius))
             Circle()
+                .inset(by: ringInset)
                 .trim(from: 0, to: progress)
                 .stroke(
                     AngularGradient(
@@ -1339,7 +1348,7 @@ private struct TalkHeroSection: View {
                         center: .center,
                         startAngle: .degrees(-capDegrees),
                         endAngle: .degrees(360 * progress)),
-                    style: StrokeStyle(lineWidth: 20, lineCap: .round))
+                    style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .opacity(progress > 0.005 ? 1 : 0)
             // At full progress the circle closes and the stroke loses its
@@ -1348,9 +1357,10 @@ private struct TalkHeroSection: View {
             // just past 12 over the faded tail, and its trailing edge is the
             // same full accent as the base arc, so no seam shows.
             Circle()
+                .inset(by: ringInset)
                 .trim(from: max(progress - 0.02, 0), to: progress)
                 .stroke(Color.themeAccent,
-                        style: StrokeStyle(lineWidth: 20, lineCap: .round))
+                        style: StrokeStyle(lineWidth: ringWidth, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .opacity(progress > 0.97 ? 1 : 0)
 
@@ -1403,9 +1413,8 @@ private struct TalkHeroSection: View {
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
-            // 260 = the 280 frame minus the 20 pt stroke: the surface
-            // meets the ring's inner edge with no gap.
-            .frame(width: 260, height: 260)
+            // The surface meets the ring's inner edge with no gap.
+            .frame(width: 300 - 2 * ringWidth, height: 300 - 2 * ringWidth)
             // The proxy morph needs the surface's live pose (global) —
             // reported from HERE so it tracks layout, not guesses.
             .background(GeometryReader { g in
