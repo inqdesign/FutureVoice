@@ -34,6 +34,9 @@ struct CallIsland: View {
     /// nil hides the row: a scene or a person's call keeps the way it was
     /// launched.
     let guidance: Binding<CallGuidance>?
+    /// What the row offers. Pronunciation is English only
+    /// (`PronunciationCall.isOffered`), so the call passes two elsewhere.
+    var guidanceChoices: [CallGuidance] = [.free, .tutor, .pronunciation]
     /// nil hides "Change": the topic of a scene or a person's call is theirs.
     let onChangeTopic: (() -> Void)?
     let onSettings: () -> Void
@@ -148,7 +151,7 @@ struct CallIsland: View {
             if let guidance {
                 Divider()
                 Picker("", selection: guidance) {
-                    ForEach([CallGuidance.free, .tutor, .pronunciation], id: \.self) { g in
+                    ForEach(guidanceChoices, id: \.self) { g in
                         Text(g.title).tag(g)
                     }
                 }

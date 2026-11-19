@@ -37,7 +37,23 @@ enum PronunciationCall {
         "futurevoice.pron.lastFinished.\(LanguageCatalog.base(language))"
     }
 
-    static var isOn: Bool { UserDefaults.standard.bool(forKey: key) }
+    /// English only (2026-11-19, founder). The pass bars were set on en-US
+    /// and never checked elsewhere: native voices reading the right sentence
+    /// failed in Japanese, French and Spanish, a native Korean speaker was
+    /// drilled on a word he said right, and two German learners never passed
+    /// a take. A language comes back once native recordings pass in it.
+    static func isOffered(for language: String) -> Bool {
+        LanguageCatalog.base(language) == "en"
+    }
+
+    /// The ring's page is showing AND the language being learned has one: a
+    /// key left set from an English call must not open a reading drill after
+    /// a switch to another language.
+    static var isOn: Bool {
+        UserDefaults.standard.bool(forKey: key)
+            && isOffered(for: UserDefaults.standard.string(
+                forKey: LanguageCatalog.targetLanguageDefaultsKey) ?? "en")
+    }
 
     static let sentencesPerRound = 5
     // No try limit anywhere (founder, 2026-11-04): a sentence or a word is

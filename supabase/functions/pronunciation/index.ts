@@ -73,6 +73,8 @@ const LOCALE_BY_LANGUAGE: Record<string, string> = {
 // alphabet: asked for IPA it returns no phonemes at all (measured
 // 2026-11-13). Every other locale keeps IPA.
 const NATIVE_ALPHABET_LOCALES = new Set(["zh-CN"])
+// Locales whose Azure model can't be trusted to judge a native speaker.
+const UNJUDGED_LOCALES = new Set(["ko-KR"])
 // Prosody (stress, intonation, rhythm) is assessed by Azure for en-US only.
 const PROSODY_LOCALES = new Set(["en-US"])
 
@@ -151,6 +153,22 @@ Deno.serve(async (req) => {
   if (reference.length > MAX_REFERENCE_CHARS) return errorResponse(400, "reference too long")
   const locale = localeFor(language, body.accent)
   if (!locale) return errorResponse(400, "unsupported language")
+  // Korean is not judged (2026-11-19). Azure's ko-KR model faults NATIVE
+  // speech: five native voices reading "예쁜 카페에서 …" all scored "예쁜"
+  // 34–58 and flagged it mispronounced, and the founder, a native speaker,
+  // got 37 and was drilled on it over and over. 503 is what the app reads as
+  // "no reader", so the pronunciation call judges the words at once and
+  // shadowing and speech score as they did before any assessment.
+  if (UNJUDGED_LOCALES.has(locale)) return errorResponse(503, "not_configured")
+  // The pronunciation call is judged in English only (2026-11-19, founder).
+  // Its pass bars were set on en-US and never checked elsewhere: a native
+  // voice reading the right sentence passed 0/5 in Japanese, 4/10 in French,
+  // 3/5 in Spanish, and two real German learners got 0 passes in 8 takes.
+  // Other surfaces (shadowing, speech) keep their scores: nothing there
+  // stops a learner on one.
+  if (body.surface === "pron_call" && locale !== "en-US") {
+    return errorResponse(503, "not_configured")
+  }
 
   let audio: Uint8Array
   try {
@@ -206,7 +224,11 @@ Deno.serve(async (req) => {
         "Ocp-Apim-Subscription-Key": key,
         "Content-Type": "audio/wav; codecs=audio/pcm; samplerate=16000",
         "Accept": "application/json",
-        "Pronunciation-Assessment": btoa(JSON.stringify(assessment)),
+        // UTF-8 first: `btoa` throws on anything outside Latin-1, so every
+        // Korean, Japanese and Chinese reference failed here as a 502
+        // before Azure was ever asked (2026-11-19).
+        "Pronunciation-Assessment": btoa(String.fromCharCode(
+          ...new TextEncoder().encode(JSON.stringify(assessment)))),
       },
       body: audio,
       signal: AbortSignal.timeout(20_000),

@@ -1540,6 +1540,8 @@ struct ConversationView: View {
                                callClock: (phoneCallActive || !didSaveCurrentSession) ? meter.clock : nil,
                                halfRate: pronThisCall,
                                guidance: islandCanChange ? islandGuidance : nil,
+                               guidanceChoices: PronunciationCall.isOffered(for: appState.targetLanguage)
+                                   ? [.free, .tutor, .pronunciation] : [.free, .tutor],
                                onChangeTopic: islandCanChange ? { islandChangeTopic() } : nil,
                                onSettings: { showingCallSettings = true },
                                expanded: $islandExpanded)
