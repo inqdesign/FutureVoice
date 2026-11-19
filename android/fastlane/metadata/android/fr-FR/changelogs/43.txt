@@ -1,0 +1,3 @@
+Nouveautés
+• Ton tuteur répond maintenant dans la langue que tu apprends, à ton niveau. Un appui affiche la traduction.
+• Les raccourcis au-dessus du champ du tuteur ouvrent tes prochains objectifs, le programme du jour et ta routine.
