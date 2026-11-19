@@ -52,7 +52,7 @@ fun TalkRing(
     accent: Color,
     modifier: Modifier = Modifier,
     diameter: Dp = 280.dp,
-    strokeWidth: Dp = 20.dp,
+    strokeWidth: Dp = 28.dp,
     /** The call pill's height — pins the mosaic's cell size across sizes. */
     pixelHeight: Float = 64f,
     /** 0 while the free-talk morph's proxy stands in for the surface. */
@@ -64,15 +64,15 @@ fun TalkRing(
     val p = progress.coerceIn(0f, 1f)
     val track = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.015f)
     Box(modifier.size(diameter), contentAlignment = Alignment.Center) {
-        // The stroke is CENTRED on the circle that fills [diameter], as a
-        // SwiftUI `Circle().stroke` is — half of it lies outside the frame,
-        // so the drawn ring is `diameter + strokeWidth` across (300 on the
-        // home) and its inner edge is exactly where the surface ends. An
-        // inset stroke drew a 280 ring around a smaller surface with a strip
-        // of page showing between them.
+        // The ring's OUTER edge sits 10 dp outside the frame (300 across on
+        // the home), where it was when the stroke was 20 dp and centred on
+        // the frame's circle, as iOS drew it. A thicker stroke grows INWARD
+        // (iOS `talkRing`, 28 since 2026-11-19): the arc's circle shrinks by
+        // the extra width and the surface shrinks to meet its inner edge, so
+        // nothing around the ring moves.
         Canvas(Modifier.size(diameter)) {
             val stroke = strokeWidth.toPx()
-            val d = min(size.width, size.height)
+            val d = min(size.width, size.height) + 20.dp.toPx() - stroke
             val topLeft = Offset((size.width - d) / 2f, (size.height - d) / 2f)
             val arcSize = Size(d, d)
             val c = Offset(size.width / 2f, size.height / 2f)
@@ -131,7 +131,7 @@ fun TalkRing(
         }
         Box(
             Modifier
-                .size(diameter - strokeWidth)
+                .size(diameter + 20.dp - strokeWidth * 2)
                 .then(if (onSurfaceBounds != null) Modifier.onGloballyPositioned {
                     onSurfaceBounds(it.boundsInWindow()) } else Modifier)
                 .graphicsLayer { alpha = surfaceAlpha }
