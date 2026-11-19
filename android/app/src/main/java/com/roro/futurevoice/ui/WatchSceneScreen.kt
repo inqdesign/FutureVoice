@@ -481,7 +481,7 @@ fun WatchSceneScreen(
         // iOS `userMessage`: the person block (who they are, how the two
         // address each other) stands before the learner; the overlap after.
         val commonGround = withPerson?.let {
-            com.roro.futurevoice.talk.CommonGround.block(persona, com.roro.futurevoice.talk.CommonGround.of(it))
+            CurriculumClient.afterLearnerBlock(it, persona, scenario.notes)
         } ?: ""
         val counterpartLines = withPerson?.let { CurriculumClient.counterpartLines(it, targetLanguage) } ?: ""
         // Steer the study picks toward what this learner actually gets wrong.

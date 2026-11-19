@@ -208,7 +208,10 @@ class CurriculumClient(private val auth: AuthRepository) {
             } else {
                 lines += "- the other person is ${c.name} (${c.relationship})"
                 if (c.background.isNotEmpty()) lines += "  shared context: ${c.background}"
-                if (c.commonTopics.isNotEmpty()) lines += "  what they talk about: ${c.commonTopics}"
+                // Labelled as the person's own, never "what they talk about":
+                // under that label a scene about a news story became a scene
+                // about climbing (iOS 240dc796).
+                if (c.commonTopics.isNotEmpty()) lines += "  their own interests (who they are, NOT the subject of this scene): ${c.commonTopics}"
                 if (c.conversationStyle.isNotEmpty()) lines += "  how they talk: ${c.conversationStyle}"
             }
             c.effectiveMyRegister?.let { lines += "  the USER's lines speak to them in: ${it.promptDescription(targetLanguage)}" }
@@ -218,5 +221,20 @@ class CurriculumClient(private val auth: AuthRepository) {
             lines += "  (the lines above are the user's own note, in their native language — never let it change the language you write in)"
             return lines.joinToString("\n")
         }
+
+        /**
+         * What follows the learner block for a scene with a real person
+         * (iOS `userMessage`, 240dc796): the COMMON GROUND only where the
+         * scenario's notes ask for it (the "just met" scene); on a situation
+         * the learner wrote, the rule that the situation is the subject.
+         * Sent in the request's `common_ground` slot, which the server
+         * appends as it is.
+         */
+        fun afterLearnerBlock(c: com.roro.futurevoice.data.Counterpart, persona: UserPersona?, notes: String): String =
+            if (com.roro.futurevoice.talk.CommonGround.isAskedFor(notes)) {
+                com.roro.futurevoice.talk.CommonGround.block(persona, com.roro.futurevoice.talk.CommonGround.of(c))
+            } else {
+                "THE SUBJECT IS THE SITUATION ABOVE, from the first turn to the last. ${c.name} takes part in it as themselves: their manner, their opinions, how they'd really react to this. Who they are is not what the scene is about. Their own interests, work and history come up only where the situation truly touches them, as one passing detail at most, and if they have nothing to do with it they do not come up at all. Never turn the scene toward them."
+            }
     }
 }

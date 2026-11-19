@@ -124,6 +124,12 @@ object ConversationPromptFixtures {
             clock = clock(0, null, daysBeforeCall(1)), tutor = true),
         Fixture("cast_stranger_fr_noground", "fr", "en", CefrLevel.C2, counterpart = strangerNoGround),
         Fixture("cast_public_figure_ko", "ko", "en", CefrLevel.A2, persona = thinPersona, counterpart = publicFigure),
+        // A call with a person AND a subject (iOS 240dc796).
+        Fixture("cast_own_close_topic_ko", "ko", "en", CefrLevel.B2,
+            topic = "A news story about dementia care that I read this morning", persona = fullPersona,
+            counterpart = closeFriend),
+        Fixture("cast_stranger_topic_en", "en", "ko", CefrLevel.B1,
+            topic = "Asking my landlord to fix the heating", persona = fullPersona, counterpart = stranger),
         Fixture("tutor_en_b1_lesson_ticked", "en", "ko", CefrLevel.B1, persona = fullPersona,
             tutor = true, lesson = lesson(1), ticked = true, fixes = listOf("\"I am live\" → \"I live\"")),
         Fixture("tutor_ko_a2_lesson_fixes", "ko", "en", CefrLevel.A2,

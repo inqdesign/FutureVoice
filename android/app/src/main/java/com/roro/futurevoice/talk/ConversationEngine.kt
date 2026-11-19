@@ -132,7 +132,7 @@ object ConversationEngine {
 
         // A cast call: the model IS a specific person, not the fluent self.
         val counterpartBlock = counterpart?.let {
-            ConversationCharacter.characterBlock(it, persona, targetLanguage, languageName, personHistory)
+            ConversationCharacter.characterBlock(it, persona, targetLanguage, languageName, personHistory, topic)
         } ?: ""
 
         // The very first call gets no block of its own (iOS 2026-11-10,

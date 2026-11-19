@@ -171,6 +171,14 @@ let fixtures: [Fixture] = [
     Fixture(name: "cast_stranger_fr_noground", target: "fr", native: "en", level: .c2, counterpart: strangerNoGround),
     Fixture(name: "cast_public_figure_ko", target: "ko", native: "en", level: .a2, persona: thinPersona,
             counterpart: publicFigure),
+    // A call with a person AND a subject (iOS 240dc796): it starts on the
+    // subject, with no "own life" opening and no COMMON GROUND.
+    Fixture(name: "cast_own_close_topic_ko", target: "ko", native: "en", level: .b2,
+            topic: "A news story about dementia care that I read this morning", persona: fullPersona,
+            counterpart: closeFriend),
+    Fixture(name: "cast_stranger_topic_en", target: "en", native: "ko", level: .b1,
+            topic: "Asking my landlord to fix the heating", persona: fullPersona,
+            counterpart: stranger),
     Fixture(name: "tutor_en_b1_lesson_ticked", target: "en", native: "ko", level: .b1, persona: fullPersona,
             tutor: true, lesson: lesson(done: 1), ticked: true, fixes: ["\"I am live\" → \"I live\""]),
     Fixture(name: "tutor_ko_a2_lesson_fixes", target: "ko", native: "en", level: .a2,

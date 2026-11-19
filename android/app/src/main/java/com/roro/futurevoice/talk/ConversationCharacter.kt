@@ -28,12 +28,19 @@ object ConversationCharacter {
 
     /** The block that casts the model AS [c] (iOS `characterBlock`). */
     fun characterBlock(c: Counterpart, persona: UserPersona?, targetLanguage: String, languageName: String,
-                       history: PersonHistory? = null): String =
-        when (c.cast) {
-            CounterpartCast.OWN_PERSON -> ownPersonBlock(c, targetLanguage, languageName)
-            CounterpartCast.STRANGER -> strangerBlock(c, persona, targetLanguage, languageName, history != null)
+                       history: PersonHistory? = null, subject: String = ""): String {
+        // The person is who is talking; the learner's situation is what the
+        // call is about (iOS 240dc796). A "just met" scenario has no subject
+        // of its own: its notes ask for the common ground by name.
+        val hasSubject = subject.isNotBlank() && !CommonGround.isAskedFor(subject)
+        val block = when (c.cast) {
+            CounterpartCast.OWN_PERSON -> ownPersonBlock(c, targetLanguage, languageName, hasSubject)
+            CounterpartCast.STRANGER -> strangerBlock(c, persona, targetLanguage, languageName, history != null, hasSubject)
             CounterpartCast.PUBLIC_FIGURE -> publicFigureBlock(c, targetLanguage, languageName, history != null)
-        } + (history?.promptBlock(c.name, languageName) ?: "")
+        }
+        return block + "\n\n" + ConversationPrompt.personIsNotTheSubject(hasSubject) +
+            (history?.promptBlock(c.name, languageName) ?: "")
+    }
 
     /**
      * What a cast person is told about the user. Someone close to the learner
@@ -90,7 +97,8 @@ object ConversationCharacter {
     // MARK: - The three blocks
 
     /** Someone from the learner's own life: they KNOW each other. */
-    private fun ownPersonBlock(c: Counterpart, targetLanguage: String, languageName: String): String {
+    private fun ownPersonBlock(c: Counterpart, targetLanguage: String, languageName: String,
+                               hasSubject: Boolean): String {
         val facts = listOfNotNull(
             if (c.relationship.isEmpty()) null else "Who you are to the user: ${c.relationship}",
             if (c.howWeMet.isEmpty()) null else "How you met: ${c.howWeMet}",
@@ -102,12 +110,12 @@ object ConversationCharacter {
         ).joinToString("\n") { "- $it" }
         val tone = if (c.isClose) ConversationPrompt.TONE_CLOSE else ConversationPrompt.TONE_DISTANT
         return ConversationPrompt.ownPersonBlock(c.name, facts,
-            addressBlock(c, targetLanguage, languageName), tone, languageName)
+            addressBlock(c, targetLanguage, languageName), tone, languageName, hasSubject)
     }
 
     /** A Find-people persona: a new acquaintance. */
     private fun strangerBlock(c: Counterpart, persona: UserPersona?, targetLanguage: String, languageName: String,
-                              metBefore: Boolean): String {
+                              metBefore: Boolean, hasSubject: Boolean): String {
         val facets = listOfNotNull(
             if (c.location.isEmpty()) null else "Where: ${c.location}",
             if (c.commonTopics.isEmpty()) null else "Their usual topics: ${c.commonTopics}",
@@ -115,7 +123,7 @@ object ConversationCharacter {
         ).joinToString("\n") { "- $it" }
         return ConversationPrompt.strangerBlock(c.name, facets, c.intro.ifEmpty { c.background },
             addressBlock(c, targetLanguage, languageName),
-            CommonGround.block(persona, CommonGround.of(c)), languageName, metBefore)
+            if (hasSubject) "" else CommonGround.block(persona, CommonGround.of(c)), languageName, metBefore, hasSubject)
     }
 
     /**

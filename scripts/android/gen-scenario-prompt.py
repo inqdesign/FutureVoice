@@ -33,7 +33,7 @@ CONV = show("FutureVoice/Services/ConversationEngine.swift")
 COACHING = show("FutureVoice/Services/CoachingLanguage.swift")
 
 pin({
-    "userMessage": (func_body(ENGINE, "userMessage"), "1d736265f29a"),
+    "userMessage": (func_body(ENGINE, "userMessage"), "284c042cc80b"),
     "isBuiltin": (func_body(ENGINE, "isBuiltin"), "dfe080434b85"),
     "generate": (func_body(ENGINE, "generate"), "fae0ac88109e"),
     "systemPrompt (wrapper)": (func_body(ENGINE, "systemPrompt").split('return """')[0], "8eced5f9a8c6"),

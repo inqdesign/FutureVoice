@@ -44,6 +44,13 @@ object CommonGround {
     }
 
     /** The block to splice into a prompt. Never invents an overlap. */
+    /**
+     * Whether a scenario's own text asks for the common ground as its subject
+     * (the "just met" scenario's notes do). Everywhere else the learner's
+     * situation is the subject and the block is left out (iOS 240dc796).
+     */
+    fun isAskedFor(text: String): Boolean = text.contains("COMMON GROUND")
+
     /** iOS `CommonGround.block` — the text is generated ([ConversationPrompt]). */
     fun block(learner: UserPersona?, other: Party): String {
         val shared = between(learner, other)
