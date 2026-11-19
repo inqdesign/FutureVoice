@@ -11,20 +11,69 @@ package com.roro.futurevoice.talk
  * sentence as written and against the sentence with the lesson's sound
  * swapped for the one it is confused with ("빵을" → "방을"). Whichever
  * spelling scores higher on that word is what was said. On the same words:
- * right 926, wrong 11, and 150 within [MARGIN], which passes. A take is
+ * right 926, wrong 11, and 150 within the margin, which passes. A take is
  * never failed on a guess.
  */
 object PronunciationContrast {
-    /** A spelling must beat the other by more than this on the word. */
-    const val MARGIN = 5
+    /** A spelling must beat the other by more than this on the word. Per
+     *  language, set where a native reading is almost never taken for the
+     *  other sound: Korean 5, Spanish and French 10, Japanese and German 15. */
+    fun margin(locale: String): Int = when (locale.take(2)) {
+        "ko" -> 5
+        "ja", "de" -> 15
+        else -> 10
+    }
     const val MAX_ALTERNATES = 2
 
     /** Topics judged by comparison. A topic is added once its own swap has
      *  been measured on native recordings. */
-    fun isOffered(topicId: String): Boolean = swaps(topicId) != null
+    fun isOffered(topicId: String): Boolean =
+        swaps(topicId) != null || wordRules(topicId) != null || occurrenceRule(topicId) != null
 
     /** The languages with at least one such topic. */
-    fun isOfferedLanguage(language: String): Boolean = language.substringBefore('-') == "ko"
+    fun isOfferedLanguage(language: String): Boolean =
+        language.substringBefore('-') in setOf("ko", "es", "fr", "ja", "de")
+
+    // Spanish, French, German: a swap inside a word.
+
+    /** A spelling swap inside one word. [minLength] keeps it off the short
+     *  function words it was not measured on. */
+    private data class WordRule(val pattern: Regex, val replacement: String, val minLength: Int = 3)
+
+    /** One list per alternate; the measurements are on iOS
+     *  `PronunciationContrast.wordRules`. */
+    private fun wordRules(topicId: String): List<List<WordRule>>? {
+        val v = "aeiouáéíóú"
+        return when (topicId) {
+            "es.rr" -> listOf(listOf(WordRule(Regex("rr"), "r")))
+            "es.r" -> listOf(listOf(WordRule(Regex("(?<=[$v])r(?=[$v])"), "rr")))
+            "es.ny" -> listOf(listOf(WordRule(Regex("ñ"), "n")))
+            "es.j" -> listOf(listOf(WordRule(Regex("j(?=[$v])|g(?=[eiéí])"), "y")))
+            "fr.u" -> listOf(listOf(WordRule(Regex("(?<![aeoqgé])u(?![inmeé])"), "ou", 4)))
+            "fr.eu" -> listOf(listOf(WordRule(Regex("(?<![aœ])eu(?![xi])"), "ou", 4)))
+            "de.ue" -> listOf(listOf(WordRule(Regex("ü"), "u", 4)))
+            "de.oe" -> listOf(listOf(WordRule(Regex("ö"), "o")))
+            "de.eiie" -> listOf(listOf(WordRule(Regex("ei"), "ie")), listOf(WordRule(Regex("ie"), "ei")))
+            "de.ich" -> listOf(listOf(WordRule(Regex("(?<=[eiäöülnr])ch(?!s)"), "sch")))
+            "fr.nasal" -> listOf(listOf(WordRule(Regex("an(?![aeiouynm])"), "on", 4)),
+                                 listOf(WordRule(Regex("on(?![aeiouynm])"), "an", 4)))
+            else -> null
+        }
+    }
+
+    private fun applying(rules: List<WordRule>, word: String): String {
+        var out = word
+        for (rule in rules) if (out.codePointCount(0, out.length) >= rule.minLength) out = rule.pattern.replace(out, rule.replacement)
+        return out
+    }
+
+    /** Japanese: the beat the lesson is about, removed, one occurrence per
+     *  alternate. The long mark only after katakana, where it is written. */
+    private fun occurrenceRule(topicId: String): Regex? = when (topicId) {
+        "ja.long" -> Regex("(?<=[ァ-ヴ])ー")
+        "ja.tsu" -> Regex("[っッ]")
+        else -> null
+    }
 
     private const val INITIALS = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ"
     private val TENSE_TO_PLAIN = mapOf('ㄲ' to 'ㄱ', 'ㄸ' to 'ㄷ', 'ㅃ' to 'ㅂ', 'ㅆ' to 'ㅅ', 'ㅉ' to 'ㅈ')
@@ -77,9 +126,19 @@ object PronunciationContrast {
     /** [text] with the topic's sound swapped in every word that carries it:
      *  one sentence per swap, the same number of words as [text]. */
     fun alternates(text: String, topicId: String): List<String> {
-        val tables = swaps(topicId) ?: return emptyList()
+        occurrenceRule(topicId)?.let { re ->
+            return re.findAll(text).take(MAX_ALTERNATES).map { text.removeRange(it.range) }.toList()
+        }
         val words = text.split(' ').filter { it.isNotEmpty() }
         val out = mutableListOf<String>()
+        wordRules(topicId)?.let { lists ->
+            for (rules in lists.take(MAX_ALTERNATES)) {
+                val alt = words.joinToString(" ") { applying(rules, it) }
+                if (alt != text && alt !in out) out.add(alt)
+            }
+            return out
+        }
+        val tables = swaps(topicId) ?: return emptyList()
         for (table in tables.take(MAX_ALTERNATES)) {
             val alt = words.mapIndexed { i, w -> swapped(w, words.getOrNull(i - 1), table) }.joinToString(" ")
             if (alt != text && alt !in out) out.add(alt)
@@ -90,9 +149,15 @@ object PronunciationContrast {
     data class Miss(val word: String, val cameOutAs: String, val gap: Int)
 
     /** Every word where an alternate beat the reference by more than
-     *  [MARGIN], the widest gap first. */
+     *  the margin, the widest gap first. */
     fun misses(result: PronunciationResult): List<Miss> {
         val reference = result.referenceWords
+        val margin = margin(result.locale)
+        if (result.locale.startsWith("ja")) {
+            return result.alternates.orEmpty().mapNotNull { alt ->
+                unspacedMiss(reference, alt.words.filter { it.error != "Insertion" }, margin)
+            }.sortedByDescending { it.gap }
+        }
         val best = mutableMapOf<Int, Miss>()
         for (alt in result.alternates.orEmpty()) {
             val other = alt.words.filter { it.error != "Insertion" }
@@ -101,10 +166,49 @@ object PronunciationContrast {
                 if (PronunciationJudge.key(r.word) == PronunciationJudge.key(a.word)) return@forEachIndexed
                 if (!r.isJudged || a.error == "Omission") return@forEachIndexed
                 val gap = (a.accuracy ?: return@forEachIndexed) - (r.accuracy ?: return@forEachIndexed)
-                if (gap > MARGIN && gap > (best[i]?.gap ?: 0)) best[i] = Miss(r.word, a.word, gap)
+                if (gap > margin && gap > (best[i]?.gap ?: 0)) best[i] = Miss(r.word, a.word, gap)
             }
         }
         return best.values.sortedByDescending { it.gap }
+    }
+
+    private class Piece(val letters: String, val word: String, val accuracy: Int?)
+
+    /** A language written without spaces: the two reads are cut into words
+     *  differently ("立っ · て" against "立て"), so they are lined up by
+     *  letter, and the words that cover the one change are compared, the
+     *  lowest score on each side. */
+    private fun unspacedMiss(reference: List<PronunciationResult.Word>,
+                             other: List<PronunciationResult.Alternate.Scored>, margin: Int): Miss? {
+        val mine = reference.map { Piece(PronunciationJudge.key(it.word), it.word, if (it.isJudged) it.accuracy else null) }
+        val theirs = other.map { Piece(PronunciationJudge.key(it.word), it.word, if (it.error == "Omission") null else it.accuracy) }
+        val t = mine.joinToString("") { it.letters }
+        val a = theirs.joinToString("") { it.letters }
+        if (t == a || t.isEmpty() || a.isEmpty()) return null
+        var p = 0
+        while (p < minOf(t.length, a.length) && t[p] == a[p]) p++
+        var s = 0
+        while (s < minOf(t.length, a.length) - p && t[t.length - 1 - s] == a[a.length - 1 - s]) s++
+        fun covering(words: List<Piece>, lo: Int, hi: Int): Pair<String, Int>? {
+            var position = 0
+            val text = StringBuilder()
+            var lowest: Int? = null
+            for (w in words) {
+                val start = position
+                val end = position + w.letters.length
+                position = end
+                val hit = if (hi > lo) start < hi && end > lo else (start < lo && lo <= end) || (lo == 0 && start == 0)
+                if (!hit) continue
+                val accuracy = w.accuracy ?: return null
+                text.append(w.word)
+                lowest = minOf(lowest ?: accuracy, accuracy)
+            }
+            return lowest?.let { text.toString() to it }
+        }
+        val (word, score) = covering(mine, p, t.length - s) ?: return null
+        val (otherWord, otherScore) = covering(theirs, p, a.length - s) ?: return null
+        if (otherScore - score <= margin) return null
+        return Miss(word, otherWord, otherScore - score)
     }
 
     /** Off script, a word left out, or the lesson's sound said as the other

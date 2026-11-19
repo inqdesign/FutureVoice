@@ -182,7 +182,7 @@ object PronunciationCourse {
             )
             "ja" -> listOf(
                 Chapter("ja.len", "waveform", vowels, listOf(
-                    t("ja.long", "ー", "おばさん · おばあさん · ビル · ビール", emptyList(), "long vowels (おばさん/おばあさん, ビル/ビール): a long vowel takes twice the time"),
+                    t("ja.long", "ー", "おばさん · おばあさん · ビル · ビール", emptyList(), "long vowels (おばさん/おばあさん, ビル/ビール): a long vowel takes twice the time. Every sentence carries a loanword written in katakana with ー (ビール, コーヒー, スーパー): that is the long vowel the app can check"),
                     t("ja.tsu", "っ", "きって · きて · まって", emptyList(), "the small っ (きって/きて): a short pause, one beat long, before the next sound"),
                     t("ja.n", "ん", "ほん · きんえん · せんせい", emptyList(), "ん is a full beat of its own (ほん, きんえん)"),
                 )),

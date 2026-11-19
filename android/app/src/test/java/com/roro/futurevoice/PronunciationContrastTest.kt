@@ -47,6 +47,43 @@ class PronunciationContrastTest {
         assertEquals(listOf("까 가 가", "카 까 카"), PronunciationContrast.alternates("가 까 카", "ko.three"))
     }
 
+    @Test fun spanishFrenchGermanSwapInsideTheWord() {
+        assertEquals(listOf("Mi pero es caro."), PronunciationContrast.alternates("Mi perro es caro.", "es.rr"))
+        assertEquals(listOf("Mi perro es carro."), PronunciationContrast.alternates("Mi perro es caro.", "es.r"))
+        assertEquals(listOf("El nino come jamón."), PronunciationContrast.alternates("El niño come jamón.", "es.ny"))
+        assertEquals(listOf("La yente come yamón."), PronunciationContrast.alternates("La gente come jamón.", "es.j"))
+        assertEquals(listOf("Tu es sur la voitoure."), PronunciationContrast.alternates("Tu es sur la voiture.", "fr.u"))
+        assertEquals(listOf("Le professour est soul."), PronunciationContrast.alternates("Le professeur est seul.", "fr.eu"))
+        assertEquals(listOf("Pendont la chonson", "Pendant la chansan"),
+            PronunciationContrast.alternates("Pendant la chanson", "fr.nasal"))
+        assertEquals(listOf("Ich bin mude für heute."), PronunciationContrast.alternates("Ich bin müde für heute.", "de.ue"))
+        assertEquals(listOf("Mien Wien in Wien", "Mein Wein in Wein"),
+            PronunciationContrast.alternates("Mein Wein in Wien", "de.eiie"))
+        assertEquals(listOf("Ich mag die Kirsche nischt, auch."),
+            PronunciationContrast.alternates("Ich mag die Kirche nicht, auch.", "de.ich"))
+    }
+
+    @Test fun japaneseTakesOneBeatOutPerAlternate() {
+        assertEquals(listOf("ビルとコーヒーをください。", "ビールとコヒーをください。"),
+            PronunciationContrast.alternates("ビールとコーヒーをください。", "ja.long"))
+        assertEquals(listOf("切手を買て待っています。", "切手を買って待ています。"),
+            PronunciationContrast.alternates("切手を買って待っています。", "ja.tsu"))
+        assertEquals(emptyList<String>(), PronunciationContrast.alternates("おばあさんが来ました。", "ja.long"))
+    }
+
+    @Test fun japaneseIsLinedUpByLetter() {
+        fun ja(words: List<Pair<String, Int>>, alt: List<Pair<String, Int>>) =
+            PronunciationResult(score = 80, accuracy = 80, fluency = 80, completeness = 100, locale = "ja-JP",
+                words = words.map { word(it.first, it.second) },
+                alternates = listOf(PronunciationResult.Alternate("", alt.map { PronunciationResult.Alternate.Scored(it.first, it.second) })))
+        fun v(r: PronunciationResult) = PronunciationJudge.verdict(r, line, "", emptyList(), "ja")
+        assertEquals(Verdict.Pass(80), v(ja(listOf("先頭" to 85, "に" to 97, "立っ" to 94, "て" to 94, "歌い" to 82),
+            listOf("先頭" to 85, "に" to 94, "立て" to 8, "歌い" to 82))))
+        assertEquals(Verdict.NotYet("立っ", null, 80, "立て"), v(ja(listOf("先頭" to 85, "に" to 97, "立っ" to 40, "て" to 90, "歌い" to 82),
+            listOf("先頭" to 85, "に" to 94, "立て" to 92, "歌い" to 82))))
+        assertEquals(Verdict.Pass(80), v(ja(listOf("ビール" to 78, "を" to 97), listOf("ビル" to 90, "を" to 97))))
+    }
+
     @Test fun otherTopicsAreNotJudgedThisWay() {
         assertEquals(emptyList<String>(), PronunciationContrast.alternates("빵을 먹어요", "ko.batchim"))
         assertEquals(emptyList<String>(), PronunciationContrast.alternates("think", "en.th"))
@@ -90,7 +127,13 @@ class PronunciationContrastTest {
     @Test fun onlyMeasuredSoundsAreOffered() {
         assertTrue(PronunciationCall.isOffered("en"))
         assertTrue(PronunciationCall.isOffered("ko"))
-        for (other in listOf("ja", "de", "es", "fr", "zh")) assertFalse(other, PronunciationCall.isOffered(other))
+        for (other in listOf("ja", "de", "es", "fr")) assertTrue(other, PronunciationCall.isOffered(other))
+        assertFalse(PronunciationCall.isOffered("zh"))
+        assertEquals(listOf("es.rr", "es.r", "es.j", "es.ny"), PronunciationCourse.topics("es").map { it.id })
+        assertEquals(listOf("fr.u", "fr.nasal", "fr.eu"), PronunciationCourse.topics("fr").map { it.id })
+        assertEquals(listOf("de.eiie", "de.ich", "de.oe", "de.ue"), PronunciationCourse.topics("de").map { it.id }.sorted())
+        assertEquals(listOf("ja.long", "ja.tsu"), PronunciationCourse.topics("ja").map { it.id })
+        assertEquals(emptyList<String>(), PronunciationCourse.topics("zh").map { it.id })
         assertEquals(listOf("ko.tense", "ko.asp", "ko.three", "ko.eoo", "ko.eu"),
             PronunciationCourse.topics("ko").map { it.id })
     }
