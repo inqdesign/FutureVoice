@@ -239,7 +239,8 @@ enum ConversationEngine {
         // `characterBlock` (ConversationEngine+Character.swift).
         let counterpartBlock = counterpart.map {
             characterBlock($0, persona: persona, targetLanguage: targetLanguage,
-                           languageName: languageName, history: personHistory)
+                           languageName: languageName, history: personHistory,
+                           subject: topic)
         } ?? ""
 
         // The very first call gets NO block of its own (2026-11-10, founder:

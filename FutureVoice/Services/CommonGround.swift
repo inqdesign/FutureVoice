@@ -64,6 +64,11 @@ enum CommonGround {
     /// The block to splice into a prompt. Never invents an overlap: when
     /// there is none it says what to do instead, because "find common ground"
     /// with nothing in common is exactly what produced the odd topics.
+    /// Whether a scenario's own text asks for the common ground as its
+    /// subject (the "just met" scenario's notes do). Everywhere else the
+    /// learner's situation is the subject and the block is left out.
+    static func isAskedFor(in text: String) -> Bool { text.contains("COMMON GROUND") }
+
     static func block(learner: UserPersona?, counterpart: Counterpart) -> String {
         let shared = between(learner: learner, counterpart: counterpart)
         guard !shared.isEmpty else {

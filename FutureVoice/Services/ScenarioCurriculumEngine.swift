@@ -187,7 +187,7 @@ enum ScenarioCurriculumEngine {
     /// lost call, not a shorter one.
     static let sceneMaxTokens = 3000
 
-    private static func systemPrompt(targetLanguage: String, proficiency: CEFRLevel) -> String {
+    static func systemPrompt(targetLanguage: String, proficiency: CEFRLevel) -> String {
         let languageName = LanguageCatalog.englishName(targetLanguage)
         let band = ConversationEngine.speechScale(for: proficiency)
         return """
@@ -272,7 +272,7 @@ enum ScenarioCurriculumEngine {
         c.remoteId?.hasPrefix("builtin:") ?? false
     }
 
-    private static func userMessage(
+    static func userMessage(
         scenario: Scenario,
         persona: UserPersona?,
         counterpart: Counterpart?,
@@ -345,10 +345,11 @@ enum ScenarioCurriculumEngine {
             } else {
                 lines.append("- the other person is \(c.name) (\(c.relationship))")
                 if !c.background.isEmpty { lines.append("  shared context: \(c.background)") }
-                // Their topics and manner: the hooks that make a scene belong to
-                // THIS person. Without them every counterpart reads the same and
-                // the scene drifts back to generic small talk.
-                if !c.commonTopics.isEmpty { lines.append("  what they talk about: \(c.commonTopics)") }
+                // Their interests and manner make the counterpart THIS
+                // person. Labelled as the person's own, never as "what they
+                // talk about": under that label a scene about a news story
+                // became a scene about climbing (2026-11-19).
+                if !c.commonTopics.isEmpty { lines.append("  their own interests (who they are, NOT the subject of this scene): \(c.commonTopics)") }
                 if !c.conversationStyle.isEmpty { lines.append("  how they talk: \(c.conversationStyle)") }
             }
             // How the two address each other — BOTH sides, because the
@@ -395,9 +396,26 @@ enum ScenarioCurriculumEngine {
         // nothing telling the model to cross them, so the scene's subject came
         // off one side at random. What two people who just met actually talk
         // about is the overlap.
+        // Only where the scenario has no subject of its own (the "just met"
+        // scene asks for the common ground by name). On a situation the
+        // learner wrote, "COMMON GROUND: start here" outranked it and the
+        // scene was about the person's interests instead (2026-11-19).
         if let c = counterpart, !isBuiltin(c) {
             lines.append("")
-            lines.append(CommonGround.block(learner: persona, counterpart: c))
+            if CommonGround.isAskedFor(in: scenario.notes) {
+                lines.append(CommonGround.block(learner: persona, counterpart: c))
+            } else {
+                lines.append("""
+                THE SUBJECT IS THE SITUATION ABOVE, from the first turn to the \
+                last. \(c.name) takes part in it as themselves: their manner, \
+                their opinions, how they'd really react to this. Who they are \
+                is not what the scene is about. Their own interests, work and \
+                history come up only where the situation truly touches them, \
+                as one passing detail at most, and if they have nothing to do \
+                with it they do not come up at all. Never turn the scene \
+                toward them.
+                """)
+            }
         }
         // Steer the study picks toward what this learner actually gets wrong,
         // so the book's words/expressions target known gaps — not generic ones.
