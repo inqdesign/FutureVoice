@@ -43,7 +43,18 @@ object PronunciationCall {
 
     private fun prefs(context: Context) = context.getSharedPreferences("futurevoice", Context.MODE_PRIVATE)
 
-    fun isOn(context: Context): Boolean = prefs(context).getBoolean(KEY, false)
+    /**
+     * English only (iOS `PronunciationCall.isOffered`, founder 2026-11-19).
+     * The pass bars were set on en-US and never checked elsewhere: native
+     * voices reading the right sentence failed in Japanese, French and
+     * Spanish, and a native Korean speaker was drilled on a word he said
+     * right. A language comes back once native recordings pass in it.
+     */
+    fun isOffered(language: String): Boolean = language.substringBefore('-') == "en"
+
+    /** The ring's page is showing AND the language being learned has one. */
+    fun isOn(context: Context): Boolean = prefs(context).getBoolean(KEY, false) &&
+        isOffered(prefs(context).getString("futurevoice.targetLanguage", null) ?: "en")
     fun set(context: Context, on: Boolean) = prefs(context).edit().putBoolean(KEY, on).apply()
 
     fun rememberTopic(context: Context, language: String, topicId: String) =

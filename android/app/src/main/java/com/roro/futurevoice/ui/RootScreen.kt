@@ -2787,16 +2787,18 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
         // tutor switch — the same key Call settings writes, each follows the
         // other. Pronunciation isn't built yet and leaves the mode as it was.
         val ringScope = androidx.compose.runtime.rememberCoroutineScope()
+        // Pronunciation is English only (`PronunciationCall.isOffered`).
+        val modes = remember(state.targetLanguage) { TalkRingMode.offered(state.targetLanguage) }
         val pager = androidx.compose.foundation.pager.rememberPagerState(
-            initialPage = TalkRingMode.current(context).ordinal) { TalkRingMode.entries.size }
-        LaunchedEffect(pager) {
+            initialPage = modes.indexOf(TalkRingMode.current(context)).coerceAtLeast(0)) { modes.size }
+        LaunchedEffect(pager, modes) {
             var first = true
             androidx.compose.runtime.snapshotFlow { pager.currentPage }.collect { page ->
                 if (first) { first = false; return@collect }
                 // The pronunciation page is its own key and leaves tutor mode
                 // as it was: it is a different call, not a setting of the
                 // talk (iOS ffaf0c58).
-                val m = TalkRingMode.entries[page]
+                val m = modes.getOrNull(page) ?: return@collect
                 com.roro.futurevoice.talk.PronunciationCall.set(context, m == TalkRingMode.PRONUNCIATION)
                 when (m) {
                     TalkRingMode.FREE_TALK -> com.roro.futurevoice.talk.TutorMode.set(context, false)
@@ -2807,13 +2809,13 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
             }
         }
         // Flipped from Call settings: the ring follows.
-        androidx.compose.runtime.DisposableEffect(Unit) {
+        androidx.compose.runtime.DisposableEffect(modes) {
             val prefs = context.getSharedPreferences("futurevoice", android.content.Context.MODE_PRIVATE)
             val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
                 if (key != com.roro.futurevoice.talk.TutorMode.KEY) return@OnSharedPreferenceChangeListener
-                if (TalkRingMode.entries[pager.currentPage] == TalkRingMode.PRONUNCIATION) return@OnSharedPreferenceChangeListener
-                val target = TalkRingMode.current(context).ordinal
-                if (target != pager.currentPage) ringScope.launch { pager.scrollToPage(target) }
+                if (modes.getOrNull(pager.currentPage) == TalkRingMode.PRONUNCIATION) return@OnSharedPreferenceChangeListener
+                val target = modes.indexOf(TalkRingMode.current(context))
+                if (target >= 0 && target != pager.currentPage) ringScope.launch { pager.scrollToPage(target) }
             }
             prefs.registerOnSharedPreferenceChangeListener(listener)
             onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
@@ -2842,14 +2844,15 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
             fun subFor(m: TalkRingMode) = if (m == TalkRingMode.PRONUNCIATION) pronHeadline else sub
             // The morph's proxy wears the CURRENT page's two lines, so the
             // hand-off never swaps "Tutor" for "Let's talk" mid-flight.
-            val currentLabel = stringResource(TalkRingMode.entries[pager.currentPage].title)
-            val currentSub = subFor(TalkRingMode.entries[pager.currentPage])
+            val currentMode = modes.getOrElse(pager.currentPage) { TalkRingMode.FREE_TALK }
+            val currentLabel = stringResource(currentMode.title)
+            val currentSub = subFor(currentMode)
             androidx.compose.runtime.SideEffect { TalkMorph.ringLabel = currentLabel; TalkMorph.ringSub = currentSub }
             androidx.compose.foundation.pager.HorizontalPager(
                 state = pager,
                 modifier = Modifier.fillMaxSize(),
             ) { page ->
-                val m = TalkRingMode.entries[page]
+                val m = modes.getOrElse(page) { TalkRingMode.FREE_TALK }
                 // INSIDE the circle: what the tap does, and the day's one
                 // number under it (or "Coming soon" on a page with no call).
                 Column(
@@ -2884,8 +2887,8 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
                 .clearAndSetSemantics {},
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            TalkRingMode.entries.forEach { m ->
-                val on = m.ordinal == pager.currentPage
+            modes.forEachIndexed { i, _ ->
+                val on = i == pager.currentPage
                 val alpha by androidx.compose.animation.core.animateFloatAsState(
                     if (on) 1f else 0.2f, androidx.compose.animation.core.tween(200), label = "ringDot")
                 Box(Modifier.size(6.dp).background(
@@ -2910,6 +2913,11 @@ enum class TalkRingMode(@androidx.annotation.StringRes val title: Int) {
     val isAvailable: Boolean get() = true
 
     companion object {
+        /** The pages the ring has for a target language. */
+        fun offered(language: String): List<TalkRingMode> = entries.filter {
+            it != PRONUNCIATION || com.roro.futurevoice.talk.PronunciationCall.isOffered(language)
+        }
+
         /** What the ring shows on launch — the last mode the learner swiped to. */
         fun current(context: android.content.Context): TalkRingMode = when {
             com.roro.futurevoice.talk.PronunciationCall.isOn(context) -> PRONUNCIATION
