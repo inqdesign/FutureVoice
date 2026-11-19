@@ -66,6 +66,13 @@ class TutorAgentTest {
         assertTrue(TutorChat.rules("en", "en").contains("No \"translation\"."))
     }
 
+    /** A quiz is a button (iOS 40b95f3f): the action decodes, and the manual says so. */
+    @Test fun theMistakeQuizIsAButton() {
+        val a = TutorAction.decode(kotlinx.serialization.json.Json.parseToJsonElement("{\"type\":\"mistakeQuiz\"}"))
+        assertEquals(TutorAction.Kind.MISTAKE_QUIZ, a?.type)
+        assertTrue(TutorAgentPrompts.protocolBlock.contains("A QUIZ IS A BUTTON, NEVER TEXT"))
+    }
+
     /** A reply cut off mid-JSON shows what was written, never raw JSON (iOS 183419f0). */
     @Test fun aCutOffReplyIsSalvaged() {
         assertEquals("Hello.\nSay \"hi\"", TutorChat.salvagedReply("{\"reply\": \"Hello.\\nSay \\\"hi\\\"\\"))

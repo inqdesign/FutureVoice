@@ -527,4 +527,119 @@ object QuickQuizStock {
         return Stored(kind = it.kind, point = clean(it.point), tip = clean(it.tip ?: ""), sentence = sentence,
             answer = answer, wrong = wrong, createdAt = System.currentTimeMillis())
     }
+
+    // ── A quiz made to order from the learner's own mistakes
+
+    // The quiz the tutor hands over when asked for one "from my mistakes"
+    // (iOS 40b95f3f, founder: a quiz written into the chat as text is worth
+    // nothing; it has to be tapped through). Each question is a NEW sentence
+    // on the point of one correction from their last week of talks, written
+    // and then checked like every stock question ([validated], [check]), so a
+    // misheard line never becomes the right answer. Nothing is stored: it is
+    // written when the button is tapped, for that sitting.
+
+    data class Mistake(val was: String, val now: String, val why: String)
+
+    const val MISTAKE_QUIZ_SIZE = 8
+    /** Under this many corrections in the last week, the window widens. */
+    const val MISTAKE_QUIZ_THIN = 4
+
+    /** What a mistake quiz would be written from: the corrections of the last
+     *  7 days of talks, then 30 when that is thin, then the recurring ones. */
+    suspend fun mistakeSources(context: Context, target: String, level: CefrLevel,
+                               now: Long = System.currentTimeMillis()): List<Mistake> {
+        val sessions = SessionStore.shared(context).load(target)
+            .filter { it.endedAt != null }
+            .sortedByDescending { it.startedAt }
+        val seen = HashSet<String>()
+        val out = ArrayList<Mistake>()
+        fun add(was: String, fixed: String, why: String) {
+            val w = was.trim()
+            val f = fixed.trim()
+            if (w.isEmpty() || f.isEmpty() || !TextScript.isInTargetScript(f, target) ||
+                !seen.add(CarryoverDetector.normalized(w))) return
+            out += Mistake(was = w, now = f, why = why)
+        }
+        for (days in listOf(7.0, 30.0)) {
+            val since = now - (days * 86_400_000).toLong()
+            for (s in sessions) {
+                if (s.startedAt < since) continue
+                for (fix in s.turns.filter { it.isEvidence }.flatMap { it.suggestion?.fixes ?: emptyList() }) {
+                    add(fix.was, fix.now, fix.why)
+                }
+            }
+            if (out.size >= MISTAKE_QUIZ_THIN) break
+        }
+        if (out.size < MISTAKE_QUIZ_THIN) {
+            val profile = ProfileStore.shared(context).load(target, level.code)
+            for ((pattern, _) in GrammarFocus.candidates(profile, sessions, now)) {
+                add(pattern.mistake, pattern.correction, pattern.context)
+            }
+        }
+        return out.take(14)
+    }
+
+    suspend fun mistakeQuiz(context: Context, target: String, native: String, level: CefrLevel): List<QuickQuizItem> {
+        val sources = mistakeSources(context, target, level)
+        if (sources.isEmpty()) return emptyList()
+        val targetName = LanguageCatalog.englishName(target)
+        val nativeName = LanguageCatalog.englishName(native)
+        val system = QuickQuizPrompts.mistakeSystem(targetName, nativeName, level.code.uppercase(),
+            WordSplitter.spaced(target))
+        val user = sources.mapIndexed { i, m ->
+            "${i + 1}. \"${m.was}\" → \"${m.now}\"" + (if (m.why.isEmpty()) "" else " (${m.why})")
+        }.joinToString("\n")
+        val key = MessageDigest.getInstance("SHA-256")
+            .digest((user + "${System.currentTimeMillis() / 1000.0}").toByteArray(Charsets.UTF_8))
+            .take(8).joinToString("") { "%02x".format(it) }
+        val client = GeminiClient(AuthRepository())
+        val items: List<JsonObject> = try {
+            withTimeoutOrNull(45_000) {
+                val root = client.sendJson(
+                    system = system,
+                    messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER, user)),
+                    serializer = JsonObject.serializer(),
+                    maxTokens = 6000, purpose = "quiz",
+                    idempotencyKey = "quiz-stock:$key")
+                (root["items"] as? JsonArray ?: throw IllegalStateException("no items")).mapNotNull { it as? JsonObject }
+            } ?: throw java.util.concurrent.TimeoutException("mistake quiz write timed out")
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException && e !is kotlinx.coroutines.TimeoutCancellationException) throw e
+            Telemetry.log("mistake_quiz", mapOf("stage" to "write", "error" to e.toString().take(200)))
+            return emptyList()
+        }
+        val from = HashMap<String, Mistake>()
+        val seen = HashSet<String>()
+        val written = ArrayList<Stored>()
+        for (it in items) {
+            fun string(name: String) = (it[name] as? JsonPrimitive)?.takeIf { p -> p.isString }?.contentOrNull
+            val sentence = string("sentence") ?: continue
+            val answer = string("answer") ?: continue
+            val wrong = (it["wrong"] as? JsonArray)?.mapNotNull { w ->
+                (w as? JsonPrimitive)?.takeIf { p -> p.isString }?.contentOrNull
+            } ?: emptyList()
+            val q = validated(Written(Kind.grammar, point = string("point") ?: "", tip = string("tip"),
+                sentence = sentence, answer = answer, wrong = wrong), target) ?: continue
+            if (!seen.add(CarryoverDetector.normalized(q.sentence))) continue
+            written += q
+            val n = (it["n"] as? JsonPrimitive)?.intOrNull
+            if (n != null && n - 1 in sources.indices) from[q.id] = sources[n - 1]
+        }
+        val kept = check(client, written, targetName, key)
+        Telemetry.log("mistake_quiz", mapOf("stage" to "done", "sources" to "${sources.size}",
+            "written" to "${items.size}", "valid" to "${written.size}",
+            "kept" to "${kept.size}", "lang" to target))
+        return kept.take(MISTAKE_QUIZ_SIZE).map { q ->
+            // The note says why, then shows the line it came from.
+            var note = q.tip
+            from[q.id]?.let { m ->
+                note += (if (note.isEmpty()) "" else "\n") +
+                    "${context.getString(com.roro.futurevoice.R.string.last_time_you_said)}: ${m.was} → ${m.now}"
+            }
+            QuickQuizItem(QuickQuizItem.Kind.GRAMMAR, prompt = q.sentence, answer = q.answer,
+                options = (listOf(q.answer) + q.wrong).shuffled(),
+                heading = q.point.ifEmpty { null },
+                note = note.ifEmpty { null }, isOwn = true)
+        }
+    }
 }

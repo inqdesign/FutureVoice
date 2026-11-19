@@ -512,7 +512,8 @@ object TutorBot {
             TutorAction.Kind.LISTEN -> start(c, StudyPlan.Kind.LISTEN)
             TutorAction.Kind.SPEECH -> start(c, StudyPlan.Kind.SPEECH)
             TutorAction.Kind.TEST -> start(c, StudyPlan.Kind.TEST)
-            TutorAction.Kind.QUIZ -> start(c, null)
+            // The chat opens the mistake quiz over itself ([com.roro.futurevoice.ui.TutorChatView]).
+            TutorAction.Kind.QUIZ, TutorAction.Kind.MISTAKE_QUIZ -> start(c, null)
             TutorAction.Kind.ROUTINE -> {
                 chatOpen = false
                 DeepLinkInbox.widgetRoute.value = DeepLinkInbox.WidgetRoute.Routine(null)
@@ -690,7 +691,7 @@ object TutorChat {
                     val decoded = ((r["actions"] as? kotlinx.serialization.json.JsonArray) ?: emptyList())
                         .mapNotNull { TutorAction.decode(it) }
                     val actions = ArrayList<TutorAction>()
-                    for (a in decoded) if (a !in actions && a.isValid(c)) actions += a
+                    for (a in decoded) if (a !in actions && a.isValid(c, level)) actions += a
                     val answer = text.ifEmpty { c.getString(R.string.i_couldn_t_answer_that_just_now_try_again_in_a_moment) }
                     val translation = ((r["translation"] as? kotlinx.serialization.json.JsonPrimitive)
                         ?.takeIf { it.isString }?.content ?: "").trim()

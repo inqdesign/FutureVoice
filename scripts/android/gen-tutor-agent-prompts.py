@@ -54,8 +54,8 @@ for name, body in tools.items():
 FINGERPRINTS = {
     "TutorChat.context": "3cff0fa71a5b",
     "TutorChat.ask": "fd4435973577",
-    "TutorAction.title": "aeb288861665",
-    "TutorAction.isValid": "2e79b08b3006",
+    "TutorAction.title": "afa73f17ac0d",
+    "TutorAction.isValid": "71bb28ef1d01",
     "TutorTools.progressLine": "05daf3e31ad4",
     "TutorTools.run": "121e26343355",
     "TutorTools.talks": "a8c31f4c7d6e",

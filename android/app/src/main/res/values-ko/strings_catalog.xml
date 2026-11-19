@@ -2329,6 +2329,7 @@
     <string name="quirks_goals_pet_peeves_whatever_helps_me_sound_like_you">"버릇, 목표, 질색하는 것처럼 너답게 들리게 하는 건 뭐든"</string>
     <string name="quirks_preferences_anything_that_helps_me_sound_like_you">"말버릇이나 취향처럼, 나답게 들리게 하는 것들"</string>
     <string name="quiz">"퀴즈"</string>
+    <string name="quiz_on_my_mistakes">"내 실수로 퀴즈"</string>
     <string name="raising_kids">"아이 키우는 중"</string>
     <string name="rank">"순위"</string>
     <string name="rather_just_fill_in_a_form">"그냥 양식으로 채우시겠어요?"</string>
@@ -3311,6 +3312,8 @@
     <string name="this_permanently_deletes_your_voice_clone_talk_time_and_acco_9e99be">"내 목소리와 통화 시간, 계정이 영영 지워지고 되돌릴 수 없어요. App Store 구독이 살아 있다면 설정 → Apple ID → 구독에서 따로 해지해 주세요."</string>
     <string name="this_person_has_been_deleted">"삭제된 사람이에요"</string>
     <string name="this_place_feels_like_home">"여기가 진짜 내 동네 같아"</string>
+    <!-- 'This quiz is made from the corrections in your talks. Have a talk, then ask again.' -->
+    <string name="this_quiz_is_made_from_the_corrections_in_your_talks_have_a_4225e4">"이 퀴즈는 대화에서 고쳐 드린 문장으로 만들어요. 대화를 한 번 하고 다시 요청해 주세요."</string>
     <string name="this_script_is_too_long_to_make_in_your_voice">"이 원고는 너무 길어서 내 목소리로 만들 수 없어요."</string>
     <string name="this_seat_couldn_t_be_opened_try_again_in_a_moment">"이 자리를 열 수 없어요. 잠시 뒤에 다시 해 보세요."</string>
     <!-- 'This shapes what I ask next — a manager and a best friend live in different worlds.' -->

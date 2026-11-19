@@ -2329,6 +2329,7 @@
     <string name="quirks_goals_pet_peeves_whatever_helps_me_sound_like_you">"口ぐせ、目標、苦手なこと。自分らしく聞こえるものなら何でも"</string>
     <string name="quirks_preferences_anything_that_helps_me_sound_like_you">"口ぐせや好みなど、自分らしく聞こえるようにするもの"</string>
     <string name="quiz">"クイズ"</string>
+    <string name="quiz_on_my_mistakes">"自分のミスでクイズ"</string>
     <string name="raising_kids">"子育て中"</string>
     <string name="rank">"順位"</string>
     <string name="rather_just_fill_in_a_form">"フォームで埋めるほうがいいですか？"</string>
@@ -3311,6 +3312,8 @@
     <string name="this_permanently_deletes_your_voice_clone_talk_time_and_acco_9e99be">"自分の声と通話時間、アカウントが完全に削除され、元に戻せません。App Storeのサブスクリプションが有効な場合は、設定 → Apple ID → サブスクリプションで別途解約してください。"</string>
     <string name="this_person_has_been_deleted">"削除された人です"</string>
     <string name="this_place_feels_like_home">"ここが本当に自分の街だと思える"</string>
+    <!-- 'This quiz is made from the corrections in your talks. Have a talk, then ask again.' -->
+    <string name="this_quiz_is_made_from_the_corrections_in_your_talks_have_a_4225e4">"このクイズは、トークで直した文から作ります。一度トークしてから、もう一度頼んでください。"</string>
     <string name="this_script_is_too_long_to_make_in_your_voice">"この原稿は長すぎて、自分の声では作れません。"</string>
     <string name="this_seat_couldn_t_be_opened_try_again_in_a_moment">"この席を開けませんでした。少しあとでもう一度試してください。"</string>
     <!-- 'This shapes what I ask next — a manager and a best friend live in different worlds.' -->

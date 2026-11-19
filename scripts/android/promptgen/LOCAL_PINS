@@ -6,7 +6,8 @@ gen-script-study-prompt.py 18f1fbf7
 gen-free-talk-openers.py 456c94e9
 # The quick quiz's written questions (QuickQuizStock, iOS 9c61e6de; own expressions
 # rated and written fresh, 6912c9db).
-gen-quiz-prompts.py 6912c9db
+# + the quiz made to order from the learner's own mistakes (iOS 40b95f3f).
+gen-quiz-prompts.py 40b95f3f
 # The vocabulary level reads the share of advanced words, and the assessment
 # judges word precision (lexical_precision, iOS e7625c42); the mean level of
 # content words, precision deciding above B1 (iOS 4925df02).
@@ -21,7 +22,8 @@ gen-level-tag-prompt.py 465331f6
 # + why they are learning: the manual line, the "purposes" button and the
 #   context line (iOS c8b22752).
 # + the tutor speaks the target language, with a translation (iOS 183419f0).
-gen-tutor-agent-prompts.py 183419f0
+# + a quiz is a button: the mistakeQuiz action (iOS 40b95f3f).
+gen-tutor-agent-prompts.py 40b95f3f
 # The coach's measured pronunciation line (renderPronunciationForPrompt, iOS 0971c05d).
 gen-shadow-coach-prompt.py 0971c05d
 # The conversation, correction, coach and tutor generators follow the shared

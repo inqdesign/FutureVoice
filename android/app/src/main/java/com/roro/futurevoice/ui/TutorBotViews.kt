@@ -463,6 +463,7 @@ fun TutorChatView(state: AppState, onDismiss: () -> Unit) {
     // Tutor replies whose translation is unfolded.
     var translated by remember { mutableStateOf(setOf<String>()) }
     var todayOpen by remember { mutableStateOf(false) }
+    var mistakeQuizOpen by remember { mutableStateOf(false) }
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     // The two languages the box's mic can dictate in: the one being learned
     // first (the tutor speaks it), then the learner's own.
@@ -526,6 +527,16 @@ fun TutorChatView(state: AppState, onDismiss: () -> Unit) {
     if (addingGoal) UpcomingGoalEditor(goal = null, language = state.targetLanguage, onDismiss = { addingGoal = false })
     goalPage?.let { g -> UpcomingGoalPage(g, state, onDismiss = { goalPage = null }) }
     if (todayOpen) TutorTodaySheet(state, onDismiss = { todayOpen = false })
+    if (mistakeQuizOpen) {
+        Dialog(
+            onDismissRequest = { mistakeQuizOpen = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+        ) {
+            DialogSystemBarsLikeActivity()
+            QuickQuizScreen(state.targetLanguage, state.nativeLanguage, state.level, mistakes = true,
+                onClose = { mistakeQuizOpen = false })
+        }
+    }
     PageSheet(onDismiss = onDismiss) {
         Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).imePadding()) {
             SheetHeader(stringResource(R.string.personal_tutor),
@@ -596,7 +607,14 @@ fun TutorChatView(state: AppState, onDismiss: () -> Unit) {
                                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                             m.actions.forEachIndexed { i, action ->
                                                 SoftChip(action.title(res), selected = i == 0, vector = action.icon()) {
-                                                    TutorBot.perform(context, action)
+                                                    // A quiz made to order opens over the chat
+                                                    // and closes back onto it.
+                                                    if (action.type == TutorAction.Kind.MISTAKE_QUIZ) {
+                                                        Analytics.capture("tutor_bot_action", mapOf("type" to action.type.raw))
+                                                        mistakeQuizOpen = true
+                                                    } else {
+                                                        TutorBot.perform(context, action)
+                                                    }
                                                 }
                                             }
                                         }
@@ -1003,6 +1021,7 @@ fun TutorAction.icon(): androidx.compose.ui.graphics.vector.ImageVector = when (
     TutorAction.Kind.SPEECH -> StudyPlan.Kind.SPEECH.icon()
     TutorAction.Kind.TEST -> StudyPlan.Kind.TEST.icon()
     TutorAction.Kind.QUIZ -> Icons.AutoMirrored.Outlined.HelpOutline
+    TutorAction.Kind.MISTAKE_QUIZ -> Icons.Filled.Checklist
     TutorAction.Kind.ROUTINE -> Icons.Filled.CalendarMonth
     TutorAction.Kind.SETTINGS -> Icons.Filled.Tune
     TutorAction.Kind.PURPOSES -> Icons.Filled.TrackChanges

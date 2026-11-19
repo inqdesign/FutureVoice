@@ -80,6 +80,7 @@ data class TutorAction(
         @SerialName("speech") SPEECH("speech"),
         @SerialName("test") TEST("test"),
         @SerialName("quiz") QUIZ("quiz"),
+        @SerialName("mistakeQuiz") MISTAKE_QUIZ("mistakeQuiz"),
         @SerialName("routine") ROUTINE("routine"),
         @SerialName("settings") SETTINGS("settings"),
         @SerialName("purposes") PURPOSES("purposes"),
@@ -117,6 +118,7 @@ data class TutorAction(
             Kind.SPEECH -> startTitle(res, StudyPlan.Kind.SPEECH)
             Kind.TEST -> startTitle(res, StudyPlan.Kind.TEST)
             Kind.QUIZ -> res.getString(R.string.quick_quiz)
+            Kind.MISTAKE_QUIZ -> res.getString(R.string.quiz_on_my_mistakes)
             Kind.ROUTINE -> res.getString(R.string.my_routine)
             Kind.SETTINGS -> res.getString(R.string.call_settings)
             Kind.PURPOSES -> res.getString(R.string.why_are_you_learning)
@@ -124,7 +126,7 @@ data class TutorAction(
     }
 
     /** Kept only if what it points at exists on this phone. */
-    suspend fun isValid(c: Context): Boolean {
+    suspend fun isValid(c: Context, level: CefrLevel): Boolean {
         val language = LanguageScope.active(c)
         return when (type) {
             Kind.TALK -> true
@@ -154,6 +156,8 @@ data class TutorAction(
                 v.isStudyingExpression(text, language) || v.isKnownExpression(text, language) ||
                     v.hasUsedExpression(text, language)
             }
+            // Written from their corrections: with none on file it opens empty.
+            Kind.MISTAKE_QUIZ -> com.roro.futurevoice.data.QuickQuizStock.mistakeSources(c, language, level).isNotEmpty()
             else -> true
         }
     }

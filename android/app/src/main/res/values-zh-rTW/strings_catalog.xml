@@ -2329,6 +2329,7 @@
     <string name="quirks_goals_pet_peeves_whatever_helps_me_sound_like_you">"習慣、目標、受不了的事 — 能讓我更像你的都可以"</string>
     <string name="quirks_preferences_anything_that_helps_me_sound_like_you">"口頭禪、喜好，任何能讓我聽起來更像你的東西"</string>
     <string name="quiz">"小測驗"</string>
+    <string name="quiz_on_my_mistakes">"用我的錯誤出題"</string>
     <string name="raising_kids">"在帶小孩"</string>
     <string name="rank">"名次"</string>
     <string name="rather_just_fill_in_a_form">"想直接填表單就好？"</string>
@@ -3311,6 +3312,8 @@
     <string name="this_permanently_deletes_your_voice_clone_talk_time_and_acco_9e99be">"你的聲音、通話時間和帳號會被永久刪除，無法復原。如果App Store訂閱還在，請另外到「設定 → Apple ID → 訂閱」取消。"</string>
     <string name="this_person_has_been_deleted">"這個人已經刪除了"</string>
     <string name="this_place_feels_like_home">"這裡真的像我家一樣"</string>
+    <!-- 'This quiz is made from the corrections in your talks. Have a talk, then ask again.' -->
+    <string name="this_quiz_is_made_from_the_corrections_in_your_talks_have_a_4225e4">"這份測驗是用對話中修正過的句子做的。先聊一次，再請我出題。"</string>
     <string name="this_script_is_too_long_to_make_in_your_voice">"這篇講稿太長，沒辦法用你的聲音生成。"</string>
     <string name="this_seat_couldn_t_be_opened_try_again_in_a_moment">"暫時打不開這個座位，請稍後再試。"</string>
     <!-- 'This shapes what I ask next — a manager and a best friend live in different worlds.' -->

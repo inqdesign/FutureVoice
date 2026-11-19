@@ -123,7 +123,13 @@ private val QUIZ_GRAY = Color(0xFF8E8E93)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QuickQuizScreen(language: String, native: String, level: CefrLevel, onClose: () -> Unit) {
+fun QuickQuizScreen(
+    language: String, native: String, level: CefrLevel,
+    /** Made to order from the learner's own recent mistakes (the tutor's
+     *  button), not the level's stock. Never parked: it is written per tap. */
+    mistakes: Boolean = false,
+    onClose: () -> Unit,
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var stage by remember { mutableStateOf(QuizStage.LOADING) }
@@ -143,12 +149,21 @@ fun QuickQuizScreen(language: String, native: String, level: CefrLevel, onClose:
             advance?.cancel()
             // Closed mid-quiz: kept for the next open. An answered question
             // counts as done, since its auto-advance was just cancelled.
-            if (stage == QuizStage.ASKING) {
+            if (stage == QuizStage.ASKING && !mistakes) {
                 QuickQuizEngine.park(items, if (chosen == null) index else index + 1, missed, language)
             }
         }
     }
     LaunchedEffect(Unit) {
+        if (mistakes) {
+            val built = com.roro.futurevoice.data.QuickQuizStock.mistakeQuiz(
+                context.applicationContext, language, native, level)
+            items.clear(); items.addAll(built)
+            setMood(WeeklyTestHost.Mood.WAITING)
+            stage = if (built.isEmpty()) QuizStage.EMPTY else QuizStage.ASKING
+            Analytics.capture("quick_quiz_started", mapOf("items" to built.size, "kind" to "mistakes"))
+            return@LaunchedEffect
+        }
         QuickQuizEngine.takeUnfinished(language)?.let { paused ->
             items.clear(); items.addAll(paused.items)
             index = paused.index
@@ -255,7 +270,8 @@ fun QuickQuizScreen(language: String, native: String, level: CefrLevel, onClose:
                     horizontalAlignment = Alignment.CenterHorizontally) {
                     QuizFace(mood, moodSince, AppSurfaces.ground)
                     Text(stringResource(R.string.not_much_to_quiz_yet), style = PT.headline)
-                    Text(stringResource(R.string.save_a_few_words_or_have_another_talk_and_the_quiz_fills_up),
+                    Text(stringResource(if (mistakes) R.string.this_quiz_is_made_from_the_corrections_in_your_talks_have_a_4225e4
+                        else R.string.save_a_few_words_or_have_another_talk_and_the_quiz_fills_up),
                         style = PT.subheadline, color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center)
                     Button(onClick = onClose, modifier = Modifier.padding(top = 8.dp),

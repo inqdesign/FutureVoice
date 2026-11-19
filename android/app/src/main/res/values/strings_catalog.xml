@@ -2339,6 +2339,7 @@
     <string name="quirks_goals_pet_peeves_whatever_helps_me_sound_like_you">"Quirks, goals, pet peeves — whatever helps me sound like you"</string>
     <string name="quirks_preferences_anything_that_helps_me_sound_like_you">"Quirks, preferences, anything that helps me sound like you"</string>
     <string name="quiz">"Quiz"</string>
+    <string name="quiz_on_my_mistakes">"Quiz on my mistakes"</string>
     <string name="raising_kids">"Raising kids"</string>
     <string name="rank">"Rank"</string>
     <string name="rather_just_fill_in_a_form">"Rather just fill in a form?"</string>
@@ -3324,6 +3325,8 @@
     <string name="this_permanently_deletes_your_voice_clone_talk_time_and_acco_9e99be">"This permanently deletes your voice clone, talk time, and account. It cannot be undone. An active App Store subscription must be canceled separately in Settings → Apple ID → Subscriptions."</string>
     <string name="this_person_has_been_deleted">"This person has been deleted"</string>
     <string name="this_place_feels_like_home">"This place feels like home"</string>
+    <!-- 'This quiz is made from the corrections in your talks. Have a talk, then ask again.' -->
+    <string name="this_quiz_is_made_from_the_corrections_in_your_talks_have_a_4225e4">"This quiz is made from the corrections in your talks. Have a talk, then ask again."</string>
     <string name="this_script_is_too_long_to_make_in_your_voice">"This script is too long to make in your voice."</string>
     <string name="this_seat_couldn_t_be_opened_try_again_in_a_moment">"This seat couldn't be opened. Try again in a moment."</string>
     <!-- 'This shapes what I ask next — a manager and a best friend live in different worlds.' -->
