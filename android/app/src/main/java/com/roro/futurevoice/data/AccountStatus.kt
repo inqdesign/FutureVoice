@@ -270,6 +270,9 @@ data class AccountStatus(
             val used: Int = 0,
             val cap: Int? = null,
             val period_end: String? = null,
+            /** The moment the period ends; servers before 2026-11-18 send
+             *  only the date above. */
+            val period_end_at: String? = null,
             val period_start: String? = null,
             val free_used: Int? = null,
             val free_cap: Int? = null,
@@ -311,7 +314,7 @@ data class AccountStatus(
                 // A null cap on an entitled plan is "uncapped", not "no plan";
                 // `used` is real either way.
                 out = out.copy(secondsUsedPeriod = it.used, monthlyCapSeconds = it.cap,
-                    periodEnd = it.period_end, periodStart = it.period_start,
+                    periodEnd = localDay(it.period_end_at) ?: it.period_end, periodStart = it.period_start,
                     bonusSeconds = it.bonus ?: out.secondsBalance)
             }
             rpc(auth, "scene_allowance")?.let {
@@ -407,6 +410,17 @@ data class AccountStatus(
                     ListSerializer(serializer<T>()), resp.body.string())
             }
         }.getOrNull()
+
+        /** The moment a period ends, as the day it falls on HERE
+         *  ("2026-11-19"). The bare `period_end` is that moment's UTC day,
+         *  which is a day off for a renewal late in the UTC evening. */
+        private fun localDay(at: String?): String? = at?.let {
+            runCatching {
+                java.time.OffsetDateTime.parse(it)
+                    .atZoneSameInstant(java.time.ZoneId.systemDefault())
+                    .toLocalDate().toString()
+            }.getOrNull()
+        }
 
         private suspend fun rpc(auth: AuthRepository, name: String): AllowanceRow? = runCatching {
             val request = Request.Builder()
