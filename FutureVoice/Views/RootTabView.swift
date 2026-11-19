@@ -352,6 +352,12 @@ struct RootTabView: View {
             TabHitchProbe.shared.mark(Self.screenName(tab))
             #endif
             Analytics.capture("screen_viewed", ["screen": Self.screenName(tab)])
+            #if targetEnvironment(macCatalyst)
+            // The card column belongs to the page it was opened from. A Mac
+            // tab switch never tells the old tab it left, so the card stayed
+            // beside every other tab (2026-11-19).
+            MacCardHost.shared.close()
+            #endif
             // Nothing about this learner reaches the pool until they have
             // seen the paragraph a stranger's phone would speak as "them".
             // Raised by itself ONCE (2026-10-25, founder): a swipe-down left
