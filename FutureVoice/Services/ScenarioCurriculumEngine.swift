@@ -187,6 +187,30 @@ enum ScenarioCurriculumEngine {
     /// lost call, not a shorter one.
     static let sceneMaxTokens = 3000
 
+    /// A learner who asks to ACT a scene wants the scene, not a talk about
+    /// it (2026-11-19, founder: "a scene from the film F1, Brad Pitt and the
+    /// actress opposite him" came out as two actors arranging a rehearsal —
+    /// "let me check the script" — because every other rule here says the
+    /// situation is the learner's real life). Original lines in the story's
+    /// world: the model can't reliably recall a film's script, and a
+    /// half-remembered one is worse material than a written one.
+    static let actedSceneRule = """
+        A SCENE TO ACT is the one exception to "the learner's own life". When
+        the learner asks to act, perform or practice a scene FROM a film, a
+        series, a play or a book, or to play a character, the dialogue IS
+        that scene, inside the story. The counterpart speaks as the character
+        they play in it (a real actor given as the other person is cast as
+        their character there, not as themselves), the user speaks as the
+        character opposite them (the role the learner named, otherwise the
+        one who shares the scene), and every line is something those two
+        characters say to each other, in their voices, with the story's
+        stakes. They call each other by the characters' names. Never write
+        two people talking ABOUT the scene: no rehearsal, no script, no
+        director's notes, no "let's take it from the top". Write an original
+        scene in that story's world; do not try to recall the work's actual
+        lines. The title names the moment in the story.
+        """
+
     static func systemPrompt(targetLanguage: String, proficiency: CEFRLevel) -> String {
         let languageName = LanguageCatalog.englishName(targetLanguage)
         let band = ConversationEngine.speechScale(for: proficiency)
@@ -207,6 +231,8 @@ enum ScenarioCurriculumEngine {
         counterpart as the one performing the learner's move, and never swap
         the two: in "thanking the beta testers" the user thanks and the
         counterpart is thanked, not the reverse.
+
+        \(actedSceneRule)
 
         Content rules:
         - turns: \(sceneTurnRange), alternating naturally. WHOEVER'S MOVE THE
