@@ -80,11 +80,12 @@ final class PlaylistPlayer: ObservableObject {
 
     /// The speed for a learner who never picked one (2026-10-22, founder:
     /// the podcast at 1× was too fast for most learners). 0.9 is the
-    /// default, a beginner hears it slower, C1+ at the speed it was made.
+    /// default, a beginner hears it slower (A1, and A2 since 2026-11-19,
+    /// founder), C1+ at the speed it was made.
     static func levelSpeed(_ level: CEFRLevel) -> Float {
         switch level {
-        case .a1: return 0.75
-        case .a2, .b1, .b2: return 0.9
+        case .a1, .a2: return 0.75
+        case .b1, .b2: return 0.9
         case .c1, .c2: return 1.0
         }
     }
