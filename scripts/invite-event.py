@@ -5,6 +5,7 @@
     scripts/invite-event.py texts            # push scripts/invite-event-texts.json
     scripts/invite-event.py offers           # make the store offers for the current %
     scripts/invite-event.py codes            # top up the App Store one-time codes
+    scripts/invite-event.py play on | off    # put the Play offers on sale / take them back
     scripts/invite-event.py discount 30      # change the %, offers and coupon with it
     scripts/invite-event.py on | off         # the switch
     scripts/invite-event.py announce         # show the announcement sheet once more
@@ -25,7 +26,9 @@ A discount needs three things outside the database, and `offers` /
     (500 at a time, six months' life; run it again whenever `show` says a
     plan is under 100);
   * Stripe: one coupon (`friend_<N>_once`), N% off, once;
-  * Google Play: not made here yet (the Android app has no claim button).
+  * Google Play: one developer-determined offer per MONTHLY plan
+    (`friend-<N>`), made as a DRAFT. `play on` activates them and tells the
+    app; read the warning above the Play section first.
 Annual plans get no offer: "one month at N%" has no meaning on a year.
 
 Uses the keys scripts/billing-switch.py uses (App Store Connect, the
@@ -38,6 +41,7 @@ import json
 import os
 import subprocess
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -83,6 +87,11 @@ def show():
     print(f"discount      {e['percent']}% for {e['months']} month(s)")
     print(f"announcement  version {e['announce_version']}")
     print(f"stripe coupon {e['stripe_coupon_id'] or '-'}")
+    print("google play offers (on sale)")
+    for product, offer in (e.get("google_offers") or {}).items():
+        print(f"   {product:48s} {offer}")
+    if not e.get("google_offers"):
+        print("   -")
     print("app store offers")
     for product, offer in (e["apple_offers"] or {}).items():
         print(f"   {product:48s} {offer}")
@@ -254,6 +263,150 @@ def codes(send: bool):
             print(f"   {product}: batch {batch['id']}: {added} new codes on file")
 
 
+# ── Google Play ────────────────────────────────────────────────────────────
+#
+# One developer-determined offer per MONTHLY plan (`friend-<N>`, on the base
+# plan `monthly`): N% off for the event's months, in every region the base
+# plan is sold in, as a relative discount so no price is typed here.
+#
+# TWO THINGS TO KNOW BEFORE `play on`:
+#   * An ACTIVE developer-determined offer is listed to every install, and
+#     Android builds before feat/android dd8607e4+1 buy "the first offer Play
+#     lists". On those builds a NEW subscriber could be sold the half-price
+#     month. `offers` therefore only makes DRAFTS (sold to nobody); `play on`
+#     activates them and is for when those builds are out of use.
+#   * Taking the offer on a subscription already held has not been tried
+#     against Play.
+
+PLAY_PACKAGE = "com.roro.futurevoice"
+PLAY_API = f"https://androidpublisher.googleapis.com/androidpublisher/v3/applications/{PLAY_PACKAGE}"
+PLAY_KEY = os.environ.get("PLAY_SERVICE_ACCOUNT", os.path.expanduser("~/keys/play-service-account.json"))
+PLAY_BASE_PLAN = "monthly"
+PLAY_TAG = "friend-invite"          # BillingService.INVITE_OFFER_TAG on Android
+PLAY_REGIONS_VERSION = "2022/02"
+_play_token = None
+
+
+def play(method: str, path: str, body=None):
+    global _play_token
+    if _play_token is None:
+        if not os.path.exists(PLAY_KEY):
+            sys.exit(f"no Play service account key at {PLAY_KEY}")
+        sa = json.load(open(PLAY_KEY))
+        b64 = lambda raw: bs.base64.urlsafe_b64encode(raw).decode().rstrip("=")
+        now = int(bs.time.time())
+        signing = (b64(json.dumps({"alg": "RS256", "typ": "JWT"}).encode()) + "." + b64(json.dumps({
+            "iss": sa["client_email"], "scope": "https://www.googleapis.com/auth/androidpublisher",
+            "aud": sa["token_uri"], "iat": now, "exp": now + 3000}).encode())).encode()
+        # openssl reads the key from a file: a temp one, removed at once.
+        import tempfile
+        with tempfile.NamedTemporaryFile("w", suffix=".pem") as pem:
+            pem.write(sa["private_key"])
+            pem.flush()
+            sig = subprocess.run(["openssl", "dgst", "-sha256", "-sign", pem.name],
+                                 input=signing, capture_output=True, check=True).stdout
+        data = urllib.parse.urlencode({
+            "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
+            "assertion": signing.decode() + "." + b64(sig)}).encode()
+        with urllib.request.urlopen(sa["token_uri"], data=data, timeout=30) as r:
+            _play_token = json.load(r)["access_token"]
+    req = urllib.request.Request(PLAY_API + path, method=method,
+                                 data=json.dumps(body).encode() if body is not None else None,
+                                 headers={"Authorization": f"Bearer {_play_token}",
+                                          "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            out = r.read()
+            return json.loads(out) if out else {}
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"Play {method} {path}: {e.code} {e.read().decode()[:500]}")
+
+
+def google_plans():
+    return bs.sql("select id, google_product_id from subscription_plans "
+                  "where is_active and period = 'monthly' and google_product_id is not null order by id")
+
+
+def play_offer_id(percent: int) -> str:
+    return f"friend-{percent}"
+
+
+def play_offers_path(product: str) -> str:
+    return f"/subscriptions/{product}/basePlans/{PLAY_BASE_PLAN}/offers"
+
+
+def play_existing(product: str, offer_id: str):
+    listed = play("GET", play_offers_path(product)).get("subscriptionOffers", [])
+    return next((o for o in listed if o["offerId"] == offer_id), None)
+
+
+def play_offer(product: str, percent: int, months: int, send: bool):
+    """A DRAFT offer: on file in Play Console, sold to nobody until `play on`."""
+    offer_id = play_offer_id(percent)
+    there = play_existing(product, offer_id)
+    if there:
+        print(f"   {product}: offer {offer_id} already there ({there['state']})")
+        return offer_id
+    sub = play("GET", f"/subscriptions/{product}")
+    base = next((b for b in sub.get("basePlans", []) if b["basePlanId"] == PLAY_BASE_PLAN), None)
+    if not base:
+        print(f"   {product}: no base plan \"{PLAY_BASE_PLAN}\", skipped")
+        return None
+    regions = [c["regionCode"] for c in base.get("regionalConfigs", [])]
+    # Play's field is the fraction of the base price the subscriber PAYS.
+    pays = (100 - percent) / 100
+    us = next((c["price"] for c in base["regionalConfigs"] if c["regionCode"] == "US"), None)
+    shown = f", US {us.get('units', '0')}.{str(us.get('nanos', 0)).zfill(9)[:2]} x {pays}" if us else ""
+    print(f"   {product}: draft {offer_id}, {percent}% off for {months} month(s) "
+          f"in {len(regions)} regions{shown}")
+    if not send:
+        return offer_id
+    play("POST", play_offers_path(product)
+         + f"?offerId={offer_id}&regionsVersion.version={urllib.parse.quote(PLAY_REGIONS_VERSION, safe='')}", {
+        "packageName": PLAY_PACKAGE, "productId": product,
+        "basePlanId": PLAY_BASE_PLAN, "offerId": offer_id,
+        "offerTags": [{"tag": PLAY_TAG}],
+        # No `targeting`: eligibility is the app's (developer-determined).
+        "phases": [{
+            "recurrenceCount": months, "duration": "P1M",
+            "regionalConfigs": [{"regionCode": r, "relativeDiscount": pays} for r in regions],
+            "otherRegionsConfig": {"relativeDiscount": pays},
+        }],
+        "regionalConfigs": [{"regionCode": r, "newSubscriberAvailability": True} for r in regions],
+        "otherRegionsConfig": {"otherRegionsNewSubscriberAvailability": True},
+    })
+    return offer_id
+
+
+def play_switch(on: bool, send: bool):
+    """Activate the drafts and tell the app (`on`), or take both back (`off`)."""
+    e = event()
+    offer_id = play_offer_id(e["percent"])
+    mapping = {}
+    for plan in google_plans():
+        product = plan["google_product_id"]
+        there = play_existing(product, offer_id)
+        if not there:
+            print(f"   {product}: no offer {offer_id}. Run `offers --send` first.")
+            continue
+        want = "ACTIVE" if on else "INACTIVE"
+        if there["state"] == want or (not on and there["state"] == "DRAFT"):
+            print(f"   {product}: {offer_id} is {there['state']}")
+        else:
+            print(f"   {product}: {offer_id} {there['state']} -> {want}" + ("" if send else "  (would)"))
+            if send:
+                play("POST", f"{play_offers_path(product)}/{offer_id}:{'activate' if on else 'deactivate'}",
+                     {"packageName": PLAY_PACKAGE, "productId": product,
+                      "basePlanId": PLAY_BASE_PLAN, "offerId": offer_id})
+        if on:
+            mapping[product] = offer_id
+    if on:
+        print("NOTE: an active offer is listed to EVERY install. Android builds that buy "
+              "\"the first offer Play lists\" could sell it to a new subscriber. "
+              "Do this only when those builds are out of use.")
+    write(f"google_offers = {lit(json.dumps(mapping))}::jsonb", send)
+
+
 # ── Stripe ─────────────────────────────────────────────────────────────────
 
 def stripe_key():
@@ -307,6 +460,12 @@ def offers(percent: int, months: int, send: bool):
             print(f"   {product}: not in App Store Connect, skipped")
             continue
         apple[product] = apple_offer(subs[product], product, plan["id"], percent, months, send)
+    print("google play (drafts only: `play on` puts them on sale)")
+    for plan in google_plans():
+        try:
+            play_offer(plan["google_product_id"], percent, months, send)
+        except RuntimeError as err:
+            print(f"   {plan['google_product_id']}: {str(err)[:300]}")
     print("stripe")
     coupon = stripe_coupon(percent, months, send)
     assignments = (f"percent = {percent}, months = {months}, "
@@ -336,6 +495,8 @@ def main():
             print("NOTE: the texts say 'half price'. Change scripts/invite-event-texts.json "
                   "and run `texts` too, or the words and the number disagree.")
         offers(percent, months, send)
+    elif cmd == "play" and len(argv) >= 2 and argv[1] in ("on", "off"):
+        play_switch(argv[1] == "on", send)
     elif cmd == "codes":
         codes(send)
     elif cmd in ("on", "off"):
