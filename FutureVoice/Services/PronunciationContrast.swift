@@ -16,19 +16,98 @@ import Foundation
 ///
 /// Only sounds measured this way are offered (`isOffered`).
 enum PronunciationContrast {
-    /// A spelling must beat the other by more than this on the word.
-    static let margin = 5
+    /// A spelling must beat the other by more than this on the word. Per
+    /// language, set where a native reading is almost never taken for the
+    /// other sound: Korean 5, Spanish and French 10, Japanese and German 15
+    /// (at 5 a native っ was "not yet" 9 times in 160, at 15 three).
+    static func margin(locale: String) -> Int {
+        switch locale.prefix(2) {
+        case "ko": return 5
+        case "ja", "de": return 15
+        default: return 10
+        }
+    }
     static let maxAlternates = 2
 
     /// Topics judged by comparison. A topic is added once its own swap has
     /// been measured on native recordings.
     static func isOffered(topicId: String) -> Bool {
-        swaps(topicId: topicId) != nil
+        swaps(topicId: topicId) != nil || wordRules(topicId: topicId) != nil
+            || occurrenceRule(topicId: topicId) != nil
     }
 
     /// The languages with at least one such topic.
     static func isOffered(language: String) -> Bool {
-        LanguageCatalog.base(language) == "ko"
+        ["ko", "es", "fr", "ja", "de"].contains(LanguageCatalog.base(language))
+    }
+
+    // MARK: - Spanish, French, German: a swap inside a word
+
+    /// A spelling swap inside one word. `minLength` keeps it off the short
+    /// function words it was not measured on.
+    private struct WordRule {
+        let pattern: String
+        let template: String
+        var minLength = 3
+    }
+
+    /// One list per alternate. Measured on FLEURS native recordings at a
+    /// margin of 10, as native said the lesson sound (right / wrong / of) and
+    /// native said the other sound (caught / missed as right / of):
+    /// rr 21 / 1 / 35 and 78 / 2 / 110 · single r the same two the other way
+    /// round · ñ 24 / 0 / 27 and 87 / 0 / 110 · j 88 / 3 / 110 and 32 / 1 /
+    /// 40 · French u 58 / 1 / 105 and 33 / 1 / 77 · eu 56 / 0 / 80 and 67 /
+    /// 2 / 80 · an 55 / 1 / 104, on 73 / 1 / 103. German at 15: ü 52 / 2 /
+    /// 91 (words of four letters up: "für" alone was 8 of the 10 wrong) and
+    /// 75 / 1 / 110 · ö 63 / 2 / 81 and 65 / 2 / 110 · ei 82 / 1 / 110, ie
+    /// 54 / 2 / 110 · the ich-sound 99 / 1 / 110 and 45 / 10 / 91. Not
+    /// offered: é/è (15 right of 99), in/an (6 wrong of 73 at 5), German
+    /// long/short vowels (7 wrong of 110) and z (4 wrong of 77).
+    private static func wordRules(topicId: String) -> [[WordRule]]? {
+        let v = "aeiouáéíóú"
+        switch topicId {
+        case "es.rr": return [[WordRule(pattern: "rr", template: "r")]]
+        case "es.r": return [[WordRule(pattern: "(?<=[\(v)])r(?=[\(v)])", template: "rr")]]
+        case "es.ny": return [[WordRule(pattern: "ñ", template: "n")]]
+        case "es.j": return [[WordRule(pattern: "j(?=[\(v)])|g(?=[eiéí])", template: "y")]]
+        case "fr.u": return [[WordRule(pattern: "(?<![aeoqgé])u(?![inmeé])", template: "ou", minLength: 4)]]
+        case "fr.eu": return [[WordRule(pattern: "(?<![aœ])eu(?![xi])", template: "ou", minLength: 4)]]
+        case "de.ue": return [[WordRule(pattern: "ü", template: "u", minLength: 4)]]
+        case "de.oe": return [[WordRule(pattern: "ö", template: "o")]]
+        case "de.eiie":
+            return [[WordRule(pattern: "ei", template: "ie")], [WordRule(pattern: "ie", template: "ei")]]
+        case "de.ich": return [[WordRule(pattern: "(?<=[eiäöülnr])ch(?!s)", template: "sch")]]
+        case "fr.nasal":
+            return [[WordRule(pattern: "an(?![aeiouynm])", template: "on", minLength: 4)],
+                    [WordRule(pattern: "on(?![aeiouynm])", template: "an", minLength: 4)]]
+        default: return nil
+        }
+    }
+
+    private static func applying(_ rules: [WordRule], to word: String) -> String {
+        var out = word
+        for rule in rules where out.count >= rule.minLength {
+            guard let re = try? NSRegularExpression(pattern: rule.pattern) else { continue }
+            out = re.stringByReplacingMatches(in: out, range: NSRange(out.startIndex..., in: out),
+                                              withTemplate: rule.template)
+        }
+        return out
+    }
+
+    // MARK: - Japanese: one beat taken out
+
+    /// The beat the lesson is about, removed: one occurrence per alternate
+    /// (Japanese has no spaces, so two swaps in one sentence could not be
+    /// told apart). The long mark only after katakana, where it is written.
+    /// Measured at a margin of 15: っ kept by a native 89 right / 3 wrong of
+    /// 160, dropped 132 caught / 1 of 160; ー 84 / 2 of 133 and 27 / 3 of 42.
+    /// Not offered: つ/す (10 wrong of 62).
+    private static func occurrenceRule(topicId: String) -> String? {
+        switch topicId {
+        case "ja.long": return "(?<=[ァ-ヴ])ー"
+        case "ja.tsu": return "[っッ]"
+        default: return nil
+        }
     }
 
     // MARK: - Korean
@@ -110,9 +189,23 @@ enum PronunciationContrast {
     /// one sentence per swap, the same number of words as `text`. Empty when
     /// the topic isn't judged this way or `text` has nothing to swap.
     static func alternates(for text: String, topicId: String) -> [String] {
-        guard let tables = swaps(topicId: topicId) else { return [] }
+        if let pattern = occurrenceRule(topicId: topicId) {
+            guard let re = try? NSRegularExpression(pattern: pattern) else { return [] }
+            return re.matches(in: text, range: NSRange(text.startIndex..., in: text))
+                .prefix(maxAlternates).compactMap { m in
+                    Range(m.range, in: text).map { text.replacingCharacters(in: $0, with: "") }
+                }
+        }
         let words = text.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
         var out: [String] = []
+        if let lists = wordRules(topicId: topicId) {
+            for rules in lists.prefix(maxAlternates) {
+                let alt = words.map { applying(rules, to: $0) }.joined(separator: " ")
+                if alt != text, !out.contains(alt) { out.append(alt) }
+            }
+            return out
+        }
+        guard let tables = swaps(topicId: topicId) else { return [] }
         for table in tables.prefix(maxAlternates) {
             let alt = words.enumerated().map { i, w in
                 swapped(w, previousWord: i > 0 ? words[i - 1] : nil, table: table)
@@ -136,6 +229,13 @@ enum PronunciationContrast {
     /// `margin`, the widest gap first.
     static func misses(in result: PronunciationResult) -> [Miss] {
         let reference = result.referenceWords
+        let margin = margin(locale: result.locale)
+        if result.locale.hasPrefix("ja") {
+            return (result.alternates ?? []).compactMap {
+                unspacedMiss(reference: reference, other: $0.words.filter { $0.error != "Insertion" },
+                             margin: margin)
+            }.sorted { $0.gap > $1.gap }
+        }
         var best: [Int: Miss] = [:]
         for alt in result.alternates ?? [] {
             let other = alt.words.filter { $0.error != "Insertion" }
@@ -153,6 +253,43 @@ enum PronunciationContrast {
             }
         }
         return best.values.sorted { $0.gap > $1.gap }
+    }
+
+    /// A language written without spaces: the two reads are cut into words
+    /// differently ("立っ · て" against "立て"), so they are lined up by
+    /// letter. Everything before and after the one change is the same in
+    /// both; the words that cover the change are compared, the lowest score
+    /// on each side.
+    private static func unspacedMiss(reference: [PronunciationResult.Word],
+                                     other: [PronunciationResult.Alternate.Scored],
+                                     margin: Int) -> Miss? {
+        let mine = reference.map { (Array(PronunciationJudge.key($0.word)), $0.word, $0.isJudged ? $0.accuracy : nil) }
+        let theirs = other.map { (Array(PronunciationJudge.key($0.word)), $0.word, $0.error == "Omission" ? nil : $0.accuracy) }
+        let t = mine.flatMap(\.0), a = theirs.flatMap(\.0)
+        guard t != a, !t.isEmpty, !a.isEmpty else { return nil }
+        var p = 0
+        while p < min(t.count, a.count), t[p] == a[p] { p += 1 }
+        var s = 0
+        while s < min(t.count, a.count) - p, t[t.count - 1 - s] == a[a.count - 1 - s] { s += 1 }
+        func covering(_ words: [([Character], String, Int?)], _ lo: Int, _ hi: Int) -> (String, Int)? {
+            var position = 0
+            var text = ""
+            var lowest: Int?
+            for (letters, word, accuracy) in words {
+                let start = position, end = position + letters.count
+                position = end
+                let hit = hi > lo ? (start < hi && end > lo) : (start < lo && lo <= end) || (lo == 0 && start == 0)
+                guard hit else { continue }
+                guard let accuracy else { return nil }
+                text += word
+                lowest = min(lowest ?? accuracy, accuracy)
+            }
+            return lowest.map { (text, $0) }
+        }
+        guard let (word, score) = covering(mine, p, t.count - s),
+              let (otherWord, otherScore) = covering(theirs, p, a.count - s),
+              otherScore - score > margin else { return nil }
+        return Miss(word: word, cameOutAs: otherWord, gap: otherScore - score)
     }
 
     /// Off script, a word left out, or the lesson's sound said as the other

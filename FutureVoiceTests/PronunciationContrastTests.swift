@@ -57,6 +57,56 @@ final class PronunciationContrastTests: XCTestCase {
                        ["까 가 가", "카 까 카"])
     }
 
+    func testSpanishFrenchGermanSwapInsideTheWord() {
+        XCTAssertEqual(PronunciationContrast.alternates(for: "Mi perro es caro.", topicId: "es.rr"), ["Mi pero es caro."])
+        XCTAssertEqual(PronunciationContrast.alternates(for: "Mi perro es caro.", topicId: "es.r"), ["Mi perro es carro."])
+        XCTAssertEqual(PronunciationContrast.alternates(for: "El niño come jamón.", topicId: "es.ny"), ["El nino come jamón."])
+        XCTAssertEqual(PronunciationContrast.alternates(for: "La gente come jamón.", topicId: "es.j"), ["La yente come yamón."])
+        // Short words were not measured: "tu" and "sur" are left alone.
+        XCTAssertEqual(PronunciationContrast.alternates(for: "Tu es sur la voiture.", topicId: "fr.u"),
+                       ["Tu es sur la voitoure."])
+        XCTAssertEqual(PronunciationContrast.alternates(for: "Le professeur est seul.", topicId: "fr.eu"),
+                       ["Le professour est soul."])
+        XCTAssertEqual(PronunciationContrast.alternates(for: "Pendant la chanson", topicId: "fr.nasal"),
+                       ["Pendont la chonson", "Pendant la chansan"])
+        XCTAssertEqual(PronunciationContrast.alternates(for: "Ich bin müde für heute.", topicId: "de.ue"),
+                       ["Ich bin mude für heute."])
+        XCTAssertEqual(PronunciationContrast.alternates(for: "Mein Wein in Wien", topicId: "de.eiie"),
+                       ["Mien Wien in Wien", "Mein Wein in Wein"])
+        XCTAssertEqual(PronunciationContrast.alternates(for: "Ich mag die Kirche nicht, auch.", topicId: "de.ich"),
+                       ["Ich mag die Kirsche nischt, auch."])
+    }
+
+    func testJapaneseTakesOneBeatOutPerAlternate() {
+        XCTAssertEqual(PronunciationContrast.alternates(for: "ビールとコーヒーをください。", topicId: "ja.long"),
+                       ["ビルとコーヒーをください。", "ビールとコヒーをください。"])
+        XCTAssertEqual(PronunciationContrast.alternates(for: "切手を買って待っています。", topicId: "ja.tsu"),
+                       ["切手を買て待っています。", "切手を買って待ています。"])
+        XCTAssertEqual(PronunciationContrast.alternates(for: "おばあさんが来ました。", topicId: "ja.long"), [])
+    }
+
+    func testJapaneseIsLinedUpByLetter() {
+        func ja(_ words: [(String, Int)], alt: [(String, Int)]) -> PronunciationResult {
+            var r = PronunciationResult(score: 80, accuracy: 80, fluency: 80, completeness: 100, prosody: nil,
+                                        locale: "ja-JP", recognized: "", words: words.map { word($0.0, $0.1) })
+            r.alternates = [.init(reference: "", words: alt.map { .init(word: $0.0, accuracy: $0.1, error: "None") })]
+            return r
+        }
+        func v(_ r: PronunciationResult) -> PronunciationJudge.Verdict {
+            PronunciationJudge.verdict(result: r, line: .init(id: UUID(), text: "", focus: []), said: "",
+                                       phonemes: [], language: "ja")
+        }
+        // A native "立って": the other spelling fits far worse.
+        XCTAssertEqual(v(ja([("先頭", 85), ("に", 97), ("立っ", 94), ("て", 94), ("歌い", 82)],
+                            alt: [("先頭", 85), ("に", 94), ("立て", 8), ("歌い", 82)])), .pass(score: 80))
+        // The beat left out: "立て" fits better by more than the margin.
+        XCTAssertEqual(v(ja([("先頭", 85), ("に", 97), ("立っ", 40), ("て", 90), ("歌い", 82)],
+                            alt: [("先頭", 85), ("に", 94), ("立て", 92), ("歌い", 82)])),
+                       .notYet(word: "立っ", sound: nil, score: 80, heard: "立て"))
+        // Within the margin of 15: too close to call.
+        XCTAssertEqual(v(ja([("ビール", 78), ("を", 97)], alt: [("ビル", 90), ("を", 97)])), .pass(score: 80))
+    }
+
     // MARK: The verdict
 
     func testALowScoreAloneNeverStopsANativeReading() {
@@ -106,9 +156,16 @@ final class PronunciationContrastTests: XCTestCase {
     func testOnlyMeasuredSoundsAreOffered() {
         XCTAssertTrue(PronunciationCall.isOffered(for: "en"))
         XCTAssertTrue(PronunciationCall.isOffered(for: "ko"))
-        for other in ["ja", "de", "es", "fr", "zh"] {
-            XCTAssertFalse(PronunciationCall.isOffered(for: other), other)
+        for other in ["ja", "de", "es", "fr"] {
+            XCTAssertTrue(PronunciationCall.isOffered(for: other), other)
         }
+        XCTAssertFalse(PronunciationCall.isOffered(for: "zh"))
+        XCTAssertEqual(PronunciationCourse.topics(for: "es").map(\.id), ["es.rr", "es.r", "es.j", "es.ny"])
+        XCTAssertEqual(PronunciationCourse.topics(for: "fr").map(\.id), ["fr.u", "fr.nasal", "fr.eu"])
+        XCTAssertEqual(PronunciationCourse.topics(for: "de").map(\.id).sorted(),
+                       ["de.eiie", "de.ich", "de.oe", "de.ue"])
+        XCTAssertEqual(PronunciationCourse.topics(for: "ja").map(\.id), ["ja.long", "ja.tsu"])
+        XCTAssertEqual(PronunciationCourse.topics(for: "zh"), [])
         XCTAssertEqual(PronunciationCourse.topics(for: "ko").map(\.id),
                        ["ko.tense", "ko.asp", "ko.three", "ko.eoo", "ko.eu"])
         XCTAssertFalse(PronunciationCourse.topics(for: "en").isEmpty)

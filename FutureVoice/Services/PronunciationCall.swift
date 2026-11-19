@@ -216,7 +216,7 @@ enum PronunciationCourse {
             return [
                 Chapter(id: "ja.len", icon: "waveform", title: vowels, topics: [
                     Topic(id: "ja.long", symbol: "ー", examples: "おばさん · おばあさん · ビル · ビール",
-                          phonemes: [], english: "long vowels (おばさん/おばあさん, ビル/ビール): a long vowel takes twice the time"),
+                          phonemes: [], english: "long vowels (おばさん/おばあさん, ビル/ビール): a long vowel takes twice the time. Every sentence carries a loanword written in katakana with ー (ビール, コーヒー, スーパー): that is the long vowel the app can check"),
                     Topic(id: "ja.tsu", symbol: "っ", examples: "きって · きて · まって",
                           phonemes: [], english: "the small っ (きって/きて): a short pause, one beat long, before the next sound"),
                     Topic(id: "ja.n", symbol: "ん", examples: "ほん · きんえん · せんせい",
