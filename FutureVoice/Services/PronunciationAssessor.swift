@@ -33,6 +33,20 @@ struct PronunciationResult: Codable, Hashable {
     /// Azure's own read of the audio, for the record.
     var recognized: String
     var words: [Word]
+    /// The same take read against the sentence with the lesson's sound
+    /// swapped (`PronunciationContrast`). nil unless the app asked.
+    var alternates: [Alternate]? = nil
+
+    struct Alternate: Codable, Hashable {
+        var reference: String
+        var words: [Scored]
+
+        struct Scored: Codable, Hashable {
+            var word: String
+            var accuracy: Int?
+            var error: String
+        }
+    }
 
     struct Word: Codable, Hashable {
         var word: String
@@ -153,6 +167,7 @@ enum PronunciationAssessor {
         reference: String,
         language: String,
         surface: String,
+        alternates: [String] = [],
         timeout: TimeInterval = 15
     ) async -> (result: PronunciationResult?, outcome: Outcome) {
         let reference = reference.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -165,6 +180,8 @@ enum PronunciationAssessor {
             let reference: String
             let accent: String?
             let surface: String
+            /// nil (left out of the body) when there are none.
+            let alternates: [String]?
         }
         struct Wire: Decodable {
             struct Word: Decodable {
@@ -188,6 +205,16 @@ enum PronunciationAssessor {
             let prosody: Int?
             let recognized: String?
             let words: [Word]?
+            let alternates: [Alternate]?
+            struct Alternate: Decodable {
+                let reference: String
+                let words: [Scored]?
+                struct Scored: Decodable {
+                    let word: String
+                    let accuracy: Int?
+                    let error: String?
+                }
+            }
         }
 
         let code = LanguageCatalog.language(language)?.code ?? language
@@ -200,7 +227,8 @@ enum PronunciationAssessor {
             // sounds. Sent as nil here too, so a server a deploy behind still
             // lands on en-US.
             accent: code == "en" ? nil : UserDefaults.standard.string(forKey: VoiceAccentCatalog.storedAccentKey),
-            surface: surface
+            surface: surface,
+            alternates: alternates.isEmpty ? nil : alternates
         )
         guard let body = try? JSONEncoder().encode(request),
               let base = Secrets.string(for: .supabaseURL),
@@ -243,6 +271,11 @@ enum PronunciationAssessor {
                           phonemes: ($0.phonemes ?? []).map {
                               .init(phoneme: $0.phoneme, accuracy: $0.accuracy, heard: $0.heard)
                           })
+                },
+                alternates: wire.alternates?.map { a in
+                    .init(reference: a.reference, words: (a.words ?? []).map {
+                        .init(word: $0.word, accuracy: $0.accuracy, error: $0.error ?? "None")
+                    })
                 }
             )
             return (result, .scored)
@@ -253,7 +286,7 @@ enum PronunciationAssessor {
 
     /// Reads the file (any format AVAudioFile opens) and assesses it.
     static func assess(audioURL: URL, reference: String, language: String,
-                       surface: String, timeout: TimeInterval = 15)
+                       surface: String, alternates: [String] = [], timeout: TimeInterval = 15)
     async -> (result: PronunciationResult?, outcome: Outcome) {
         let wav = await Task.detached { () -> Data? in
             // A live call's learner turn is WAV bytes filed under `.mp3`
@@ -274,7 +307,7 @@ enum PronunciationAssessor {
         }.value
         guard let wav else { return (nil, .skipped) }
         return await assess(wav: wav, reference: reference, language: language,
-                            surface: surface, timeout: timeout)
+                            surface: surface, alternates: alternates, timeout: timeout)
     }
 
     /// A 16 kHz mono PCM16 WAV (as `AudioLoudness.wav16kMono` writes it, a

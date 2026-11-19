@@ -42,8 +42,11 @@ enum PronunciationCall {
     /// failed in Japanese, French and Spanish, a native Korean speaker was
     /// drilled on a word he said right, and two German learners never passed
     /// a take. A language comes back once native recordings pass in it.
+    ///
+    /// Korean is back the same day, judged another way: by comparison
+    /// (`PronunciationContrast`), on the sounds measured that way.
     static func isOffered(for language: String) -> Bool {
-        LanguageCatalog.base(language) == "en"
+        LanguageCatalog.base(language) == "en" || PronunciationContrast.isOffered(language: language)
     }
 
     /// The ring's page is showing AND the language being learned has one: a
@@ -109,7 +112,19 @@ enum PronunciationCourse {
         let english: String
     }
 
+    /// The course as offered: outside English, only the sounds judged by
+    /// comparison (`PronunciationContrast.isOffered`); a chapter left with
+    /// none is dropped.
     static func chapters(for language: String) -> [Chapter] {
+        let all = allChapters(for: language)
+        guard LanguageCatalog.base(language) != "en" else { return all }
+        return all.compactMap { c in
+            let kept = c.topics.filter { PronunciationContrast.isOffered(topicId: $0.id) }
+            return kept.isEmpty ? nil : Chapter(id: c.id, icon: c.icon, title: c.title, topics: kept)
+        }
+    }
+
+    static func allChapters(for language: String) -> [Chapter] {
         let consonants = explain("Consonants")
         let vowels = explain("Vowels")
         let flow = explain("Endings and flow")
@@ -453,6 +468,13 @@ struct PronunciationRound: Equatable {
         /// How that sound came out (founder, 2026-11-04: "show how it
         /// sounded"), when Azure heard something else.
         var heardAs: PronunciationJudge.HeardAs? = nil
+        /// false when the take was judged by comparison
+        /// (`PronunciationContrast`): there is no score to show or say.
+        var scored = true
+        /// The spelling the word fit better ("방을"), judged by comparison.
+        var cameOutAs: String? = nil
+
+        var spokenScore: Int? { scored ? score : nil }
     }
 
     let id: UUID
@@ -644,6 +666,11 @@ enum PronunciationJudge {
                         said: String, phonemes: [String], language: String,
                         only: Set<String>? = nil, excluding: Set<String> = [],
                         wordDrill: Bool = false) -> Verdict {
+        // Outside English no score is held to a bar: the lesson's sound is
+        // judged by comparison, and nothing else stops a reading.
+        if LanguageCatalog.base(language) != "en" {
+            return PronunciationContrast.verdict(result: result, only: only, excluding: excluding)
+        }
         guard let result else { return .unheard }
         if (result.completeness ?? 100) < completenessBar { return .offScript }
         func inScope(_ w: PronunciationResult.Word) -> Bool {
@@ -754,6 +781,18 @@ enum PronunciationJudge {
     static func feedback(for verdict: Verdict, result: PronunciationResult?,
                          line: PronunciationRound.Line, phonemes: [String]) -> PronunciationRound.Feedback? {
         guard let result else { return nil }
+        // Judged by comparison: the word and what it came out as, no score.
+        if !result.locale.hasPrefix("en") {
+            switch verdict {
+            case .notYet(let word, _, _, let heard):
+                return .init(word: word, sound: nil, score: 0, ok: false, scored: false, cameOutAs: heard)
+            case .pass:
+                let only = result.referenceWords.count == 1 ? result.referenceWords.first?.word : nil
+                return .init(word: only, sound: nil, score: 0, ok: true, scored: false)
+            case .notSmooth, .offScript, .unheard:
+                return nil
+            }
+        }
         let words = result.referenceWords.filter(\.isJudged)
         func scoreOf(_ word: String, _ sound: String?) -> Int? {
             guard let w = words.first(where: { key($0.word) == key(word) }) else { return nil }

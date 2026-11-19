@@ -75,6 +75,7 @@ const LOCALE_BY_LANGUAGE: Record<string, string> = {
 const NATIVE_ALPHABET_LOCALES = new Set(["zh-CN"])
 // Locales whose Azure model can't be trusted to judge a native speaker.
 const UNJUDGED_LOCALES = new Set(["ko-KR"])
+const MAX_ALTERNATES = 2
 // Prosody (stress, intonation, rhythm) is assessed by Azure for en-US only.
 const PROSODY_LOCALES = new Set(["en-US"])
 
@@ -141,6 +142,10 @@ Deno.serve(async (req) => {
   let body: {
     audio_b64?: string; language?: string; reference?: string
     accent?: string | null; surface?: string
+    // Contrast judging (2026-11-19): the same take read against the
+    // reference with the lesson's sound swapped for the one it is confused
+    // with ("빵을" → "방을"). At most two, same word count as `reference`.
+    alternates?: string[]
   }
   try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
 
@@ -159,14 +164,28 @@ Deno.serve(async (req) => {
   // got 37 and was drilled on it over and over. 503 is what the app reads as
   // "no reader", so the pronunciation call judges the words at once and
   // shadowing and speech score as they did before any assessment.
-  if (UNJUDGED_LOCALES.has(locale)) return errorResponse(503, "not_configured")
+  //
+  // Unless the app asks the other question (`alternates`): not "how good was
+  // this word" but "which of these two was said". The model's bias on a word
+  // is the same under both spellings and cancels. Measured the same day on
+  // FLEURS, real native Korean: 1,087 words whose tense/plain consonant was
+  // swapped in the reference; an absolute bar of 50 caught 136 of the wrong
+  // ones, the comparison picked what was said 926 times, the other 11, and
+  // left 150 within 5 points (the app passes those).
+  const alternates = (Array.isArray(body.alternates) ? body.alternates : [])
+    .filter((a): a is string => typeof a === "string")
+    .map((a) => a.trim())
+    .filter((a) => a && a !== reference && a.length <= MAX_REFERENCE_CHARS)
+    .slice(0, MAX_ALTERNATES)
+  const contrast = alternates.length > 0
+  if (UNJUDGED_LOCALES.has(locale) && !contrast) return errorResponse(503, "not_configured")
   // The pronunciation call is judged in English only (2026-11-19, founder).
   // Its pass bars were set on en-US and never checked elsewhere: a native
   // voice reading the right sentence passed 0/5 in Japanese, 4/10 in French,
   // 3/5 in Spanish, and two real German learners got 0 passes in 8 takes.
   // Other surfaces (shadowing, speech) keep their scores: nothing there
   // stops a learner on one.
-  if (body.surface === "pron_call" && locale !== "en-US") {
+  if (body.surface === "pron_call" && locale !== "en-US" && !contrast) {
     return errorResponse(503, "not_configured")
   }
 
@@ -190,11 +209,13 @@ Deno.serve(async (req) => {
   const recording = recordFreeUsage({
     supabase, userId: user.id, action: "pronunciation", purpose: "pronunciation",
     dailyCap: DAILY_CAP, sourceFn: SOURCE_FN, idempotencyKey: idemKey,
-    metadata: { locale, audio_ms: audioMs, surface: body.surface ?? null },
+    // Azure bills each read of the audio: one plus one per alternate.
+    metadata: { locale, audio_ms: audioMs * (1 + alternates.length), surface: body.surface ?? null,
+                ...(contrast ? { alternates: alternates.length } : {}) },
   })
 
-  const assessment = {
-    ReferenceText: reference,
+  const assessmentFor = (referenceText: string) => ({
+    ReferenceText: referenceText,
     GradingSystem: "HundredMark",
     Granularity: "Phoneme",
     Dimension: "Comprehensive",
@@ -212,13 +233,11 @@ Deno.serve(async (req) => {
     // how the app can say "your f came out as p" or "a vowel slipped in".
     // Phoneme names come back for en-US only; elsewhere this is empty.
     NBestPhonemeCount: 3,
-  }
+  })
   const url = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1`
     + `?language=${encodeURIComponent(locale)}&format=detailed`
 
-  let upstream: Response
-  try {
-    upstream = await fetch(url, {
+  const ask = (referenceText: string) => fetch(url, {
       method: "POST",
       headers: {
         "Ocp-Apim-Subscription-Key": key,
@@ -228,11 +247,32 @@ Deno.serve(async (req) => {
         // Korean, Japanese and Chinese reference failed here as a 502
         // before Azure was ever asked (2026-11-19).
         "Pronunciation-Assessment": btoa(String.fromCharCode(
-          ...new TextEncoder().encode(JSON.stringify(assessment)))),
+          ...new TextEncoder().encode(JSON.stringify(assessmentFor(referenceText))))),
       },
       body: audio,
       signal: AbortSignal.timeout(20_000),
     })
+  // The alternates run beside the reference. One that fails is left out:
+  // the app then has nothing to compare that word with and passes it.
+  const alternateReads = alternates.map(async (alt) => {
+    try {
+      const r = await ask(alt)
+      if (!r.ok) return null
+      const b = ((await r.json()) as AzureResponse | null)?.NBest?.[0]
+      if (!b) return null
+      return {
+        reference: alt,
+        words: (b.Words ?? []).map((w) => ({
+          word: w.Word,
+          accuracy: score(pick(w, "AccuracyScore") as number | undefined),
+          error: (pick(w, "ErrorType") as string | undefined) ?? "None",
+        })),
+      }
+    } catch { return null }
+  })
+  let upstream: Response
+  try {
+    upstream = await ask(reference)
   } catch (e) {
     await recording
     return errorResponse(502, "azure unreachable", String(e))
@@ -285,5 +325,7 @@ Deno.serve(async (req) => {
     prosody: score(pick(best, "ProsodyScore") as number | undefined),
     recognized: best.Display ?? "",
     words,
+    // Only when asked for: an older app never sends `alternates`.
+    ...(contrast ? { alternates: (await Promise.all(alternateReads)).filter((a) => a) } : {}),
   }), { status: 200, headers: { ...cors(), "Content-Type": "application/json" } })
 })

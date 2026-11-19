@@ -210,7 +210,7 @@ struct PronunciationFeedbackPill: View {
     let feedback: PronunciationRound.Feedback
 
     private var color: Color {
-        feedback.ok ? .green : (feedback.score < 50 ? .red : .orange)
+        feedback.ok ? .green : (feedback.scored && feedback.score < 50 ? .red : .orange)
     }
 
     var body: some View {
@@ -228,13 +228,18 @@ struct PronunciationFeedbackPill: View {
                         EmptyView()
                     }
                 }
-            } else {
+                if let other = feedback.cameOutAs {
+                    Text(verbatim: "→ \(other)").foregroundStyle(color)
+                }
+            } else if feedback.scored {
                 Text(explain("Flow")).fontWeight(.semibold)
             }
-            Text(verbatim: "\(feedback.score)")
-                .fontWeight(.bold)
-                .monospacedDigit()
-                .foregroundStyle(color)
+            if feedback.scored {
+                Text(verbatim: "\(feedback.score)")
+                    .fontWeight(.bold)
+                    .monospacedDigit()
+                    .foregroundStyle(color)
+            }
             Text(feedback.ok ? explain("Nice") : explain("Not yet"))
                 .fontWeight(.semibold)
                 .foregroundStyle(color)

@@ -5761,7 +5761,8 @@ struct ConversationView: View {
                 (result, outcome) = await early.task.value
             } else if let audioURL {
                 (result, outcome) = await PronunciationAssessor.assess(
-                    audioURL: audioURL, reference: drill ?? line.text, language: target, surface: "pron_call")
+                    audioURL: audioURL, reference: drill ?? line.text, language: target, surface: "pron_call",
+                    alternates: PronunciationContrast.alternates(for: drill ?? line.text, topicId: round.topic.id))
             }
             // From the turn in hand: with an early read, only what was left.
             pronAssessMs = Int(Date().timeIntervalSince(assessStart) * 1000)
@@ -5875,7 +5876,7 @@ struct ConversationView: View {
                     withAnimation(.easeInOut(duration: 0.25)) { pronRound = now }
                     sendTutorSystem()
                     tutorNudge(PronunciationNotes.inFlow(chunk: chunk, word: word, sound: sound,
-                                                         heardAs: fb?.heardAs, score: fb?.score,
+                                                         heardAs: fb?.heardAs, score: fb?.spokenScore,
                                                          topic: now.topic))
                     return
                 }
@@ -5884,7 +5885,7 @@ struct ConversationView: View {
                 sendTutorSystem()
                 tutorNudge(PronunciationNotes.notYet(word: now.lines[i].drillWord ?? word, sound: sound, heard: heard,
                                                      topic: now.topic, sentence: line.text,
-                                                     heardAs: fb?.heardAs, score: fb?.score))
+                                                     heardAs: fb?.heardAs, score: fb?.spokenScore))
             }
         }
     }
@@ -5973,11 +5974,13 @@ struct ConversationView: View {
         let line = round.lines[i]
         let reference = line.drillWord ?? line.text
         let target = appState.targetLanguage
+        let alternates = PronunciationContrast.alternates(for: reference, topicId: round.topic.id)
         let url = take.url
         let task = Task { () -> (result: PronunciationResult?, outcome: PronunciationAssessor.Outcome) in
             defer { try? FileManager.default.removeItem(at: url) }
             return await PronunciationAssessor.assess(audioURL: url, reference: reference,
-                                                      language: target, surface: "pron_call")
+                                                      language: target, surface: "pron_call",
+                                                      alternates: alternates)
         }
         pronEarly = PronEarlyRead(roundId: round.id, index: i, reference: reference,
                                   ms: take.ms, task: task)
@@ -6090,7 +6093,7 @@ struct ConversationView: View {
         ])
         // The last miss on this word, to say whether this one came closer.
         let previous = now.lines[i].drillTries > 0 && now.lines[i].feedback?.ok == false
-            ? now.lines[i].feedback?.score : nil
+            ? now.lines[i].feedback?.spokenScore : nil
         let fb = PronunciationJudge.feedback(for: verdict, result: result, line: probe,
                                              phonemes: now.topic.phonemes)
         if let fb { now.lines[i].feedback = fb }
@@ -6116,7 +6119,7 @@ struct ConversationView: View {
             // new tip, never a bare "again" (founder, 2026-11-10).
             withAnimation(.easeInOut(duration: 0.25)) { pronRound = now }
             tutorNudge(PronunciationNotes.wordAgain(word: word, sound: sound, topic: now.topic,
-                                                   heardAs: fb?.heardAs, score: fb?.score,
+                                                   heardAs: fb?.heardAs, score: fb?.spokenScore,
                                                    previous: previous, tries: now.lines[i].drillTries))
         case .offScript:
             pronUnheard = 0
