@@ -2463,15 +2463,22 @@ class TalkViewModel(context: Context) : ViewModel() {
                 }
                 is PronunciationJudge.Verdict.NotSmooth -> {
                     pronUnheard = 0
-                    // Nothing moves on by itself: only the learner's own
-                    // "Next sentence" leaves a sentence.
                     now = now.replacing(i) { l -> l.copy(tries = l.tries + 1, bestScore = maxOf(l.bestScore ?: 0, verdict.score)) }
+                    if (now.lines[i].tries >= PronunciationCall.MAX_MISSES) {
+                        pronMoveOnAfterMisses(now, i, null, null)
+                        return@launch
+                    }
                     _state.update { it.copy(pronRound = now) }
                     tutorNudge(PronunciationNotes.notSmooth(line.text, PronunciationJudge.pauseBefore(result),
                         tries = now.lines[i].tries))
                 }
                 is PronunciationJudge.Verdict.NotYet -> {
                     pronUnheard = 0
+                    if (line.tries + 1 >= PronunciationCall.MAX_MISSES) {
+                        now = now.replacing(i) { l -> l.copy(tries = l.tries + 1, bestScore = maxOf(l.bestScore ?: 0, verdict.score)) }
+                        pronMoveOnAfterMisses(now, i, verdict.word, verdict.sound)
+                        return@launch
+                    }
                     // The word on its own first, then the sentence again. A word
                     // already right on its own is practiced joined to its
                     // neighbours instead: the joining is what slipped.
@@ -2598,6 +2605,21 @@ class TalkViewModel(context: Context) : ViewModel() {
         tutorNudge(PronunciationNotes.moveOn(word, sound, now.topic, now.current?.let { now.lines[it] }, now, later))
     }
 
+    /** A sentence missed MAX_MISSES times moves on by itself. It does not
+     *  come back at the end of the round (a third reading); its word waits
+     *  for the next round on this sound (iOS). */
+    private fun pronMoveOnAfterMisses(start: PronunciationRound, i: Int, word: String?, sound: String?) {
+        if (_state.value.partial.isNotBlank()) discardHeldForPron()
+        val (round, _) = pronGiveUp(start.replacing(i) { it.copy(isRetry = true) }, i, word, sound)
+        val now = round
+        com.roro.futurevoice.core.Telemetry.log("pron_auto_next", mapOf("topic" to now.topic.id,
+            "tries" to now.lines[i].tries.toString(), "word" to (word ?: "")))
+        _state.update { it.copy(pronRound = now) }
+        sendTutorSystem()
+        if (now.isFinished) finishPronRound(now)
+        tutorNudge(PronunciationNotes.moveOn(word, sound, now.topic, now.current?.let { now.lines[it] }, now, false))
+    }
+
     /** The learner's own "Back to the sentence" while a word is drilled. */
     fun pronLeaveWord() {
         if (!pronThisCall) return
@@ -2694,6 +2716,13 @@ class TalkViewModel(context: Context) : ViewModel() {
             is PronunciationJudge.Verdict.NotYet -> {
                 pronUnheard = 0
                 now = now.replacing(i) { it.copy(drillTries = it.drillTries + 1) }
+                if (now.lines[i].drillTries >= PronunciationCall.MAX_MISSES) {
+                    now = now.replacing(i) { it.copy(drillWord = null, drillTries = 0) }
+                    _state.update { it.copy(pronRound = now) }
+                    sendTutorSystem()
+                    tutorNudge(PronunciationNotes.wordBack(word, verdict.sound, now.topic, chosen = false))
+                    return
+                }
                 _state.update { it.copy(pronRound = now) }
                 // Every miss says what was off and a new tip, never a bare
                 // "again" (iOS, founder 2026-11-10).

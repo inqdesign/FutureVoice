@@ -37,6 +37,9 @@ object PronunciationCall {
     /** Written by the ring: true while its pronunciation page is showing. */
     const val KEY = "futurevoice.call.pronunciationMode"
     const val SENTENCES_PER_ROUND = 5
+    /** "Not yet" twice on the same sentence, or on the same word alone, and
+     *  it moves on by itself (iOS, founder 2026-11-20). */
+    const val MAX_MISSES = 2
 
     fun lastTopicKey(language: String) = "futurevoice.pron.lastTopic.${language.substringBefore('-')}"
     fun lastFinishedKey(language: String) = "futurevoice.pron.lastFinished.${language.substringBefore('-')}"
@@ -1087,9 +1090,10 @@ object PronunciationNotes {
             "That's it! Now the sentence.", "Good! Back to the whole sentence.",
             "There it is. Now all of it.", "Nice! Now read the sentence.")), 7)
 
-    fun wordBack(word: String, sound: String?, topic: PronunciationCourse.Topic): String {
+    fun wordBack(word: String, sound: String?, topic: PronunciationCourse.Topic, chosen: Boolean = true): String {
         val which = sound?.let { " (its \"$it\" sound)" } ?: ""
-        return "They chose to go back to the sentence. \"$word\"$which isn't there yet — that's fine. Give ONE short tip on how to make it (today's sound: ${topic.english}), at most 10 words, say \"$word\" once, clearly, then: now the whole sentence. At most 25 words in all."
+        val start = if (chosen) "They chose to go back to the sentence." else "Two tries on the word is enough for now: back to the sentence."
+        return "$start \"$word\"$which isn't there yet — that's fine. Give ONE short tip on how to make it (today's sound: ${topic.english}), at most 10 words, say \"$word\" once, clearly, then: now the whole sentence. At most 25 words in all."
     }
 
     fun wordOffScript(word: String): String = only("Just the word: $word.", 5)
