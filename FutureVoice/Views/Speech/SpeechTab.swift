@@ -1346,7 +1346,9 @@ struct SpeechOwnScriptSheet: View {
                 // Only once there IS a script: the price is measured from it,
                 // and before a word is typed there is nothing to price
                 // (founder, 2026-10-14 — the length first, then the cost).
-                if appState.voiceCloneId != nil && !trimmed.isEmpty, !SpeechAppFlags.isSpeechApp {
+                // Not when editing: the script's own page already has the
+                // voiceover button (founder, 2026-11-20 — a duplicate).
+                if existing == nil, appState.voiceCloneId != nil && !trimmed.isEmpty, !SpeechAppFlags.isSpeechApp {
                     Section {
                         Toggle("Also make it in my voice", isOn: $voiceover)
                             .disabled(quote > ScriptVoiceover.maxMinutes)
