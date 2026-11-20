@@ -37,12 +37,25 @@ struct TalkTakeaway: Equatable {
             .compactMap { $0 }.joined(separator: ",")
     }
 
-    /// The picks. The curriculum lists are already in teaching order (words
-    /// the call kept coming back to first, expressions the fluent self
-    /// offered before the ones the learner said), so the first unmastered
-    /// item is the one; a fully mastered list still gives its first.
-    static func make(session: Session,
+    /// The picks: one item per chapter, chosen for THIS learner's level
+    /// (2026-11-20, founder: the screen showed "that", and expressions the
+    /// learner already had). The chapters list what the talk taught; this
+    /// picks the one worth holding on to.
+    ///
+    /// - Word: a graded word at the learner's level or one band above, the
+    ///   one the fluent self came back to in the most turns (ties: the
+    ///   higher band). Then any other graded word at or above the level,
+    ///   then a word the list doesn't grade that the call kept returning to.
+    ///   Never a word the list grades below the level.
+    /// - Expression: one the fluent self OFFERED (a phrase the learner said
+    ///   is already theirs), rated at or above the level by
+    ///   `QuickQuizStock`'s cached rating (`levels`). A phrase rated below
+    ///   the level or "none" is never shown; an unrated one is shown only
+    ///   when no rated one qualifies (the rating call failed or ran late).
+    @MainActor static func make(session: Session,
                      curriculum: TalkCurriculum.Snapshot,
+                     proficiency: CEFRLevel,
+                     expressionLevels: [String: String],
                      fix: Fix?) -> TalkTakeaway {
         let fluentText = session.turns
             .filter { $0.role == .fluentSelf }
@@ -61,10 +74,12 @@ struct TalkTakeaway: Equatable {
             return nil
         }
         var t = TalkTakeaway()
-        if let w = firstOpen(curriculum.words) {
+        if let w = pickWord(curriculum.words, fluentTurns: fluentText, proficiency: proficiency) {
             t.word = Entry(text: w.text, example: example(for: w.text))
         }
-        if let e = firstOpen(curriculum.expressions) {
+        if let e = pickExpression(curriculum.expressions,
+                                  offered: session.summary?.expressionsOffered ?? [],
+                                  levels: expressionLevels, proficiency: proficiency) {
             t.expression = Entry(text: ExpressionsView.display(e.text),
                                  example: example(for: e.text))
         }
@@ -73,6 +88,42 @@ struct TalkTakeaway: Equatable {
             t.line = Line(turnId: l.id, text: l.text)
         }
         return t
+    }
+
+    static func pickWord(_ items: [ScenarioCurriculum.Item], fluentTurns: [String],
+                         proficiency: CEFRLevel) -> ScenarioCurriculum.Item? {
+        let open = items.filter { $0.masteredAt == nil }
+        guard !open.isEmpty else { return nil }
+        let base = CoreVocabulary.levelRank(proficiency)
+        let turnLemmas = fluentTurns.map { VocabStore.lemmas(in: [$0]) }
+        func turns(_ w: String) -> Int {
+            let key = w.lowercased()
+            return turnLemmas.filter { $0.contains(key) }.count
+        }
+        func rank(_ w: String) -> Int? { CoreVocabulary.level(of: w).map(CoreVocabulary.levelRank) }
+        func best(_ pool: [ScenarioCurriculum.Item]) -> ScenarioCurriculum.Item? {
+            pool.max { a, b in
+                let (ta, tb) = (turns(a.text), turns(b.text))
+                return ta == tb ? (rank(a.text) ?? 0) < (rank(b.text) ?? 0) : ta < tb
+            }
+        }
+        let graded = open.filter { rank($0.text).map { $0 >= base } ?? false }
+        if let w = best(graded.filter { rank($0.text)! <= base + 1 }) { return w }
+        if let w = best(graded) { return w }
+        // Off the graded list: only a word the call kept coming back to.
+        return best(open.filter { rank($0.text) == nil && turns($0.text) > 1 })
+    }
+
+    @MainActor static func pickExpression(_ items: [ScenarioCurriculum.Item], offered: [String],
+                               levels: [String: String],
+                               proficiency: CEFRLevel) -> ScenarioCurriculum.Item? {
+        let offeredKeys = Set(offered.map(CarryoverDetector.normalized))
+        let open = items.filter {
+            $0.masteredAt == nil && offeredKeys.contains(CarryoverDetector.normalized($0.text))
+        }
+        let rated = open.map { ($0, levels[ExpressionCatalog.normalizedKey($0.text)]) }
+        if let hit = rated.first(where: { QuickQuizStock.atLevel($0.1, proficiency) }) { return hit.0 }
+        return rated.first { $0.1 == nil }?.0
     }
 }
 

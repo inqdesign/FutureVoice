@@ -660,9 +660,17 @@ final class VocabStore: ObservableObject {
     func pickupCandidates(fromFluentTexts texts: [String], atOrAbove minLevel: CEFRLevel?,
                           excludingLemmas excluded: Set<String> = []) -> [String] {
         let minRank = minLevel.map(CoreVocabulary.levelRank) ?? 0
+        // CONTENT words only (2026-11-20). The list grades `that` B2 and
+        // auxiliary `will` as the noun, so for a B1/B2 learner every relative
+        // clause the fluent self said put "that" in the book, the notebook
+        // and the "Before you go" screen. The vocabulary level learned this
+        // first (`VocabSophistication`); this reads the same reader, so a
+        // word is a word in both places.
+        let content = Self.contentLemmas(in: texts)
         let graded = Self.lemmas(in: texts)
             .compactMap { w -> (word: String, rank: Int)? in
-                guard !excluded.contains(w), let lv = CoreVocabulary.level(of: w) else { return nil }
+                guard !excluded.contains(w), content?.contains(w) ?? true,
+                      let lv = CoreVocabulary.level(of: w) else { return nil }
                 let rank = CoreVocabulary.levelRank(lv)
                 return rank >= minRank ? (w, rank) : nil
             }
@@ -989,6 +997,24 @@ final class VocabStore: ObservableObject {
         return out
     }
 
+    /// Content-word lemmas in `texts` as `VocabSophistication` reads them
+    /// (nouns, verbs, adjectives, adverbs, minus the language's stop words),
+    /// or nil for a language it has no reader for (no filter there).
+    nonisolated static func contentLemmas(in texts: [String]) -> Set<String>? {
+        let code = LanguageScope.active
+        guard let profile = VocabSophistication.profiles[code] else { return nil }
+        var out = Set<String>()
+        var tagger: NLTagger?
+        for text in texts {
+            out.formUnion(contentMemo.value(for: text, language: NLLanguage(rawValue: code)) {
+                let t = tagger ?? NLTagger(tagSchemes: [.lemma, .lexicalClass])
+                tagger = t
+                return Set(VocabSophistication.contentLemmas(text, profile: profile, tagger: t))
+            })
+        }
+        return out
+    }
+
     /// Korean: map each spoken token to a wordlist headword via the
     /// deterministic KoreanMorph heuristic (particle stripping, ending → 다).
     /// Only lexicon hits come back — a candidate that isn't a headword is a
@@ -1252,5 +1278,6 @@ final class TextMemo<Value>: @unchecked Sendable {
 }
 
 private let lemmaMemo = TextMemo<Set<String>>()
+private let contentMemo = TextMemo<Set<String>>()
 private let offListMemo = TextMemo<Set<String>>()
 private let lookupKeyMemo = TextMemo<String>()

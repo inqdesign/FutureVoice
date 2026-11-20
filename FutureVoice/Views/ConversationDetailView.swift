@@ -1114,16 +1114,39 @@ struct ConversationDetailView: View {
         let fix = (corrections.first { $0.masteredAt == nil && !($0.original ?? "").isEmpty }
                    ?? corrections.first)
             .map { TalkTakeaway.Fix(original: $0.original, fluent: $0.fluent, reason: $0.reason) }
-        let t = TalkTakeaway.make(session: session, curriculum: curriculum, fix: fix)
-        guard !t.isEmpty else { return }
-        Analytics.capture("talk_takeaway_shown", ["parts": t.parts])
-        // A beat after the page appears: presenting in the same pass as the
-        // sheet that holds this page is dropped by UIKit.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+        // The expression is picked by its level, so the talk's offered
+        // phrases are rated first (the quick quiz's cache, free). Waited for
+        // at most `takeawayRateWait`; a late rating leaves the pick to the
+        // unrated fallback rather than holding the screen.
+        let offered = session.summary?.expressionsOffered ?? []
+        let target = LanguageCatalog.englishName(appState.targetLanguage)
+        let level = appState.proficiency
+        Task { @MainActor in
+            let started = Date()
+            // Its own task, so the rating still lands in the cache (for the
+            // quiz and the next talk) when the wait gives up on it.
+            let rating = Task { await QuickQuizStock.rateMissing(offered, targetName: target) }
+            await withTaskGroup(of: Void.self) { group in
+                group.addTask { await rating.value }
+                group.addTask { try? await Task.sleep(nanoseconds: UInt64(Self.takeawayRateWait * 1e9)) }
+                await group.next()
+                group.cancelAll()
+            }
+            let t = TalkTakeaway.make(session: session, curriculum: curriculum,
+                                      proficiency: level,
+                                      expressionLevels: QuickQuizStock.levels(), fix: fix)
+            guard !t.isEmpty else { return }
+            Analytics.capture("talk_takeaway_shown", ["parts": t.parts])
+            // A beat after the page appears: presenting in the same pass as
+            // the sheet that holds this page is dropped by UIKit.
+            let beat = max(0, 0.35 - Date().timeIntervalSince(started))
+            try? await Task.sleep(nanoseconds: UInt64(beat * 1e9))
             takeawayShownAt = Date()
             takeaway = t
         }
     }
+
+    private static let takeawayRateWait: Double = 4
 
     private func refresh() {
         // Pick up store-side changes (misheard exclusions made from the

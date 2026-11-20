@@ -274,7 +274,9 @@ final class TalkBookProgressTests: XCTestCase {
     func testLearningAWordChecksItOffInsteadOfRemovingIt() {
         // The book stores LEMMAS (lowercased); German nouns arrive capitalized.
         let taughtWord = self.taughtWord.lowercased()
-        let talk = session(saying: taughtWord)
+        // In a sentence: alone, the tagger reads a word as an interjection,
+        // and the book takes content words only.
+        let talk = session(saying: "The word \(taughtWord) came up.")
 
         let before = TalkCurriculum.build(session: talk, proficiency: .a1, shadowAttempts: [], drillCards: [])
         guard before.words.contains(where: { $0.text == taughtWord }) else {
@@ -747,6 +749,27 @@ final class ConfirmedByUseTests: XCTestCase {
         XCTAssertFalse(picks.contains("car"))
         XCTAssertTrue(picks.contains("practice") || picks.contains("time"),
                       "ordinary words the learner didn't say still come through")
+    }
+
+    /// The list grades `that` B2 and auxiliary `will` as the noun; neither
+    /// is a word to pick up (2026-11-20: "that" on the Before-you-go screen).
+    func testPickupSkipsFunctionWordsTheListGradesHigh() {
+        let fluent = ["I think that the deadline will be tough, but that negotiation was impressive.",
+                      "That sounds like a reasonable compromise that will work."]
+        let picks = VocabStore.shared.pickupCandidates(fromFluentTexts: fluent, atOrAbove: .b1)
+        XCTAssertFalse(picks.contains("that"))
+        XCTAssertFalse(picks.contains("will"))
+        XCTAssertTrue(picks.contains("negotiation") || picks.contains("compromise"))
+    }
+
+    /// The takeaway's word is at the learner's level or one above, and the
+    /// one the call came back to most.
+    @MainActor func testTakeawayWordFitsTheLevel() {
+        let items = ["negotiation", "compromise", "tough"].map { ScenarioCurriculum.Item(text: $0, note: "") }
+        let turns = ["The negotiation was hard.", "Any compromise?", "The negotiation again."]
+        let level = CoreVocabulary.level(of: "negotiation") ?? .b1
+        let pick = TalkTakeaway.pickWord(items, fluentTurns: turns, proficiency: level)
+        XCTAssertEqual(pick?.text, "negotiation")
     }
 
     func testSayingAKnownWordConfirmsIt() {
