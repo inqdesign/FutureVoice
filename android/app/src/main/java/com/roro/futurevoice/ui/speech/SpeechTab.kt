@@ -858,8 +858,9 @@ internal fun SpeechOwnScriptSheet(existing: SpeechScript?, language: String, nat
                 modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 7.dp))
         }
         // Only once there IS a script: the price is measured from it (iOS,
-        // founder 2026-10-14 — the length first, then the cost).
-        if (voiceId != null && trimmed.isNotEmpty()) {
+        // founder 2026-10-14 — the length first, then the cost). Not when
+        // editing: the script's own page already has the voiceover button.
+        if (existing == null && voiceId != null && trimmed.isNotEmpty()) {
             val tooLong = quote > ScriptVoiceover.MAX_MINUTES
             FormSection(null, footer = if (tooLong) stringResource(R.string.this_script_is_too_long_to_make_in_your_voice)
                 else voiceoverPriceLine(quote, account)) {
