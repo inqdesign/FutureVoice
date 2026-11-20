@@ -1158,6 +1158,13 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         socket?.cancel(with: .goingAway, reason: nil)
         socket = nil
         stopAudio(endingCall: true)
+        // A call put down mid-line never hears that line's end, so the echo
+        // gate stayed shut, and the call picked back up forwarded every
+        // buffer as silence: nothing the learner said reached the gateway
+        // (device log 2026-11-20, two resumed tutor calls, 66 s of "gate
+        // MUTE" with them talking). The gate belongs to the line, not the
+        // client.
+        mic.setEchoGate(active: false)
         if case .failed = state {} else { state = .idle }
         partial = ""
         level = 0

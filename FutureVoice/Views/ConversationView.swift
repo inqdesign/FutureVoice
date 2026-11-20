@@ -1980,9 +1980,17 @@ struct ConversationView: View {
                     guard !realtime.sendPending else { return }
                     HapticEngine.selection()
                     if pronThisCall { pronStartEarlyRead() }
+                    lastSendTapAt = Date()
                     realtime.sendTurn()
                     return
                 }
+                // A reply written ahead starts ~0.3 s after Send, and the
+                // pill turns from Send into hang-up the same instant: a
+                // second tap (or one that landed late) put the call down
+                // right after it was answered (device log 2026-11-20, tutor
+                // mode, 0.45 s after Send). Just after a Send, a tap is not
+                // a hang-up.
+                if phoneCallActive, Date().timeIntervalSince(lastSendTapAt) < Self.sendTapGrace { return }
                 Task { await handleMicTap() }
             } label: {
                 ZStack {
@@ -2093,6 +2101,10 @@ struct ConversationView: View {
     /// Send-to-answer once the learner has started: the pill is Send and
     /// reset sits beside it. Before the first word the turn looks like any
     /// other — the pill stops the call, the topic button stays.
+    /// When the pill was last tapped as Send (see the pill's action).
+    @State private var lastSendTapAt = Date.distantPast
+    private static let sendTapGrace: TimeInterval = 1.5
+
     private var sendReady: Bool {
         sendModeActive && (hasHeldWords || realtime.sendPending)
     }
