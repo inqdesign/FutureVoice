@@ -514,7 +514,10 @@ private fun DayJournal(context: Context, day: Long, seconds: Int, talks: List<Se
         DayCardStore.resolve(context, day) { DayCardStore.make(context, day, seconds, talks) }
     }
     val study = card.studyMinutes
-    if (seconds == 0 && talks.isEmpty() && shadowed == 0 && reviewed == 0 && study == 0) return
+    // Everything the card itself lists counts (say it again, speech,
+    // listening, scenes, words), not only the five numbers beside it.
+    if (seconds == 0 && talks.isEmpty() && shadowed == 0 && reviewed == 0 && study == 0 &&
+        card.lines.isEmpty()) return
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         Box(Modifier.size(PREVIEW_WIDTH, PREVIEW_WIDTH * 5 / 4).clip(ContinuousShape(10.dp)).clickable(onClick = onShare),

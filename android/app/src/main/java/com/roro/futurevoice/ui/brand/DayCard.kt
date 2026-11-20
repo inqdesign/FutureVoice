@@ -61,7 +61,7 @@ data class DayCardData(
     /** Word and expression cards worked through. */
     val words: Int? = null,
 ) {
-    val hasActivity: Boolean get() = talkMinutes > 0 || talks > 0 || studyMinutes > 0
+    val hasActivity: Boolean get() = talkMinutes > 0 || talks > 0 || studyMinutes > 0 || lines.isNotEmpty()
 
     /** The list at the card's bottom left: everything done that day, one
      *  line each, a zero never printed. Talk is minutes (metered); the rest
