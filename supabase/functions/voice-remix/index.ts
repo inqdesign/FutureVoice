@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
   if (pre) return pre
   if (req.method !== "POST") return errorResponse(405, "method not allowed")
 
-  const authed = await requireUser(req)
+  const authed = await requireUser(req, { allowAnonymous: true })
   if (authed instanceof Response) return authed
   const { user, supabase } = authed
 

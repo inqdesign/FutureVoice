@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
   if (pre) return pre
   if (req.method !== "POST") return errorResponse(405, "method not allowed")
 
-  const authed = await requireUser(req)
+  const authed = await requireUser(req, { allowAnonymous: true })
   if (authed instanceof Response) return authed
   const { user, supabase } = authed
 
@@ -241,6 +241,11 @@ Deno.serve(async (req) => {
   // so this is one synthesis per voice, ever.
   const isFreeVoiceCheck = body.purpose === "voice_comparison" && body.text.length <= 200
   const isFreeEntry = isFreeGreeting || isFreeVoiceCheck
+  // An anonymous session (onboarding, before the account) may only hear its
+  // own voice's entry lines; everything else waits for the account.
+  if (user.isAnonymous && !isFreeEntry) {
+    return errorResponse(401, "account required")
+  }
   // A script voiceover line rides on its reservation (see the migration
   // `20261014150000_script_voiceover`): timestamped only, a key required, and
   // the line's characters must fit what the reservation covers. Without one

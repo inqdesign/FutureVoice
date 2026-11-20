@@ -11,11 +11,18 @@
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
 
 export interface AuthedRequest {
-  user: { id: string; email?: string }
+  user: { id: string; email?: string; isAnonymous: boolean }
   supabase: SupabaseClient
 }
 
-export async function requireUser(req: Request): Promise<AuthedRequest | Response> {
+/** An anonymous session exists only to clone and hear the voice before the
+ *  sign-up step, so it is refused everywhere except the functions that pass
+ *  `allowAnonymous` (the voice ones the onboarding calls). On 2026-11-20 a
+ *  script minted anonymous users with the public anon key by the dozen. */
+export async function requireUser(
+  req: Request,
+  opts: { allowAnonymous?: boolean } = {},
+): Promise<AuthedRequest | Response> {
   const authHeader = req.headers.get("Authorization")
   if (!authHeader) {
     return new Response(JSON.stringify({ error: "missing Authorization" }), {
@@ -35,7 +42,14 @@ export async function requireUser(req: Request): Promise<AuthedRequest | Respons
       headers: { "Content-Type": "application/json", ...cors() },
     })
   }
-  return { user: { id: data.user.id, email: data.user.email ?? undefined }, supabase }
+  const isAnonymous = data.user.is_anonymous === true
+  if (isAnonymous && !opts.allowAnonymous) {
+    return new Response(JSON.stringify({ error: "account required" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json", ...cors() },
+    })
+  }
+  return { user: { id: data.user.id, email: data.user.email ?? undefined, isAnonymous }, supabase }
 }
 
 export function cors(): HeadersInit {
