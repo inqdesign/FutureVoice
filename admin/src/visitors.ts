@@ -12,6 +12,8 @@
 // team's own browsers never start PostHog (the "nawana-internal" mark), and
 // local previews are another host, so neither is here.
 
+import { hogqlCached } from "./posthog";
+
 export interface VisitorsEnv {
   POSTHOG_API_KEY?: string;
   POSTHOG_PROJECT_ID?: string;
@@ -41,7 +43,6 @@ const LEAVE = ["creators_leave", "$pageleave"];
 export async function visitorsData(env: VisitorsEnv, url: URL): Promise<Response> {
   if (!env.POSTHOG_API_KEY) return json({ error: "no_key" }, 503);
   const days = url.searchParams.get("days") === "7" ? 7 : 1;
-  const project = env.POSTHOG_PROJECT_ID || "@current";
   const query = `
     select distinct_id,
       ${PAGE_SQL} as page,
@@ -70,13 +71,8 @@ export async function visitorsData(env: VisitorsEnv, url: URL): Promise<Response
     limit 3000`;
   let rows: unknown[][];
   try {
-    const r = await fetch(`https://eu.posthog.com/api/projects/${project}/query/`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${env.POSTHOG_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ query: { kind: "HogQLQuery", query } }),
-    });
-    if (!r.ok) return json({ error: `posthog ${r.status}`, detail: (await r.text()).slice(0, 300) }, 502);
-    rows = ((await r.json()) as { results?: unknown[][] }).results ?? [];
+    // The map polls every 20 s; one answer a minute is shared (posthog.ts).
+    rows = await hogqlCached(env, query, 60);
   } catch (e) {
     return json({ error: (e as Error).message }, 502);
   }

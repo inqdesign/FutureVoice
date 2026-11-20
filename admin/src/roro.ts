@@ -19,6 +19,8 @@
 // is ~13k rows), so they are read thin through PostgREST and folded here.
 // Memory text, story text and titles are never read — counts and times only.
 
+import { hogqlCached } from "./posthog";
+
 export interface RoroEnv {
   DEARRORO_SUPABASE_URL?: string;
   DEARRORO_SERVICE_ROLE_KEY?: string;
@@ -84,17 +86,8 @@ async function authUsers(env: RoroEnv): Promise<Row[]> {
   return out;
 }
 
-async function hogql(env: RoroEnv, query: string): Promise<unknown[][]> {
-  if (!env.POSTHOG_API_KEY) throw new Error("no_key");
-  const project = env.POSTHOG_PROJECT_ID || "@current";
-  const r = await fetch(`https://eu.posthog.com/api/projects/${project}/query/`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${env.POSTHOG_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ query: { kind: "HogQLQuery", query } }),
-  });
-  if (!r.ok) throw new Error(`posthog ${r.status}`);
-  return ((await r.json()) as { results?: unknown[][] }).results ?? [];
-}
+// Same PostHog project as nawana, so the same limit: through posthog.ts.
+const hogql = (env: RoroEnv, query: string) => hogqlCached(env, query, 120);
 
 /** PostHog's timestamps come back without a zone; they are UTC. */
 const phTime = (v: unknown) => v == null ? null

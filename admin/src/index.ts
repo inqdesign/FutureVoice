@@ -32,6 +32,7 @@ import { marketingAction, marketingData, serveMedia } from "./marketing";
 import roroShell from "./roro.html";
 import { visitorsData } from "./visitors";
 import { roroData } from "./roro";
+import { hogqlCached } from "./posthog";
 
 export interface Env {
   SUPABASE_URL: string;
@@ -629,8 +630,6 @@ async function recentLedger(env: Env): Promise<unknown[]> {
 /** Every Speech-tab event in PostHog, oldest first. distinct_id is the
  *  Supabase UUID uppercased, so it is lowered to join. */
 async function speechRows(env: Env): Promise<Array<Record<string, any>>> {
-  if (!env.POSTHOG_API_KEY) throw new Error("no_key");
-  const project = env.POSTHOG_PROJECT_ID || "@current";
   const query = `
     select distinct_id, timestamp, event,
       properties.seconds, properties.overall, properties.accuracy,
@@ -642,13 +641,7 @@ async function speechRows(env: Env): Promise<Array<Record<string, any>>> {
       and (properties.app = 'nawana' or properties.product = 'nawana')
     order by timestamp
     limit 50000`;
-  const r = await fetch(`https://eu.posthog.com/api/projects/${project}/query/`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${env.POSTHOG_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ query: { kind: "HogQLQuery", query } }),
-  });
-  if (!r.ok) throw new Error(`posthog ${r.status}`);
-  const body = await r.json() as { results?: unknown[][] };
+  const body = { results: await hogql(env, query) };
   const n = (v: unknown) => (v === null || v === "" || v === undefined ? null : Number(v));
   const b = (v: unknown) => v === true || v === 1 || String(v).toLowerCase() === "true";
   return (body.results ?? []).map((x) => ({
@@ -660,17 +653,8 @@ async function speechRows(env: Env): Promise<Array<Record<string, any>>> {
   }));
 }
 
-async function hogql(env: Env, query: string): Promise<unknown[][]> {
-  if (!env.POSTHOG_API_KEY) throw new Error("no_key");
-  const project = env.POSTHOG_PROJECT_ID || "@current";
-  const r = await fetch(`https://eu.posthog.com/api/projects/${project}/query/`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${env.POSTHOG_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ query: { kind: "HogQLQuery", query } }),
-  });
-  if (!r.ok) throw new Error(`posthog ${r.status}`);
-  return ((await r.json()) as { results?: unknown[][] }).results ?? [];
-}
+/** A page-load query: answers up to 2 min old are shared (posthog.ts). */
+const hogql = (env: Env, query: string) => hogqlCached(env, query, 120);
 
 /** Foreground time per user per UTC day, from iOS's Application Opened →
  *  the very next Application Backgrounded. An Opened followed by another
@@ -773,7 +757,7 @@ const phTime = (v: unknown) =>
 let liveExtraCache: { at: number; rows: unknown[] } | null = null;
 async function liveExtraEvents(env: Env): Promise<unknown[]> {
   if (liveExtraCache && Date.now() - liveExtraCache.at < 60_000) return liveExtraCache.rows;
-  const rows = await hogql(env, `
+  const rows = await hogqlCached(env, `
     select lower(distinct_id), timestamp, event, properties.seconds,
       properties.reached, properties.cards
     from events
@@ -781,7 +765,7 @@ async function liveExtraEvents(env: Env): Promise<unknown[]> {
       and (startsWith(event, 'trial_') or event in ('podcast_started', 'podcast_listened', 'playlist_started'))
       and (properties.app = 'nawana' or properties.product = 'nawana')
     order by timestamp
-    limit 5000`).then((rs) => rs.map((x) => ({
+    limit 5000`, 60).then((rs) => rs.map((x) => ({
       u: String(x[0]),
       at: new Date(String(x[1]).replace(" ", "T") + (/Z|[+-]\d\d:?\d\d$/.test(String(x[1])) ? "" : "Z")).toISOString(),
       action: `event:${x[2]}`, purpose: null,
@@ -804,7 +788,8 @@ async function liveExtraEvents(env: Env): Promise<unknown[]> {
 // UPPERCASED (Swift uuidString), so it is lowered to join.
 //
 // Held for 60 s per isolate: the tab polls every 15 s, a city does not move
-// between two polls, and PostHog rate-limits its query API per project. The database half of live.json is never cached.
+// between two polls, and PostHog rate-limits its query API per project (posthog.ts
+// shares the answer across isolates for 2 min). The database half of live.json is never cached.
 type PhRow = { city: string | null; cc: string | null; lat: number | null; lon: number | null;
                lifecycle: string | null; lifecycleAt: string | null;
                lastEvent: string | null; lastAt: string | null };
@@ -813,7 +798,6 @@ let phCache: { at: number; rows: Record<string, PhRow>; error?: string } | null 
 async function posthogPresence(env: Env): Promise<{ rows: Record<string, PhRow>; error?: string }> {
   if (!env.POSTHOG_API_KEY) return { rows: {}, error: "no_key" };
   if (phCache && Date.now() - phCache.at < 60_000) return phCache;
-  const project = env.POSTHOG_PROJECT_ID || "@current";
   const query = `
     select distinct_id,
       argMax(properties.$geoip_city_name, timestamp),
@@ -830,13 +814,7 @@ async function posthogPresence(env: Env): Promise<{ rows: Record<string, PhRow>;
     group by distinct_id
     limit 10000`;
   try {
-    const r = await fetch(`https://eu.posthog.com/api/projects/${project}/query/`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${env.POSTHOG_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ query: { kind: "HogQLQuery", query } }),
-    });
-    if (!r.ok) throw new Error(`posthog ${r.status}`);
-    const body = await r.json() as { results?: unknown[][] };
+    const body = { results: await hogqlCached(env, query, 120) };
     const rows: Record<string, PhRow> = {};
     const iso = (v: unknown) => (v ? new Date(String(v).replace(" ", "T") + (String(v).match(/Z|[+-]\d\d:?\d\d$/) ? "" : "Z")).toISOString() : null);
     for (const x of body.results ?? []) {
