@@ -2764,7 +2764,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             if (tutorCallOver || !tutorStillSaid(turnId, said) || _state.value.pronRound?.id != round.id) return@launch
             when (answer?.choice) {
                 TutorNext.Choice.MORE, TutorNext.Choice.AGAIN -> startPronRound(round.topic,
-                    "They want another round of \"${round.topic.symbol}\". Say in a few words that you're getting new sentences — nothing else.")
+                    "They want another round of the same sound. Say in a few words that you're getting new sentences — nothing else.")
                 TutorNext.Choice.NEW -> {
                     tutorNudge("They want a different sound. Say in a few words that they can pick one on their screen now.")
                     _state.update { it.copy(pronTopicsRequested = true) }

@@ -614,7 +614,11 @@ fun TalkScreen(
     // it has words; the thinking line keeps the place meanwhile.
     val replyHasNoWordsYet = state.turns.lastOrNull()
         ?.let { it.role == TurnRole.FLUENT_SELF && it.transcript.isEmpty() } == true
-    val visibleTurns = if (replyHasNoWordsYet) state.turns.dropLast(1) else state.turns
+    // The pronunciation call draws none of the learner's lines (iOS, founder
+    // 2026-11-20): no transcriber writes a word as it was said ("조녁" came
+    // back 저녁 even when told to keep it).
+    val visibleTurns = (if (replyHasNoWordsYet) state.turns.dropLast(1) else state.turns)
+        .let { list -> if (state.pronOn) list.filter { it.role != TurnRole.USER } else list }
     // The feed is BOTTOM-ANCHORED (`reverseLayout` below), the stand-in for
     // iOS's `defaultScrollAnchor(.bottom)`: index 0 is the newest line, and a
     // line growing at the end keeps its bottom edge in place in the same
