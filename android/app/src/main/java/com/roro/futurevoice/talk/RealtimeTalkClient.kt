@@ -821,6 +821,10 @@ class RealtimeTalkClient(private val context: Context) {
         // The rest will never be heard; the line keeps all its words.
         finishReveal()
         stopMic()
+        // A call put down mid-line never hears that line's end: the gate
+        // stayed shut and the call picked back up forwarded only silence
+        // (iOS device log 2026-11-20). The gate belongs to the line.
+        setEchoGate(false)
         scope.launch(audioThread) { retirePlayer() }
         // Here, not on the audio thread: a resume's connect() runs right
         // after this and must not have its mode switched off behind it.

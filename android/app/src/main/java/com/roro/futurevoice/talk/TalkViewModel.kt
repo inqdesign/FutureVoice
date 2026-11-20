@@ -1688,6 +1688,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         if (!sendToAnswerOn || _state.value.sendPending || _state.value.partial.isBlank()) return
         _state.update { it.copy(sendPending = true) }
         if (pronThisCall) pronStartEarlyRead()
+        lastSendTapAt = System.currentTimeMillis()
         realtime.sendTurn()
         // Never leave the pill spinning on a gateway that answered nothing.
         sendPendingJob?.cancel()
@@ -1719,7 +1720,15 @@ class TalkViewModel(context: Context) : ViewModel() {
         }
     }
 
+    /** When the pill was last tapped as Send (iOS `lastSendTapAt`). */
+    private var lastSendTapAt = 0L
+
     fun togglePause() {
+        // A reply written ahead starts ~0.3 s after Send and the pill turns
+        // into pause the same instant: a tap just after a Send is not a
+        // pause (iOS 2026-11-20).
+        if (System.currentTimeMillis() - lastSendTapAt < 1500 &&
+            _state.value.phase != TalkPhase.PAUSED) return
         if (REALTIME) {
             // Pausing IS hanging up on this path; resuming reconnects with
             // the history so the fluent self knows what was already said.
