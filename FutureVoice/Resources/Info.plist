@@ -59,6 +59,8 @@
 	<string>nawana films your speech practice when you turn the camera on, and takes a photo of where you studied for today's card.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>nawana records your voice so it can clone it and let you hear yourself speaking fluently in another language.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>nawana counts your steps to move you along the street in Walk mode.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>nawana saves your day's card to your photo library.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

@@ -185,6 +185,18 @@
         }
       }
     },
+    "NSMotionUsageDescription" : {
+      "comment" : "Privacy - Motion Usage Description",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "nawana counts your steps to move you along the street in Walk mode."
+          }
+        }
+      }
+    },
     "NSPhotoLibraryAddUsageDescription" : {
       "comment" : "Privacy - Photo Library Additions Usage Description",
       "extractionState" : "extracted_with_value",

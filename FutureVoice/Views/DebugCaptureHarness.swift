@@ -2366,6 +2366,10 @@ enum DebugCapture {
             }
             UserDefaults.standard.set(true, forKey: PeopleSky.defaultsKey)
             return AnyView(RootTabView())
+        case "walk":
+            // The Walk prototype on its own (`-skipWalk <metres>` moves it).
+            once("walk") { seedScenarios(into: appState) }
+            return AnyView(WalkAmbientView().environmentObject(appState))
         case "tabs":
             // The full tab shell — used to review the floating Free talk pill
             // sitting above the real tab bar.

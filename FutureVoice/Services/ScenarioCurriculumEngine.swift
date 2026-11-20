@@ -47,7 +47,8 @@ enum ScenarioCurriculumEngine {
         onTitle: (@MainActor (String) -> Void)? = nil,
         onTurn: (@MainActor (DialogueEngineTurn) -> Void)? = nil
     ) async throws -> ScenarioCurriculum {
-        let system = systemPrompt(targetLanguage: targetLanguage, proficiency: proficiency)
+        let system = systemPrompt(targetLanguage: targetLanguage, proficiency: proficiency,
+                                  walkBy: isWalkBy(scenario))
         let messages = [GeminiClient.Message(
             role: .user,
             content: userMessage(
@@ -187,6 +188,16 @@ enum ScenarioCurriculumEngine {
     /// lost call, not a shorter one.
     static let sceneMaxTokens = 3000
 
+    /// A place passed in Walk mode (`WalkModeView`, prototype 2026-11-19,
+    /// founder: "a short scene for walking"). The walker is on their feet
+    /// and the next place is forty metres on, so the scene is one small
+    /// exchange, about a third of a full scene, with a study list to match.
+    static func isWalkBy(_ scenario: Scenario) -> Bool {
+        scenario.starterId?.hasPrefix("walk:") ?? false
+    }
+
+    static let walkTurnRange = "4 to 5"
+
     /// A learner who asks to ACT a scene wants the scene, not a talk about
     /// it (2026-11-19, founder: "a scene from the film F1, Brad Pitt and the
     /// actress opposite him" came out as two actors arranging a rehearsal —
@@ -211,9 +222,28 @@ enum ScenarioCurriculumEngine {
         lines. The title names the moment in the story.
         """
 
-    static func systemPrompt(targetLanguage: String, proficiency: CEFRLevel) -> String {
+    static func systemPrompt(targetLanguage: String, proficiency: CEFRLevel, walkBy: Bool = false) -> String {
         let languageName = LanguageCatalog.englishName(targetLanguage)
         let band = ConversationEngine.speechScale(for: proficiency)
+        let turnRange = walkBy ? walkTurnRange : sceneTurnRange
+        let wordCount = walkBy ? 3 : 8
+        let expressionCount = walkBy ? 3 : 6
+        let substance = walkBy ? """
+        SUBSTANCE: a WALK-BY scene. The learner is out on a walk and drops in
+        here for under a minute. ONE small thing happens and it is finished:
+        they ask for or about one thing, the other person answers with one
+        small twist (a choice, a price, it's sold out, a friendly question
+        back), and it is settled. No long greeting, no second errand, no
+        goodbye beyond a word. Every turn is ONE short sentence.
+        """ : """
+        SUBSTANCE — the same at EVERY level. Something has to actually HAPPEN:
+        the specific thing the learner is going in to do, the complication it
+        runs into, the question that is hard to answer, and how it lands. A
+        beginner's scene is not a thinner scene — it is the same situation in
+        easier words. Never fill the turns with greetings and pleasantries and
+        stop before the difficult part; that part is the reason they are
+        watching.
+        """
         return """
         You are a \(languageName) curriculum designer. Given ONE real-life
         scenario a learner (CEFR \(proficiency.rawValue.uppercased())) wants to master, write the SCENE
@@ -235,7 +265,7 @@ enum ScenarioCurriculumEngine {
         \(actedSceneRule)
 
         Content rules:
-        - turns: \(sceneTurnRange), alternating naturally. WHOEVER'S MOVE THE
+        - turns: \(turnRange), alternating naturally. WHOEVER'S MOVE THE
           SCENARIO NAMES OPENS IT — when the learner is the one going in to do
           something, the FIRST turn is "user". The counterpart opens only when
           the situation is something that happens TO the learner (called in by
@@ -249,11 +279,11 @@ enum ScenarioCurriculumEngine {
           (slightly above \(proficiency.rawValue.uppercased()), never textbook-stiff). Every user turn must
           be a complete, speakable line — it will be shadowed ALOUD. No stage
           directions, brackets, or placeholders anywhere.
-        - words: 8 single words or short compounds that APPEAR in the dialogue
+        - words: \(wordCount) single words or short compounds that APPEAR in the dialogue
           and a \(proficiency.rawValue.uppercased()) learner plausibly doesn't own yet. No filler like
           "hello" / "thanks". note = one short cue for when it comes up.
           example = the dialogue sentence that uses it (or a tight variant).
-        - expressions: 6 multi-word chunks (2–6 words) that APPEAR VERBATIM in
+        - expressions: \(expressionCount) multi-word chunks (2–6 words) that APPEAR VERBATIM in
           the dialogue — collocations, softeners, transactional moves natives
           actually use here. note = one short cue for when to reach for it.
           example = the dialogue sentence that uses it.
@@ -261,13 +291,7 @@ enum ScenarioCurriculumEngine {
         - Everything specific to THIS scenario and persona — never generic
           textbook content. All content in \(languageName); notes in simple \(languageName).
 
-        SUBSTANCE — the same at EVERY level. Something has to actually HAPPEN:
-        the specific thing the learner is going in to do, the complication it
-        runs into, the question that is hard to answer, and how it lands. A
-        beginner's scene is not a thinner scene — it is the same situation in
-        easier words. Never fill the turns with greetings and pleasantries and
-        stop before the difficult part; that part is the reason they are
-        watching.
+        \(substance)
 
         WHAT \(proficiency.rawValue.uppercased()) CHANGES — the words and the sentence shapes, and
         nothing else. The scene is the same length and carries the same amount

@@ -20,6 +20,7 @@ struct WatchTab: View {
 
     @State private var composer: ComposerConfig?
     @State private var watchScene: WatchTarget?
+    @State private var showingWalk = false
 
     /// What to play + whether to write a new take. A saved scenario is a
     /// TEMPLATE — tapping its card generates a fresh scene every time
@@ -176,6 +177,15 @@ struct WatchTab: View {
                         .accessibilityLabel(Text("Your scenarios"))
                     }
                 }
+                if WalkMode.isEnabled {
+                    // Prototype: walk a real street, listen in on the way.
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button { showingWalk = true } label: {
+                            Image(systemName: "figure.walk")
+                        }
+                        .accessibilityLabel(Text("Walk"))
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     // ONE people page: your own people and the shared pool,
                     // merged — the header button answers "who can I talk to".
@@ -184,6 +194,9 @@ struct WatchTab: View {
                     }
                     .accessibilityLabel("People")
                 }
+            }
+            .fullScreenCover(isPresented: $showingWalk) {
+                WalkAmbientView().environmentObject(appState)
             }
             .sheet(isPresented: $showingSavedScenarios) {
                 NavigationStack {
@@ -231,6 +244,10 @@ struct WatchTab: View {
                 CounterpartVoiceIntakeView().environmentObject(appState)
             }
             .onAppear { bookmarkedRemoteIds = PublicPersonaService.bookmarkedIds() }
+            #if DEBUG
+            // `-walk 1`: open the Walk prototype straight away.
+            .onAppear { if UserDefaults.standard.bool(forKey: "walk") { showingWalk = true } }
+            #endif
             .sheet(item: $personCard) { person in
                 NavigationStack {
                     FindPersonCard(
