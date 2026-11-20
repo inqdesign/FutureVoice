@@ -1102,7 +1102,10 @@ export default {
     }
 
     const page = (shell as unknown as string)
-      .replace("__ADMIN_DATA__", () => JSON.stringify(data))
+      // "<" escaped: the data carries text learners wrote (names, intros,
+      // feedback), and a "</script>" in it closed this script block and ran
+      // whatever followed, on the page that holds every account.
+      .replace("__ADMIN_DATA__", () => JSON.stringify(data).replace(/</g, "\\u003c"))
       .replaceAll("__ADMIN_BASE__", base);
     return html(page);
   },

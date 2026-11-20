@@ -1379,7 +1379,7 @@ const isFailure = e => {
 };
 /** "통화 끊김 · 소켓 끊김" — the event, then which failure it was. */
 const failureLabel = e => (EVENT_KO[e.event]||e.event)
-  + (e.code ? ` · ${RT_REASON_KO[e.code]||e.code}` : '');
+  + (e.code ? ` · ${RT_REASON_KO[e.code]||esc(e.code)}` : '');
 
 /* ------------------------------------------------------- user helpers */
 const nameOf = u => u.name || (u.email ? u.email.split('@')[0] : u.label);
@@ -1698,7 +1698,7 @@ function renderAttention(users){
     const last = dropped[0];
     items.push({at:last.at, pri:0, color:'var(--crit)',
       t:`<b${whoAttr(u)}>${esc(nameOf(u))}</b> 통화가 끊겼어요 ${dropped.length}회`,
-      w: RT_REASON_KO[last.reason]||last.reason});
+      w: RT_REASON_KO[last.reason]||esc(last.reason)});
   }
   items.sort((a,b)=> (a.pri??2)-(b.pri??2) || (b.at||'').localeCompare(a.at||''));
   const el = document.getElementById('attention');
@@ -1746,10 +1746,10 @@ function buildFeed(users){
         continue;
       }
       if(r.recovered){
-        add(r.at, 'talk','var(--s2)', `${who} 통화 자동 재연결`, `${RT_REASON_KO[r.reason]||r.reason} · 턴 ${r.turns}`);
+        add(r.at, 'talk','var(--s2)', `${who} 통화 자동 재연결`, `${RT_REASON_KO[r.reason]||esc(r.reason)} · 턴 ${r.turns}`);
         continue;
       }
-      add(r.at, 'trouble','var(--crit)', `${who} 통화 끊김`, RT_REASON_KO[r.reason]||r.reason);
+      add(r.at, 'trouble','var(--crit)', `${who} 통화 끊김`, RT_REASON_KO[r.reason]||esc(r.reason));
     }
   }
   const byIdx = Object.fromEntries(users.map(u=>[u.idx,u]));
@@ -3556,7 +3556,7 @@ function personDetail(u){
       '통화 기록 없음')}
     ${col('통화 종료', rt.map(r => {
       const cls = RT_OK.has(r.reason) ? 'ok' : RT_WALL.has(r.reason) || r.recovered ? 'muted' : 'bad';
-      return `<li>${fmtTs(r.at)} · <b class="${cls}">${RT_REASON_KO[r.reason]||r.reason}</b>`
+      return `<li>${fmtTs(r.at)} · <b class="${cls}">${RT_REASON_KO[r.reason]||esc(r.reason)}</b>`
         + (r.recovered ? ' <span class="muted">→ 자동 재연결</span>' : '')
         + ` · 턴 ${r.turns}${r.src==='failed'?'':` · ${fmtMin(r.secs)}`}`
         + (r.p50?` · 응답 ${(r.p50/1000).toFixed(1)}초`:'')
