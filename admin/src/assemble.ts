@@ -37,9 +37,16 @@ const TEST_EMAILS = new Set([
   "nawana.review@gmail.com",
   "hi.superpower.lab@gmail.com",
   "buchhaltung.dearroro@gmail.com",
+  // The App Store Connect team's address, used as a test account (2026-11-10).
+  "hello.threesby@gmail.com",
   // The owner's Android account (2026-11-16).
   "eunggyuboram@gmail.com",
 ]);
+// Google Play's pre-launch report robots (Firebase Test Lab): one Google
+// sign-in per new Android build, a few minutes of tapping, never back.
+// Generated addresses, always firstnamelastname.<5 digits>@gmail.com
+// (2026-11-20: 20 accounts since 10-06, none ever talked).
+const ROBOT_EMAIL = /^[a-z]{8,}\.[0-9]{5}@gmail\.com$/;
 
 // Apple's cut and the sticker prices. Prices live in docs/launch-billing.md;
 // they are NOT in the database (there is no price column), so they are stated
@@ -152,11 +159,16 @@ export function assemble(raw: any) {
       id: u.id,
       label: u.display_name || (u.email ? u.email.split("@")[0] : u.id.slice(0, 8)),
       email: u.email,
-      dev: TEST_IDS.has(u.id) || TEST_EMAILS.has((u.email ?? "").toLowerCase()),
+      dev: TEST_IDS.has(u.id) || TEST_EMAILS.has((u.email ?? "").toLowerCase())
+        || ROBOT_EMAIL.test((u.email ?? "").toLowerCase()),
       owner: u.id === OWNER_ID,
       appVersion: appBuildOf.get(u.id)?.version ?? null,
       appBuild: appBuildOf.get(u.id)?.build ?? null,
       appSeenAt: appBuildOf.get(u.id)?.at ?? null,
+      // The app the newest build came from, and every app this person used.
+      appPlatform: appBuildOf.has(u.id)
+        ? (appBuildOf.get(u.id)?.platform === "android" ? "android" : "apple") : null,
+      platforms: appBuildOf.get(u.id)?.platforms ?? [],
       // Not a signup: an onboarding session that never reached Apple sign-in
       // (field absent until 20260923110000 is applied → false).
       anonymous: !!u.anonymous,

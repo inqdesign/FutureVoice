@@ -56,6 +56,10 @@
   width:100%;
   height:clamp(320px, 52vh, 640px);
   border-radius:16px; border:1px solid var(--ring); background:#dde6ee; overflow:hidden;
+  /* Leaflet's panes and controls carry z-index 400–1000; without a stacking
+     context of its own the map drew over the person card (#pcard, 20) and
+     the tooltip (2026-11-08). */
+  isolation:isolate;
   box-shadow:0 1px 2px rgba(0,0,0,.05), 0 18px 36px -20px rgba(15,30,60,.35)}
 @media (max-width:560px){ #liveMap{--mapw:calc(100vw - 28px); height:38vh} }
 .leaflet-container{font-family:inherit}
@@ -344,6 +348,11 @@ td.num, th.num{text-align:right; font-variant-numeric:tabular-nums}
   border-radius:4px; padding:0 5px; margin-left:6px; vertical-align:1px}
 .verchip{display:inline-block; font-size:10.5px; font-weight:500; color:var(--muted); margin-left:6px;
   font-variant-numeric:tabular-nums; white-space:nowrap}
+.platico{display:inline-flex; vertical-align:-2px; margin-left:5px; width:13px; height:13px}
+.platico svg{width:100%; height:100%}
+.platico.apple{color:var(--ink-2)}
+.platico.android{color:#2e9e5b}
+.platico + .platico{margin-left:2px}
 .verchip.old{color:var(--warn); font-weight:600}
 tr.grouphead td{background:var(--page); font-size:12.5px; padding:14px 10px 8px; border-top:2px solid var(--ring)}
 .devchip{font-size:10.5px; font-weight:600; color:var(--muted); border:1px solid var(--ring);
@@ -503,6 +512,7 @@ tr.detail td{background:var(--page); font-size:12.5px; padding:14px}
 svg text{font-family:inherit}
 .axis{font-size:10.5px; fill:var(--muted)}
 .gridline{stroke:var(--grid); stroke-width:1}
+.trendhit{fill:transparent} .trendhit:hover{fill:var(--ink); fill-opacity:.05}
 .baseline{stroke:var(--baseline); stroke-width:1}
 
 /* --- tier cards --------------------------------------------------------- */
@@ -676,16 +686,6 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   #costTable th:nth-child(5), #costTable td:nth-child(5){display:none}
   code{overflow-wrap:anywhere}
 }
-</style>
-</head>
-<body>
-
-<aside class="side" id="side">
-  <div class="sbrand">
-    <p class="eyebrow">Dear RoRo · 내부 운영</p>
-    <nav class="appsw" aria-label="앱"><a href="__ADMIN_BASE__/" aria-current="page">나와나</a><a href="__ADMIN_BASE__/roro">Dear RoRo</a></nav>
-    <div class="stitle">어드민</div>
-    <button type="button" class="menubtn" id="menuBtn" aria-expanded="false" aria-controls="sideNav">목차</button>
 /* 라이브 지도 · 웹 (2026-11-12): the web pages' visits on the same map. */
 .livehead .liveview{margin:0}
 .livehead .liveview button{padding:4px 12px}
@@ -709,12 +709,23 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
 .wtag{font-size:11.5px; padding:1px 7px; border-radius:5px; background:var(--chip); color:var(--ink-2)}
 .wtag.hot{background:var(--ink); color:var(--page)}
 .wtag.go{background:color-mix(in srgb, var(--good) 18%, transparent); color:var(--good-text)}
+</style>
+</head>
+<body>
+
+<aside class="side" id="side">
+  <div class="sbrand">
+    <p class="eyebrow">Dear RoRo · 내부 운영</p>
+    <nav class="appsw" aria-label="앱"><a href="__ADMIN_BASE__/" aria-current="page">나와나</a><a href="__ADMIN_BASE__/roro">Dear RoRo</a></nav>
+    <div class="stitle">어드민</div>
+    <button type="button" class="menubtn" id="menuBtn" aria-expanded="false" aria-controls="sideNav">목차</button>
   </div>
   <nav class="snav" id="sideNav" aria-label="어드민 목차"></nav>
   <div class="sctl">
     <div class="lsec">시간대</div>
     <div class="seg" id="tzPick" role="group" aria-label="시간대" style="margin:4px 0 10px"></div>
     <label class="toggle"><input type="checkbox" id="devToggle"> 본인·테스트 계정 포함</label>
+    <a class="linkbtn" href="__ADMIN_BASE__/creators">크리에이터 프로그램</a>
     <a class="linkbtn" href="__ADMIN_BASE__/logout">나가기</a>
   </div>
 </aside>
@@ -732,6 +743,7 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
 <section id="liveSec" data-nav="라이브 지도">
   <div class="livehead">
     <h2 style="margin:0">지금 누가, 어디서, 뭘 하나</h2>
+    <div class="seg liveview" id="liveView" role="group" aria-label="앱 또는 웹"><button type="button" data-v="app" aria-pressed="true">앱</button><button type="button" data-v="web" aria-pressed="false">웹</button></div>
     <span class="livebeat" id="liveBeat"><i></i><span>불러오는 중</span></span>
     <button type="button" id="liveSound" class="soundbtn" aria-pressed="false">🔕 소리 꺼짐</button>
   </div>
@@ -744,13 +756,20 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   <div class="livegrid">
     <div id="liveMap"></div>
     <div class="card" id="liveTimeline">
-    <div class="seg liveview" id="liveView" role="group" aria-label="앱 또는 웹"><button type="button" data-v="app" aria-pressed="true">앱</button><button type="button" data-v="web" aria-pressed="false">웹</button></div>
       <div class="tlhead">
         <h3 style="margin:0">지난 24시간, 시간대별</h3>
         <span class="muted" id="tlFilter"></span>
       </div>
       <div class="hstrip" id="tlStrip"></div>
       <div id="tlList"></div>
+    </div>
+    <div class="card" id="webCard" hidden>
+      <div class="tlhead">
+        <h3 style="margin:0">웹 방문</h3>
+        <div class="seg" id="webPageSeg" role="group" aria-label="페이지" style="margin:0"></div>
+        <div class="seg" id="webRangeSeg" role="group" aria-label="기간" style="margin:0"></div>
+      </div>
+      <div id="webList"></div>
     </div>
   </div>
 </section>
@@ -763,14 +782,6 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   <b id="cancelShape"></b></p>
 </section>
 
-    <div class="card" id="webCard" hidden>
-      <div class="tlhead">
-        <h3 style="margin:0">웹 방문</h3>
-        <div class="seg" id="webPageSeg" role="group" aria-label="페이지" style="margin:0"></div>
-        <div class="seg" id="webRangeSeg" role="group" aria-label="기간" style="margin:0"></div>
-      </div>
-      <div id="webList"></div>
-    </div>
 <div class="dgrid">
 <section id="attentionSec" data-nav="지금 봐야 할 것">
   <h2>지금 봐야 할 것</h2>
@@ -797,6 +808,18 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   <p class="sub">체험은 대개 <b>가입하고 몇 분 안에</b> 시작돼요 — 통화를 해보고 고르는 게 아니라서
   위 퍼널에 끼워 넣으면 순서가 거짓말이 돼요. 그래서 따로 세웁니다.</p>
   <div class="card bars" id="subFunnel"></div>
+</section>
+<section id="voiceSec" data-nav="목소리 선택">
+  <h2>내 목소리를 고르나, AI 목소리를 고르나</h2>
+  <p class="sub">온보딩에서 미래의 나가 어떤 목소리로 말하게 했는지, 고른 날별로 한 사람씩 세요(PostHog).
+  <b>녹음 후 AI 튜터</b>는 녹음하고 들어본 뒤 AI 튜터로 바꾼 사람, <b>녹음 없이 AI 튜터</b>는 첫 화면에서
+  "AI 튜터 목소리로 할게요"를 누른 사람(11/6부터 있는 문), <b>녹음하다 멈춤</b>은 내 목소리 문을 골랐는데
+  고르는 화면까지 못 온 사람이에요. 비율은 멈춘 사람을 빼고 계산해요. 나중에 Me → 목소리에서 바꾼 것은 표에만 나와요.
+  계정 만들기 전에 떠나 지워진 사람도 들어가요. 왼쪽 아래 토글을 따라요.</p>
+  <div class="seg" id="voicePick" role="group" aria-label="묶는 단위"></div>
+  <div class="tiles" id="voiceTiles"></div>
+  <div class="card" id="voiceChart" style="margin-top:12px"></div>
+  <div class="card scroll" style="margin-top:12px"><table id="voiceTable"></table></div>
 </section>
 </div>
 
@@ -904,6 +927,23 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
     <h2>무슨 기능을 쓰나</h2>
     <p class="sub">무료 기능의 일일 사용 기록이에요. 전 계정 합산이라 왼쪽 아래 토글의 영향을 받지 않아요.</p>
     <div class="card bars" id="features"></div>
+  </div>
+</section>
+<section id="talkModeSec" data-nav="대화 모드">
+  <h2>어떤 모드로 이야기하나</h2>
+  <p class="sub">통화를 어디서 시작했는지(PostHog <code>conversation_started</code>의 화면·종류·코치)와,
+  그 통화가 튜터 모드였는지(앱 기록 <code>talk_rt_session</code>)예요. 2026-11-02 이후 빌드는 통화마다
+  튜터 여부를 직접 적고, 그 전 빌드는 통화 중에 튜터 레슨 기록이 있었으면 튜터로 셌어요(추정). 두 표는 출처가 달라
+  합계가 안 맞아요. 왼쪽 아래 토글을 따라요.</p>
+  <div style="display:flex; gap:14px; flex-wrap:wrap">
+    <div class="seg" id="talkModePick" role="group" aria-label="기간"></div>
+    <div class="seg" id="talkModeUnitPick" role="group" aria-label="묶는 단위"></div>
+  </div>
+  <div class="tiles" id="talkModeTiles" style="margin-top:12px"></div>
+  <div class="card" id="talkModeTrend" style="margin-top:12px"></div>
+  <div class="dgrid" style="margin-top:12px">
+    <div class="card scroll"><table id="talkModeEntries"></table></div>
+    <div class="card scroll"><table id="talkModeTutor"></table></div>
   </div>
 </section>
 <section id="featureSec" data-nav="기능별 사용">
@@ -1376,21 +1416,36 @@ const nameOf = u => u.name || (u.email ? u.email.split('@')[0] : u.label);
  *  build is read from the learners, not from app_release: that row only moves
  *  when someone remembers `beta.sh released`. `b` overrides the snapshot with
  *  a fresher sighting (the live feed). */
-let newestBuildMemo = null;
-function newestBuild(){
-  if(newestBuildMemo == null) newestBuildMemo = Math.max(0,
-    ...DATA.users.filter(u=>!u.dev && !u.owner && u.appBuild).map(u=>+u.appBuild));
-  return newestBuildMemo;
+// Per app (2026-11-08): Android's build numbers are its own counter (27
+// beside iOS's 130), so an Android build is compared with Android builds.
+const newestBuildMemo = {};
+function newestBuild(p = 'apple'){
+  if(newestBuildMemo[p] == null) newestBuildMemo[p] = Math.max(0,
+    ...DATA.users.filter(u=>!u.dev && !u.owner && u.appBuild && (u.appPlatform||'apple') === p)
+      .map(u=>+u.appBuild));
+  return newestBuildMemo[p];
 }
 function verChip(u, b){
   const build = b?.build || u?.appBuild, version = b?.version || u?.appVersion;
   if(!build) return '';
-  const old = +build < newestBuild();
+  const p = u?.appPlatform || 'apple';
+  const old = +build < newestBuild(p);
   const seen = b ? '' : (u.appSeenAt ? ` · ${ago(u.appSeenAt)}에 마지막으로 봄` : '');
-  return `<span class="verchip${old?' old':''}" title="앱 버전${old?` — 최신 ${newestBuild()}보다 옛 빌드`:''}${seen}">`
+  return `<span class="verchip${old?' old':''}" title="앱 버전${old?` — 최신 ${newestBuild(p)}보다 옛 빌드`:''}${seen}">`
     + `${esc(version||'')} (${esc(build)})</span>`;
 }
-const badge = u => verChip(u) + badgeOnly(u);
+/** Which app this person uses, right after the name (2026-11-08): an Apple
+ *  logo for iPhone/iPad/Mac, the Android robot for Android, both when both.
+ *  From client_events' platform stamp and PostHog (index.ts platformRows);
+ *  nothing when neither has seen the person in an app. */
+const PLAT_SVG = {
+  apple: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.15 6.9c-.95 0-2.42-1.08-3.96-1.04-2.04.03-3.91 1.18-4.96 3.01-2.12 3.68-.55 9.1 1.52 12.09 1.01 1.45 2.2 3.09 3.79 3.04 1.52-.07 2.09-.99 3.94-.99 1.83 0 2.35.99 3.96.95 1.64-.03 2.68-1.48 3.68-2.95 1.16-1.69 1.64-3.33 1.66-3.42-.04-.01-3.18-1.22-3.22-4.86-.03-3.04 2.48-4.49 2.6-4.56-1.43-2.09-3.62-2.32-4.39-2.38-2-.16-3.68 1.09-4.62 1.09zm3.38-3.07c.84-1.01 1.4-2.43 1.25-3.83-1.21.05-2.66.81-3.53 1.82-.78.9-1.45 2.34-1.27 3.71 1.34.1 2.71-.69 3.55-1.7z"/></svg>',
+  android: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M2.5 19a9.5 9.5 0 0 1 19 0zM7 14.5a1.25 1.25 0 1 0 2.5 0a1.25 1.25 0 1 0-2.5 0zm7.5 0a1.25 1.25 0 1 0 2.5 0a1.25 1.25 0 1 0-2.5 0z"/><path d="M6.6 10.2 4.6 6.8M17.4 10.2l2-3.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+};
+const PLAT_KO = {apple:'Apple 앱 (iPhone·iPad·Mac)', android:'안드로이드 앱'};
+const platIcon = u => (u?.platforms || []).slice().sort().reverse()
+  .map(p => PLAT_SVG[p] ? `<span class="platico ${p}" title="${PLAT_KO[p]}">${PLAT_SVG[p]}</span>` : '').join('');
+const badge = u => platIcon(u) + verChip(u) + badgeOnly(u);
 /** Invites, both directions, beside the name on every tab (index.ts
  *  referralRows). Joined through a friend: "← who invited them". Invited
  *  others: "→ who joined". Names are written out, not hidden in a tooltip,
@@ -2175,7 +2230,7 @@ function renderHeatmap(users){
     html += `<div class="r${isSubscriber(u)?' paying':lapsing(u)?' lapsing':''}${narrow?'':' one'}" style="grid-template-columns:${cols}">`
       + `<div class="who">`
       +   `<div class="n">${prospectFor(u) ? prospectStar(prospectFor(u)) : `<span class="sd" style="background:${st?st.color:'var(--grid)'}"></span>`}`
-      +     `<span style="overflow:hidden;text-overflow:ellipsis"${whoAttr(u)}>${esc(nameOf(u))}</span>${narrow ? verChip(u) + badgeCore(u) : ''}</div>`
+      +     `<span style="overflow:hidden;text-overflow:ellipsis"${whoAttr(u)}>${esc(nameOf(u))}</span>${platIcon(u)}${narrow ? verChip(u) + badgeCore(u) : ''}</div>`
       + (narrow ? '' : `</div>`) + (!narrow ? '' :
          `<div class="s">${langPair(u.idx)}${u.voiceName ? esc(u.voiceName) : '<span class="muted">클론 없음</span>'}</div>`
       // Invites get their own line: beside the name they squeezed it to "y…".
@@ -2304,6 +2359,195 @@ function renderSpeech(users){
         + `<td>${[...o.genres].map(esc).join(', ') || '<span class="muted">—</span>'}</td>`
         + `<td class="num">${o.scripts || '—'}</td>`
         + `<td title="${esc(fmtTs(o.last))}">${ago(o.last)}</td></tr>`; }).join('');
+}
+
+/* ---- 대화 모드 -------------------------------------------------------------
+ * DATA.talkModes (index.ts talkModeRows): `starts` = conversation_started
+ * (origin, entry, coach, tutor — tutor only from 2026-11-02 builds), `calls` =
+ * talk_rt_session with `tutor` read off the row or inferred (`tutorSrc`). */
+const TALK_MODE_DAYS = [[7,'7일'],[14,'14일'],[30,'30일'],[60,'60일']];
+let talkModeDays = 14;
+const TALK_ENTRY = {
+  talk_ring:'Talk 링', widget:'위젯', welcome:'첫 통화', daily_call:'데일리 콜', resume:'이어하기',
+  talk_scenario:'Talk 상황', talk_news:'뉴스', talk_exam:'시험', talk_field:'분야', talk_own_topic:'내 토픽',
+  week_recap:'주간 리포트', progress_tip:'진도 팁', routine:'루틴', tutor_bot:'튜터 봇',
+  scenario_book:'상황 책', practice_book:'복습 책', practice_empty:'복습(빈 화면)', watch_person:'사람',
+  core_news:'코어 뉴스', other:'기타',
+};
+const TALK_ORIGIN = {free:'프리톡', scenario:'상황', news:'뉴스', person:'사람'};
+let talkModeUnit = null;  // null = picked from the period until someone taps 일별/주별
+const talkModeUnitNow = () => talkModeDays<=7 ? 'day' : (talkModeUnit || (talkModeDays<=14 ? 'day' : 'week'));
+// A series is an ENTITY: a fixed list, so a quiet period can't repaint the rest.
+const TALK_ENTRY_SERIES = [
+  {k:'talk_ring', ko:'Talk 링', c:'var(--s1)'}, {k:'daily_call', ko:'데일리 콜', c:'var(--s2)'},
+  {k:'tutor_bot', ko:'튜터 봇', c:'var(--s3)'}, {k:'scene', ko:'상황', c:'#eda100'},
+  {k:'rest', ko:'기타', c:'var(--muted)'}, {k:'none', ko:'기록 전', c:'var(--grid)'},
+];
+const talkEntrySeries = r => !r.entry ? 'none'
+  : (r.entry==='talk_ring' || r.entry==='daily_call' || r.entry==='tutor_bot') ? r.entry
+  : (r.entry==='talk_scenario' || r.entry==='scenario_book') ? 'scene' : 'rest';
+const TALK_SHARE_SERIES = [
+  {k:'topic', ko:'토픽', c:'#e87ba4'}, {k:'coach', ko:'코치', c:'#6250d6'}, {k:'tutor', ko:'튜터', c:'var(--s3)'},
+];
+/** Two panels over the same buckets: how many calls started and from where,
+ *  then what share of them were topic / coach / tutor calls.
+ *  A property a build never sent is NOT a "no": `coach` exists from early
+ *  October and `entry` from 10-18, so a share counts only the calls that say,
+ *  and an older call stacks as 기록 전. Weeks are 7-day blocks counted back
+ *  from today, so the newest bar is a whole week and can't read as a drop. */
+function drawTalkModeTrend(users){
+  const el = document.getElementById('talkModeTrend');
+  if(!el) return;
+  if(!DATA.talkModes){ el.innerHTML=''; return; }
+  const unit = talkModeUnitNow();
+  const days = [...Array(talkModeDays)].map((_,i)=>{
+    const d = new Date(TODAY+'T12:00:00Z'); d.setUTCDate(d.getUTCDate()-(talkModeDays-1-i));
+    return d.toISOString().slice(0,10); });
+  const size = unit==='week' ? 7 : 1;
+  const used = days.slice(days.length % size);
+  const buckets = [];
+  for(let i=0; i<used.length; i+=size) buckets.push({first:used[i], last:used[i+size-1], starts:[], calls:[]});
+  const at = new Map(used.map((d,i)=>[d, buckets[Math.floor(i/size)]]));
+  const vis = new Set(users.map(u=>u.idx));
+  for(const r of DATA.talkModes.starts) if(vis.has(r.u)){ const b = at.get(localDay(r.at)); if(b) b.starts.push(r); }
+  for(const r of DATA.talkModes.calls) if(vis.has(r.u)){ const b = at.get(localDay(r.at)); if(b) b.calls.push(r); }
+  if(!buckets.some(b=>b.starts.length || b.calls.length)){ el.innerHTML='<div class="empty">이 기간엔 통화 기록이 없어요.</div>'; return; }
+
+  const MIN_N = 3;  // a share of one or two calls is a coin toss, not a trend
+  const shareOf = b => ({
+    topic:{a:b.starts.filter(r=>r.origin && r.origin!=='free').length, n:b.starts.filter(r=>r.origin).length},
+    coach:{a:b.starts.filter(r=>r.coach==='on').length, n:b.starts.filter(r=>r.coach==='on'||r.coach==='off').length},
+    tutor:{a:b.calls.filter(r=>r.tutor).length, n:b.calls.length},
+  });
+  const n = buckets.length, W = innerW(el), LEFT=34, RIGHT=72, plotW = W-LEFT-RIGHT, bw = plotW/n;
+  const bwid = Math.max(3, Math.min(44, bw-(bw>10?6:2)));
+  const step = Math.max(1, Math.ceil(n/Math.max(4, Math.floor(plotW/46))));
+  const span = b => b.first===b.last ? fmtDate(b.first) : `${fmtD(b.first)}–${fmtD(b.last)}`;
+  const ticks = H => buckets.map((b,i)=> i%step ? '' :
+    `<text x="${(LEFT+i*bw+bw/2).toFixed(1)}" y="${H-2}" class="axis" text-anchor="middle">${fmtD(b.first)}</text>`).join('');
+  const hits = (H, top, ph, tip) => buckets.map((b,i)=>
+    `<rect class="trendhit" x="${(LEFT+i*bw).toFixed(1)}" y="${top}" width="${Math.max(1,bw).toFixed(1)}" height="${ph}" data-tip="${tip(b)}"/>`).join('');
+  const legend = s => s.map(v=>`<span class="swatch" style="background:${v.c};margin-left:8px"></span><span style="font-weight:400">${v.ko}</span>`).join('');
+
+  // panel 1: calls started, stacked by where
+  const H1 = 160, top = 8, bh = H1-top-16;
+  const count = b => { const c = Object.fromEntries(TALK_ENTRY_SERIES.map(v=>[v.k,0])); for(const r of b.starts) c[talkEntrySeries(r)]++; return c; };
+  const peak = Math.max(1, ...buckets.map(b=>b.starts.length));
+  const mag = 10**Math.floor(Math.log10(peak)), yMax = [1,2,5,10].map(m=>m*mag).find(v=>v>=peak);
+  const y1 = v => top+bh-v/yMax*bh;
+  const tip1 = b => { const c = count(b); return `<b>${span(b)}</b><br>시작한 통화 ${num(b.starts.length)}`
+    + TALK_ENTRY_SERIES.filter(v=>c[v.k]).map(v=>`<br>${v.ko} ${num(c[v.k])}`).join(''); };
+  let svg = `<div class="panel" style="margin-top:0"><div class="panel-label">시작한 통화, 어디서${legend(TALK_ENTRY_SERIES)}</div>`
+    + `<svg width="${W}" height="${H1}" role="img" aria-label="시작한 통화 ${unit==='week'?'주별':'일별'}">`
+    + (yMax>=2 ? `<line x1="${LEFT}" y1="${y1(yMax/2).toFixed(1)}" x2="${W-RIGHT}" y2="${y1(yMax/2).toFixed(1)}" class="gridline"/>`
+      + `<text x="${LEFT-6}" y="${(y1(yMax/2)+3).toFixed(1)}" class="axis" text-anchor="end">${yMax/2}</text>` : '')
+    + `<line x1="${LEFT}" y1="${y1(yMax).toFixed(1)}" x2="${W-RIGHT}" y2="${y1(yMax).toFixed(1)}" class="gridline"/>`
+    + `<text x="${LEFT-6}" y="${(y1(yMax)+3).toFixed(1)}" class="axis" text-anchor="end">${yMax}</text>`
+    + `<line x1="${LEFT}" y1="${top+bh}" x2="${W-RIGHT}" y2="${top+bh}" class="baseline"/>`;
+  buckets.forEach((b,i)=>{
+    const c = count(b), x = LEFT+i*bw+(bw-bwid)/2; let y = top+bh;
+    for(const v of TALK_ENTRY_SERIES){
+      if(!c[v.k]) continue;
+      const h = c[v.k]/yMax*bh; y -= h;
+      svg += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bwid.toFixed(1)}" height="${Math.max(1,h-1.5).toFixed(1)}" rx="2" fill="${v.c}"/>`;
+    }
+  });
+  svg += ticks(H1) + hits(H1, top, bh, tip1) + '</svg></div>';
+
+  // panel 2: shares, one axis, 0–100%; a bucket under MIN_N is a gap in that line
+  const H2 = 140, bh2 = H2-top-16, y2 = v => top+bh2-v*bh2;
+  const pctOf = s => `${Math.round(s.a/s.n*100)}%`;
+  const tip2 = b => { const s = shareOf(b); return `<b>${span(b)}</b>` + TALK_SHARE_SERIES.map(v=>{ const x = s[v.k];
+    return `<br>${v.ko} ${x.n ? `${pctOf(x)} (${x.a}/${x.n})${x.n<MIN_N?' · 표본 적음':''}` : '기록 없음'}`; }).join(''); };
+  svg += `<div class="panel"><div class="panel-label">비율${legend(TALK_SHARE_SERIES)}</div>`
+    + `<svg width="${W}" height="${H2}" role="img" aria-label="토픽, 코치, 튜터 통화 비율">`
+    + [0,.5,1].map(f=>`<line x1="${LEFT}" y1="${y2(f).toFixed(1)}" x2="${W-RIGHT}" y2="${y2(f).toFixed(1)}" class="${f?'gridline':'baseline'}"/>`
+      + `<text x="${LEFT-6}" y="${(y2(f)+3).toFixed(1)}" class="axis" text-anchor="end">${f*100}%</text>`).join('');
+  const ends = [];
+  for(const v of TALK_SHARE_SERIES){
+    const pts = buckets.map((b,i)=>{ const s = shareOf(b)[v.k]; return s.n>=MIN_N ? {x:LEFT+i*bw+bw/2, y:y2(s.a/s.n), s} : null; });
+    let path = '', pen = false;
+    for(const p of pts){ if(!p){ pen = false; continue; } path += `${pen?'L':'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`; pen = true; }
+    if(path) svg += `<path d="${path}" fill="none" stroke="${v.c}" stroke-width="2" stroke-linejoin="round"/>`;
+    svg += pts.filter(Boolean).map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${bw<10?2:3}" fill="${v.c}" stroke="var(--surface)" stroke-width="1.5"/>`).join('');
+    const last = pts.filter(Boolean).pop();
+    if(last) ends.push({ko:v.ko, y:last.y, s:last.s});
+  }
+  ends.sort((a,b)=>a.y-b.y).forEach((e,i)=>{ if(i) e.y = Math.max(e.y, ends[i-1].y+12);
+    svg += `<text x="${W-RIGHT+8}" y="${(e.y+3.5).toFixed(1)}" style="font-size:11px;fill:var(--ink-2)">${e.ko} ${pctOf(e.s)}</text>`; });
+  svg += ticks(H2) + hits(H2, top, bh2, tip2) + '</svg></div>'
+    + `<div class="legend">${tzLabel()} 시간 기준${unit==='week' ? ' · 오늘부터 7일씩 거슬러 묶었어요' : ''}`
+    + ` · 토픽·코치는 시작한 통화, 튜터는 끝난 통화가 분모 · 코치 기록은 10월 초부터, 시작한 곳은 10/18부터 · 통화 ${MIN_N}개 미만이면 선을 끊었어요</div>`;
+  el.innerHTML = svg;
+}
+function renderTalkModes(users){
+  const pick = document.getElementById('talkModePick'), tiles = document.getElementById('talkModeTiles'),
+        ent = document.getElementById('talkModeEntries'), tut = document.getElementById('talkModeTutor');
+  if(!tiles) return;
+  pick.innerHTML = TALK_MODE_DAYS.map(([d,lab])=>
+    `<button type="button" data-d="${d}" aria-pressed="${d===talkModeDays}">${lab}</button>`).join('');
+  pick.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{
+    talkModeDays = +b.dataset.d; talkModeUnit = null; renderTalkModes(visibleUsers());
+  }));
+  const unitPick = document.getElementById('talkModeUnitPick'), unitNow = talkModeUnitNow();
+  unitPick.innerHTML = talkModeDays<=7 ? '' : [['day','일별'],['week','주별']].map(([k,l])=>
+    `<button type="button" data-k="${k}" aria-pressed="${unitNow===k}">${l}</button>`).join('');
+  unitPick.onclick = e => { const b = e.target.closest('button'); if(!b) return; talkModeUnit = b.dataset.k; renderTalkModes(visibleUsers()); };
+  drawTalkModeTrend(users);
+  if(!DATA.talkModes){ tiles.innerHTML='<div class="empty">기록을 못 읽었어요 (Worker 로그의 talkModes).</div>'; ent.innerHTML=''; tut.innerHTML=''; return; }
+  const vis = new Set(users.map(u=>u.idx));
+  const since = Date.now() - talkModeDays*86400000;
+  const starts = DATA.talkModes.starts.filter(r=>vis.has(r.u) && Date.parse(r.at)>=since);
+  const calls = DATA.talkModes.calls.filter(r=>vis.has(r.u) && Date.parse(r.at)>=since);
+  const people = a => new Set(a.map(r=>r.u)).size;
+  const pct = (a,b) => b ? `${Math.round(a/b*100)}%` : '—';
+  const free = starts.filter(r=>r.origin==='free'), topic = starts.filter(r=>r.origin && r.origin!=='free');
+  const coachOn = starts.filter(r=>r.coach==='on');
+  const coachKnown = starts.filter(r=>r.coach==='on' || r.coach==='off');
+  const tCalls = calls.filter(r=>r.tutor), oCalls = calls.filter(r=>!r.tutor);
+  const t = [
+    {k:'시작한 통화', v:num(starts.length), d:`${num(people(starts))}명`},
+    {k:'프리톡', v:pct(free.length, starts.length), d:`${num(free.length)}통 · ${num(people(free))}명`},
+    {k:'토픽으로', v:pct(topic.length, starts.length), d:`상황·뉴스·사람 ${num(topic.length)}통 · ${num(people(topic))}명`},
+    {k:'코치 모드', v:pct(coachOn.length, coachKnown.length), d:`켠 채 시작 ${num(coachOn.length)}통`},
+    {k:'튜터 모드', v:pct(tCalls.length, calls.length), d:`${num(tCalls.length)}통 · ${num(people(tCalls))}명 (끝난 통화 중)`, good: tCalls.length>0},
+  ];
+  tiles.innerHTML = t.map(x=>`<div class="tile${x.good?' good':''}"><div class="k">${x.k}</div>`
+    + `<div class="v">${x.v}</div><div class="d">${x.d}</div></div>`).join('');
+
+  const by = new Map();
+  for(const r of starts){
+    const k = r.entry || r.origin || 'other';
+    const o = by.get(k) || {k, origin:r.origin, n:0, us:new Set(), coach:0, coachKnown:0, tutorKnown:0, tutor:0};
+    o.n++; o.us.add(r.u); if(r.coach==='on') o.coach++;
+    if(r.coach==='on' || r.coach==='off') o.coachKnown++;
+    if(r.tutor==='on' || r.tutor==='off'){ o.tutorKnown++; if(r.tutor==='on') o.tutor++; }
+    by.set(k, o);
+  }
+  const list = [...by.values()].sort((a,b)=>b.n-a.n);
+  ent.innerHTML = !list.length ? '<tr><td class="empty">이 기간엔 시작한 통화가 없어요.</td></tr>'
+    : '<tr><th>시작한 곳</th><th>종류</th><th class="num">통화</th><th class="num">사람</th>'
+      + '<th class="num">코치 켬</th><th class="num" title="튜터 여부를 적는 빌드(11-02 이후)의 통화 중">튜터</th></tr>'
+      + list.map(o=>`<tr><td>${esc(TALK_ENTRY[o.k] || o.k)}</td>`
+        + `<td class="muted">${esc(TALK_ORIGIN[o.origin] || o.origin || '—')}</td>`
+        + `<td class="num">${num(o.n)}</td><td class="num">${num(o.us.size)}</td>`
+        + `<td class="num">${pct(o.coach, o.coachKnown)}</td>`
+        + `<td class="num">${o.tutorKnown ? `${num(o.tutor)} / ${num(o.tutorKnown)}` : '<span class="muted">—</span>'}</td></tr>`).join('');
+
+  const row = (lab, a) => {
+    const spoke = a.filter(r=>r.turns>0);
+    const turns = spoke.reduce((s,r)=>s+r.turns,0), secs = a.reduce((s,r)=>s+r.secs,0);
+    const inferred = a.filter(r=>r.tutorSrc==='inferred').length;
+    return `<tr><td>${lab}</td><td class="num">${num(a.length)}</td><td class="num">${num(spoke.length)}</td>`
+      + `<td class="num">${num(people(a))}</td>`
+      + `<td class="num">${spoke.length ? (turns/spoke.length).toFixed(1) : '—'}</td>`
+      + `<td class="num">${a.length ? fmtMin(secs/a.length) : '—'}</td>`
+      + `<td class="num muted">${a.length ? pct(inferred, a.length) : '—'}</td></tr>`;
+  };
+  tut.innerHTML = !calls.length ? '<tr><td class="empty">이 기간엔 끝난 통화 기록이 없어요.</td></tr>'
+    : '<tr><th>통화</th><th class="num">통화</th><th class="num">말한 통화</th><th class="num">사람</th>'
+      + '<th class="num">평균 턴</th><th class="num">평균 길이</th><th class="num" title="튜터 여부를 레슨 기록으로 추정한 비율">추정</th></tr>'
+      + row('튜터 모드', tCalls) + row('그 외', oCalls);
 }
 
 /* ---- 앱 사용 시간 ----------------------------------------------------------
@@ -2564,6 +2808,141 @@ function renderQuiz(users){
         + `<td class="num">${o.ws || '—'}</td><td class="num">${o.wf || '—'}</td>`
         + `<td class="num">${o.tot ? `${pct(o.sc, o.tot)} <span class="muted">${o.sc}/${o.tot}</span>` : '—'}</td>`
         + `<td title="${esc(fmtTs(o.last))}">${ago(o.last)}</td></tr>`; }).join('');
+}
+
+/* ---- 목소리 선택 -----------------------------------------------------------
+ * DATA.voiceChoice (index.ts voiceChoiceRows): voice_door_chosen {door} and
+ * fluent_self_voice_chosen {choice, source, door, preset}, keyed by user
+ * index; u = -1 is someone swept before sign-up, p is the PostHog person.
+ * One person = one onboarding outcome, dated by their first pick. */
+let voiceUnit = 'day';
+const VOICE_KINDS = [
+  {k:'own',     ko:'내 목소리',         c:'var(--s1)'},
+  {k:'after',   ko:'녹음 후 AI 튜터',    c:'var(--s3)'},
+  {k:'tutor',   ko:'녹음 없이 AI 튜터',  c:'var(--s2)'},
+  {k:'stopped', ko:'녹음하다 멈춤',      c:'var(--baseline)'},
+];
+const VOICE_DOORS_FROM = '2026-11-06';
+function voiceOutcomes(users){
+  if(!DATA.voiceChoice) return null;
+  const vis = new Set(users.map(u=>u.idx));
+  const by = new Map();
+  for(const r of DATA.voiceChoice){
+    if(r.u !== -1 && !vis.has(r.u)) continue;
+    const key = r.p;
+    const o = by.get(key) || {u:r.u, first:r.at, door:null, meet:null, later:[]};
+    if(r.event==='voice_door_chosen') o.door = r.door;
+    else if((r.source||'meet')==='meet') o.meet = r;
+    else o.later.push(r);
+    by.set(key, o);
+  }
+  for(const o of by.values()){
+    const m = o.meet;
+    o.kind = m ? (m.choice==='own' ? 'own'
+                  : (m.choice==='tutor_only' || m.door==='tutor' || o.door==='tutor') ? 'tutor' : 'after')
+               : (o.door==='tutor' ? 'tutor' : 'stopped');
+    o.preset = m && m.choice!=='own' ? m.preset : null;
+  }
+  return [...by.values()];
+}
+function renderVoiceChoice(users){
+  const tiles = document.getElementById('voiceTiles'), chart = document.getElementById('voiceChart'),
+        tbl = document.getElementById('voiceTable'), pick = document.getElementById('voicePick');
+  if(!tiles) return;
+  pick.innerHTML = [['day','일별'],['week','주별']].map(([k,l]) =>
+    `<button type="button" data-k="${k}" aria-pressed="${voiceUnit===k}">${l}</button>`).join('');
+  pick.onclick = e => { const b = e.target.closest('button'); if(!b) return; voiceUnit = b.dataset.k; renderVoiceChoice(visibleUsers()); };
+  const list = voiceOutcomes(users);
+  if(!list){ tiles.innerHTML='<div class="empty">기록을 못 읽었어요 (Worker 로그의 voiceChoice).</div>'; chart.innerHTML=''; tbl.innerHTML=''; return; }
+  if(!list.length){ tiles.innerHTML='<div class="empty">아직 고른 사람이 없어요.</div>'; chart.innerHTML=''; tbl.innerHTML=''; return; }
+  const cnt = s => { const c = {own:0, after:0, tutor:0, stopped:0}; for(const o of s) c[o.kind]++; return c; };
+  const share = c => { const n = c.own+c.after+c.tutor; return n ? (c.after+c.tutor)/n : null; };
+  const pct = v => v==null ? '—' : `${Math.round(v*100)}%`;
+  const week = Date.now() - 7*86400000;
+  const all = cnt(list), last7 = cnt(list.filter(o=>Date.parse(o.first)>=week));
+  const doors = cnt(list.filter(o=>localDay(o.first)>=VOICE_DOORS_FROM));
+  const switched = list.filter(o=>o.later.length);
+  tiles.innerHTML = [
+    {k:'고른 사람', v:num(list.length), d:`내 목소리 ${all.own} · AI ${all.after+all.tutor} · 멈춤 ${all.stopped}`},
+    {k:'AI 목소리 비율', v:pct(share(all)), d:`녹음 후 ${all.after} · 녹음 없이 ${all.tutor}`},
+    {k:'최근 7일', v:pct(share(last7)), d:`${num(last7.own+last7.after+last7.tutor)}명 중 AI ${last7.after+last7.tutor}`},
+    {k:'두 문이 생긴 뒤', v:pct(share(doors)), d:`11/6부터 · 녹음 없이 ${doors.tutor} · 멈춤 ${doors.stopped}`},
+    {k:'나중에 바꾼 사람', v:num(switched.length), d:'Me → 목소리에서'},
+  ].map(x=>`<div class="tile"><div class="k">${x.k}</div><div class="v">${x.v}</div><div class="d">${x.d}</div></div>`).join('');
+
+  // buckets: every day (or Monday-start week) from the first pick to today
+  const dayKey = iso => localDay(iso);
+  const weekKey = day => { const d = new Date(day+'T12:00:00Z'); d.setUTCDate(d.getUTCDate() - (d.getUTCDay()+6)%7); return d.toISOString().slice(0,10); };
+  const keyOf = iso => voiceUnit==='week' ? weekKey(dayKey(iso)) : dayKey(iso);
+  const firstDay = list.map(o=>dayKey(o.first)).sort()[0];
+  const keys = [];
+  // walk calendar days as strings (local days already), firstDay → today
+  for(const d = new Date(firstDay+'T12:00:00Z'); ; d.setUTCDate(d.getUTCDate()+1)){
+    const day = d.toISOString().slice(0,10);
+    if(day > TODAY) break;
+    const k = voiceUnit==='week' ? weekKey(day) : day;
+    if(keys[keys.length-1] !== k) keys.push(k);
+  }
+  const groups = new Map(keys.map(k=>[k, []]));
+  for(const o of list){ const k = keyOf(o.first); if(groups.has(k)) groups.get(k).push(o); }
+  const n = keys.length;
+  const W = innerW(chart), LEFT=34, RIGHT=8, plotW = W-LEFT-RIGHT, bw = plotW/n;
+  const bwid = Math.max(4, Math.min(44, bw-8));
+  const tot = keys.map(k=>groups.get(k).length), max = Math.max(1, ...tot);
+  const H1 = 150, top = 8, bh = H1-top-16;
+  const step = Math.max(1, Math.ceil(n/14));
+  const label = k => voiceUnit==='week' ? `${fmtD(k)}주` : fmtD(k);
+  const tipOf = (k, c) => `<b>${voiceUnit==='week' ? fmtDate(k)+' 주' : fmtDate(k)}</b><br>`
+    + VOICE_KINDS.map(v=>`${v.ko} ${c[v.k]}`).join('<br>') + `<br>AI 비율 ${pct(share(c))}`;
+  const doorX = (() => { const k = voiceUnit==='week' ? weekKey(VOICE_DOORS_FROM) : VOICE_DOORS_FROM;
+    const i = keys.indexOf(k); return i<0 ? null : LEFT + i*bw + (voiceUnit==='week' ? bw/2 : 0); })();
+  const doorMark = H => doorX==null ? '' :
+    `<line x1="${doorX.toFixed(1)}" y1="2" x2="${doorX.toFixed(1)}" y2="${H-14}" stroke="var(--muted)" stroke-dasharray="3 3"/>`;
+  let svg = `<div class="panel" style="margin-top:0"><div class="panel-label">사람 수`
+    + VOICE_KINDS.map(v=>`<span class="swatch" style="background:${v.c};margin-left:8px"></span><span style="font-weight:400">${v.ko}</span>`).join('')
+    + `</div><svg width="${W}" height="${H1}" role="img" aria-label="목소리 선택 ${voiceUnit==='week'?'주별':'일별'}">`
+    + `<line x1="${LEFT}" y1="${top+bh}" x2="${W-RIGHT}" y2="${top+bh}" class="baseline"/>`
+    + `<text x="${LEFT-6}" y="${top+8}" class="axis" text-anchor="end">${max}</text>` + doorMark(H1)
+    + (doorX==null ? '' : `<text x="${(doorX+4).toFixed(1)}" y="${top+8}" class="axis">두 문 시작</text>`);
+  keys.forEach((k,i) => {
+    const x = LEFT + i*bw, c = cnt(groups.get(k));
+    if(i%step===0) svg += `<text x="${(x+bw/2).toFixed(1)}" y="${H1-2}" class="axis" text-anchor="middle">${label(k)}</text>`;
+    let y = top+bh; const tip = tipOf(k, c);
+    for(const v of VOICE_KINDS){
+      if(!c[v.k]) continue;
+      const h = c[v.k]/max*bh; y -= h;
+      svg += `<rect x="${(x+(bw-bwid)/2).toFixed(1)}" y="${y.toFixed(1)}" width="${bwid.toFixed(1)}" height="${Math.max(1,h-1).toFixed(1)}" rx="2" fill="${v.c}" data-tip="${tip}"/>`;
+    }
+  });
+  svg += '</svg></div>';
+  // AI share per bucket, as a line (buckets nobody finished are gaps)
+  const H2 = 96, bh2 = H2-top-16;
+  const pts = keys.map((k,i) => { const v = share(cnt(groups.get(k))); return v==null ? null :
+    {x: LEFT + i*bw + bw/2, y: top + bh2 - v*bh2, v, k, c: cnt(groups.get(k))}; });
+  let path = '', pen = false;
+  for(const p of pts){ if(!p){ pen = false; continue; } path += `${pen?'L':'M'}${p.x.toFixed(1)},${p.y.toFixed(1)}`; pen = true; }
+  svg += `<div class="panel"><div class="panel-label"><span class="swatch" style="background:var(--ink-2)"></span>AI 목소리 비율`
+    + `<span style="font-weight:400;color:var(--muted);margin-left:auto">전체 ${pct(share(all))}</span></div>`
+    + `<svg width="${W}" height="${H2}" role="img" aria-label="AI 목소리 비율">`
+    + [0, .5, 1].map(f=>`<line x1="${LEFT}" y1="${(top+bh2-f*bh2).toFixed(1)}" x2="${W-RIGHT}" y2="${(top+bh2-f*bh2).toFixed(1)}" class="${f?'gridline':'baseline'}"/>`
+      + `<text x="${LEFT-6}" y="${(top+bh2-f*bh2+3).toFixed(1)}" class="axis" text-anchor="end">${f*100}%</text>`).join('')
+    + doorMark(H2)
+    + (path ? `<path d="${path}" fill="none" stroke="var(--ink-2)" stroke-width="2"/>` : '')
+    + pts.filter(Boolean).map(p=>`<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="var(--ink-2)" data-tip="${tipOf(p.k, p.c)}"/>`).join('');
+  keys.forEach((k,i) => { if(i%step===0) svg += `<text x="${(LEFT+i*bw+bw/2).toFixed(1)}" y="${H2-2}" class="axis" text-anchor="middle">${label(k)}</text>`; });
+  svg += '</svg></div><div class="legend">' + `${tzLabel()} 시간 기준 · 한 사람은 처음 고른 날에 한 번만 세요</div>`;
+  chart.innerHTML = svg;
+
+  const KO = Object.fromEntries(VOICE_KINDS.map(v=>[v.k, v.ko]));
+  const rows = [...list].sort((a,b)=>b.first.localeCompare(a.first));
+  tbl.innerHTML = '<tr><th>사람</th><th>고른 날</th><th>온보딩</th><th>AI 목소리</th><th>나중에</th></tr>'
+    + rows.map(o => { const u = o.u === -1 ? null : DATA.users[o.u];
+      const last = o.later[o.later.length-1];
+      const later = last ? `${last.choice==='own' ? '내 목소리' : 'AI 튜터'}${last.preset ? ` (${esc(last.preset)})` : ''}${o.later.length>1 ? ` · ${o.later.length}번` : ''}` : '—';
+      return `<tr><td>${u ? `<b${whoAttr(u)}>${esc(nameOf(u))}</b> ${badge(u)}` : '<span class="muted">가입 전 떠남</span>'}</td>`
+        + `<td title="${esc(fmtTs(o.first))}">${fmtDate(localDay(o.first))}</td>`
+        + `<td><span class="swatch" style="background:${VOICE_KINDS.find(v=>v.k===o.kind).c}"></span> ${KO[o.kind]}</td>`
+        + `<td>${o.preset ? esc(o.preset) : '—'}</td><td>${later}</td></tr>`; }).join('');
 }
 
 function renderFeatures(){
@@ -3101,6 +3480,13 @@ function renderDaily(users){
     {label:'대화 턴',   color:'var(--s1)', data:turns,  fmt:v=>`${num(v)}턴`, h:76},
     {label:'통화 시간', color:'var(--s2)', data:talk,   fmt:v=>fmtMin(v), h:76},
   ];
+  // Foreground time from PostHog (appTimeRows): iOS only, last 60 days.
+  if(DATA.appTime){
+    const app = Array(n).fill(0), dayAt = new Map(DATA.days.map((d,i)=>[d,i]));
+    for(const r of DATA.appTime){ const i = dayAt.get(r.day); if(i!==undefined && vis.has(r.u)) app[i]+=r.secs; }
+    panels.push({label:'앱 사용 시간 (iOS)', color:'#6250d6', data:app, fmt:v=>fmtMin(v), h:76});
+  }
+  const tickEvery = Math.max(1, Math.ceil(n/Math.max(4, Math.floor(plotW/46))));
   let html='';
   for(const p of panels){
     const max = Math.max(1, ...p.data);
@@ -3113,7 +3499,7 @@ function renderDaily(users){
          +  `<line x1="${LEFT}" y1="${top+bh}" x2="${W-RIGHT}" y2="${top+bh}" class="baseline"/>`;
     for(let i=0;i<n;i++){
       const x = LEFT + i*bw;
-      html += `<text x="${(x+bw/2).toFixed(1)}" y="${H-2}" class="axis" text-anchor="middle">${fmtD(DATA.days[i])}</text>`;
+      if(i%tickEvery===0) html += `<text x="${(x+bw/2).toFixed(1)}" y="${H-2}" class="axis" text-anchor="middle">${fmtD(DATA.days[i])}</text>`;
       const v = p.data[i]; if(!v) continue;
       const h = Math.max(2, v/max*bh);
       const bwid = Math.max(3, Math.min(52, bw-10));
@@ -4162,14 +4548,14 @@ function render(){
   renderMoneyTiles(); renderCancelShape(); renderTrials();
   renderPlanUsage(); renderUnitTiles(); renderTiers(); renderGemini();
   renderSpeech(users); renderAppTime(users); renderPodcast(users); renderProspects(users);
-  renderFeatureUse(users); renderQuiz(users);
+  renderFeatureUse(users); renderQuiz(users); renderTalkModes(users); renderVoiceChoice(users);
   renderBurn(); renderCostMonths(); renderCostTable(); renderFairUse();
 }
 /** Only the width-dependent drawings. Same code path as the first paint, so a
  *  redraw can never disagree with it. */
 function redrawCharts(){
   const users = visibleUsers();
-  renderDaily(users); renderHeatmap(users); renderHoursToday(users); renderHours(users); renderHoursByUser(users); renderBurn();
+  renderDaily(users); renderVoiceChoice(users); drawTalkModeTrend(users); renderHeatmap(users); renderHoursToday(users); renderHours(users); renderHoursByUser(users); renderBurn();
   redrawMarketing();
 }
 /* ============================================================ 라이브
@@ -4592,6 +4978,7 @@ function renderLive(){
   // Polled for the alarm while another tab is up: nothing to draw (a hidden
   // map measures 0 and would fit its bounds to nothing).
   if(!liveVisible) return;
+  if(liveView === 'web'){ renderWeb(); return; }
   const dayUsers = new Set(eps.map(e=>e.u));
   const located = [...dayUsers].filter(id=>geoOf(PH[id])).length;
   document.getElementById('liveTiles').innerHTML = [
@@ -4760,6 +5147,156 @@ function renderLive(){
     });
   });
 }
+
+/* ============================================================ 라이브 지도 · 웹
+ * The 앱 / 웹 switch above the map (2026-11-12). 웹 puts nawana.app's page
+ * visits on the same map, from __ADMIN_BASE__/visitors/data.json (PostHog,
+ * visitors.ts): one pin per visit, the creators page's depth as a bar. The
+ * app's arrival alarm keeps running under it (renderLive still runs up to the
+ * alarm and hands over here). */
+let liveView = 'app', webData = null, webAt = 0, webTimer = null, webDays = 1, webPage = 'creators', webSel = null, webFit = false, webAll = false;
+try{ liveView = localStorage.getItem('nawana.admin.liveView') === 'web' ? 'web' : 'app';
+     webPage = localStorage.getItem('nawana.admin.webPage') || 'creators'; }catch(e){}
+const WEB_PAGES = [['creators','크리에이터'], ['pay','결제'], ['home','홈'], ['ko','한국어 홈'], ['community','커뮤니티'], ['all','전체']];
+const WEB_PAGE_NAME = Object.fromEntries(WEB_PAGES);
+// web/creators.html's PARTS, in order; 8 is the form.
+const WEB_PARTS = ['맨 위','약속','샘플','재료','아이디어','성장','방법','FAQ','지원서','파트너','방명록'];
+const WEB_FORM = 8;
+const webFrom = d => !d || d === '$direct' ? '직접' : /threads/.test(d) ? '스레드' : /instagram/.test(d) ? '인스타'
+  : /google/.test(d) ? '구글' : /naver/.test(d) ? '네이버' : d;
+const webDur = s => s == null ? null : s < 60 ? `${s}초` : `${Math.floor(s/60)}분${s%60 ? ' '+s%60+'초' : ''}`;
+const webAgo = ms => ms < 60e3 ? '방금' : ms < 3600e3 ? `${Math.round(ms/60e3)}분 전` : ms < 86400e3 ? `${Math.round(ms/3600e3)}시간 전` : `${Math.round(ms/86400e3)}일 전`;
+const webClock = iso => new Intl.DateTimeFormat('ko-KR', {timeZone: tzZone(), month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit', hourCycle:'h23'}).format(new Date(iso));
+const webDevice = d => d === 'Desktop' ? '컴퓨터' : d === 'Mobile' ? '휴대폰' : d === 'Tablet' ? '태블릿' : (d || '');
+const webPlace = v => v.city || v.cc ? `${flagOf(v.cc)} ${esc(v.city || v.cc)}` : '<span class="muted">위치 모름</span>';
+function webKind(v, now){
+  const since = now - new Date(v.last).getTime();
+  return since <= 5*60e3 && !v.left ? 'live' : since <= 3600e3 ? 'recent' : since <= 86400e3 ? 'today' : 'quiet';
+}
+const webEmoji = v => v.applied ? '✅' : v.started ? '✍️' : v.device === 'Desktop' ? '💻' : '📱';
+function webReached(v){
+  if(v.applied) return '지원 완료';
+  if(v.started) return '지원서 쓰다 멈춤';
+  if(v.deepest == null) return '맨 위만';
+  return `${WEB_PARTS[v.deepest] || v.deepestName || v.deepest}까지`;
+}
+const webDepth = v => v.page !== 'creators' ? '' : `<span class="wdepth" title="${esc(webReached(v))}">${
+  WEB_PARTS.map((n, i) => `<i class="${i <= (v.deepest ?? -1) ? 'on' : ''}${i === WEB_FORM ? ' form' : ''}" title="${esc(n)}"></i>`).join('')}</span>`;
+
+function setLiveView(v){
+  if(v === liveView) return;
+  liveView = v;
+  try{ localStorage.setItem('nawana.admin.liveView', v); }catch(e){}
+  applyLiveView();
+  if(v === 'web'){ if(livePlayT != null) pausePlay(); pollWeb(); }
+  renderLive();
+}
+function applyLiveView(){
+  const web = liveView === 'web';
+  document.querySelectorAll('#liveView button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === liveView)));
+  document.getElementById('liveTimeline').hidden = web;
+  document.getElementById('webCard').hidden = !web;
+  document.getElementById('liveSub').hidden = web;
+  document.getElementById('webSub').hidden = !web;
+  if(playCtl) playCtl.style.display = web ? 'none' : '';
+  clearInterval(webTimer); webTimer = null;
+  if(web) webTimer = setInterval(() => { if(!document.hidden && liveVisible) pollWeb(); }, 20000);
+}
+async function pollWeb(){
+  try{
+    const r = await fetch(`__ADMIN_BASE__/visitors/data.json?days=${webDays}`, {cache:'no-store', credentials:'same-origin'});
+    const j = await r.json().catch(() => ({}));
+    if(!r.ok) throw new Error(j.error || r.status);
+    webData = j; webAt = Date.now();
+  }catch(e){ webData = webData || {visits:[]}; webData.error = e.message || '오류'; }
+  if(liveView === 'web') renderLive();
+}
+function renderWeb(){
+  const now = Date.now();
+  const all = (webData && webData.visits) || [];
+  const note = document.getElementById('liveNote');
+  if(webData && webData.error){ note.hidden = false; note.textContent = `웹 방문을 읽지 못했어요 (${webData.error})`; }
+  else if(!liveData || !liveData.phError) note.hidden = true;
+  document.getElementById('webPageSeg').innerHTML = WEB_PAGES.map(([k, lab]) => {
+    const c = k === 'all' ? all.length : all.filter(v => v.page === k).length;
+    return `<button type="button" data-k="${k}" aria-pressed="${k === webPage}">${lab} <span style="opacity:.6">${c}</span></button>`;
+  }).join('');
+  document.getElementById('webRangeSeg').innerHTML = [[1,'24시간'],[7,'7일']].map(([d, lab]) =>
+    `<button type="button" data-d="${d}" aria-pressed="${d === webDays}">${lab}</button>`).join('');
+  const vs = all.filter(v => webPage === 'all' || v.page === webPage).map(v => ({...v, kind: webKind(v, now)}));
+  const cnt = f => vs.filter(f).length;
+  const pct = (a, b) => b ? `${Math.round(a/b*100)}%` : '';
+  const cr = vs.filter(v => v.page === 'creators');
+  const toForm = cnt(v => v.page === 'creators' && (v.deepest ?? -1) >= WEB_FORM);
+  const tiles = [
+    {k:'지금 보는 중', v:num(cnt(v => v.kind === 'live')), d:'5분 안에 움직임'},
+    {k: webDays === 1 ? '24시간 방문' : '7일 방문', v:num(vs.length), d:`${new Set(vs.map(v => v.cc).filter(Boolean)).size}개 나라`},
+    {k:'스레드에서', v:num(cnt(v => /threads/.test(v.from || ''))), d:pct(cnt(v => /threads/.test(v.from || '')), vs.length)},
+  ];
+  if(cr.length) tiles.push(
+    {k:'지원서까지 내려옴', v:num(toForm), d:pct(toForm, cr.length)},
+    {k:'지원서 쓰기 시작', v:num(cnt(v => v.started)), d:''},
+    {k:'지원 완료', v:num(cnt(v => v.applied)), d:''});
+  document.getElementById('liveTiles').innerHTML = tiles.map(t => `<div class="tile"><div class="k">${t.k}</div><div class="v">${t.v}</div>`
+    + `<div class="d">${t.d}</div></div>`).join('');
+
+  const rows = webAll ? vs : vs.slice(0, 80);
+  document.getElementById('webList').innerHTML = !webData ? '<div class="empty">불러오는 중</div>'
+    : !vs.length ? '<div class="empty">이 기간에 방문이 없어요.</div>'
+    : rows.map(v => `<button type="button" class="wrow${v.id === webSel ? ' sel' : ''}" data-id="${esc(v.id)}">
+      <span class="wd ${v.kind}"></span>
+      <span class="w1"><b>${webPlace(v)}</b><span class="m">${esc(WEB_PAGE_NAME[v.page] || v.page)} · ${esc(webDevice(v.device))} · ${esc(webFrom(v.from))}${v.ref ? ' · ref ' + esc(v.ref) : ''}</span></span>
+      <span class="wt">${v.kind === 'live' ? '<b style="color:var(--good)">지금</b>' : esc(webClock(v.first))}</span>
+      <span class="w2">${webDepth(v)}${v.page === 'creators' ? `<span>${esc(webReached(v))}</span>` : ''}${
+        v.seconds != null ? `<span>${esc(webDur(v.seconds))} 머묾</span>` : ''}${v.samples ? `<span class="wtag">샘플 ${v.samples}</span>` : ''}${
+        v.applied ? '<span class="wtag go">지원 완료</span>' : v.started ? '<span class="wtag hot">지원서 시작</span>' : ''}</span>
+    </button>`).join('') + (vs.length > rows.length ? `<button type="button" class="linkbtn" id="webMore" style="margin-top:8px">${vs.length - rows.length}개 더 보기</button>` : '');
+
+  ensureMap();
+  if(!liveMap) return;
+  if(playCtl) playCtl.style.display = 'none';
+  nightLayer.setLatLngs(nightPolygon(new Date()));
+  const located = spread(vs.filter(v => v.lat != null && v.lon != null).map(v => ({...v, lat:+v.lat, lon:+v.lon})));
+  const markers = syncPins(located.map(v => ({
+    id: 'w:' + v.id, kind: v.kind, lat: v.lat, lon: v.lon, dx: v.dx, dy: v.dy, emoji: webEmoji(v),
+    tag: v.kind === 'live' || v.id === webSel ? (v.city || v.cc || '') : '', sel: v.id === webSel,
+    tip: `<b>${webPlace(v)}</b> · ${esc(WEB_PAGE_NAME[v.page] || v.page)}<br>${esc(webClock(v.first))} 들어옴 · ${esc(webAgo(now - new Date(v.last).getTime()))}`
+      + `<br>${esc(webDevice(v.device))}${v.os ? ' · ' + esc(v.os) : ''} · ${esc(webFrom(v.from))}${v.ref ? ' · ref ' + esc(v.ref) : ''}`
+      + (v.page === 'creators' ? `<br>${esc(webReached(v))}${v.seconds != null ? ' · ' + esc(webDur(v.seconds)) : ''}${v.samples ? ' · 샘플 ' + v.samples + '번' : ''}` : ''),
+    onClick: () => { webSel = webSel === v.id ? null : v.id; renderLive();
+      const el = document.querySelector(`#webList .wrow[data-id="${CSS.escape(v.id)}"]`); el && el.scrollIntoView({block:'nearest', behavior:'smooth'}); },
+  })));
+  if(!webFit && located.length){
+    webFit = true;
+    liveMap.fitBounds(located.map(v => [v.lat, v.lon]), {padding:[60,60], maxZoom:4});
+  }
+  document.querySelectorAll('#webList .wrow').forEach(el => {
+    const mk = markers.get('w:' + el.dataset.id); if(!mk) return;
+    el.addEventListener('mouseenter', () => mk.openTooltip());
+    el.addEventListener('mouseleave', () => mk.closeTooltip());
+  });
+}
+document.getElementById('liveView').addEventListener('click', e => {
+  const b = e.target.closest('button[data-v]'); if(b) setLiveView(b.dataset.v);
+});
+document.getElementById('webPageSeg').addEventListener('click', e => {
+  const b = e.target.closest('button[data-k]'); if(!b) return;
+  webPage = b.dataset.k; webSel = null; webAll = false;
+  try{ localStorage.setItem('nawana.admin.webPage', webPage); }catch(e){}
+  renderLive();
+});
+document.getElementById('webRangeSeg').addEventListener('click', e => {
+  const b = e.target.closest('button[data-d]'); if(!b) return;
+  webDays = +b.dataset.d; webSel = null; webAll = false; pollWeb();
+});
+document.getElementById('webList').addEventListener('click', e => {
+  if(e.target.id === 'webMore'){ webAll = true; renderLive(); return; }
+  const b = e.target.closest('.wrow'); if(!b) return;
+  webSel = webSel === b.dataset.id ? null : b.dataset.id;
+  const v = webData && webData.visits.find(x => x.id === b.dataset.id);
+  if(webSel && v && v.lat != null && liveMap) liveMap.flyTo([+v.lat, +v.lon], Math.max(liveMap.getZoom(), 4), {duration:.6});
+  renderLive();
+});
 
 /** The play / scrub control, drawn inside the map so it stays with the
  *  sticky map while the list scrolls. */
@@ -4970,6 +5507,7 @@ async function pollLive(){
  *  The map is only built and drawn once its section scrolls into view. */
 function startLivePoll(){
   clearInterval(liveTimer);
+  applyLiveView(); if(liveView === 'web') pollWeb();
   pollLive();
   liveTimer = setInterval(()=>{ if(soundOn || !document.hidden) pollLive(); }, POLL_MS);
 }
@@ -4978,7 +5516,6 @@ function startLivePoll(){
  * __ADMIN_BASE__/marketing.json when it opens (and every minute while it is
  * open), because a veto has to be made against the state of NOW, not the
  * state of when the page was loaded. The three buttons POST and re-read. */
-  if(liveView === 'web'){ renderWeb(); return; }
 const MK_STAGES = [
   ['idea','아이디어'], ['brief','기획'], ['copy','카피'], ['design','디자인'], ['review','검토'],
   ['ready','준비됨'], ['scheduled','예약됨'], ['posting','올리는 중'], ['posted','올라감'],
@@ -5148,156 +5685,6 @@ function mkMetricsHtml(p){
     const m = p.latest[ch];
     const parts = MK_ALLMET.filter(([k]) => m[k] != null).map(([k, lab]) => `${lab} <b>${num(m[k])}</b>`);
     return `<div><span class="ch">${esc(MK_CH[ch]||ch)}</span>${parts.join(' · ')} <span class="muted">· ${ago(m.at)}</span></div>`;
-/* ============================================================ 라이브 지도 · 웹
- * The 앱 / 웹 switch above the map (2026-11-12). 웹 puts nawana.app's page
- * visits on the same map, from __ADMIN_BASE__/visitors/data.json (PostHog,
- * visitors.ts): one pin per visit, the creators page's depth as a bar. The
- * app's arrival alarm keeps running under it (renderLive still runs up to the
- * alarm and hands over here). */
-let liveView = 'app', webData = null, webAt = 0, webTimer = null, webDays = 1, webPage = 'creators', webSel = null, webFit = false, webAll = false;
-try{ liveView = localStorage.getItem('nawana.admin.liveView') === 'web' ? 'web' : 'app';
-     webPage = localStorage.getItem('nawana.admin.webPage') || 'creators'; }catch(e){}
-const WEB_PAGES = [['creators','크리에이터'], ['pay','결제'], ['home','홈'], ['ko','한국어 홈'], ['community','커뮤니티'], ['all','전체']];
-const WEB_PAGE_NAME = Object.fromEntries(WEB_PAGES);
-// web/creators.html's PARTS, in order; 8 is the form.
-const WEB_PARTS = ['맨 위','약속','샘플','재료','아이디어','성장','방법','FAQ','지원서','파트너','방명록'];
-const WEB_FORM = 8;
-const webFrom = d => !d || d === '$direct' ? '직접' : /threads/.test(d) ? '스레드' : /instagram/.test(d) ? '인스타'
-  : /google/.test(d) ? '구글' : /naver/.test(d) ? '네이버' : d;
-const webDur = s => s == null ? null : s < 60 ? `${s}초` : `${Math.floor(s/60)}분${s%60 ? ' '+s%60+'초' : ''}`;
-const webAgo = ms => ms < 60e3 ? '방금' : ms < 3600e3 ? `${Math.round(ms/60e3)}분 전` : ms < 86400e3 ? `${Math.round(ms/3600e3)}시간 전` : `${Math.round(ms/86400e3)}일 전`;
-const webClock = iso => new Intl.DateTimeFormat('ko-KR', {timeZone: tzZone(), month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit', hourCycle:'h23'}).format(new Date(iso));
-const webDevice = d => d === 'Desktop' ? '컴퓨터' : d === 'Mobile' ? '휴대폰' : d === 'Tablet' ? '태블릿' : (d || '');
-const webPlace = v => v.city || v.cc ? `${flagOf(v.cc)} ${esc(v.city || v.cc)}` : '<span class="muted">위치 모름</span>';
-function webKind(v, now){
-  const since = now - new Date(v.last).getTime();
-  return since <= 5*60e3 && !v.left ? 'live' : since <= 3600e3 ? 'recent' : since <= 86400e3 ? 'today' : 'quiet';
-}
-const webEmoji = v => v.applied ? '✅' : v.started ? '✍️' : v.device === 'Desktop' ? '💻' : '📱';
-function webReached(v){
-  if(v.applied) return '지원 완료';
-  if(v.started) return '지원서 쓰다 멈춤';
-  if(v.deepest == null) return '맨 위만';
-  return `${WEB_PARTS[v.deepest] || v.deepestName || v.deepest}까지`;
-}
-const webDepth = v => v.page !== 'creators' ? '' : `<span class="wdepth" title="${esc(webReached(v))}">${
-  WEB_PARTS.map((n, i) => `<i class="${i <= (v.deepest ?? -1) ? 'on' : ''}${i === WEB_FORM ? ' form' : ''}" title="${esc(n)}"></i>`).join('')}</span>`;
-
-function setLiveView(v){
-  if(v === liveView) return;
-  liveView = v;
-  try{ localStorage.setItem('nawana.admin.liveView', v); }catch(e){}
-  applyLiveView();
-  if(v === 'web'){ if(livePlayT != null) pausePlay(); pollWeb(); }
-  renderLive();
-}
-function applyLiveView(){
-  const web = liveView === 'web';
-  document.querySelectorAll('#liveView button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === liveView)));
-  document.getElementById('liveTimeline').hidden = web;
-  document.getElementById('webCard').hidden = !web;
-  document.getElementById('liveSub').hidden = web;
-  document.getElementById('webSub').hidden = !web;
-  if(playCtl) playCtl.style.display = web ? 'none' : '';
-  clearInterval(webTimer); webTimer = null;
-  if(web) webTimer = setInterval(() => { if(!document.hidden && liveVisible) pollWeb(); }, 20000);
-}
-async function pollWeb(){
-  try{
-    const r = await fetch(`__ADMIN_BASE__/visitors/data.json?days=${webDays}`, {cache:'no-store', credentials:'same-origin'});
-    const j = await r.json().catch(() => ({}));
-    if(!r.ok) throw new Error(j.error || r.status);
-    webData = j; webAt = Date.now();
-  }catch(e){ webData = webData || {visits:[]}; webData.error = e.message || '오류'; }
-  if(liveView === 'web') renderLive();
-}
-function renderWeb(){
-  const now = Date.now();
-  const all = (webData && webData.visits) || [];
-  const note = document.getElementById('liveNote');
-  if(webData && webData.error){ note.hidden = false; note.textContent = `웹 방문을 읽지 못했어요 (${webData.error})`; }
-  else if(!liveData || !liveData.phError) note.hidden = true;
-  document.getElementById('webPageSeg').innerHTML = WEB_PAGES.map(([k, lab]) => {
-    const c = k === 'all' ? all.length : all.filter(v => v.page === k).length;
-    return `<button type="button" data-k="${k}" aria-pressed="${k === webPage}">${lab} <span style="opacity:.6">${c}</span></button>`;
-  }).join('');
-  document.getElementById('webRangeSeg').innerHTML = [[1,'24시간'],[7,'7일']].map(([d, lab]) =>
-    `<button type="button" data-d="${d}" aria-pressed="${d === webDays}">${lab}</button>`).join('');
-  const vs = all.filter(v => webPage === 'all' || v.page === webPage).map(v => ({...v, kind: webKind(v, now)}));
-  const cnt = f => vs.filter(f).length;
-  const pct = (a, b) => b ? `${Math.round(a/b*100)}%` : '';
-  const cr = vs.filter(v => v.page === 'creators');
-  const toForm = cnt(v => v.page === 'creators' && (v.deepest ?? -1) >= WEB_FORM);
-  const tiles = [
-    {k:'지금 보는 중', v:num(cnt(v => v.kind === 'live')), d:'5분 안에 움직임'},
-    {k: webDays === 1 ? '24시간 방문' : '7일 방문', v:num(vs.length), d:`${new Set(vs.map(v => v.cc).filter(Boolean)).size}개 나라`},
-    {k:'스레드에서', v:num(cnt(v => /threads/.test(v.from || ''))), d:pct(cnt(v => /threads/.test(v.from || '')), vs.length)},
-  ];
-  if(cr.length) tiles.push(
-    {k:'지원서까지 내려옴', v:num(toForm), d:pct(toForm, cr.length)},
-    {k:'지원서 쓰기 시작', v:num(cnt(v => v.started)), d:''},
-    {k:'지원 완료', v:num(cnt(v => v.applied)), d:''});
-  document.getElementById('liveTiles').innerHTML = tiles.map(t => `<div class="tile"><div class="k">${t.k}</div><div class="v">${t.v}</div>`
-    + `<div class="d">${t.d}</div></div>`).join('');
-
-  const rows = webAll ? vs : vs.slice(0, 80);
-  document.getElementById('webList').innerHTML = !webData ? '<div class="empty">불러오는 중</div>'
-    : !vs.length ? '<div class="empty">이 기간에 방문이 없어요.</div>'
-    : rows.map(v => `<button type="button" class="wrow${v.id === webSel ? ' sel' : ''}" data-id="${esc(v.id)}">
-      <span class="wd ${v.kind}"></span>
-      <span class="w1"><b>${webPlace(v)}</b><span class="m">${esc(WEB_PAGE_NAME[v.page] || v.page)} · ${esc(webDevice(v.device))} · ${esc(webFrom(v.from))}${v.ref ? ' · ref ' + esc(v.ref) : ''}</span></span>
-      <span class="wt">${v.kind === 'live' ? '<b style="color:var(--good)">지금</b>' : esc(webClock(v.first))}</span>
-      <span class="w2">${webDepth(v)}${v.page === 'creators' ? `<span>${esc(webReached(v))}</span>` : ''}${
-        v.seconds != null ? `<span>${esc(webDur(v.seconds))} 머묾</span>` : ''}${v.samples ? `<span class="wtag">샘플 ${v.samples}</span>` : ''}${
-        v.applied ? '<span class="wtag go">지원 완료</span>' : v.started ? '<span class="wtag hot">지원서 시작</span>' : ''}</span>
-    </button>`).join('') + (vs.length > rows.length ? `<button type="button" class="linkbtn" id="webMore" style="margin-top:8px">${vs.length - rows.length}개 더 보기</button>` : '');
-
-  ensureMap();
-  if(!liveMap) return;
-  if(playCtl) playCtl.style.display = 'none';
-  nightLayer.setLatLngs(nightPolygon(new Date()));
-  const located = spread(vs.filter(v => v.lat != null && v.lon != null).map(v => ({...v, lat:+v.lat, lon:+v.lon})));
-  const markers = syncPins(located.map(v => ({
-    id: 'w:' + v.id, kind: v.kind, lat: v.lat, lon: v.lon, dx: v.dx, dy: v.dy, emoji: webEmoji(v),
-    tag: v.kind === 'live' || v.id === webSel ? (v.city || v.cc || '') : '', sel: v.id === webSel,
-    tip: `<b>${webPlace(v)}</b> · ${esc(WEB_PAGE_NAME[v.page] || v.page)}<br>${esc(webClock(v.first))} 들어옴 · ${esc(webAgo(now - new Date(v.last).getTime()))}`
-      + `<br>${esc(webDevice(v.device))}${v.os ? ' · ' + esc(v.os) : ''} · ${esc(webFrom(v.from))}${v.ref ? ' · ref ' + esc(v.ref) : ''}`
-      + (v.page === 'creators' ? `<br>${esc(webReached(v))}${v.seconds != null ? ' · ' + esc(webDur(v.seconds)) : ''}${v.samples ? ' · 샘플 ' + v.samples + '번' : ''}` : ''),
-    onClick: () => { webSel = webSel === v.id ? null : v.id; renderLive();
-      const el = document.querySelector(`#webList .wrow[data-id="${CSS.escape(v.id)}"]`); el && el.scrollIntoView({block:'nearest', behavior:'smooth'}); },
-  })));
-  if(!webFit && located.length){
-    webFit = true;
-    liveMap.fitBounds(located.map(v => [v.lat, v.lon]), {padding:[60,60], maxZoom:4});
-  }
-  document.querySelectorAll('#webList .wrow').forEach(el => {
-    const mk = markers.get('w:' + el.dataset.id); if(!mk) return;
-    el.addEventListener('mouseenter', () => mk.openTooltip());
-    el.addEventListener('mouseleave', () => mk.closeTooltip());
-  });
-}
-document.getElementById('liveView').addEventListener('click', e => {
-  const b = e.target.closest('button[data-v]'); if(b) setLiveView(b.dataset.v);
-});
-document.getElementById('webPageSeg').addEventListener('click', e => {
-  const b = e.target.closest('button[data-k]'); if(!b) return;
-  webPage = b.dataset.k; webSel = null; webAll = false;
-  try{ localStorage.setItem('nawana.admin.webPage', webPage); }catch(e){}
-  renderLive();
-});
-document.getElementById('webRangeSeg').addEventListener('click', e => {
-  const b = e.target.closest('button[data-d]'); if(!b) return;
-  webDays = +b.dataset.d; webSel = null; webAll = false; pollWeb();
-});
-document.getElementById('webList').addEventListener('click', e => {
-  if(e.target.id === 'webMore'){ webAll = true; renderLive(); return; }
-  const b = e.target.closest('.wrow'); if(!b) return;
-  webSel = webSel === b.dataset.id ? null : b.dataset.id;
-  const v = webData && webData.visits.find(x => x.id === b.dataset.id);
-  if(webSel && v && v.lat != null && liveMap) liveMap.flyTo([+v.lat, +v.lon], Math.max(liveMap.getZoom(), 4), {duration:.6});
-  renderLive();
-});
-
   }).join('') + `</div>`;
 }
 
@@ -5507,7 +5894,6 @@ const PAGES = () => [...document.querySelectorAll('.grp')];
 function buildNav(){
   const nav = document.getElementById('sideNav');
   nav.innerHTML = PAGES().map(g => {
-  applyLiveView(); if(liveView === 'web') pollWeb();
     const items = [...g.querySelectorAll('section[data-nav]')]
       .map(x => `<a class="sl" href="#${x.id}">${esc(x.dataset.nav)}</a>`).join('');
     return `<div class="sg" data-page="${g.id}"><a class="sgh" href="#${g.id}">${esc(g.dataset.group)}</a>`

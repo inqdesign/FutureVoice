@@ -29,8 +29,10 @@
 import shell from "./shell.html";
 import { assemble } from "./assemble";
 import { marketingAction, marketingData, serveMedia } from "./marketing";
-import roroShell from "./roro.html";
+import { creatorsAction, creatorsCohort, creatorsData } from "./creators";
+import creatorsShell from "./creators.html";
 import { visitorsData } from "./visitors";
+import roroShell from "./roro.html";
 import { roroData } from "./roro";
 import { hogqlCached } from "./posthog";
 
@@ -218,6 +220,36 @@ async function fetchData(env: Env) {
       console.log(`quiz: ${(e as Error).message}`);
       return null;
     });
+    // Which voice the fluent self speaks in (2026-11-08): every voice pick,
+    // onboarding's two doors and Me → Voice. A person whose anonymous session
+    // was swept before sign-up has no row in users and keeps u = -1, because
+    // leaving at the voice step is part of what this chart is about.
+    // The door is picked before sign-in under PostHog's anonymous id and the
+    // voice after it under the account's, so rows are joined by person_id
+    // and take whichever of the person's ids has an account.
+    (data as any).voiceChoice = await voiceChoiceRows(env).then((rows) => {
+      const acct = new Map<string, number>();
+      for (const r of rows) if (uidx.has(r.u) && !acct.has(r.p)) acct.set(r.p, uidx.get(r.u)!);
+      return rows.map(({ u: _u, ...r }) => ({ ...r, u: acct.get(r.p) ?? -1 }));
+    })
+      .catch((e) => {
+        console.log(`voiceChoice: ${(e as Error).message}`);
+        return null;
+      });
+    // Apple / Android beside every name (2026-11-08): PostHog adds to what
+    // client_events already said (assemble.ts `platforms`). Optional.
+    const byId = new Map((data.users as any[]).map((u) => [u.id, u]));
+    for (const r of await platformRows(env).catch((e) => {
+      console.log(`platforms: ${(e as Error).message}`);
+      return [];
+    })) {
+      const u = byId.get(r.u);
+      if (!u) continue;
+      const set = new Set<string>(u.platforms ?? []);
+      if (r.android) set.add("android");
+      if (r.apple) set.add("apple");
+      u.platforms = [...set];
+    }
   }
   // Joined through a friend's invite (2026-10-08): the invitee's
   // `referral_invitee` grant names who invited them. A strong subscribe
@@ -511,10 +543,12 @@ async function ledgerSince(env: Env, since: string, maxRows: number): Promise<un
 
 async function latestAppBuilds(env: Env): Promise<unknown[]> {
   const seen = new Map<string, unknown>();
+  const platforms = new Map<string, Set<string>>();
   const page = 1000;
   for (let from = 0; from < 50_000; from += page) {
     const url = `${env.SUPABASE_URL}/rest/v1/client_events`
-      + `?select=id:user_id,at:created_at,build:properties->>build,version:properties->>version`
+      + `?select=id:user_id,at:created_at,build:properties->>build,version:properties->>version,`
+      + `platform:properties->>platform`
       + `&user_id=not.is.null&properties->>build=not.is.null&order=created_at.desc`;
     const r = await fetch(url, {
       headers: {
@@ -524,11 +558,38 @@ async function latestAppBuilds(env: Env): Promise<unknown[]> {
       },
     });
     if (!r.ok) throw new Error(`client_events ${r.status}`);
-    const batch = await r.json() as Array<{ id: string }>;
-    for (const row of batch) if (!seen.has(row.id)) seen.set(row.id, row);
+    const batch = await r.json() as Array<{ id: string; platform?: string | null }>;
+    for (const row of batch) {
+      if (!seen.has(row.id)) seen.set(row.id, row);
+      // Every app a person has used (2026-11-08): Android stamps
+      // `platform: android` on each row, iOS and the Mac stamp nothing.
+      const p = row.platform === "android" ? "android" : "apple";
+      if (!platforms.has(row.id)) platforms.set(row.id, new Set());
+      platforms.get(row.id)!.add(p);
+    }
     if (batch.length < page) break;
   }
-  return [...seen.values()];
+  return [...seen.entries()].map(([id, row]) => ({
+    ...(row as object), platforms: [...(platforms.get(id) ?? [])],
+  }));
+}
+
+/** Which app each person has used, from PostHog (2026-11-08): reaches people
+ *  whose builds predate `client_events`' build stamp. Android's events carry
+ *  `platform: android`; iOS/iPadOS/the Mac carry `$os` and an app version
+ *  (the website's events are `$lib = web` and are left out). */
+async function platformRows(env: Env): Promise<Array<{ u: string; android: boolean; apple: boolean }>> {
+  const rows = await hogql(env, `
+    select lower(distinct_id),
+      countIf(properties.platform = 'android'),
+      countIf(properties.$os in ('iOS', 'iPadOS', 'macOS') and properties.$app_version is not null)
+    from events
+    where timestamp > now() - interval 180 day
+      and (properties.app = 'nawana' or properties.product = 'nawana')
+      and properties.$lib != 'web'
+    group by distinct_id
+    limit 50000`);
+  return rows.map((x) => ({ u: String(x[0]), android: Number(x[1]) > 0, apple: Number(x[2]) > 0 }));
 }
 
 async function profileLangs(env: Env): Promise<Record<string, { native: string | null; target: string | null }>> {
@@ -743,6 +804,27 @@ async function quizRows(env: Env): Promise<Array<Record<string, any> & { u: stri
     u: String(x[0]), at: phTime(x[1]), event: String(x[2]),
     items: n(x[3]), missed: n(x[4]), score: n(x[5]), total: n(x[6]),
     trial: x[7] === true || x[7] === 1 || String(x[7]).toLowerCase() === "true",
+  }));
+}
+
+/** Every voice pick (2026-11-08): `voice_door_chosen` {door: own | tutor}
+ *  is the onboarding intro's two doors (from 2026-11-06), and
+ *  `fluent_self_voice_chosen` {choice: own | preset | tutor_only, source:
+ *  meet | settings, door} is the pick itself. */
+async function voiceChoiceRows(env: Env): Promise<Array<Record<string, any> & { u: string; p: string }>> {
+  const rows = await hogql(env, `
+    select lower(distinct_id), toString(person_id), timestamp, event,
+      properties.door, properties.choice, properties.source, properties.preset
+    from events
+    where event in ('voice_door_chosen', 'fluent_self_voice_chosen')
+      and timestamp > now() - interval 180 day
+      and (properties.app = 'nawana' or properties.product = 'nawana')
+    order by timestamp
+    limit 50000`);
+  const s = (v: unknown) => (v === null || v === undefined || v === "" ? null : String(v));
+  return rows.map((x) => ({
+    u: String(x[0]), p: String(x[1]), at: phTime(x[2]), event: String(x[3]),
+    door: s(x[4]), choice: s(x[5]), source: s(x[6]), preset: s(x[7]),
   }));
 }
 
@@ -968,7 +1050,8 @@ export default {
       // data.json is for scripts, and a script gets a 404 rather than a form.
       if (path === "/data.json" || path === "/live.json" || path === "/history.json"
         || path === "/marketing.json" || path.startsWith("/marketing/")
-        || path === "/roro/data.json" || path === "/visitors/data.json") return text("Not found", 404);
+        || path === "/roro/data.json" || path === "/creators/data.json" || path === "/visitors/data.json"
+        || (req.method === "POST" && path.startsWith("/creators/"))) return text("Not found", 404);
       return html(loginPage(base), 401);
     }
 
@@ -1010,6 +1093,19 @@ export default {
     // 마케팅 tab: its own small read, fetched when the tab opens, and the
     // three buttons on a piece (게시 막기 · 지금 올리기 · 미루기).
     if (path === "/marketing.json") return marketingData(env, base);
+    // 크리에이터 page: its own read and buttons, the console's stylesheet.
+    if (path === "/creators/data.json") return creatorsData(env);
+    if (path === "/creators/cohort") return creatorsCohort(req, env);
+    {
+      const m = path.match(/^\/creators\/([^/]+)\/(note|note-hide|note-show|status|code|post|end|delete|reward|upgrade|upgrade-quote|upgrade-link|minutes)$/);
+      if (m) return creatorsAction(req, env, m[1], m[2]);
+    }
+    if (path === "/creators" || path === "/creators/") {
+      const style = (shell as unknown as string).match(/<style>[\s\S]*?<\/style>/)?.[0] ?? "";
+      return html((creatorsShell as unknown as string)
+        .replace("<!--__SHARED_STYLE__-->", () => style)
+        .replaceAll("__ADMIN_BASE__", base));
+    }
     {
       const m = path.match(/^\/marketing\/([^/]+)\/(veto|post-now|reschedule)$/);
       if (m) return marketingAction(req, env, m[1], m[2]);

@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>크리에이터 · 어드민</title>
+<!-- The creator program's desk. Borrows nawana's console stylesheet at request
+     time like the Dear RoRo page, and keeps only its own shapes below.
+     Applicants' text is untrusted: it reaches the DOM through textContent only,
+     and a link is drawn only when it is http(s). Server half: creators.ts. -->
+<!--__SHARED_STYLE__-->
+<style>
+.cr{max-width:980px}
+.cr h1{font-size:24px; font-weight:700; letter-spacing:-.01em; margin:0 0 4px}
+.cr .sub{color:var(--muted); font-size:13.5px; margin:0 0 18px}
+.cr .sub a{color:inherit}
+.row{display:block; width:100%; text-align:left; background:var(--surface); border:1px solid var(--ring); border-radius:10px; padding:12px 16px; margin-top:8px; cursor:pointer; font:inherit; color:inherit}
+.row:hover{border-color:var(--ink-2)}
+.row .l1{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap}
+.row b{font-size:15.5px}
+.row .h{color:var(--ink-2); font-size:13px}
+.row .t{margin-left:auto; color:var(--muted); font-size:12.5px; white-space:nowrap}
+.row .tags{display:flex; flex-wrap:wrap; gap:5px; margin-top:6px}
+.tag{font-size:11.5px; padding:1px 7px; border-radius:5px; background:var(--chip); color:var(--ink-2)}
+.tag.hot{background:var(--ink); color:var(--page)}
+.row .p{color:var(--ink-2); font-size:13.5px; margin-top:6px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden}
+.strip{display:flex; gap:3px; margin-top:8px}
+.strip button,.strip i{flex:1 1 0; min-width:0; height:30px; border-radius:4px; border:1px solid var(--ring); background:var(--page); padding:0; font-size:10px; line-height:1; color:var(--muted); display:flex; flex-direction:column; align-items:center; justify-content:center; font-style:normal}
+.strip button{cursor:pointer}
+.strip .talked{border-color:var(--seq3)}
+.strip .posted{background:var(--ink); color:var(--page); border-color:var(--ink)}
+.strip .today{box-shadow:0 0 0 1.5px var(--s2)}
+.legend{font-size:12px; color:var(--muted); margin-top:6px}
+.detail{background:var(--surface); border:1px solid var(--ink-2); border-radius:10px; padding:18px; margin-top:8px}
+.detail h2{font-size:19px; margin:0}
+.detail .meta{color:var(--ink-2); font-size:13.5px; margin-top:2px}
+.detail h3{font-size:12px; color:var(--muted); font-weight:600; letter-spacing:.03em; margin:18px 0 4px}
+.detail p.text{white-space:pre-wrap; margin:0; font-size:14.5px; line-height:1.6}
+.detail textarea{width:100%; min-height:72px; font:inherit; font-size:14px; padding:9px 11px; border:1px solid var(--ring); border-radius:8px; background:var(--page); color:var(--ink); resize:vertical; box-sizing:border-box}
+.bar{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+.act{appearance:none; font:inherit; font-size:13px; font-weight:600; padding:6px 12px; border-radius:8px; border:1px solid var(--ring); background:var(--surface); color:var(--ink); cursor:pointer}
+.act:hover{background:var(--chip)}
+.act.on,.act.primary{background:var(--ink); color:var(--page); border-color:var(--ink)}
+.act.danger{color:var(--crit)}
+.act[disabled]{opacity:.5; cursor:default}
+select.act{padding-right:6px}
+.code{font-family:ui-monospace,Menlo,monospace; font-size:16px; font-weight:700; letter-spacing:.06em}
+.foot{display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-top:20px; padding-top:14px; border-top:1px solid var(--ring)}
+.toast{position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:var(--ink); color:var(--page); padding:8px 16px; border-radius:999px; font-size:13.5px; z-index:50}
+.empty{color:var(--muted); padding:28px 0; font-size:14px}
+.notes-h{margin-top:40px;font-size:20px}
+.note-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(127,127,127,.2)}
+.note-row .note-text{flex:1;margin:0}
+.note-row small{opacity:.6;white-space:nowrap}
+.note-row.gone .note-text{opacity:.4;text-decoration:line-through}
+</style>
+</head>
+<body>
+
+<aside class="side" id="side">
+  <div class="sbrand">
+    <p class="eyebrow">내부 운영</p>
+    <nav class="appsw" aria-label="앱"><a href="__ADMIN_BASE__/">나와나</a><a href="__ADMIN_BASE__/roro">Dear RoRo</a></nav>
+    <div class="stitle">크리에이터</div>
+  </div>
+  <div class="sctl"><a class="linkbtn" href="__ADMIN_BASE__/logout">나가기</a></div>
+</aside>
+
+<main class="main">
+  <div class="cr">
+    <h1>크리에이터 프로그램</h1>
+    <p class="sub">공개 페이지: <a href="https://nawana.app/creators" target="_blank" rel="noopener">nawana.app/creators</a></p>
+    <div class="bar" id="cohort" style="margin:0 0 14px"></div>
+    <div class="seg" id="filters" role="group" aria-label="상태"></div>
+    <div id="list"></div>
+    <h2 class="notes-h">방명록</h2>
+    <p class="sub">페이지 맨 아래 일력 뒷면에 남긴 글이에요. 익명이고, 쓰자마자 페이지에 보여요. 이상한 글은 숨기면 페이지에서 빠져요.</p>
+    <div id="notes"></div>
+  </div>
+</main>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const BASE = "__ADMIN_BASE__";
+const STATUS = {new:"새 지원", talking:"연락 중", active:"활동 중", paused:"쉬는 중", ended:"종료", declined:"보류"};
+const LANG = {en:"영어", de:"독일어", ja:"일본어", es:"스페인어", fr:"프랑스어", zh:"중국어", ko:"한국어"};
+const CAD = {daily:"매일", weekdays:"평일마다", three:"주 3번", custom:"직접 정함"};
+const STAGE = {not_started:"시작 전", small:"팔로워 적음", running:"운영 중"};
+const USE = {never:"나와나 처음", tried:"조금 써봄", using:"쓰는 중"};
+const DEV = {iphone:"아이폰", android:"안드로이드"};
+const PLAT = {threads:"스레드", instagram:"인스타", youtube:"유튜브", tiktok:"틱톡", blog:"블로그", other:"기타"};
+const PLAN = {light_monthly:"Light", plus_monthly:"Plus"};
+
+let DATA = {apps:[], days:21}, filter = null, openId = null;
+
+const el = (tag, props = {}, kids = []) => {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "class") n.className = v;
+    else if (k === "text") n.textContent = v;
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) n.setAttribute(k, v);
+  }
+  for (const c of [].concat(kids)) if (c != null && c !== false) n.append(c);
+  return n;
+};
+
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(toast.h); toast.h = setTimeout(() => { t.hidden = true; }, 2200);
+}
+
+function ago(iso) {
+  const s = (Date.now() - new Date(iso)) / 1000;
+  if (s < 3600) return `${Math.max(1, Math.round(s / 60))}분 전`;
+  if (s < 86400) return `${Math.round(s / 3600)}시간 전`;
+  return `${Math.round(s / 86400)}일 전`;
+}
+
+function days() {
+  const out = [];
+  for (let i = DATA.days - 1; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 86400000);
+    out.push(d.toISOString().slice(0, 10));
+  }
+  return out;
+}
+
+async function load() {
+  const r = await fetch(`${BASE}/creators/data.json`, {cache:"no-store", credentials:"same-origin"});
+  DATA = await r.json();
+  render();
+  renderNotes();
+  renderCohort();
+}
+
+async function act(id, action, body = {}) {
+  const r = await fetch(`${BASE}/creators/${id}/${action}`, {
+    method:"POST", credentials:"same-origin",
+    headers:{"Content-Type":"application/json"}, body:JSON.stringify(body),
+  });
+  const out = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    toast(out.error === "already_redeemed" ? "이미 쓴 코드는 다시 만들 수 없어요." : out.error === "tables_missing" ? "마이그레이션이 아직 안 들어갔어요." : "저장하지 못했어요.");
+    throw new Error(out.error);
+  }
+  return out;
+}
+
+async function copy(text, label) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast(`${label} 복사했어요`);
+  } catch { toast("복사하지 못했어요. 창을 한 번 누르고 다시 해주세요."); }
+}
+
+const firstDM = (a) => a.page_lang === "en" ? firstDMEn(a) :
+`안녕하세요 ${a.name}님, 나와나 크리에이터 1기에 지원해주셔서 고마워요. 지원서 잘 읽었어요.
+얼마나 자주, 어디에 올리면 좋을지 같이 정해볼까요?`;
+
+const codeDM = (a) => a.page_lang === "en" ? codeDMEn(a) :
+`${a.name}님, 같이 해봐요. 코드는 ${a.comp_code} 예요.
+코드는 12월 1일에 넣어주세요. 설정의 "초대 코드 입력"에 넣으면 시작이에요. 1기는 이날 다 같이 시작해서 3월 10일까지 100일 동안 해요. (날짜는 예정이에요. 바뀌면 먼저 알려드릴게요.)
+
+그때까지는 앱을 둘러보고 써보면서 100일 공부 계획을 세워보세요. 통화는 무료 20분이 있고, 스피치 챌린지, 복습, 섀도잉은 지금도 무료예요. 어떻게 공부할지는 본인이 정하면 돼요.
+
+12월 1일부터는 정한 날마다 이렇게 해요.
+① 공부한 기록을 내 SNS에 올리고
+② "앱은 나와나로부터 제공받았습니다" 한 줄을 잘 보이게 넣고
+③ 체크인 링크에 올린 글 주소를 붙여넣어요. 링크는 시작 전에 보내드릴게요.
+
+저는 앱을 드리고, 약속한 날에 체크인했는지만 확인해요. 그게 전부예요.`;
+
+// Mail the founder sends himself: these open in his mail app, already written, and he edits before sending.
+const challengerMail = (a) => a.page_lang === "en" ? challengerMailEn(a) : (a.paid_at ? {
+  subject: "100일 챌린지, 결제까지 확인했습니다",
+  body:
+`${a.name}님, 안녕하세요. 나와나를 만드는 이응규입니다.
+
+100일 챌린지 1기 신청과 결제 모두 확인했습니다. 같이 하게 되어 반갑습니다.
+
+앱은 지금부터 쓰실 수 있습니다. 결제하신 계정으로 로그인하시면 됩니다. 챌린지는 시작하는 날부터 세 달 동안 세고, 그 뒤 10일은 제가 드립니다.
+
+규칙은 신청하실 때 보신 그대로입니다.
+· 하루: 통화 4분 이상과 스피치 1개
+· 한 달에 하루까지 쉴 수 있습니다
+· 100일이 끝난 다음 날부터, 지킨 달 수만큼 이어서 무료로 쓰실 수 있습니다. 세 달을 모두 지키면 그 뒤 3개월이 무료입니다 (환불은 아닙니다)
+
+1기는 12월 1일에 시작해서 3월 10일에 끝날 예정입니다. 날짜가 바뀌면 먼저 알려드리겠습니다. 시작 전에 앱을 꼭 써보세요. 궁금한 점은 이 메일에 답장해 주세요.
+
+이응규 드림`,
+} : {
+  subject: "100일 챌린지 신청 잘 받았습니다",
+  body:
+`${a.name}님, 안녕하세요. 나와나를 만드는 이응규입니다.
+
+100일 챌린지 1기 신청 잘 받았습니다. 아직 결제가 남아 있어서 연락드립니다.
+
+챌린지는 미리 결제하고, 시작하는 날부터 같이 시작합니다. 아래 주소에서 결제해 주세요. 한 번만 결제되고, 자동으로 다시 결제되지 않습니다. 앱에서 쓰는 계정(Apple 또는 Google)으로 로그인하면 그 계정에 바로 적용됩니다.
+https://nawana.app/pay?id=${a.id}&cur=${curOf(a.country)}
+
+이미 앱에서 구독하고 계시다면 결제하지 마시고 이 메일에 답장해 주세요.
+
+궁금한 점도 이 메일에 답장해 주세요.
+
+이응규 드림`,
+});
+// The way in as a challenger is offered only while applications are open (through 19 November, local time, until it has ended everywhere).
+const APPLY_OPEN = () => Date.now() < Date.parse("2026-11-20T00:00:00-12:00");
+const laterMail = (a) => a.page_lang === "en" ? laterMailEn(a) : ({
+  subject: "크리에이터 프로그램 1기 지원 결과를 알려드립니다",
+  body:
+`${a.name}님, 안녕하세요. 나와나를 만드는 이응규입니다.
+
+크리에이터 프로그램 1기에 지원해 주셔서 고맙습니다. 적어주신 내용은 전부 읽었습니다.
+
+1기는 적은 인원으로 시작해서, 이번에는 함께하지 못하게 되었습니다.
+
+${APPLY_OPEN() ? `100일 챌린지는 챌린저로 같이 하실 수 있습니다. SNS에 올리지 않고, 3개월 구독료를 미리 내고 매일 공부하는 방식입니다. 마지막 10일은 제가 무료로 드리고, 100일이 끝나면 지킨 달 수만큼 이어서 무료로 쓰실 수 있습니다. 신청은 11월 19일까지 받습니다.
+https://nawana.app/creators
+
+` : ""}다음 기수를 열 때 먼저 알려드리겠습니다. 지원해 주셔서 고맙습니다.
+
+이응규 드림`,
+});
+// The same messages for an application from the English page (page_lang "en"): program/copy/en/mail.md, "Desk messages (EN)".
+const firstDMEn = (a) =>
+`Hi ${a.name}! Thanks for applying to nawana Creators, cohort 1. I've read your application.
+Want to figure out together how often you'll post, and where?`;
+const codeDMEn = (a) =>
+`${a.name}, let's do this! Your code is ${a.comp_code}
+Please enter it on December 1, under "Enter invite code" in Settings. That's how you start. We all start together that day and go for 100 days, until March 10. (Both dates are planned. If they move, you'll hear it from me first.)
+
+Until then, look around the app, use it, and make your own plan for the 100 days. You have 20 free minutes of calls, and speech challenges, review and shadowing are free already. How you study is up to you.
+
+From December 1, on each day we set:
+1. Post what you studied on your own account.
+2. Say clearly that the app was free, the way your country asks. For example "I got nawana for free" or #ad.
+3. Paste the post's address into your check-in link. I'll send the link before we start.
+
+I give you the app and check that you checked in on the days we agreed. That's all.`;
+const challengerMailEn = (a) => (a.paid_at ? {
+  en: true,
+  subject: "Your 100-day challenge: payment received",
+  body:
+`Hi ${a.name}, I'm Eunggyu, and I make nawana.
+
+I have both your sign-up and your payment for cohort 1 of the 100-day challenge. I'm glad you're in.
+
+You can use the app from today. Just sign in with the account you paid with. The challenge counts three months from day 1, and the 10 days after that are on me.
+
+The rules are the ones you saw when you signed up:
+· A day: at least 4 minutes of calls and one speech
+· You can miss one day a month
+· From the day after day 100, you keep using nawana free, one month for each month you kept. Keep all three and the next 3 months are free (it's not a refund)
+
+Cohort 1 is planned to start on December 1 and end on March 10. If the dates move, you'll hear it from me first. Start using the app now, before day 1. Any questions, just reply to this email.
+
+Eunggyu`,
+} : {
+  en: true,
+  subject: "Your 100-day challenge: one step left",
+  body:
+`Hi ${a.name}, I'm Eunggyu, and I make nawana.
+
+I got your sign-up for cohort 1 of the 100-day challenge. All that's left is the payment, so here's the link.
+
+You pay up front, and we all start together on day 1. Pay at the link below. You're charged once, and it never renews. Sign in with the account you use in the app (Apple or Google), and it goes straight onto that account.
+https://nawana.app/pay?id=${a.id}&cur=${a.country ? curOf(a.country) : "usd"}&lang=en
+
+If you already subscribe in the app, please don't pay. Reply to this email instead.
+
+Any other questions, just reply here too.
+
+Eunggyu`,
+});
+const laterMailEn = (a) => ({
+  en: true,
+  subject: "Your application to the nawana Creator Program",
+  body:
+`Hi ${a.name}, I'm Eunggyu, and I make nawana.
+
+Thank you for applying to cohort 1 of the nawana Creator Program. I read everything you wrote.
+
+Cohort 1 starts small, so I can't bring you in as a creator this time.
+
+${APPLY_OPEN() ? `You can still do the 100 days as a challenger. Challengers don't post anything: you pay for three months up front and study every day. The last 10 days are on me, and once the 100 days are over you keep using nawana free, one month for each month you kept. Sign-ups close November 19 (Seoul time).
+https://nawana.app/en/creators
+
+` : ""}When I open the next cohort, you'll be the first to know. Thanks again for applying.
+
+Eunggyu`,
+});
+const mailBody = (m) => `${m.en ? "Subject" : "제목"}: ${m.subject}\n\n${m.body}`;
+const mailto = (a, m) => `mailto:${a.email}?subject=${encodeURIComponent(m.subject)}&body=${encodeURIComponent(m.body)}`;
+
+// A challenger's three months, judged from the cohort's first day: a month is
+// kept when at most one of its 30 days is missed. A day is the participant's
+// own LOCAL date, as their phone reported it (challenge_days): 4 minutes of
+// talk and one speech take. The dates are plain calendar dates counted from the
+// cohort's first Seoul day; no time zone is applied to them here, because the
+// phone already said which date it was. A date the phone never reported (an app
+// from before the check-in) falls back to the server's talk ledger and is
+// counted apart as talk-only, since nobody can see that day's speech.
+const DAY_BAR = 240;
+const seoulDate = (t) => new Date(new Date(t).getTime() + 9 * 3600000).toISOString().slice(0, 10);
+const addDays = (date, n) => new Date(Date.parse(date + "T00:00:00Z") + n * 86400000).toISOString().slice(0, 10);
+function months(a) {
+  if (!DATA.cohort_start) return null;
+  const first = seoulDate(DATA.cohort_start), today = seoulDate(DATA.now || Date.now());
+  const days = a.days || {}, talk = a.talk || {};
+  return [0, 1, 2].map((m) => {
+    let met = 0, passed = 0, talkOnly = 0;
+    for (let d = m * 30; d < m * 30 + 30; d++) {
+      const date = addDays(first, d);
+      // A day is judged once it is over in Seoul.
+      if (date >= today) break;
+      passed++;
+      const row = days[date];
+      if (row) {
+        if (row.talk >= DAY_BAR && row.speech >= 1) met++;
+      } else if ((talk[addDays(date, -1)] || 0) >= DAY_BAR || (talk[date] || 0) >= DAY_BAR) {
+        // The ledger is kept by UTC day, so either side of Seoul's midnight counts.
+        met++; talkOnly++;
+      }
+    }
+    const missed = passed - met;
+    return { n: m + 1, met, passed, talkOnly, over: passed === 30, kept: passed === 30 && missed <= 1, lost: missed > 1 };
+  });
+}
+
+function renderCohort() {
+  const box = document.getElementById("cohort");
+  const input = el("input", {type:"date", class:"act", "aria-label":"1기 시작일"});
+  // Shown as the Seoul day it was set to.
+  if (DATA.cohort_start) input.value = new Date(new Date(DATA.cohort_start).getTime() + 9 * 3600000).toISOString().slice(0, 10);
+  box.replaceChildren(
+    el("span", {class:"legend", style:"margin:0", text:DATA.cohort_start ? "1기 시작일" : "1기 시작일이 아직 없어요"}),
+    input,
+    el("button", {type:"button", class:"act", text:"시작일 저장", onclick:async () => {
+      if (!input.value) return;
+      if (!confirm(`${input.value}을 1기 시작일로 저장할까요? 이미 결제한 챌린저의 100일도 이날부터로 맞춰져요.`)) return;
+      const r = await fetch(`${BASE}/creators/cohort`, {method:"POST", credentials:"same-origin", headers:{"Content-Type":"application/json"}, body:JSON.stringify({day:input.value})});
+      const out = await r.json().catch(() => ({}));
+      if (!r.ok) { toast("저장하지 못했어요."); return; }
+      toast(`저장했어요. 챌린저 ${out.moved}명의 기간을 맞췄어요.`);
+      load();
+    }}),
+  );
+}
+
+// The form stores a country code; older applications hold a typed name, shown as written.
+const REGION = (() => { try { return new Intl.DisplayNames(["ko"], {type:"region"}); } catch { return null; } })();
+const countryName = (c) => { try { return (/^[A-Z]{2}$/.test(c || "") && REGION && REGION.of(c)) || c; } catch { return c; } };
+
+// The fee's currency follows the country, as on the page: won in Korea, euro where the euro is money, dollars elsewhere.
+const EUROZONE = new Set(["AT","BE","BG","CY","DE","EE","ES","FI","FR","GR","HR","IE","IT","LT","LU","LV","MT","NL","PT","SI","SK","AD","MC","SM","VA","ME","XK"]);
+const LOCAL_CUR = { AE: "aed", AU: "aud", BR: "brl", CA: "cad", CH: "chf", CL: "clp", CN: "cny", CO: "cop", CZ: "czk", DK: "dkk", EG: "egp", GB: "gbp", HK: "hkd", HU: "huf", ID: "idr", IL: "ils", IN: "inr", KZ: "kzt", MX: "mxn", MY: "myr", NG: "ngn", NO: "nok", NZ: "nzd", PE: "pen", PH: "php", PK: "pkr", PL: "pln", QA: "qar", RO: "ron", SA: "sar", SE: "sek", SG: "sgd", TH: "thb", TR: "try", TW: "twd", TZ: "tzs", VN: "vnd", ZA: "zar" };
+const curOf = (c) => !c || c === "KR" || c === "한국" ? "krw" : c === "JP" || c === "일본" ? "jpy" : EUROZONE.has(c) ? "eur" : LOCAL_CUR[c] || "usd";
+
+function contactLink(a) {
+  const c = String(a.contact).trim();
+  if (/^https?:\/\//i.test(c)) return c;
+  if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c)) return "mailto:" + c;
+  const h = c.replace(/^@/, "");
+  if (!/^[\w.]+$/.test(h)) return null;
+  return (a.platforms || []).includes("instagram") && !(a.platforms || []).includes("threads")
+    ? "https://www.instagram.com/" + h : "https://www.threads.com/@" + h;
+}
+const safeUrl = (u) => (/^https?:\/\//i.test(u || "") ? u : null);
+
+function strip(a) {
+  const today = new Date().toISOString().slice(0, 10);
+  const posted = new Set(a.posts);
+  return el("div", {class:"strip"}, days().map((d) => {
+    const mins = Math.round((a.talk[d] || 0) / 60);
+    const on = posted.has(d);
+    const cls = [on && "posted", mins > 0 && "talked", d === today && "today"].filter(Boolean).join(" ");
+    return el("button", {
+      type:"button", class:cls, title:`${d} · 통화 ${mins}분${on ? " · 올림" : ""}`,
+      onclick: async (e) => {
+        e.stopPropagation();
+        await act(a.id, "post", {day:d, on:!on});
+        if (on) a.posts = a.posts.filter((x) => x !== d); else a.posts.push(d);
+        render();
+      },
+    }, [el("span", {text:String(+d.slice(8))}), mins > 0 ? el("span", {text:`${mins}분`}) : null]);
+  }));
+}
+
+// An application from the English page (/en/creators): its mail and pay page are in English.
+const enTag = (a) => (a.page_lang === "en" ? ["EN"] : []);
+
+function row(a) {
+  const tags = enTag(a).concat(a.kind === "challenger" ? ["챌린저", LANG[a.language] + (a.level ? " " + a.level.toUpperCase() : ""), a.paid_at ? "결제함" : "결제 전", DEV[a.device], USE[a.nawana_use]] : [LANG[a.language] + (a.level ? " " + a.level.toUpperCase() : ""), CAD[a.cadence], STAGE[a.stage], DEV[a.device], USE[a.nawana_use]]);
+  const open = () => { openId = a.id; render(); };
+  // A div, not a button: the day strip inside it holds buttons of its own.
+  return el("div", {class:"row", role:"button", tabindex:"0", onclick:open,
+    onkeydown:(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); open(); } }}, [
+    el("div", {class:"l1"}, [
+      el("b", {text:a.name}), el("span", {class:"h", text:a.contact}),
+      a.country ? el("span", {class:"h", text:countryName(a.country)}) : null,
+      el("span", {class:"t", text:ago(a.created_at)}),
+    ]),
+    el("div", {class:"tags"}, [
+      el("span", {class:"tag hot", text:STATUS[a.status]}),
+      ...tags.map((t) => el("span", {class:"tag", text:t})),
+    ]),
+    // A challenger is asked no essay: the row says what the form did ask instead of the stand-in stored for it.
+    a.status === "active" || a.status === "paused" ? null : el("div", {class:"p", text:a.kind === "challenger" ? "챌린저 지원서 · 100일 치를 미리 결제하고 매일 공부해요 (글로 쓰는 질문은 없어요)" : a.persona}),
+    a.status === "active" || a.status === "paused" ? strip(a) : null,
+  ]);
+}
+
+function detail(a) {
+  const link = contactLink(a), own = safeUrl(a.link);
+  const sub = a.subscription;
+  const note = el("textarea", {placeholder:"메모. 정한 일정, 대화 내용 같은 것", "aria-label":"메모"});
+  note.value = a.note || "";
+  note.addEventListener("change", async () => { await act(a.id, "note", {note:note.value}); a.note = note.value; toast("저장했어요"); });
+
+  const setStatus = (s) => async () => {
+    const out = await act(a.id, "status", {status:s}); Object.assign(a, out.app); render();
+  };
+
+  const plan = el("select", {class:"act", "aria-label":"요금제"}, Object.entries(PLAN).map(([v, t]) => el("option", {value:v, text:t})));
+  plan.value = "plus_monthly";
+
+  const codeBox = [];
+  if (a.comp_code) {
+    codeBox.push(el("div", {class:"bar"}, [
+      el("span", {class:"code", text:a.comp_code}),
+      el("span", {class:"tag", text:a.redeemed_at ? `${ago(a.redeemed_at)} 입력함` : "아직 입력 안 함"}),
+      sub ? el("span", {class:"tag", text:`${sub.plan_id.startsWith("plus") ? "Plus" : "Light"} · ${sub.cancel_at_period_end ? String(sub.current_period_end).slice(0,10) + "에 끝남" : "매달 자동 연장"}`}) : null,
+      el("button", {type:"button", class:"act", text:"코드 DM 복사", onclick:() => copy(codeDM(a), "DM")}),
+    ]));
+  }
+  if (!a.redeemed_at) {
+    codeBox.push(el("div", {class:"bar", style:a.comp_code ? "margin-top:8px" : ""}, [
+      plan,
+      el("button", {type:"button", class:"act primary", text:a.comp_code ? "코드 다시 만들기" : "코드 만들고 활동 시작", onclick:async () => {
+        if (a.comp_code && !confirm("지금 코드는 못 쓰게 돼요. 다시 만들까요?")) return;
+        const out = await act(a.id, "code", {plan:plan.value}); Object.assign(a, out.app); render();
+        await copy(codeDM(a), "코드 DM");
+      }}),
+    ]));
+  }
+
+  return el("article", {class:"detail"}, [
+    el("div", {class:"l1", style:"display:flex;gap:10px;align-items:baseline"}, [
+      el("h2", {text:a.name}),
+      el("button", {type:"button", class:"act", style:"margin-left:auto", text:"접기", onclick:() => { openId = null; render(); }}),
+    ]),
+    el("div", {class:"meta"}, [
+      link ? el("a", {href:link, target:"_blank", rel:"noopener noreferrer", text:a.contact}) : a.contact,
+      ` · ${ago(a.created_at)} 지원`, a.source ? ` · ref ${a.source}` : "",
+    ]),
+    a.email && a.email !== a.contact ? el("div", {class:"meta"}, [el("a", {href:"mailto:" + a.email, text:a.email})]) : null,
+    el("div", {class:"tags", style:"display:flex;flex-wrap:wrap;gap:5px;margin-top:8px"},
+      [...enTag(a), LANG[a.language] + (a.level ? " " + a.level.toUpperCase() : ""), CAD[a.cadence] + (a.cadence_note ? ` (${a.cadence_note})` : ""), STAGE[a.stage], DEV[a.device], USE[a.nawana_use], ...(a.platforms||[]).map((p) => PLAT[p] || p)]
+        .map((t) => el("span", {class:"tag", text:t}))),
+    ...(a.kind === "challenger" ? [
+      el("h3", {text:"챌린저 지원서"}),
+      el("p", {class:"text", text:"챌린저는 이름, 이메일, 언어와 수준, 폰, 사는 나라, 나와나 사용 경험만 적어요. 계정, 올릴 곳, 주기, 챌린지 내용, 이유는 묻지 않아서 여기에 없어요."}),
+      el("p", {class:"text", text:"요금제: 모두 Light로 시작해요 · 이메일: " + (a.email || "")}),
+      el("p", {class:"text", text:a.rules_agreed_at ? "규칙 동의: " + String(a.rules_agreed_at).slice(0, 10) : "규칙 동의: 기록 없음 (체크박스가 생기기 전에 낸 지원서)"}),
+    ] : [
+      el("h3", {text:"해보고 싶은 100일 챌린지"}), el("p", {class:"text", text:a.persona}),
+      el("h3", {text:"해보고 싶은 이유"}), el("p", {class:"text", text:a.why}),
+    ]),
+    a.reference_link ? el("h3", {text:"이렇게 해보고 싶은 영상이나 크리에이터"}) : null,
+    a.reference_link ? (safeUrl(a.reference_link) ? el("a", {href:a.reference_link, target:"_blank", rel:"noopener noreferrer", text:a.reference_link}) : el("p", {class:"text", text:a.reference_link})) : null,
+    own ? el("h3", {text:"링크"}) : null,
+    own ? el("a", {href:own, target:"_blank", rel:"noopener noreferrer", text:own}) : null,
+    a.country || a.timezone ? el("p", {class:"text", text:"사는 나라: " + (countryName(a.country) || "모름") + (a.timezone ? " · 시간대 " + a.timezone : "")}) : null,
+    el("h3", {text:"상태"}),
+    el("div", {class:"bar"}, [
+      ...Object.keys(STATUS).filter((s) => s !== "ended").map((s) =>
+        el("button", {type:"button", class:"act" + (a.status === s ? " on" : ""), text:STATUS[s], onclick:setStatus(s)})),
+      a.kind === "challenger" ? null : el("button", {type:"button", class:"act", text:"연락 DM 복사", onclick:() => copy(firstDM(a), "DM")}),
+    ]),
+    el("h3", {text:"보낼 메일"}),
+    el("div", {class:"bar"}, (a.kind === "challenger" ? [["챌린저 안내", challengerMail(a)]] : [["다음 기수에 안내", laterMail(a)]]).flatMap(([label, m]) => [
+      a.email ? el("a", {class:"act primary", style:"text-decoration:none", href:mailto(a, m), text:`${label} 메일 열기`, onclick:async () => {
+        // A first answer moves a new application on, so the list of unread ones stays true.
+        if (a.status === "new" && a.kind === "challenger") { const out = await act(a.id, "status", {status:"talking"}); Object.assign(a, out.app); render(); }
+      }}) : null,
+      el("button", {type:"button", class:"act", text:`${label} 복사`, onclick:() => copy(mailBody(m), "메일")}),
+    ])),
+    el("p", {class:"legend", text:a.kind === "challenger" ? "메일 앱에 다 쓰인 채로 열려요. 고쳐서 보내면 돼요. 결제한 사람에게는 확인 메일이, 아직인 사람에게는 결제 주소가 든 메일이 열려요." : "메일 앱에 다 쓰인 채로 열려요. 한마디 덧붙여서 보내고, 상태를 보류로 바꿔주세요."}),
+    ...(a.kind === "challenger"
+      ? challengerBox(a)
+      : [el("h3", {text:"무료 이용 코드"}), ...codeBox]),
+    el("h3", {text:`최근 ${DATA.days}일 · 칸을 누르면 올린 날로 표시돼요`}),
+    strip(a),
+    el("p", {class:"legend", text:"검은 칸은 올린 날, 파란 테두리는 앱에서 통화한 날이에요."}),
+    el("h3", {text:"메모"}), note,
+    el("div", {class:"foot"}, [
+      a.status === "ended"
+        ? el("span", {class:"legend", text:`${String(a.ended_at || "").slice(0,10)} 종료`})
+        : !["active", "paused"].includes(a.status) ? el("span")
+        : el("button", {type:"button", class:"act", text:"프로그램 종료", onclick:async () => {
+            if (!confirm("종료할까요? 무료 이용은 이번 달 마지막 날까지 쓸 수 있고 그다음 끝나요.")) return;
+            const out = await act(a.id, "end"); Object.assign(a, out.app); render();
+          }}),
+      ["ended", "declined"].includes(a.status)
+        ? el("button", {type:"button", class:"act danger", text:"지원서 지우기", onclick:async () => {
+            if (!confirm("이 사람의 지원서와 기록을 완전히 지울까요? 되돌릴 수 없어요.")) return;
+            await act(a.id, "delete"); DATA.apps = DATA.apps.filter((x) => x.id !== a.id); openId = null; render(); toast("지웠어요");
+          }})
+        : null,
+    ]),
+  ]);
+}
+
+// What a challenger paid, how their months are going, and the reward.
+function challengerBox(a) {
+  const sub = a.subscription, out = [el("h3", {text:"결제"})];
+  if (!a.paid_at) {
+    out.push(el("p", {class:"text", text:"아직 결제하지 않았어요. 신청서를 내면 바로 결제 화면으로 이어지는데, 거기서 멈춘 경우예요. 안내 메일의 주소로 다시 결제할 수 있어요."}));
+    out.push(el("div", {class:"bar", style:"margin-top:6px"}, [el("button", {type:"button", class:"act", text:"이 사람의 결제 주소 복사", onclick:() => copy(`https://nawana.app/pay?id=${a.id}&cur=${a.page_lang === "en" && !a.country ? "usd" : curOf(a.country)}${a.page_lang === "en" ? "&lang=en" : ""}`, "결제 주소")})]));
+    return out;
+  }
+  const size = {light_challenge:"Light", plus_challenge:"Plus", max_challenge:"Max"}[a.paid_plan] || a.paid_plan;
+  out.push(el("p", {class:"text", text:`${String(a.paid_at).slice(0, 10)} 결제 · ${size}` + (sub && sub.current_period_end ? ` · ${String(sub.current_period_end).slice(0, 10)}까지 이용` : "")}));
+
+  if (a.upgraded_at) out.push(el("p", {class:"text", text:`${String(a.upgraded_at).slice(0, 10)}에 요금제를 올렸어요` + (a.upgrade_amount != null ? ` · ${String(a.upgrade_currency || "").toUpperCase()} ${["krw", "jpy", "clp", "vnd"].includes(a.upgrade_currency) ? a.upgrade_amount : a.upgrade_amount / 100} 결제` : "")}));
+  if (a.extra_seconds) out.push(el("p", {class:"text", text:`제가 드린 추가 통화: ${Math.round(a.extra_seconds / 60)}분`}));
+
+  // Moving up a size, by hand: say what it costs, make the checkout to send, and the payment changes the
+  // package by itself (stripe-webhook). The plain change beside it is for when no money is involved.
+  out.push(el("h3", {text:"요금제 올리기"}));
+  const SIZES = [["light_challenge", "Light · 150분"], ["plus_challenge", "Plus · 450분"], ["max_challenge", "Max · 600분"]];
+  const at = SIZES.findIndex(([v]) => v === a.paid_plan);
+  const higher = SIZES.slice(at + 1);
+  const quoteLine = el("p", {class:"text"}), linkBox = el("div", {class:"bar", style:"margin-top:8px"});
+  const upErr = (e) => toast({too_late:"남은 달이 없어서 올릴 수 없어요.", no_package:"이 계정에 챌린지 이용권이 없어요. 직접 확인해 주세요.", not_an_upgrade:"지금보다 큰 요금제를 골라주세요.", tables_missing:"업그레이드 함수가 아직 배포되지 않았어요."}[e.message] || "하지 못했어요.");
+  if (!higher.length) out.push(el("p", {class:"text", text:"이미 가장 큰 요금제예요."}));
+  else {
+    const target = el("select", {class:"act", "aria-label":"올릴 요금제"}, higher.map(([v, t]) => el("option", {value:v, text:t})));
+    const say = (qt) => { quoteLine.textContent = `${qt.from} → ${qt.to} · 남은 ${qt.months}개월 치 차액 ${qt.label}`; };
+    out.push(el("div", {class:"bar"}, [
+      target,
+      el("button", {type:"button", class:"act", text:"차액 보기", onclick:async () => {
+        try { say((await act(a.id, "upgrade-quote", {plan:target.value})).quote); linkBox.replaceChildren(); } catch (e) { upErr(e); }
+      }}),
+      el("button", {type:"button", class:"act primary", text:"결제 링크 만들기", onclick:async () => {
+        try {
+          const res = await act(a.id, "upgrade-link", {plan:target.value});
+          say(res.quote);
+          const mail = a.page_lang === "en" ? {en: true, subject:"Moving up your plan", body:
+`Hi ${a.name}, I'm Eunggyu, and I make nawana.
+
+As you asked, your plan is ready to move up from ${res.quote.from} to ${res.quote.to}. For the ${res.quote.months} ${res.quote.months === 1 ? "month" : "months"} still to come, the difference is ${res.quote.label}.
+
+Pay at the link below and it applies right away. The link stays open for about a day.
+${res.url}
+
+Once you've paid, reopen the app and you'll have more call time.
+
+Eunggyu`} : {subject:"요금제 올리기 안내", body:
+`${a.name}님, 안녕하세요. 나와나를 만드는 이응규입니다.
+
+말씀하신 대로 요금제를 ${res.quote.from}에서 ${res.quote.to}로 올릴 수 있게 준비했습니다. 남은 ${res.quote.months}개월 치 차액은 ${res.quote.label}입니다.
+
+아래 주소에서 결제하시면 바로 적용됩니다. 주소는 하루 동안 열려 있습니다.
+${res.url}
+
+결제 뒤 앱을 다시 여시면 통화 시간이 늘어나 있습니다.
+
+이응규 드림`};
+          linkBox.replaceChildren(
+            el("button", {type:"button", class:"act", text:"링크 복사", onclick:() => copy(res.url, "결제 링크")}),
+            a.email ? el("a", {class:"act", style:"text-decoration:none", href:mailto(a, mail), text:"안내 메일 열기"}) : null,
+            el("span", {class:"legend", style:"margin:0", text:`${new Date(res.expires_at).toLocaleString("ko-KR")}까지 열려 있어요`}),
+          );
+          await copy(res.url, "결제 링크");
+        } catch (e) { upErr(e); }
+      }}),
+    ]));
+    out.push(quoteLine, linkBox);
+    out.push(el("p", {class:"legend", text:"차액은 남은 달 수 × 두 요금제의 한 달 가격 차이예요. 시작한 달은 세지 않아요. 결제되면 요금제가 저절로 바뀌고 여기에 기록돼요."}));
+    out.push(el("div", {class:"bar", style:"margin-top:6px"}, [el("button", {type:"button", class:"act", text:"결제 없이 바꾸기", onclick:async () => {
+      const label = SIZES.find(([v]) => v === target.value)[1];
+      if (!confirm(`${a.name}님의 요금제를 결제 없이 ${label}으로 바꿀까요?`)) return;
+      try { await act(a.id, "upgrade", {plan:target.value}); await load(); toast("요금제를 바꿨어요"); } catch (e) { upErr(e); }
+    }})]));
+  }
+
+  // Talk time on top, a gift: added to what they can use right away.
+  out.push(el("h3", {text:"추가 통화 시간 드리기"}));
+  const give = el("select", {class:"act", "aria-label":"드릴 시간"}, [30, 60, 120, 300].map((n) => el("option", {value:String(n), text:`${n}분`})));
+  out.push(el("div", {class:"bar"}, [give, el("button", {type:"button", class:"act", text:"드리기", onclick:async () => {
+    if (!confirm(`${a.name}님께 통화 ${give.value}분을 드릴까요?`)) return;
+    try { const res = await act(a.id, "minutes", {minutes:Number(give.value)}); Object.assign(a, res.app); render(); toast(`${give.value}분을 드렸어요`); } catch { /* toast said it */ }
+  }})]));
+  out.push(el("p", {class:"legend", text:"요금제의 통화 시간보다 먼저 쓰여요. 요금제는 그대로예요."}));
+
+  out.push(el("h3", {text:"세 달 · 통화 4분과 스피치 1개를 채운 날 기준"}));
+  const ms = months(a);
+  if (!ms) out.push(el("p", {class:"text", text:"1기 시작일을 저장하면 달마다 지킨 날이 보여요."}));
+  else {
+    out.push(el("div", {class:"bar"}, ms.map((m) => el("span", {class:"tag" + (m.kept ? " hot" : ""), text:
+      `${m.n}번째 달 ${m.met}/${m.passed || 0}일 · ` + (m.kept ? "지킴" : m.lost ? "못 지킴" : m.passed ? "진행 중" : "시작 전")
+      + (m.talkOnly ? ` · 통화만 확인 ${m.talkOnly}일` : "")}))));
+    out.push(el("p", {class:"legend", text:"한 달에 하루까지 쉴 수 있어요. 하루는 참가자가 사는 곳의 날짜로, 앱이 보낸 통화 시간과 스피치 개수로 세요. 마지막 10일은 세지 않아요."}));
+    if (ms.some((m) => m.talkOnly)) out.push(el("p", {class:"legend", text:"'통화만 확인'은 앱이 그날 기록을 보내지 않은 날이에요. 앱을 아직 업데이트하지 않은 경우예요. 통화 4분은 서버 기록으로 확인했고, 스피치는 확인하지 못했어요."}));
+  }
+
+  out.push(el("h3", {text:"보상 · 지킨 달마다 한 달 무료"}));
+  if (a.rewarded_at) {
+    out.push(el("p", {class:"text", text:`${String(a.rewarded_at).slice(0, 10)}에 ${a.reward_months}개월을 드렸어요.`}));
+  } else {
+    const pick = el("select", {class:"act", "aria-label":"무료로 줄 달 수"}, [0, 1, 2, 3].map((n) => el("option", {value:String(n), text:`${n}개월`})));
+    pick.value = String(ms ? ms.filter((m) => m.kept).length : 0);
+    out.push(el("div", {class:"bar"}, [pick, el("button", {type:"button", class:"act primary", text:"보상 확정", onclick:async () => {
+      if (!confirm(`${a.name}님께 ${pick.value}개월 무료를 드릴까요? 한 번만 정할 수 있어요.`)) return;
+      try { const res = await act(a.id, "reward", {months:Number(pick.value)}); Object.assign(a, res.app); await load(); toast("보상을 드렸어요"); }
+      catch (e) { if (e.message === "no_package") toast("이 계정에 챌린지 이용권이 없어요. 직접 확인해 주세요."); }
+    }})]));
+    out.push(el("p", {class:"legend", text:"세 달이 끝난 뒤, 이용 기간이 끝나기 전(마지막 10일 안)에 정해주세요. 이용 기간이 그만큼 늘어나요."}));
+  }
+  return out;
+}
+
+function render() {
+  const counts = {};
+  for (const a of DATA.apps) counts[a.status] = (counts[a.status] || 0) + 1;
+  document.getElementById("filters").replaceChildren(
+    el("button", {type:"button", "aria-pressed":String(filter === null), text:`전체 ${DATA.apps.length}`, onclick:() => { filter = null; render(); }}),
+    ...Object.keys(STATUS).map((s) => el("button", {type:"button", "aria-pressed":String(filter === s), text:`${STATUS[s]} ${counts[s] || 0}`, onclick:() => { filter = s; render(); }})),
+  );
+  const list = document.getElementById("list");
+  if (DATA.error || DATA.missing) {
+    list.replaceChildren(el("p", {class:"empty", text:DATA.missing ? "테이블이 아직 없어요. 마이그레이션 20261109190000_creator_program.sql을 적용하면 채워져요." : "읽지 못했어요: " + DATA.error}));
+    return;
+  }
+  const rows = DATA.apps.filter((a) => filter === null || a.status === filter);
+  const emails = [...new Set(rows.map((a) => a.email).filter(Boolean))];
+  const mailBar = emails.length ? [el("div", {class:"bar", style:"margin:0 0 10px"}, [el("button", {type:"button", class:"act", text:`이 목록의 이메일 ${emails.length}개 복사`, onclick:() => copy(emails.join(", "), "이메일")})])] : [];
+  list.replaceChildren(...mailBar, ...(rows.length
+    ? rows.map((a) => (a.id === openId ? detail(a) : row(a)))
+    : [el("p", {class:"empty", text:"아직 없어요."})]));
+}
+
+function renderNotes() {
+  const box = document.getElementById("notes"), notes = DATA.notes || [];
+  box.replaceChildren(...(notes.length ? notes.map((n) => el("div", {class:"note-row" + (n.hidden ? " gone" : "")}, [
+    el("p", {class:"note-text", text:n.body}),
+    el("small", {text:new Date(n.created_at).toLocaleString("ko-KR")}),
+    el("button", {type:"button", class:"act", text:n.hidden ? "다시 보이기" : "숨기기", onclick:async () => {
+      await act(n.id, n.hidden ? "note-show" : "note-hide"); n.hidden = !n.hidden; renderNotes();
+    }}),
+  ])) : [el("p", {class:"empty", text:"아직 없어요."})]));
+}
+
+load().catch(() => {
+  document.getElementById("list").replaceChildren(el("p", {class:"empty", text:"읽지 못했어요. 새로고침해 주세요."}));
+});
+</script>
+</body>
+</html>
