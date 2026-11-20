@@ -59,6 +59,11 @@ enum PronunciationCall {
     }
 
     static let sentencesPerRound = 5
+    /// "Not yet" twice on the same sentence, or on the same word alone, and
+    /// it moves on by itself (founder, 2026-11-20: being asked for the same
+    /// thing three times and more is what makes this call infuriating). The
+    /// learner's own "Next sentence" still leaves sooner.
+    static let maxMisses = 2
     // No try limit anywhere (founder, 2026-11-04): a sentence or a word is
     // left only by the learner's own "Next sentence" / "Back to the sentence".
 
@@ -1280,9 +1285,11 @@ enum PronunciationNotes {
 
     /// Back to the sentence after the word's tries ran out: say what is
     /// still off and how to fix it, never just move on.
-    static func wordBack(word: String, sound: String?, topic: PronunciationCourse.Topic) -> String {
+    static func wordBack(word: String, sound: String?, topic: PronunciationCourse.Topic,
+                         chosen: Bool = true) -> String {
         let which = sound.map { " (its \"\($0)\" sound)" } ?? ""
-        return "They chose to go back to the sentence. \"\(word)\"\(which) isn't there yet — that's fine. Give ONE short tip on how to make it (today's sound: \(topic.english)), at most 10 words, say \"\(word)\" once, clearly, then: now the whole sentence. At most 25 words in all."
+        let start = chosen ? "They chose to go back to the sentence." : "Two tries on the word is enough for now: back to the sentence."
+        return "\(start) \"\(word)\"\(which) isn't there yet — that's fine. Give ONE short tip on how to make it (today's sound: \(topic.english)), at most 10 words, say \"\(word)\" once, clearly, then: now the whole sentence. At most 25 words in all."
     }
 
     static func wordOffScript(word: String) -> String {

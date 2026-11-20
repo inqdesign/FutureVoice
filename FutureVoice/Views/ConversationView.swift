@@ -5860,8 +5860,10 @@ struct ConversationView: View {
                 pronUnheard = 0
                 now.lines[i].tries += 1
                 now.lines[i].bestScore = max(now.lines[i].bestScore ?? 0, score)
-                // Nothing moves on by itself (founder, 2026-11-04): only
-                // the learner's own "Next sentence" leaves a sentence.
+                if now.lines[i].tries >= PronunciationCall.maxMisses {
+                    pronMoveOnAfterMisses(&now, index: i, word: nil, sound: nil)
+                    return
+                }
                 withAnimation(.easeInOut(duration: 0.25)) { pronRound = now }
                 tutorNudge(PronunciationNotes.notSmooth(sentence: line.text,
                                                         pauseBefore: PronunciationJudge.pauseBefore(in: result),
@@ -5870,6 +5872,10 @@ struct ConversationView: View {
                 pronUnheard = 0
                 now.lines[i].tries += 1
                 now.lines[i].bestScore = max(now.lines[i].bestScore ?? 0, score)
+                if now.lines[i].tries >= PronunciationCall.maxMisses {
+                    pronMoveOnAfterMisses(&now, index: i, word: word, sound: sound)
+                    return
+                }
                 // The word on its own first, then the sentence again. A word
                 // already right on its own is practiced joined to its
                 // neighbours instead: the joining is what slipped.
@@ -6022,6 +6028,24 @@ struct ConversationView: View {
                                                topic: now.topic))
     }
 
+    /// A sentence missed `maxMisses` times moves on by itself. It does not
+    /// come back at the end of the round (that is a third reading); its word
+    /// waits for the next round on this sound.
+    private func pronMoveOnAfterMisses(_ now: inout PronunciationRound, index i: Int,
+                                       word: String?, sound: String?) {
+        if hasHeldWords { realtime.discardTurn(filterStale: false) }
+        now.lines[i].isRetry = true
+        _ = pronGiveUp(&now, index: i, word: word, sound: sound)
+        Telemetry.log("pron_auto_next", ["topic": now.topic.id, "tries": String(now.lines[i].tries),
+                                         "word": word ?? ""])
+        withAnimation(.easeInOut(duration: 0.3)) { pronRound = now }
+        sendTutorSystem()
+        if now.isFinished { finishPronRound(now) }
+        tutorNudge(PronunciationNotes.moveOn(word: word, sound: sound, topic: now.topic,
+                                             next: now.current.map { now.lines[$0] },
+                                             round: now, laterInRound: false))
+    }
+
     /// A sentence the learner skipped. The first time it goes to the END
     /// of the round, once (true); its second time it is left, and its word
     /// is kept for the next round on this sound (false).
@@ -6118,9 +6142,18 @@ struct ConversationView: View {
         case .notYet(_, let sound, _, _):
             pronUnheard = 0
             now.lines[i].drillTries += 1
-            // The word stays until it is right or the learner leaves it
-            // ("Back to the sentence"). Every miss says what was off and a
+            // Two misses on the word alone and it goes back to the sentence
+            // by itself (`maxMisses`). Every miss says what was off and a
             // new tip, never a bare "again" (founder, 2026-11-10).
+            if now.lines[i].drillTries >= PronunciationCall.maxMisses {
+                now.lines[i].drillWord = nil
+                now.lines[i].drillTries = 0
+                withAnimation(.easeInOut(duration: 0.25)) { pronRound = now }
+                sendTutorSystem()
+                tutorNudge(PronunciationNotes.wordBack(word: word, sound: sound, topic: now.topic,
+                                                       chosen: false))
+                return
+            }
             withAnimation(.easeInOut(duration: 0.25)) { pronRound = now }
             tutorNudge(PronunciationNotes.wordAgain(word: word, sound: sound, topic: now.topic,
                                                    heardAs: fb?.heardAs, score: fb?.spokenScore,
