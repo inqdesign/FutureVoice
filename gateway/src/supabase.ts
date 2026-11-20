@@ -56,7 +56,12 @@ export async function verifyUser(env: Env, token: string): Promise<string | null
     },
   })
   if (!r.ok) return null
-  const user = (await r.json()) as { id?: string }
+  const user = (await r.json()) as { id?: string; is_anonymous?: boolean }
+  // An anonymous session never places a call. The apps hold it on the
+  // sign-up step (it exists only to clone and hear the greeting before an
+  // account), and on 2026-11-20 a script minted anonymous users by the dozen
+  // with the public anon key and opened calls on their free seconds.
+  if (user?.is_anonymous) return null
   return user?.id ?? null
 }
 
