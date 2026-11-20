@@ -2795,8 +2795,9 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
         // tutor switch — the same key Call settings writes, each follows the
         // other. Pronunciation isn't built yet and leaves the mode as it was.
         val ringScope = androidx.compose.runtime.rememberCoroutineScope()
-        // Pronunciation is English only (`PronunciationCall.isOffered`).
-        val modes = remember(state.targetLanguage) { TalkRingMode.offered(state.targetLanguage) }
+        // Every page in every language; pronunciation reads "Coming soon"
+        // outside English (`PronunciationCall.isOffered`, iOS 2026-11-20).
+        val modes = remember { TalkRingMode.entries.toList() }
         val pager = androidx.compose.foundation.pager.rememberPagerState(
             initialPage = modes.indexOf(TalkRingMode.current(context)).coerceAtLeast(0)) { modes.size }
         LaunchedEffect(pager, modes) {
@@ -2807,7 +2808,8 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
                 // as it was: it is a different call, not a setting of the
                 // talk (iOS ffaf0c58).
                 val m = modes.getOrNull(page) ?: return@collect
-                com.roro.futurevoice.talk.PronunciationCall.set(context, m == TalkRingMode.PRONUNCIATION)
+                com.roro.futurevoice.talk.PronunciationCall.set(context,
+                    m == TalkRingMode.PRONUNCIATION && m.isAvailable(state.targetLanguage))
                 when (m) {
                     TalkRingMode.FREE_TALK -> com.roro.futurevoice.talk.TutorMode.set(context, false)
                     TalkRingMode.TUTOR -> com.roro.futurevoice.talk.TutorMode.set(context, true)
@@ -2865,7 +2867,7 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
                 // number under it (or "Coming soon" on a page with no call).
                 Column(
                     Modifier.fillMaxSize().then(
-                        if (enabled && m.isAvailable) Modifier.clickable(indication = null,
+                        if (enabled && m.isAvailable(state.targetLanguage)) Modifier.clickable(indication = null,
                             interactionSource = remember { MutableInteractionSource() }) { onTap() }
                         else Modifier),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -2876,10 +2878,10 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
                     val label = stringResource(m.title)
                     Text(label, style = DisplayFace.style(label,
                         MaterialTheme.typography.titleLarge),
-                        color = if (m.isAvailable) MaterialTheme.colorScheme.onSurface
+                        color = if (m.isAvailable(state.targetLanguage)) MaterialTheme.colorScheme.onSurface
                             else MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
-                        if (m.isAvailable) subFor(m) else stringResource(R.string.coming_soon),
+                        if (m.isAvailable(state.targetLanguage)) subFor(m) else stringResource(R.string.coming_soon),
                         // iOS `.footnote.weight(.medium).monospacedDigit()`.
                         style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -2918,13 +2920,12 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
 enum class TalkRingMode(@androidx.annotation.StringRes val title: Int) {
     FREE_TALK(R.string.let_s_talk), TUTOR(R.string.tutor), PRONUNCIATION(R.string.pronunciation);
 
-    val isAvailable: Boolean get() = true
+    /** Pronunciation has a call in English only; elsewhere its page reads
+     *  "Coming soon" and does nothing on a tap (iOS 2026-11-20). */
+    fun isAvailable(language: String): Boolean =
+        this != PRONUNCIATION || com.roro.futurevoice.talk.PronunciationCall.isOffered(language)
 
     companion object {
-        /** The pages the ring has for a target language. */
-        fun offered(language: String): List<TalkRingMode> = entries.filter {
-            it != PRONUNCIATION || com.roro.futurevoice.talk.PronunciationCall.isOffered(language)
-        }
 
         /** What the ring shows on launch — the last mode the learner swiped to. */
         fun current(context: android.content.Context): TalkRingMode = when {

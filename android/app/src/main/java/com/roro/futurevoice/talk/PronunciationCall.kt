@@ -54,7 +54,7 @@ object PronunciationCall {
      * right. A language comes back once native recordings pass in it.
      */
     fun isOffered(language: String): Boolean =
-        language.substringBefore('-') == "en" || PronunciationContrast.isOfferedLanguage(language)
+        language.substringBefore('-') == "en"
 
     /** The ring's page is showing AND the language being learned has one. */
     fun isOn(context: Context): Boolean = prefs(context).getBoolean(KEY, false) &&
