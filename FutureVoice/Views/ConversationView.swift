@@ -1882,7 +1882,14 @@ struct ConversationView: View {
     }
 
     private var visibleTurns: [Turn] {
-        replyHasNoWordsYet ? Array(turns.dropLast()) : turns
+        let shown = replyHasNoWordsYet ? Array(turns.dropLast()) : turns
+        // The pronunciation call draws none of the learner's lines (founder,
+        // 2026-11-20: "돈일 영화" and "조녁" showed up as 독일 and 저녁). No
+        // transcriber writes a word as it was SAID: told in so many words to
+        // keep 조녁, Gemini still wrote 저녁, 커피 for 거피, 토요일 for 도요일
+        // (probe, same day), and the sentence from the screen claimed the
+        // same. What the app heard is on the card, judged from the audio.
+        return pronThisCall ? shown.filter { $0.role != .user } : shown
     }
 
     private func scroll(_ proxy: ScrollViewProxy, immediate: Bool = true) {
@@ -6215,7 +6222,7 @@ struct ConversationView: View {
             switch answer?.choice {
             case .more, .again:
                 startPronRound(topic: round.topic,
-                               note: "They want another round of \"\(round.topic.symbol)\". Say in a few words that you're getting new sentences — nothing else.")
+                               note: "They want another round of the same sound. Say in a few words that you're getting new sentences — nothing else.")
             case .new:
                 tutorNudge("They want a different sound. Say in a few words that they can pick one on their screen now.")
                 showingPronTopics = true

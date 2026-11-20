@@ -18,6 +18,7 @@
 
 /** What a call hears back from its voice. */
 import { speakableSymbols } from "./spoken-symbols"
+import { speakableLetters } from "./spoken-letters"
 
 export interface TTSCallbacks {
   /** PCM audio for a context. */
@@ -291,7 +292,7 @@ export class CartesiaTTS {
       this.sentenceLine.set(id, contextId)
       // As written: Cartesia's "!" is only +0.6–1.7 dB (measured
       // 2026-10-12, en/de/ko/ja), so nothing is calmed here.
-      this.ws?.send(JSON.stringify(this.request(id, speakableSymbols(text.trim()))))
+      this.ws?.send(JSON.stringify(this.request(id, speakableLetters(speakableSymbols(text.trim())))))
     })
   }
 

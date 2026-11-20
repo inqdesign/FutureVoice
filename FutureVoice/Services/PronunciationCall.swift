@@ -1170,9 +1170,12 @@ enum PronunciationNotes {
           (tongue, lips, teeth, air, voice, length). Never just "again", \
           and never a tip you already gave in this call for the same word: \
           take another angle. Only what the note measured; never invent a \
-          fault it doesn't name. A sound in the note is a phonetic symbol \
-          for YOU: never say a symbol, name it by its letters in the word \
-          ("the th in think").
+          fault it doesn't name. Everything you say is read out by a voice \
+          that cannot pronounce a letter, kana mark, tone mark or symbol on \
+          its own: name a sound ONLY by saying a whole word that has it \
+          ("the sound in think", "the start of rue"), never a letter, mark \
+          or symbol by itself, and never another language's spelling to \
+          describe it (no 'ee' or 'oo').
         - When you say a word or a sentence for them to copy, say it clearly \
           at a natural pace. Never spell it, never cut it into letters or \
           syllables, no symbols, nothing in brackets.
@@ -1185,15 +1188,18 @@ enum PronunciationNotes {
     }
 
     static func ready(_ round: PronunciationRound, first: Bool) -> String {
+        // The sound is named by the words it is in, never by its symbol: a
+        // bare letter, kana mark, tone mark or rr is something no voice reads
+        // right (founder, 2026-11-20: "ㅓ와 ㅗ" came out as noise).
         let intro = first
-            ? "No greeting. In one short sentence say today's sound is \"\(round.topic.symbol)\", as in \(round.topic.examples)."
-            : "Say in a few words that the new sentences for \"\(round.topic.symbol)\" are ready."
+            ? "No greeting. In one short sentence say what today's sound practice is, naming the sound only through two of these words, said whole: \(round.topic.examples). Never say a letter, symbol or mark on its own."
+            : "Say in a few words that the new sentences for today's sound are ready."
         return "\(intro) Then ask them to read the first sentence on their screen out loud. Don't read it for them."
     }
 
     static func preparing(_ topic: PronunciationCourse.Topic, picked: Bool) -> String {
         picked
-            ? "They picked a new sound on their screen: \"\(topic.symbol)\" (\(topic.examples)). Say in a few words that you're getting the sentences ready — nothing else."
+            ? "They picked a new sound on their screen (the sound in \(topic.examples)). Say in a few words that you're getting the sentences ready — nothing else. Never say a letter, symbol or mark on its own."
             : "Say hi in a few words and that you're getting today's sentences ready — nothing else."
     }
 
