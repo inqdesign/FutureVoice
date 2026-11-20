@@ -161,6 +161,10 @@ object InviteEvent {
 
     private const val SEEN_ANNOUNCE = "futurevoice.inviteEvent.seenAnnounce"
     private const val OFFERED_CLAIM = "futurevoice.inviteEvent.offeredClaim"
+    /** A reward Play sold the offer for that the server has not heard about
+     *  yet. Kept until the server says yes or the reward is no longer the
+     *  one that can be taken. */
+    private const val UNREPORTED_CLAIM = "futurevoice.inviteEvent.unreportedClaim"
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var priceWatch: Job? = null
@@ -207,21 +211,47 @@ object InviteEvent {
         }
         // A database without the event (an older server) or no network:
         // nothing is drawn, which is the same as the event being off.
-        _state.value = withContext(Dispatchers.IO) {
-            runCatching {
-                val req = Request.Builder()
-                    .url("${Config.supabaseUrl.trimEnd('/')}/rest/v1/rpc/invite_event_state")
-                    .header("Authorization", "Bearer ${auth.accessToken()}")
-                    .header("apikey", Config.supabaseAnonKey)
-                    .post("{}".toRequestBody("application/json".toMediaType()))
-                    .build()
-                Edge.client.newCall(req).execute().use { resp ->
-                    val raw = resp.body.string()
-                    if (resp.code !in 200..299) InviteEventState.off else InviteEventState.decode(raw)
-                }
-            }.getOrDefault(InviteEventState.off)
-        }
+        _state.value = fetchState(auth) ?: InviteEventState.off
+        reportUnreported(context)
         loadPrices(context)
+    }
+
+    /**
+     * Play said yes but the server never heard it (no network, the app
+     * killed on the way): tell it now. Play has charged nothing yet (the
+     * offer prices the NEXT renewal), so this is the only record that the
+     * month was taken. Stops once the server answers, or once the reward is
+     * no longer the one to take (taken, or a new period).
+     */
+    private suspend fun reportUnreported(context: Context) {
+        val prefs = prefs(context)
+        val pending = prefs.getString(UNREPORTED_CLAIM, null) ?: return
+        val state = _state.value
+        if (!state.enabled) return
+        if (state.claimable != pending) {
+            prefs.edit().remove(UNREPORTED_CLAIM).apply()
+            return
+        }
+        if (reportClaimed(pending)) {
+            prefs.edit().remove(UNREPORTED_CLAIM).apply()
+            Analytics.capture("invite_reward_claimed", mapOf("store" to "google", "late" to true))
+            fetchState(AuthRepository())?.let { _state.value = it }
+        }
+    }
+
+    /** `invite_event_state`, or null when it could not be read. */
+    private suspend fun fetchState(auth: AuthRepository): InviteEventState? = withContext(Dispatchers.IO) {
+        runCatching {
+            val req = Request.Builder()
+                .url("${Config.supabaseUrl.trimEnd('/')}/rest/v1/rpc/invite_event_state")
+                .header("Authorization", "Bearer ${auth.accessToken()}")
+                .header("apikey", Config.supabaseAnonKey)
+                .post("{}".toRequestBody("application/json".toMediaType()))
+                .build()
+            Edge.client.newCall(req).execute().use { resp ->
+                if (resp.code !in 200..299) null else InviteEventState.decode(resp.body.string())
+            }
+        }.getOrNull()
     }
 
     /** Before there is an account (the Welcome screen's code field): the
@@ -359,10 +389,11 @@ object InviteEvent {
      * current period left alone. When the purchase lands, the server is told
      * (`invite_reward_claimed`) and the state is read again.
      *
-     * NOT YET TRIED AGAINST PLAY: the server lists no Play offer today, so
-     * [Phase.Claim] cannot be reached on a real account. [onTaken] runs once
-     * the month is taken; a cancelled sheet changes nothing, and anything
-     * else shows the server's `claim_failed` line.
+     * Tried against Play on 2026-11-20 (internal track, license tester):
+     * €0 at the claim, €5.00 at the next renewal, €9.99 after. [onTaken]
+     * runs once Play has sold the offer, whether or not the server heard it
+     * yet (a missed report is sent again on the next refresh); a cancelled
+     * sheet changes nothing, and anything else shows `claim_failed`.
      */
     fun claim(activity: Activity, onTaken: () -> Unit = {}) {
         if (_claiming.value) return
@@ -378,21 +409,38 @@ object InviteEvent {
         }
         _claiming.value = true
         _claimError.value = null
+        // Play already sold this one and only our record is missing: send
+        // that, never the Play sheet a second time.
+        if (prefs(context).getString(UNREPORTED_CLAIM, null) == reward) {
+            scope.launch {
+                reportUnreported(context)
+                _claiming.value = false
+                onTaken()
+            }
+            return
+        }
         BillingService.shared(context).claimInviteOffer(activity, productId, offerId) { outcome ->
             when (outcome) {
                 BillingService.InviteClaimOutcome.OPENED ->
                     Analytics.capture("invite_reward_claim_opened", mapOf("store" to "google"))
                 BillingService.InviteClaimOutcome.CANCELLED -> _claiming.value = false
                 BillingService.InviteClaimOutcome.PURCHASED -> scope.launch {
+                    // Written before the server is asked, so a call that never
+                    // arrives is made again on the next refresh.
+                    prefs(context).edit().putString(UNREPORTED_CLAIM, reward).commit()
                     val told = reportClaimed(reward)
+                    if (told) prefs(context).edit().remove(UNREPORTED_CLAIM).apply()
                     refresh(context)
                     _claiming.value = false
                     if (told || phase != Phase.Claim) {
                         Analytics.capture("invite_reward_claimed", mapOf("store" to "google"))
                         onTaken()
                     } else {
-                        _claimError.value = text(context, "claim_failed")
+                        // Play took it; only our record is missing, and the
+                        // next refresh sends it again. Not a failure to the
+                        // learner: the month is theirs.
                         Analytics.capture("invite_reward_claim_failed", mapOf("error" to "not_recorded"))
+                        onTaken()
                     }
                 }
                 else -> {
