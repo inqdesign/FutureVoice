@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPT Live Trial</title>
+<style>
+  :root { --bg:#fff; --fg:#111; --muted:#6b6b6b; --line:#e4e4e4; --me:#f2f2f7; --accent:#0a84ff; --red:#ff3b30; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#111; --fg:#f2f2f2; --muted:#9a9a9a; --line:#2c2c2e; --me:#1c1c1e; } }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.45 -apple-system, system-ui, sans-serif; }
+  main { max-width:720px; margin:0 auto; padding:20px 16px 60px; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  .sub { color:var(--muted); margin:0 0 16px; }
+  .row { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:12px; }
+  label { display:flex; flex-direction:column; font-size:12px; color:var(--muted); gap:4px; }
+  select, button, input { font:inherit; padding:7px 10px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--fg); }
+  input { min-width:240px; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; padding:9px 18px; }
+  button.stop { background:var(--red); border-color:var(--red); }
+  #status { color:var(--muted); margin:8px 0 14px; min-height:1.4em; }
+  #log { border-top:1px solid var(--line); padding-top:10px; }
+  .line { margin:8px 0; padding:8px 10px; border-radius:10px; max-width:85%; }
+  .ai { background:var(--me); }
+  .you { margin-left:auto; border:1px solid var(--line); }
+  .meta { font-size:11px; color:var(--muted); margin-top:3px; }
+  table { border-collapse:collapse; width:100%; margin:14px 0; font-size:13px; }
+  td { padding:5px 4px; border-bottom:1px solid var(--line); }
+  td:last-child { text-align:right; font-variant-numeric:tabular-nums; }
+  .note { font-size:12px; color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>GPT Live 튜터 시험</h1>
+  <p class="sub">gpt-live-1, 듣는 동안에도 말할지 정하는 모델이에요. 이어폰을 끼면 숫자가 정확해요.</p>
+
+  <div class="row">
+    <label>배우는 언어
+      <select id="lang">
+        <option value="en">English</option><option value="ko">한국어</option>
+        <option value="ja">日本語</option><option value="de">Deutsch</option><option value="es">Español</option>
+      </select>
+    </label>
+    <label>모국어
+      <select id="native">
+        <option value="ko">한국어</option><option value="en">English</option><option value="ja">日本語</option><option value="de">Deutsch</option>
+      </select>
+    </label>
+    <label>레벨
+      <select id="level"><option value="a1">A1</option><option value="a2" selected>A2</option><option value="b1">B1</option></select>
+    </label>
+    <label>목소리
+      <select id="voice"></select>
+    </label>
+    <label>프롬프트
+      <select id="prompt">
+        <option value="tutor">튜터 (주제 하나, 될 때까지)</option>
+        <option value="call">앱 통화 프롬프트 (자유 대화)</option>
+      </select>
+    </label>
+  </div>
+  <div class="row">
+    <label>오늘 주제 (비우면 튜터가 물어봐요)
+      <input id="topic" placeholder="예: 카페에서 주문하기">
+    </label>
+  </div>
+  <div class="row">
+    <button id="go" class="primary">통화 시작</button>
+  </div>
+  <div id="status"></div>
+
+  <table id="stats" hidden>
+    <tr><td>통화 시간</td><td id="sDur">0:00</td></tr>
+    <tr><td>연결 (세션 생성 / 첫 소리까지)</td><td id="sConn">-</td></tr>
+    <tr><td>말 끝 → 첫 소리, 귀 기준 (중앙값 / 최근)</td><td id="sEar">-</td></tr>
+    <tr><td>말 끝 → 첫 소리, 모델 타임라인 (중앙값 / 최근)</td><td id="sTl">-</td></tr>
+    <tr><td>과금 시간 (OpenAI 보고)</td><td id="sUse">-</td></tr>
+    <tr><td><b>비용 ($0.05/분)</b></td><td id="sCost"><b>-</b></td></tr>
+    <tr><td>비교: 지금 우리 통화 원가</td><td>약 $0.046 / 분</td></tr>
+  </table>
+  <p class="note">귀 기준: 마이크에 내 목소리가 마지막으로 잡힌 순간부터 튜터 목소리가 스피커에 나오기 시작한 순간까지. 이어폰 없이 하면 튜터 소리가 마이크에 섞여 숫자가 틀려요.</p>
+
+  <div id="log"></div>
+</main>
+<script>
+const VOICES = {
+  en: ["gleam", "meridian", "marin", "cedar", "vesper", "willow", "quartz", "ripple", "stone"],
+  ko: ["noeul", "marin", "cedar"],
+  ja: ["harema", "shida", "marin", "cedar"],
+  de: ["nuri", "juni", "flitz", "marin", "cedar"],
+  es: ["calandria", "compas", "destello", "hornero", "luciernaga", "marin", "cedar"],
+};
+const PER_MIN = 0.05;
+
+const $ = (id) => document.getElementById(id);
+function fillVoices() {
+  $("voice").innerHTML = VOICES[$("lang").value].map((v) => `<option>${v}</option>`).join("");
+}
+$("lang").onchange = fillVoices; fillVoices();
+
+let pc, dc, mic, startedAt, timer, actx, poll, closeTimeout;
+let ready = false, finalized = false, usageSeconds = 0;
+let createMs = 0, tapAt = 0, firstSoundMs = 0;
+// Ear: last time the mic heard the learner, and the far side's loudness.
+let lastMicVoice = 0, lastRemoteLoud = 0, micSinceRemote = false;
+const ear = [];
+// Timeline: transcript intervals in session ms.
+const userSpans = [], aiSpans = [];
+const tl = [];
+let curWho = null, curEl = null;
+
+function status(t) { $("status").textContent = t; }
+const median = (a) => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
+const sec = (ms) => (ms / 1000).toFixed(2) + "초";
+
+function say(who, delta) {
+  if (who !== curWho || !curEl) {
+    curEl = document.createElement("div");
+    curEl.className = "line " + who;
+    $("log").appendChild(curEl);
+    curWho = who;
+  }
+  curEl.textContent += delta;
+  curEl.scrollIntoView({ block: "end" });
+}
+function stamp(text) {
+  if (!curEl) return;
+  const m = document.createElement("div"); m.className = "meta"; m.textContent = text; curEl.appendChild(m);
+}
+
+// One AI reply = an AI run starting after a learner span; gap = run start − last learner end.
+function recomputeTimeline() {
+  tl.length = 0;
+  const ai = [...aiSpans].sort((a, b) => a.s - b.s);
+  let prevEnd = -Infinity;
+  for (const span of ai) {
+    const isRunStart = span.s - prevEnd > 600;
+    if (isRunStart) {
+      const userBefore = userSpans.filter((u) => u.e <= span.s && u.e > prevEnd);
+      if (userBefore.length) tl.push(span.s - Math.max(...userBefore.map((u) => u.e)));
+    }
+    prevEnd = Math.max(prevEnd, span.e);
+  }
+}
+
+function render() {
+  const s = (Date.now() - startedAt) / 1000;
+  $("sDur").textContent = `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+  $("sConn").textContent = `${sec(createMs)} / ${firstSoundMs ? sec(firstSoundMs) : "-"}`;
+  $("sEar").textContent = ear.length ? `${sec(median(ear))} / ${sec(ear.at(-1))} (${ear.length}번)` : "-";
+  $("sTl").textContent = tl.length ? `${sec(median(tl))} / ${sec(tl.at(-1))} (${tl.length}번)` : "-";
+  $("sUse").textContent = usageSeconds ? `${usageSeconds}초` : "-";
+  const billed = usageSeconds || s;
+  $("sCost").innerHTML = `<b>$${(billed / 60 * PER_MIN).toFixed(4)}</b>`;
+}
+
+function onEvent(e) {
+  switch (e.type) {
+    case "session.started":
+      ready = true;
+      status(`통화 중 · gpt-live-1 · ${$("voice").value}`);
+      // The guide: greeting as a developer message at creation AND once more as commentary.
+      dc.send(JSON.stringify({ type: "session.commentary.append", event_id: "greeting_1", delegation_id: null, content: window.__greeting }));
+      break;
+    case "session.input_transcript.delta":
+      userSpans.push({ s: e.start_ms, e: e.end_ms }); say("you", e.delta); recomputeTimeline(); render(); break;
+    case "session.output_transcript.delta":
+      aiSpans.push({ s: e.start_ms, e: e.end_ms }); say("ai", e.delta); recomputeTimeline(); render(); break;
+    case "session.usage.updated":
+      usageSeconds = e.usage?.seconds || usageSeconds; render(); break;
+    case "session.closed":
+      finalized = true; usageSeconds = e.usage?.seconds || usageSeconds; render();
+      status(`끊었어요 (${e.reason || "closed"}). 숫자는 위에 남아 있어요.`); cleanup(); break;
+    case "error":
+      say("ai", "\n[오류] " + (e.error?.message || JSON.stringify(e))); break;
+    default:
+      if (!/delta$/.test(e.type)) console.log(e);
+  }
+}
+
+function rms(an, buf) {
+  an.getFloatTimeDomainData(buf);
+  let sum = 0; for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+  return Math.sqrt(sum / buf.length);
+}
+
+function watchLevels(micStream, remoteStream) {
+  actx = new AudioContext();
+  const micAn = actx.createAnalyser(); micAn.fftSize = 1024;
+  const remAn = actx.createAnalyser(); remAn.fftSize = 1024;
+  actx.createMediaStreamSource(micStream).connect(micAn);
+  actx.createMediaStreamSource(remoteStream).connect(remAn);
+  const buf = new Float32Array(1024);
+  poll = setInterval(() => {
+    const now = performance.now();
+    const m = rms(micAn, buf), r = rms(remAn, buf);
+    const remoteWasQuiet = now - lastRemoteLoud > 450;
+    if (r > 0.012) {
+      if (!firstSoundMs) { firstSoundMs = now - tapAt; render(); }
+      if (remoteWasQuiet && micSinceRemote && lastMicVoice) {
+        const gap = now - lastMicVoice;
+        if (gap > 0 && gap < 8000) { ear.push(gap); stamp(`귀 기준 ${sec(gap)}`); render(); }
+        micSinceRemote = false;
+      }
+      lastRemoteLoud = now;
+    } else if (m > 0.02 && remoteWasQuiet) {
+      // Only count the mic while the tutor is quiet, so its own echo can't count.
+      lastMicVoice = now; micSinceRemote = true;
+    }
+  }, 15);
+}
+
+async function start() {
+  tapAt = performance.now();
+  status("마이크 허용을 기다리는 중… 주소창 왼쪽 팝업에서 '허용'을 눌러 주세요.");
+  try {
+    mic = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+  } catch (e) {
+    status(e.name === "NotAllowedError" ? "마이크가 막혀 있어요. 주소창 왼쪽 아이콘 → 마이크 허용." : "마이크를 열 수 없어요: " + e.message);
+    return;
+  }
+  status("연결 중…");
+  tapAt = performance.now();
+  pc = new RTCPeerConnection();
+  const audio = document.createElement("audio"); audio.autoplay = true; document.body.appendChild(audio);
+  pc.ontrack = (ev) => {
+    const stream = new MediaStream([ev.track]);
+    audio.srcObject = stream;
+    audio.play().catch(() => status("자동 재생이 막혔어요. 페이지를 한 번 클릭해 주세요."));
+    watchLevels(mic, stream);
+  };
+  for (const t of mic.getAudioTracks()) pc.addTrack(t, mic);
+  dc = pc.createDataChannel("oai-events");
+  dc.onmessage = (m) => onEvent(JSON.parse(m.data));
+  dc.onclose = () => { if (!finalized && pc) { status("연결이 끊겼어요 (최종 사용량 미확인)."); cleanup(); } };
+
+  await pc.setLocalDescription(await pc.createOffer());
+  if (pc.iceGatheringState !== "complete") {
+    await new Promise((resolve) => {
+      const t = setTimeout(resolve, 3000);
+      pc.addEventListener("icegatheringstatechange", () => { if (pc.iceGatheringState === "complete") { clearTimeout(t); resolve(); } });
+    });
+  }
+  const q = { lang: $("lang").value, native: $("native").value, level: $("level").value,
+              voice: $("voice").value, prompt: $("prompt").value, topic: $("topic").value };
+  const r = await fetch("/live-session", { method: "POST", headers: { "Content-Type": "application/json" },
+                                           body: JSON.stringify({ sdp: pc.localDescription.sdp, q }) });
+  const out = await r.json();
+  if (!r.ok || out.error) { status(out.error || `연결 실패 ${r.status}`); cleanup(); return; }
+  createMs = out.create_ms; window.__greeting = out.greeting;
+  await pc.setRemoteDescription({ type: "answer", sdp: out.transport.sdp });
+
+  startedAt = Date.now(); usageSeconds = 0; ear.length = 0; tl.length = 0;
+  userSpans.length = 0; aiSpans.length = 0; curWho = null; curEl = null; firstSoundMs = 0;
+  lastMicVoice = 0; lastRemoteLoud = 0; micSinceRemote = false;
+  $("log").innerHTML = ""; $("stats").hidden = false;
+  timer = setInterval(render, 1000);
+  $("go").textContent = "끊기"; $("go").classList.add("stop");
+}
+
+function cleanup() {
+  clearInterval(timer); clearInterval(poll); clearTimeout(closeTimeout);
+  const c = dc; dc = undefined; c?.close();
+  pc?.close(); mic?.getTracks().forEach((t) => t.stop()); actx?.close();
+  pc = mic = actx = null; ready = false;
+  $("go").textContent = "통화 시작"; $("go").classList.remove("stop");
+}
+
+function hangUp() {
+  if (!ready || !dc || dc.readyState !== "open") return cleanup();
+  status("마무리하는 중… (최종 사용량 받는 중)");
+  dc.send(JSON.stringify({ type: "session.close" }));
+  closeTimeout = setTimeout(() => { status("최종 사용량 없이 끊었어요."); cleanup(); }, 15000);
+}
+
+let busy = false;
+$("go").onclick = async () => {
+  if (pc) return hangUp();
+  if (busy) return;
+  busy = true; finalized = false;
+  try { await start(); } catch (e) { status(String(e)); cleanup(); } finally { busy = false; }
+};
+</script>
+</body>
+</html>

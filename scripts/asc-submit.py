@@ -274,6 +274,57 @@ def sync_page(ver: dict | None, send: bool) -> None:
     sync_localizations("appInfoLocalizations", "appInfo", "appInfos", info["id"], live, info_page, send)
 
 
+CREATIVE_ASSETS = os.path.join(ROOT, "fastlane", "creative_assets.json")
+
+
+def sync_creative_assets(ver, send: bool) -> None:
+    """The product page header and search-results asset, per locale.
+
+    They live in the app's asset library (uploaded once, ids in
+    fastlane/creative_assets.json) and are PLACED on each version
+    localization. A placement can't be added to an approved version unless
+    the asset is approved too, and an asset is approved only by going through
+    review on a version — so this rides on the submission. A locale with no
+    entry of its own takes "default". A placement already showing the right
+    asset is left alone; one showing another asset is replaced."""
+    if PLATFORM != "IOS" or not os.path.exists(CREATIVE_ASSETS):
+        return
+    plan = {k: v for k, v in json.load(open(CREATIVE_ASSETS)).items() if not k.startswith("_")}
+    if ver is None:
+        print(f"  creative assets: placed once the version exists ({', '.join(plan)})")
+        return
+    locs = call("GET", f"/appStoreVersions/{ver['id']}/appStoreVersionLocalizations?limit=50")["data"]
+    for loc in locs:
+        locale = loc["attributes"]["locale"]
+        for ptype, by_locale in plan.items():
+            want = by_locale.get(locale) or by_locale["default"]
+            rel, aid = next(iter(want.items()))          # {"video": id} or {"image": id}
+            have = call("GET", f"/appStoreVersionLocalizations/{loc['id']}/placements"
+                               f"?filter[placementType]={ptype}&include=image,video")["data"]
+            current = [p for p in have
+                       if ((p.get("relationships", {}).get(rel) or {}).get("data") or {}).get("id") == aid]
+            if current:
+                print(f"  {ptype} {locale}: already placed")
+                continue
+            print(f"  {ptype} {locale}: {'REPLACE' if have else 'PLACE'} {rel} {aid}")
+            if not send:
+                continue
+            for p in have:
+                call("DELETE", f"/appAssetLibraryPlacements/{p['id']}")
+            asset_type = "appAssetLibraryVideos" if rel == "video" else "appAssetLibraryImages"
+            try:
+                call("POST", "/appAssetLibraryPlacements", {"data": {
+                    "type": "appAssetLibraryPlacements",
+                    "attributes": {"placementType": ptype, "placementGroup": "DEFAULT_PROFILE"},
+                    "relationships": {
+                        rel: {"data": {"type": asset_type, "id": aid}},
+                        "appStoreVersionLocalization": {"data": {
+                            "type": "appStoreVersionLocalizations", "id": loc["id"]}}}}})
+            except RuntimeError as e:
+                # Never block a submission on artwork: say it and move on.
+                print(f"    not placed: {e}")
+
+
 def main() -> None:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     if len(args) != 2:
@@ -336,6 +387,7 @@ def main() -> None:
 
     if not send:
         sync_page(ver, send=False)
+        sync_creative_assets(ver, send=False)
         if PLATFORM == "MAC_OS":
             sync_mac_screenshots(ver, send=False)
         print("dry run — re-run with --send")
@@ -373,6 +425,7 @@ def main() -> None:
     print("build attached")
 
     sync_page(ver, send=True)
+    sync_creative_assets(ver, send=True)
     if PLATFORM == "MAC_OS":
         sync_mac_screenshots(ver, send=True)
 

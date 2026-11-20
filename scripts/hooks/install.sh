@@ -7,7 +7,7 @@ set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 dest="$(git -C "$here" rev-parse --path-format=absolute --git-common-dir)/hooks"
 mkdir -p "$dest"
-for h in commit-msg; do
+for h in commit-msg pre-commit; do
   install -m 0755 "$here/$h" "$dest/$h"
   echo "✓ $h → $dest/$h"
 done

@@ -56,19 +56,19 @@ CJK = {"ja", "zh-Hans", "zh-Hant"}
 #   a (eu, elsewhere) pair is picked by the visitor's time zone (Europe/*).
 STORE_PRICES = {
     "ja": ({"$9.99": "¥1,500", "$99.99": "¥15,000", "$24.99": "¥3,000", "$249.99": "¥30,000", "$34.99": "¥6,000"},
-           "日本のApp Storeでの価格です。ほかの国では、App Storeにその国の価格が表示されます。"),
+           "日本のApp Storeでの価格です。Google Playやほかの国では、ストアにそれぞれの価格が表示されます。"),
     "zh-Hant": ({"$9.99": "NT$320", "$99.99": "NT$2,990", "$24.99": "NT$690", "$249.99": "NT$6,990", "$34.99": "NT$1,190"},
-                "以上為台灣 App Store 的價格。其他地區請以 App Store 顯示的當地價格為準。"),
+                "以上為台灣 App Store 的價格。Google Play 與其他地區請以商店顯示的價格為準。"),
     "zh-Hans": ({"$9.99": "US$9.99", "$99.99": "US$99.99", "$24.99": "US$24.99", "$249.99": "US$249.99", "$34.99": "US$34.99"},
-                "以上为美国 App Store 的价格。其他地区请以 App Store 显示的当地价格为准。"),
+                "以上为美国 App Store 的价格。Google Play 和其他地区请以商店显示的价格为准。"),
     "fr": ({"$9.99": "9,99 €", "$99.99": "99,99 €", "$24.99": "22,99 €", "$249.99": "229,99 €", "$34.99": "39,99 €"},
-           "Prix de l’App Store en France. Dans les autres pays, l’App Store affiche le prix local."),
+           "Prix de l’App Store en France. Sur Google Play et dans les autres pays, la boutique affiche son propre prix."),
     "de": ({"$9.99": "9,99 €", "$99.99": "99,99 €", "$24.99": "22,99 €", "$249.99": "229,99 €", "$34.99": "39,99 €"},
-           "Preise im App Store in Deutschland. In anderen Ländern zeigt der App Store den dortigen Preis."),
+           "Preise im App Store in Deutschland. Bei Google Play und in anderen Ländern zeigt der Store den dortigen Preis."),
     "es": ({"$9.99": ("9,99 €", "$199 MXN"), "$99.99": ("99,99 €", "$1,999 MXN"), "$24.99": ("22,99 €", "$399 MXN"),
             "$249.99": ("229,99 €", "$3,999 MXN"), "$34.99": ("39,99 €", "$799 MXN")},
-           ("Precios de la App Store en España. En otros países, la App Store muestra el precio local.",
-            "Precios de la App Store en México. En otros países, la App Store muestra el precio local.")),
+           ("Precios de la App Store en España. En Google Play y en otros países, la tienda muestra su propio precio.",
+            "Precios de la App Store en México. En Google Play y en otros países, la tienda muestra su propio precio.")),
 }
 EURO_CHECKOUT = {"de", "fr", "es"}
 EU_JS = 'const IN_EU = /^Europe\\//.test((Intl.DateTimeFormat().resolvedOptions().timeZone) || "")\n'

@@ -13,7 +13,7 @@ SK="${STRIPE_SECRET_KEY:-$(grep '^STRIPE_SECRET_KEY=' ~/humhumhum/.env.local | c
 [[ "$SK" == sk_* ]] || { echo "no STRIPE_SECRET_KEY" >&2; exit 1; }
 
 curl -sS -u "$SK:" https://api.stripe.com/v1/products \
-  -d id=nawana_challenge -d name="nawana 100일 챌린지" -d statement_descriptor="NAWANA.APP" \
+  -d id=nawana_challenge -d name="nawana 100-day challenge" -d statement_descriptor="NAWANA.APP" \
   -d "metadata[project]=futurevoice" >/dev/null
 
 # plan usd krw eur  (minor units; krw is zero-decimal)

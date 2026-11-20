@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# A migration's version is its identity: `db push` and apply-migration.sh
+# both treat a recorded version as done, whatever file it came from. Two
+# files with one version means one of them never runs in production, and
+# nothing says so — 20261012140000_plan_change_is_a_new_purchase sat
+# unapplied for three weeks that way (2026-11-04). Refuses a commit that
+# ADDS a migration whose version another file already has. The pairs from
+# before this hook are left as they are (all checked against production on
+# 2026-11-04).
+set -euo pipefail
+added=$(git diff --cached --name-only --diff-filter=AR -- 'supabase/migrations/*.sql' || true)
+[[ -z "$added" ]] && exit 0
+bad=0
+for f in $added; do
+  v=$(basename "$f" | cut -d_ -f1)
+  others=$(git ls-files -- "supabase/migrations/${v}_*.sql" | grep -vx "$f" || true)
+  if [[ -n "$others" ]]; then
+    echo "✗ $f shares version $v with: $others" >&2
+    bad=1
+  fi
+done
+if [[ $bad == 1 ]]; then
+  echo "  give the new migration its own version (the next free timestamp) — git mv, then commit" >&2
+  exit 1
+fi

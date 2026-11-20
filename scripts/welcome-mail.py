@@ -44,6 +44,8 @@ THREADS_HANDLE = "adaywithboram"          # the founder's own; easiest to keep u
 THREADS_URL = f"https://www.threads.com/@{THREADS_HANDLE}"
 INSTAGRAM_HANDLE = "nawana.app"
 INSTAGRAM_DM_URL = f"https://ig.me/m/{INSTAGRAM_HANDLE}"
+KAKAO_OPENCHAT_URL = "https://open.kakao.com/o/gcRTBBVi"  # Korean letter only
+KAKAO_YELLOW = "#FEE500"
 LOGO_URL = f"{SITE_URL}/mail/nawana-icon-256.png"
 PER_SEND_PAUSE = 0.6
 TEST_IDS = {  # admin/src/assemble.ts TEST_IDS
@@ -72,18 +74,22 @@ COPY = {
         },
         "story_h": "어떻게 만들게 됐는지",
         "story": [
-            "저는 대학교 2학년 때 영어가 꼭 필요하다는 생각에 영국으로 편입했고, 졸업 후 독일에서 "
-            "일자리를 구해 지금 16년째 살고 있습니다. 클라이언트 미팅도, 프로젝트도, 팀 관리도 전부 영어로 해 왔습니다.",
-            "그런데도 유창하다고 느낀 적은 한 번도 없었습니다. 상황은 넘길 수 있었지만, "
-            "하고 싶은 말을 하고 싶은 방식으로 하지는 못했습니다.",
-            "그래서 제게 가장 필요한 건, 내 생각을 입으로 말해 보는 연습이라고 생각했습니다.",
+            "저는 대학교 3학년 때 영어가 꼭 필요하다는 생각에 영국으로 편입했고, 졸업 후 독일에서 일자리를 구해 "
+            "15년 동안 디자인 회사에서 일했습니다. 작년에 회사를 그만두고 홀로서기를 준비하다, 올해 창업을 했습니다.",
+            "15년 동안 회사 생활을 하면서 영어만 써 왔는데, 단 한 번도 유창하다고 느껴 본 적이 없었던 것 같습니다. "
+            "그렇게 고민하다, 제게 가장 필요한 건 내 생각을 입으로 말해 보는 연습이라고 생각했습니다.",
             "그런데 말하기 연습은 늘 남의 목소리를 흉내 내는 일이었습니다. 원어민의 발음을 따라 할 때마다 "
             "어색하고 나와 맞지 않았고, 꼭 연기를 하는 것 같아 불편했습니다.",
-            "그 무렵 다른 앱을 만들면서 목소리가 가진 신비로운 힘을 더 절실히 느꼈습니다. 그리고 이런 생각이 "
-            "들었습니다. 말하는 리듬도, 톤도, 음색도 그대로인 그냥 내 목소리인데, 영어를 완벽하게 말하는 내가 "
-            "있다면 어떨까. 그 모습이 곧 내가 이루고 싶은 목표가 되지 않을까. 그렇다면 매일 그 목소리를 닮아 "
-            "가도록 노력하면 되겠다.",
-            "나와나는 그 생각에서 시작했습니다. 저도 지금 매일 이 앱으로 연습하고 있습니다.",
+            "나와나 이전에, 내 목소리로 아이에게 들려주는 앱을 개발했었습니다. 아이들이 궁금해하는 세상의 이야기를 "
+            "영어로 만들어서 들려주다 보니 이런 생각이 들었습니다. 말하는 리듬도, 톤도, 음색도 그대로인 그냥 내 목소리인데, "
+            "영어를 완벽하게 말하는 내가 있다면 어떨까. 그 모습이 곧 내가 이루고 싶은 목표가 되지 않을까. "
+            "그렇다면 매일 그 목소리를 닮아 가도록 노력하면 되겠다.",
+            "나와나는 그 생각에서 시작했습니다.",
+            "언어를 공부한다는 건 시간이 걸리는 일이라 바로 눈앞에 보이지는 않겠지만, 저도 이제 3개월 정도 이 앱으로 "
+            "공부하고 있습니다. 다른 공부 방법이나 교재를 찾는 게 아니라, 지금 당장 내가 하고 싶은 말, 내가 관심 있는 "
+            "주제로 대화를 하고 내가 만든 실수로 공부를 하니, 교재를 찾아 헤매는 시간을 줄이고 집중할 수 있어서 좋았습니다.",
+            "여러분도 여러분에게 맞는 루틴을 찾으셔서, 매일 조금씩이라도 대화를 통해 꾸준히 연습하시고, "
+            "꼭 하루빨리 미래의 내가 지금의 내가 될 수 있으셨으면 좋겠습니다.",
         ],
         "first_h": "처음이라면",
         "first": "Talk에서 첫 통화를 걸어 보세요. 주제 없이 편하게 말을 걸면 됩니다. 미래의 내가 먼저 "
@@ -96,20 +102,27 @@ COPY = {
             ("채팅", "다른 학습자들과 제가 함께 있습니다. 궁금한 점, 바라는 기능 무엇이든 남겨 주세요."),
         ],
         "comm_cta": "커뮤니티 둘러보기",
+        "kakao": {
+            "tag": "카카오톡 오픈채팅",
+            "title": "나와나 오픈채팅방",
+            "lines": [
+                "최신 소식과 제가 하고 있는 작업들, 여러 공지사항들을 받아 보실 수 있답니다.",
+                "부담 없이 들르셔서, 소통하면서 더 언어를 공부하실 수 있으셨음 좋겠어요!",
+            ],
+            "cta": "오픈채팅방 들어가기",
+        },
         "reach_h": "저에게 바로 말 걸기",
         "reach": "쓰시다가 막히는 곳, 좋았던 순간, 불편했던 점 모두 듣고 싶습니다. 편하신 곳으로 연락 주세요. "
                  "제가 직접 읽고 답합니다.",
         "reply": "이 메일에 답장",
         "threads": "Threads",
         "instagram": "Instagram DM",
-        "notice": [
-            "기존 유저분들께서는 구독 정책이 많이 바뀌어서 혼란이 있으셨을 거예요. 처음이라 자리 잡는 데까지 "
-            "조금 너그럽게 이해해 주시길 바랍니다.",
-            "꼭 최신 앱으로 업데이트해 주셔야 합니다. 그리고 혹시 무료 통화가 더 필요하신 분은 개인적으로 "
-            "메시지를 주시면, 더 경험해 보실 수 있도록 도와드리겠습니다.",
+        # 2026-11-17 founder: no notice for the Korean letter (it addressed September's users)
+        "community": False,  # 2026-11-17 founder: the community banner is left out for now
+        "close": [
+            "아직 부족한 곳이 많지만, 정말 열심히 만들고 있습니다.",
+            "다들 재밌게 언어 공부하는 하루 되셨으면 좋겠고, 나와나를 이용해 주셔서 정말 고맙습니다.",
         ],
-        "update_cta": "App Store에서 최신 버전 받기",
-        "close": "아직 부족한 곳이 많지만, 정말 열심히 만들고 있습니다. 미래의 나와 매일 조금씩 가까워지시길 바랍니다.",
         "sign": "이응규 드림",
         "foot": {"signup": "이 메일은 나와나 가입 시 한 번만 발송됩니다.",
                  "hello": "이 메일은 한 번만 발송됩니다. 더 받고 싶지 않으시면 답장으로 알려 주세요."},
@@ -204,7 +217,8 @@ def section_html(c: dict, variant: str) -> str:
     if variant == "signup":
         out += [label(c["first_h"]), p(c["first"], top=10)]
     items = "<br>".join(f"<b>{e(h)}</b>&nbsp; {e(t)}" for h, t in c["comm_items"])
-    out.append(
+    if c.get("community", True):
+      out.append(
         f'<div style="margin:34px 0 0;padding:22px 22px 24px;background:{SURF};border-radius:16px;">'
         f'<div style="font-size:12px;letter-spacing:.04em;color:{DIM};font-family:{MONO};">{e(c["comm_tag"])}</div>'
         f'<div style="font-size:22px;margin-top:8px;font-family:{PIXEL};">'
@@ -214,6 +228,18 @@ def section_html(c: dict, variant: str) -> str:
         f'<p style="margin:18px 0 0;"><a href="{COMMUNITY_URL}" style="display:inline-block;background:{BLUE};'
         f'color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:11px 20px;'
         f'border-radius:999px;">{e(c["comm_cta"])}</a></p></div>')
+    if "kakao" in c:
+        k = c["kakao"]
+        out.append(
+            f'<div style="margin:{16 if c.get("community", True) else 34}px 0 0;padding:22px 22px 24px;background:{KAKAO_YELLOW}33;'
+            f'border:1px solid {KAKAO_YELLOW};border-radius:16px;">'
+            f'<div style="font-size:12px;letter-spacing:.04em;color:{DIM};font-family:{MONO};">{e(k["tag"])}</div>'
+            f'<div style="font-size:19px;font-weight:700;margin-top:8px;">{e(k["title"])}</div>'
+            + "".join(f'<p style="font-size:15px;line-height:1.7;margin:{10 if i == 0 else 6}px 0 0;">{e(t)}</p>'
+                      for i, t in enumerate(k["lines"]))
+            + f'<p style="margin:18px 0 0;"><a href="{KAKAO_OPENCHAT_URL}" style="display:inline-block;'
+            f'background:{KAKAO_YELLOW};color:#191919;text-decoration:none;font-size:15px;font-weight:700;'
+            f'padding:11px 20px;border-radius:999px;">{e(k["cta"])}</a></p></div>')
     out += [label(c["reach_h"]), p(c["reach"], top=10)]
 
     def row(left, right, href):
@@ -229,12 +255,13 @@ def section_html(c: dict, variant: str) -> str:
         + row(c["threads"], f"@{THREADS_HANDLE} →", THREADS_URL)
         + row(c["instagram"], f"@{INSTAGRAM_HANDLE} →", INSTAGRAM_DM_URL)
         + "</table>")
-    if variant == "hello":
+    if variant == "hello" and "notice" in c:
         out += [p(c["notice"][0], top=30), p(c["notice"][1])]
         out.append(f'<p style="margin:16px 0 0;"><a href="{APP_STORE_URL}" style="display:inline-block;'
                    f'border:1px solid {INK};color:{INK};text-decoration:none;font-size:14px;font-weight:600;'
                    f'padding:9px 16px;border-radius:999px;">{e(c["update_cta"])}</a></p>')
-    out += [p(c["close"], top=30), p(c["sign"], top=22)]
+    close = c["close"] if isinstance(c["close"], list) else [c["close"]]
+    out += [p(t, top=30 if i == 0 else 14) for i, t in enumerate(close)] + [p(c["sign"], top=22)]
     return "".join(out)
 
 
@@ -265,12 +292,16 @@ def text_body(lang: str, variant: str) -> str:
         s = [c["hi"], c["thanks"][variant], f"[{c['story_h']}]", *c["story"]]
         if variant == "signup":
             s += [f"[{c['first_h']}]", c["first"]]
-        s += [f"[{c['comm_tag']}] {COMMUNITY_URL}", c["comm_intro"],
-              "\n".join(f"- {h}: {t}" for h, t in c["comm_items"]),
+        if c.get("community", True):
+            s += [f"[{c['comm_tag']}] {COMMUNITY_URL}", c["comm_intro"],
+                  "\n".join(f"- {h}: {t}" for h, t in c["comm_items"])]
+        s += [
+              *([f"[{c['kakao']['tag']}]", " ".join(c["kakao"]["lines"]),
+                 f"{c['kakao']['cta']}: {KAKAO_OPENCHAT_URL}"] if "kakao" in c else []),
               f"[{c['reach_h']}]", c["reach"],
               f"{c['reply']}: {REPLY_TO}\n{c['threads']}: {THREADS_URL}\n{c['instagram']}: {INSTAGRAM_DM_URL}",
-              *( [*c["notice"], f"{c['update_cta']}: {APP_STORE_URL}"] if variant == "hello" else []),
-              c["close"], c["sign"], c["foot"][variant]]
+              *( [*c["notice"], f"{c['update_cta']}: {APP_STORE_URL}"] if variant == "hello" and "notice" in c else []),
+              *(c["close"] if isinstance(c["close"], list) else [c["close"]]), c["sign"], c["foot"][variant]]
         parts.append("\n\n".join(s))
     return "\n\n· · ·\n\n".join(parts)
 
@@ -336,15 +367,29 @@ def send(key: str, to: str, lang: str, variant: str, idem: str) -> str:
 
 
 RECIPIENTS_SQL = """
+with act as (
+  select user_id, count(distinct (created_at at time zone 'Asia/Seoul')::date) as days
+    from (select user_id, created_at from usage_ledger where created_at > now() - interval '14 days'
+          union all
+          select user_id, created_at from client_events where created_at > now() - interval '14 days') x
+   group by 1)
 select u.id::text as user_id, u.email,
        case when p.setup_at is null then 'both'
             when p.native_language = 'ko' then 'ko' else 'en' end as lang,
-       w.sent_at
+       w.sent_at,
+       -- 2026-11-17 founder: newest signups and frequent visitors who have not subscribed go first.
+       case when u.created_at > now() - interval '14 days' then 0
+            when coalesce(a.days, 0) >= 3
+                 and not exists (select 1 from user_subscriptions s
+                                  where s.user_id = u.id and s.status in ('active', 'trialing')) then 0
+            else 1 end as tier,
+       coalesce(a.days, 0) as active_days
   from auth.users u
   left join profiles p on p.id = u.id
   left join welcome_mails w on w.user_id = u.id
+  left join act a on a.user_id = u.id
  where not u.is_anonymous and u.email is not null and u.deleted_at is null
- order by u.created_at
+ order by tier, u.created_at desc
 """
 
 
@@ -357,6 +402,7 @@ def main():
     ap.add_argument("--lang", default="both", choices=["ko", "en", "both"])
     ap.add_argument("--variant", default="hello", choices=["hello", "signup"])
     ap.add_argument("--limit", type=int)
+    ap.add_argument("--only-lang", choices=["ko", "en", "both"], help="only recipients whose letter is in this language")
     a = ap.parse_args()
 
     if a.preview:
@@ -375,7 +421,7 @@ def main():
         return
 
     rows = [r for r in sql(RECIPIENTS_SQL) if r["user_id"] not in TEST_IDS]
-    pending = [r for r in rows if not r["sent_at"]]
+    pending = [r for r in rows if not r["sent_at"] and (not a.only_lang or r["lang"] == a.only_lang)]
     by = {}
     for r in pending:
         by[r["lang"]] = by.get(r["lang"], 0) + 1
@@ -386,7 +432,7 @@ def main():
         pending = pending[:a.limit]
     if not a.send:
         for r in pending:
-            print(f"  {r['lang']:4} {r['email']}")
+            print(f"  {r['lang']:4} tier {r['tier']} days {r['active_days']:>2}  {r['email']}")
         print("dry run: nothing sent. --send to deliver.")
         return
 
@@ -405,6 +451,9 @@ def main():
             sql(f"update welcome_mails set error = {q(str(err)[:300])} where user_id = {q(r['user_id'])}")
             fail += 1
             print(f"  FAIL {r['email']}: {err}")
+            if str(err).startswith("429"):
+                print("  stopping: Resend refused for quota or rate; re-run tomorrow, the rest stays pending")
+                break
         time.sleep(PER_SEND_PAUSE)
     print(f"done: {ok} sent, {fail} failed")
 
