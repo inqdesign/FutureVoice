@@ -5,21 +5,36 @@ here first, with the date and who decided. Founder = 이응규.
 
 ## Cohort 1 (1기)
 
-- Applications: 2026-11-12 → 2026-11-19. Starts **2026-12-01**, day 100 is **2027-03-10**.
+- Applications: 2026-11-12 → 2026-11-19, by the applicant's own date (founder, 2026-11-12: not strict;
+  the form closes at the end of 19 Nov local time, the server once 19 Nov has ended everywhere). Starts **2026-12-01**, day 100 is **2027-03-10**.
   **Every date is PLANNED and is always written with "예정"** (founder, 2026-11-12: never say
   "12월 1일에 시작합니다" as settled); it may move with the number of applicants.
 - While they wait, every surface tells the applicant to USE THE APP now (not "you may").
 - Months are 30-day blocks from the first day, not calendar months:
   month 1 = Dec 1–Dec 30 · month 2 = Dec 31–Jan 29 · month 3 = Jan 30–Feb 28 ·
   the last 10 days (Mar 1–Mar 10) are on the house and are not judged.
-- Korean only. A day is counted by the date where the participant lives (the page says so;
+- **Open to everyone, in Korean or English** (founder, 2026-11-12; was "Korean only"). One
+  cohort, the same dates, rules, prices and deadline for both. The English page is
+  `/en/creators` (Korean stays `/creators`), written natively in English, never a translation;
+  a browser that lists Korean opens /creators and every other one /en/creators; the footer
+  and header switch (?lang=) is remembered and wins (founder, 2026-11-12). The application keeps
+  which page it came from (`page_lang`: ko | en), and that decides the
+  language of every mail and of the pay page that applicant sees. A creator abroad discloses
+  the free app the way their own country asks (e.g. "I got nawana for free" or #ad).
+  A day is counted by the date where the participant lives (the page says so;
   the application keeps their country and time zone). The cohort's own dates are Seoul's.
 
 ## Creator (크리에이터)
 
 - Studies for 100 days and posts the proof on their own SNS, on the days they agreed.
 - nawana is free meanwhile: a standing comp code (Plus by default), made in the admin.
+- The code is sent before the start and ENTERED ON THE FIRST DAY (2026-12-01, planned): that is
+  how a creator starts (founder, 2026-11-19; the code DM used to say "enter it within 30 days").
 - No format, no review of posts, the app need not appear. Teaching content is not the concept.
+- Each post carries a line saying the app was given for free (required by law: Korean FTC
+  endorsement guidelines, German UWG, US FTC). Korean: "앱은 나와나로부터 제공받았습니다";
+  English: "I got nawana for free" or #ad. On both pages (founder, 2026-11-12) and in the code DM.
+- "리뷰" on the page means: this is not a free app in exchange for a review of the app.
 - Checks in each posting day with that day's post link.
 - At day 100 each one is ended in the admin by hand (the comp does not end by itself).
 
@@ -49,6 +64,8 @@ here first, with the date and who decided. Founder = 이응규.
   first. The pay step tells them not to pay and to write instead.
 - Refund (founder, 2026-11-12): in full before the cohort starts; after that the terms' 14
   days from payment. Asked by mail.
+  Written in the terms as "100일 챌린지" / "The 100-day challenge" (#challenge, live 2026-11-12):
+  after the start, the used share is kept; if the dates move and don't suit, full refund before day 1.
 - Light is the low doorstep on purpose: start light, move up when it runs short.
 
 ## Privacy and promises
@@ -62,6 +79,8 @@ here first, with the date and who decided. Founder = 이응규.
 
 ## Writing
 
+- English: plain, warm, first person from the founder in mails; "you" on the page. No em dash.
+  Written from the intent and the facts here, never translated from the Korean.
 - Page and app: 해요체. Mail from the founder: 합니다체. No em dash. “당신” is fine on the
   creators page (founder, 2026-11-12: it doesn't matter there); still not in mails or the app.
 - Written in Korean, never translated. Start with what to do or what they get.

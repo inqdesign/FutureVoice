@@ -29,6 +29,17 @@ The lead keeps this file true after every step.
   looked at (headless Chrome, phone width). NOT seen working: the sign-in round trip and the
   jump to Stripe from the page (needs a person). Fee by country: `LOCAL_FEE` (42 currencies).
 
+- ◐ Open to English speakers (2026-11-12, founder): `/en/creators` (web/en/creators.html,
+  built from the Korean page by scratchpad build_en.py), `/pay?lang=en`, English applicant
+  mail, English desk messages, `page_lang` (migration `20261112220000`), English upgrade
+  checkout. Reviewed twice (prog-reviewer), Korean outputs byte-identical. Screens seen in
+  headless Chrome at 390 px. Live 2026-11-12: migration (column + RPC checked on prod),
+  creator-apply v37, challenge-upgrade v5, web (/en/creators, /pay, /creators byte-identical to
+  local). Admin deployed by the founder (not checked). Not seen: a real English application,
+  mail or payment end to end.
+  Open for the founder: OPEN 1–7 in program/copy/en/creators.md, Stripe product name
+  ("nawana 100일 챌린지" shows on English checkouts), privacy policy speech-count line.
+
 ## 2. While applications come in (11-12 → 11-19)
 
 - ◐ Desk: list, notes, statuses, mails that open already written (challenger paid / unpaid,
@@ -53,7 +64,13 @@ The lead keeps this file true after every step.
 ## 4. During the 100 days
 
 - ☐ A weekly look: who is close to losing a month, who stopped. Drafts only; the founder sends.
-- ☐ Daily wall / archive of creators' posts (direction 2026-11-10, not designed).
+- ☐ "pages": ONE shared page for everyone in the cohort (founder, 2026-11-16), not a desk for the
+  founder and not a public showcase. A participant opens it by their own link and checks in on top
+  of it (creator: the day's post address + one line; challenger: nothing, the app's day shows);
+  the feed is the creators' posts as each platform's own embed (Threads sized by the height its
+  embed reports); the right column is everyone with the day's check-in. Promotion is the founder's
+  own Threads account, separate. Mock: `web/_mock/archive.html` (`?me=<index>` = that person's
+  link). Supersedes the separate check-in mock.
 
 ## 5. The end (2027-03-01 → 03-10)
 
