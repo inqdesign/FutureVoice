@@ -170,13 +170,15 @@ Deno.serve(async (req) => {
 
   // Deactivate prior active clones so the partial unique index accepts
   // the new row.
-  await supabase
+  // voice_clones is written by the SERVER (2026-11-20): the table is what
+  // "is this voice theirs?" reads, so a learner's own token may not write it.
+  await billingClient()
     .from("voice_clones")
     .update({ is_active: false })
     .eq("user_id", user.id)
     .eq("is_active", true)
 
-  const { error: insErr } = await supabase
+  const { error: insErr } = await billingClient()
     .from("voice_clones")
     .insert({
       user_id: user.id,

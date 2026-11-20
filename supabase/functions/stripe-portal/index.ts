@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
 
   // Only allow redirect back to our own site (same rule as stripe-checkout).
   const site = Deno.env.get("SITE_URL")
-  const returnUrl = body.return_url && site && body.return_url.startsWith(site)
+  const returnUrl = body.return_url && site && (body.return_url === site || body.return_url.startsWith(site.replace(/\/$/, "") + "/"))
     ? body.return_url
     : site
   if (!returnUrl) return errorResponse(500, "server missing SITE_URL")

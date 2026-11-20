@@ -11,6 +11,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, upstreamErrorResponse, cors } from "../_shared/auth.ts"
 import * as cartesia from "../_shared/cartesia.ts"
+import { billingClient } from "../_shared/credits.ts"
 
 const MAX_NAME_LENGTH = 100
 
@@ -51,7 +52,7 @@ Deno.serve(async (req) => {
   // Keep our copy in step with upstream. Written AFTER the upstream edit, so
   // a row never claims a name the provider refused; a failure here is logged and
   // swallowed, because the rename itself already succeeded.
-  const { error: nameErr } = await supabase
+  const { error: nameErr } = await billingClient()
     .from("voice_clones")
     .update({ name })
     .eq("user_id", user.id)

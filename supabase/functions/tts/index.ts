@@ -149,6 +149,12 @@ Deno.serve(async (req) => {
   // it. A key already on file passes only for the same user, the same length
   // and the same voice, within ten minutes; anything else is 409. Run beside
   // the charge, so it may see this request's own fresh row — which matches.
+  // The text is compared too (2026-11-20): same length and voice let any
+  // other text of that length ride a spent key for ten minutes. Rows from
+  // before the hash was recorded pass on length and voice, as they did.
+  const textSha = Array.from(new Uint8Array(
+    await crypto.subtle.digest("SHA-256", new TextEncoder().encode(body.text!)),
+  )).slice(0, 8).map((b) => b.toString(16).padStart(2, "0")).join("")
   const replayPromise: Promise<Response | null> = (async () => {
     const { data: prior } = await billingClient()
       .from("usage_ledger")
@@ -164,6 +170,7 @@ Deno.serve(async (req) => {
     const voice = p.metadata?.voice_id
     const sameLine = (chars === undefined || chars === body.text!.length)
       && (voice === undefined || voice === body.voice_id)
+      && (p.metadata?.text_sha === undefined || p.metadata?.text_sha === textSha)
     return sameUser && fresh && sameLine ? null : errorResponse(409, "idempotency key already used")
   })()
 
@@ -268,7 +275,7 @@ Deno.serve(async (req) => {
     supabase, userId: user.id, chars: body.text.length,
     sourceFn: SOURCE_FN, idempotencyKey: idemKey,
     // The model that ACTUALLY spoke, so a char count can be costed.
-    metadata: { chars: body.text.length, voice_id: body.voice_id,
+    metadata: { chars: body.text.length, voice_id: body.voice_id, text_sha: textSha,
                 purpose: body.purpose ?? null, model_id: cartesia.CARTESIA_MODEL,
                 ...(body.scene_key ? { scene_key: body.scene_key } : {}) },
   }

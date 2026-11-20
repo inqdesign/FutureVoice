@@ -15,7 +15,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
-import { recordFreeUsage, rateLimitedResponse } from "../_shared/credits.ts"
+import { recordFreeUsage, rateLimitedResponse, billingClient } from "../_shared/credits.ts"
 
 import * as cartesia from "../_shared/cartesia.ts"
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
@@ -92,9 +92,10 @@ async function cartesiaAccent(
     }
     const id = accent ? `${uuid}:${accent}` : uuid
     if (id === current.voice_id) return json({ voice_id: id })
-    await supabase.from("voice_clones").update({ is_active: false })
+    // Written by the server: see voice-clone.
+    await billingClient().from("voice_clones").update({ is_active: false })
       .eq("user_id", userId).eq("is_active", true)
-    const { error } = await supabase.from("voice_clones").insert({
+    const { error } = await billingClient().from("voice_clones").insert({
       user_id: userId, voice_id: id, is_active: true,
       name: (body.voice_name ?? "").trim() || current.name,
     })

@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
   // A voice from before 2026-10-12 (an earlier provider) has nothing
   // upstream left to delete. Only the row is retired.
 
-  await supabase
+  await serviceRoleClient()
     .from("voice_clones")
     .update({ is_active: false })
     .eq("id", owned.id)
