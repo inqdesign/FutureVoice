@@ -58,12 +58,14 @@ for name, anchor in (("low", "case .a1, .a2"), ("mid", "case .b1, .b2"), ("high"
     bands[name] = (voc, st)
 
 breath = plain(literal_at(COACHING, "static let breathPunctuation"))
+acted = plain(literal_at(ENGINE, "static let actedSceneRule"))
 system = ts(literal_at(ENGINE, 'return """', ENGINE.index("static func systemPrompt(")), {
     "languageName": "${languageName}",
     "proficiency.rawValue.uppercased()": "${prof}",
     "CoachingLanguage.breathPunctuation": "${BREATH_PUNCTUATION}",
     "sceneTurnRange": "${SCENE_TURN_RANGE}",
     "sceneTurnStyle": "${SCENE_TURN_STYLE}",
+    "actedSceneRule": "${ACTED_SCENE_RULE}",
     "band.vocabulary": "${band.vocabulary}",
     "band.structure": "${band.structure}",
 })
@@ -81,6 +83,8 @@ export const SCENE_TURN_STYLE = {J(turn_style)}
 /** One ceiling: the payload is the same size for every learner. */
 export const SCENE_MAX_TOKENS = {max_tokens.group(1)}
 export const BREATH_PUNCTUATION = {J(breath)}
+/** A scene asked to be ACTED is written inside the story (iOS 03ab3204). */
+export const ACTED_SCENE_RULE = {J(acted)}
 
 /** `ConversationEngine.speechScale(for:)` — the ONE definition of a band. */
 export function speechScale(prof: string): {{ vocabulary: string; structure: string }} {{
