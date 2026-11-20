@@ -340,6 +340,7 @@ final class DailyGoalCountsFinishedWorkTests: XCTestCase {
     override func tearDown() {
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         try? FileManager.default.removeItem(at: dir.appendingPathComponent(filename))
+        try? FileManager.default.removeItem(at: dir.appendingPathComponent("devices-" + filename))
         super.tearDown()
     }
 

@@ -6,6 +6,14 @@ import Foundation
 /// attempts) — fine for scheduling, useless for showing effort over time.
 /// This log records every rep as it happens so the Practice tab can show an
 /// honest "you showed up" strip and weekly totals. Counts only; no content.
+///
+/// Two files, like `AppUsageLog` (2026-11-20): the per-day file syncs by
+/// taking the bigger device's count per field, so on a day practised on a Mac
+/// and a phone the smaller device's reps dropped out. The per-DEVICE file
+/// keys each day by `day|device`: one writer per key, so the max merge is
+/// exact and a day is the sum of its devices. The per-day file is still
+/// written for builds that don't know the device file; each field reads the
+/// larger of the two, so no day reads lower than it did.
 final class PracticeLog {
     static let shared = PracticeLog()
 
@@ -57,22 +65,31 @@ final class PracticeLog {
     }
 
     private var days: [String: Day]
+    private var devices: [String: Day]
     private let fileURL: URL
+    private let deviceURL: URL
+    private let device: String
     /// Guards `days`. Writes come from the main actor, but the streak
     /// (`PracticeStats.activeDays`) is also read from `ProgressTab`'s
     /// detached reload, and an unguarded Dictionary read racing a write is a
     /// crash, not a stale number.
     private let lock = NSLock()
 
-    init(filename: String = "practice-log.json") {
+    static let deviceFilename = "practice-log-devices.json"
+
+    /// A test log under another name gets its own device file beside it.
+    init(filename: String = "practice-log.json", device: String = DeviceIdentity.id) {
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         self.fileURL = dir.appendingPathComponent(filename)
-        if let data = try? Data(contentsOf: fileURL),
-           let decoded = try? JSONDecoder().decode([String: Day].self, from: data) {
-            self.days = decoded
-        } else {
-            self.days = [:]
-        }
+        self.deviceURL = dir.appendingPathComponent(
+            filename == "practice-log.json" ? Self.deviceFilename : "devices-" + filename)
+        self.device = device
+        self.days = Self.read(fileURL)
+        self.devices = Self.read(deviceURL)
+    }
+
+    private static func read(_ url: URL) -> [String: Day] {
+        (try? Data(contentsOf: url)).flatMap { try? JSONDecoder().decode([String: Day].self, from: $0) } ?? [:]
     }
 
     /// Drops the in-memory day map and re-reads the file. Only `BackupService`
@@ -80,9 +97,9 @@ final class PracticeLog {
     /// life, so a restore that replaced the file on disk would be erased by
     /// the very next `record()` writing the stale map back out.
     func reloadFromDisk() {
-        let fresh = (try? Data(contentsOf: fileURL))
-            .flatMap { try? JSONDecoder().decode([String: Day].self, from: $0) } ?? [:]
-        lock.lock(); days = fresh; lock.unlock()
+        let fresh = Self.read(fileURL)
+        let freshDevices = Self.read(deviceURL)
+        lock.lock(); days = fresh; devices = freshDevices; lock.unlock()
     }
 
     /// - Parameter finished: the item is done with (mastered / known /
@@ -91,27 +108,14 @@ final class PracticeLog {
     func record(_ kind: Kind, finished: Bool = false, on date: Date = Date()) {
         let key = Self.key(for: date)
         lock.lock()
-        var day = days[key] ?? Day()
-        switch kind {
-        case .drill:      day.drillReps += 1
-        case .shadow:     day.shadowReps += 1
-        case .word:       day.wordReps += 1
-        case .expression: day.expressionReps += 1
-        case .scene:      day.sceneReps += 1
-        }
-        if finished {
-            switch kind {
-            case .drill:      day.drillDone += 1
-            case .shadow:     day.shadowDone += 1
-            case .word:       day.wordDone += 1
-            case .expression: day.expressionDone += 1
-            case .scene:      break
-            }
-        }
-        days[key] = day
+        days[key] = (days[key] ?? Day()).adding(kind, finished: finished)
+        let deviceKey = key + "|" + device
+        devices[deviceKey] = (devices[deviceKey] ?? Day()).adding(kind, finished: finished)
         let snapshot = days
+        let deviceSnapshot = devices
         lock.unlock()
         save(snapshot)
+        saveDevices(deviceSnapshot)
         // The time of day too, for the study timetable.
         ActivityEventLog.shared.record(ActivityEventLog.Kind(kind), at: date)
     }
@@ -119,15 +123,27 @@ final class PracticeLog {
     func day(_ date: Date) -> Day? {
         let key = Self.key(for: date)
         lock.lock(); defer { lock.unlock() }
-        return days[key]
+        return Self.combined(days[key], devices: devices, day: key)
+    }
+
+    /// The day as every device recorded it: each field the larger of the
+    /// per-day count and the sum over devices. nil when neither has the day.
+    static func combined(_ legacy: Day?, devices: [String: Day], day: String) -> Day? {
+        let mine = devices.filter { $0.key.hasPrefix(day + "|") }.values
+        guard legacy != nil || !mine.isEmpty else { return nil }
+        let sum = mine.reduce(Day()) { $0.plus($1) }
+        return SyncKindRegistry.maxDay(legacy ?? Day(), sum)
     }
 
     /// Every day that `showedUp`, as local start-of-day dates. The log is
     /// never pruned, so this reaches back to the first rep ever recorded.
     func activeDays(calendar: Calendar = .current) -> Set<Date> {
-        lock.lock(); let all = days; lock.unlock()
-        return Set(all.compactMap { key, day -> Date? in
-            guard day.showedUp, let date = Self.keyFormatter.date(from: key) else { return nil }
+        lock.lock(); let all = days; let perDevice = devices; lock.unlock()
+        var keys = Set(all.keys)
+        for k in perDevice.keys { if let bar = k.firstIndex(of: "|") { keys.insert(String(k[..<bar])) } }
+        return Set(keys.compactMap { key -> Date? in
+            guard let day = Self.combined(all[key], devices: perDevice, day: key), day.showedUp,
+                  let date = Self.keyFormatter.date(from: key) else { return nil }
             return calendar.startOfDay(for: date)
         })
     }
@@ -146,6 +162,12 @@ final class PracticeLog {
         SyncEngine.noteChanged(.practiceDay)
     }
 
+    private func saveDevices(_ devices: [String: Day]) {
+        guard let data = try? JSONEncoder().encode(devices) else { return }
+        try? data.write(to: deviceURL, options: [.atomic])
+        SyncEngine.noteChanged(.practiceDevice)
+    }
+
     private static let keyFormatter: DateFormatter = {
         let f = DateFormatter()
         f.calendar = Calendar(identifier: .gregorian)
@@ -160,6 +182,28 @@ final class PracticeLog {
 }
 
 extension PracticeLog.Day {
+    func adding(_ kind: PracticeLog.Kind, finished: Bool) -> Self {
+        var d = self
+        switch kind {
+        case .drill:      d.drillReps += 1; if finished { d.drillDone += 1 }
+        case .shadow:     d.shadowReps += 1; if finished { d.shadowDone += 1 }
+        case .word:       d.wordReps += 1; if finished { d.wordDone += 1 }
+        case .expression: d.expressionReps += 1; if finished { d.expressionDone += 1 }
+        case .scene:      d.sceneReps += 1
+        }
+        return d
+    }
+
+    func plus(_ o: Self) -> Self {
+        var d = self
+        d.drillReps += o.drillReps; d.shadowReps += o.shadowReps
+        d.wordReps += o.wordReps; d.expressionReps += o.expressionReps
+        d.drillDone += o.drillDone; d.shadowDone += o.shadowDone
+        d.wordDone += o.wordDone; d.expressionDone += o.expressionDone
+        d.sceneReps += o.sceneReps
+        return d
+    }
+
     // Lenient decoding: logs written before the word/expression counters
     // existed lack those keys, and the loader treats a decode failure as an
     // empty log — which would erase the whole history on first launch.

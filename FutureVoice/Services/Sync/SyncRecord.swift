@@ -43,6 +43,9 @@ enum SyncKind: String, Codable, CaseIterable, Hashable {
     case pronunciation
     // Global (Documents root / UserDefaults).
     case practiceDay
+    /// Practice reps per day PER DEVICE (`PracticeLog`, `day|device` keys),
+    /// like `usageDevice`. An older build skips it, so no schema bump.
+    case practiceDevice
     case talkDay
     case usageDay
     /// App time per day PER DEVICE (`AppUsageLog`, `day|device` keys), so two
@@ -115,7 +118,7 @@ enum SyncKind: String, Codable, CaseIterable, Hashable {
              .speechScript, .speechTake,
              .tutorLesson, .tutorChat, .tutorProgress, .learnerState, .pronunciation:
             return true
-        case .practiceDay, .talkDay, .usageDay, .usageDevice, .persona, .personaNote, .profile,
+        case .practiceDay, .practiceDevice, .talkDay, .usageDay, .usageDevice, .persona, .personaNote, .profile,
              .counterpart, .dayCard, .defaults, .upcomingGoal, .learningPurpose,
              .studyPlan, .promiseDay, .activityEvent, .goalPrep, .goalPlan, .weekRecap,
              .blobCounterpartPhoto,

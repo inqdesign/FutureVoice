@@ -69,16 +69,8 @@ enum AppUsageLog {
         map.reduce(0) { $1.key.hasPrefix(day + "|") ? $0 + $1.value : $0 }
     }
 
-    /// This install's name in the device map. The vendor id: different on
-    /// every device, never carried by a backup onto a new one.
-    private static var device: String {
-        if let id = UIDevice.current.identifierForVendor?.uuidString { return id.lowercased() }
-        let k = "futurevoice.usageDeviceId"
-        if let id = UserDefaults.standard.string(forKey: k) { return id }
-        let id = UUID().uuidString.lowercased()
-        UserDefaults.standard.set(id, forKey: k)
-        return id
-    }
+    /// This install's name in the device map (`DeviceIdentity`).
+    private static var device: String { DeviceIdentity.id }
 
     private static func load(_ key: String = key) -> [String: Int] {
         UserDefaults.standard.dictionary(forKey: key) as? [String: Int] ?? [:]
@@ -91,5 +83,19 @@ enum AppUsageLog {
         f.locale = Locale(identifier: "en_US_POSIX")
         f.dateFormat = "yyyy-MM-dd"
         return f.string(from: date)
+    }
+}
+
+/// This install's name in the per-device day maps (`AppUsageLog`,
+/// `PracticeLog`). The vendor id: different on every device, never carried by
+/// a backup onto a new one.
+enum DeviceIdentity {
+    static var id: String {
+        if let id = UIDevice.current.identifierForVendor?.uuidString { return id.lowercased() }
+        let k = "futurevoice.usageDeviceId"
+        if let id = UserDefaults.standard.string(forKey: k) { return id }
+        let id = UUID().uuidString.lowercased()
+        UserDefaults.standard.set(id, forKey: k)
+        return id
     }
 }
