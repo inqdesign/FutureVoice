@@ -199,6 +199,13 @@ export class CallSession implements DurableObject {
   /** Past the projected play-out: the phone starts a line a beat after the
    *  gateway sent it. */
   private static readonly nudgeAfterPlayoutMs = 150
+  /** A note waits while the learner is mid-line (see `learnerMidLine`):
+   *  re-checked this often, and for at most `nudgeSpeechWaitMaxMs` on an
+   *  open interim alone, so a room that never stops producing words can't
+   *  hold a note forever. A line that commits takes the note with it. */
+  private static readonly nudgeSpeechRecheckMs = 500
+  private static readonly nudgeSpeechWaitMaxMs = 10000
+  private nudgeHeldSince = 0
   private nudgesUsed = 0
   static readonly maxNudges = 8
   static readonly maxNudgeChars = 600
@@ -1769,6 +1776,19 @@ export class CallSession implements DurableObject {
     this.history.push({ role: "user", text: modelText ?? (native && nativeLanguage !== null
       ? nativeTurnText(text, languageName(this.language), languageName(nativeLanguage))
       : text) })
+    // Notes that waited for this line (see `flushNudge`) are answered with
+    // it, in the same reply. Not on a held turn: the app's own note for it
+    // comes through `flushNudge`, which takes them all.
+    let notesJoined = false
+    if (this.pendingNudges.length > 0 && !this.holdReplies) {
+      const last = this.history[this.history.length - 1]
+      last.text = `${last.text}\n${this.pendingNudges.splice(0).map((n) =>
+        `[Note from the app — the learner did not say this: ${n}]`).join("\n")}`
+      if (this.nudgeTimer !== null) { clearTimeout(this.nudgeTimer); this.nudgeTimer = null }
+      this.nudgeHeldSince = 0
+      notesJoined = true
+      console.log("nudge: joined the learner's turn")
+    }
     // A stale reply still going (e.g. utterance finalized right behind a
     // barge-in interim) must not race the new one.
     this.activeReplyAbort?.abort()
@@ -1784,8 +1804,9 @@ export class CallSession implements DurableObject {
         CallSession.holdReplyMaxMs) as unknown as number
       return
     }
-    // A native line's speculation answered the raw words, without the note.
-    if (spec && !native && CallSession.sameWords(spec.text, text)) {
+    // A native line's speculation answered the raw words, without the note;
+    // so did one written before a waiting app note joined the turn.
+    if (spec && !native && !notesJoined && CallSession.sameWords(spec.text, text)) {
       // The model has been writing since the interim settled — adopt it.
       // Only NOW does anything reach the voice: a speculation for words the
       // learner didn't finish saying dies unvoiced above.
@@ -2054,6 +2075,21 @@ export class CallSession implements DurableObject {
     // (device log 2026-11-02, tutor mode: a topic line, then "lesson ready"
     // 3.7 s in, with ~4 s of the first still queued on the phone). Wait for
     // the play-out clock; the reply's own writing time is then the pause.
+    // The learner is talking (2026-11-20, tutor mode: "wait, one thing"
+    // started over a learner already answering the tutor's last question).
+    // A note never starts a line over them: it waits, and if their line
+    // commits first it rides on that turn (`commitTurn`).
+    if (this.learnerMidLine()) {
+      if (this.nudgeHeldSince === 0) this.nudgeHeldSince = Date.now()
+      if (this.nudgeTimer === null) {
+        this.nudgeTimer = setTimeout(() => {
+          this.nudgeTimer = null
+          this.flushNudge()
+        }, CallSession.nudgeSpeechRecheckMs) as unknown as number
+      }
+      return
+    }
+    this.nudgeHeldSince = 0
     const wait = this.playoutEndAt + CallSession.nudgeAfterPlayoutMs - Date.now()
     if (wait > 0) {
       if (this.nudgeTimer === null) {
@@ -2074,6 +2110,20 @@ export class CallSession implements DurableObject {
     if (this.heldReplyTimer !== null) { clearTimeout(this.heldReplyTimer); this.heldReplyTimer = null }
     this.turnCount += 1
     this.generateReply(`t${this.turnCount}`)
+  }
+
+  /** Is the learner in the middle of a line: words held for the next turn
+   *  (a hold, or Send mode's words before Send), a Send being finished, or
+   *  an utterance still open. An open interim alone counts only while it is
+   *  fresh, not our own line coming back, and for at most
+   *  `nudgeSpeechWaitMaxMs` of one wait. */
+  private learnerMidLine(): boolean {
+    if (this.pendingUtterance !== null || this.sendRequested) return true
+    const now = Date.now()
+    const open = this.lastInterimAt > this.lastFinalAt && now - this.lastInterimAt < 3000
+      && this.lastInterimText.trim().length > 0 && !this.isLikelyEcho(this.lastInterimText)
+    if (!open) return false
+    return this.nudgeHeldSince === 0 || now - this.nudgeHeldSince < CallSession.nudgeSpeechWaitMaxMs
   }
 
   /** `audio_end` used to ride on the provider's own "done" alone, and on
