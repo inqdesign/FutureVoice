@@ -1,5 +1,10 @@
 Novedades
 • Invita a un amigo: si tienes una suscripción, invita a alguien y, cuando se suscriba, los dos pagan la mitad el mes siguiente. Empieza desde Ajustes.
+• Ahora cada carácter de una frase en chino lleva su pinyin encima.
 
 Mejoras
 • Si pides actuar una escena de una película o una serie, la escena se escribe dentro de esa historia.
+• En Ajustes ves con qué cuenta has iniciado sesión y su correo.
+
+Aviso
+• El entrenador de pronunciación llega primero en inglés. Los demás idiomas se abrirán cuando su evaluación sea lo bastante precisa.

@@ -1,5 +1,10 @@
 Nouveautés
 • Invite un ami : avec un abonnement, invite quelqu’un, et dès qu’il s’abonne, vous payez tous les deux le mois suivant à moitié prix. Ça se passe dans les Réglages.
+• Chaque caractère d’une phrase en chinois a maintenant son pinyin au-dessus.
 
 Améliorations
 • Demande à jouer une scène d’un film ou d’une série, et elle est écrite au cœur de cette histoire.
+• Les Réglages indiquent avec quel compte tu es connecté, et son adresse e-mail.
+
+À savoir
+• Le coach de prononciation arrive d’abord en anglais. Les autres langues suivront dès que leur évaluation sera assez précise.
