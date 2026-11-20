@@ -1096,6 +1096,44 @@ enum PronunciationJudge {
 /// What the app tells the voice after each take (`RealtimeTalkClient.nudge`).
 /// English instructions; the model speaks the target language.
 enum PronunciationNotes {
+    /// A bare Korean letter (ㅓ, ㄲ) is read out wrongly or not at all by the
+    /// voice (founder, 2026-11-20: "ㅓ와 ㅗ 소리" came out as noise). Every
+    /// note and the system prompt of a Korean pronunciation call name a vowel
+    /// by its syllable (어) and a consonant by its letter name (쌍기역), which
+    /// is how a Korean teacher says them out loud. The card keeps the letters.
+    static func spokenLetters(_ text: String) -> String {
+        var out = ""
+        for ch in text {
+            if let v = vowelSyllable[ch] { out.append(v) }
+            else if let c = consonantName[ch] { out += c }
+            else { out.append(ch) }
+        }
+        return out
+    }
+
+    /// Only for a Korean call: other languages never carry these letters.
+    static func forVoice(_ text: String, target: String) -> String {
+        target.hasPrefix("ko") ? spokenLetters(text) : text
+    }
+
+    private static let vowelSyllable: [Character: Character] = {
+        // Compatibility jamo ㅏ (U+314F) … ㅣ (U+3163), in order, each
+        // written with the silent ㅇ: 아 애 야 … 이.
+        var m: [Character: Character] = [:]
+        for i in 0..<21 {
+            let jamo = Character(UnicodeScalar(0x314F + i)!)
+            m[jamo] = Character(UnicodeScalar(0xC544 + i * 28)!)
+        }
+        return m
+    }()
+
+    private static let consonantName: [Character: String] = [
+        "ㄱ": "기역", "ㄲ": "쌍기역", "ㄴ": "니은", "ㄷ": "디귿", "ㄸ": "쌍디귿",
+        "ㄹ": "리을", "ㅁ": "미음", "ㅂ": "비읍", "ㅃ": "쌍비읍", "ㅅ": "시옷",
+        "ㅆ": "쌍시옷", "ㅇ": "이응", "ㅈ": "지읒", "ㅉ": "쌍지읒", "ㅊ": "치읓",
+        "ㅋ": "키읔", "ㅌ": "티읕", "ㅍ": "피읖", "ㅎ": "히읗",
+    ]
+
     static func systemPrompt(target: String, level: CEFRLevel,
                              round: PronunciationRound?, planning: Bool) -> String {
         let lang = LanguageCatalog.englishName(target)

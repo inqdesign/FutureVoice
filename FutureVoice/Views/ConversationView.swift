@@ -3531,6 +3531,7 @@ struct ConversationView: View {
             tutorWaitNoteAt = Date()
             tutorWaitKind = pronThisCall ? "pron" : waitKind
         }
+        let note = pronThisCall ? PronunciationNotes.forVoice(note, target: appState.targetLanguage) : note
         if RealtimeMode.isEnabled, !phoneCallActive {
             pendingTutorNudge = note
         } else {
@@ -7107,9 +7108,11 @@ struct ConversationView: View {
         // clock rather than none.
         if promptClock == nil { pinPromptClock() }
         if pronThisCall {
-            return PronunciationNotes.systemPrompt(target: appState.targetLanguage,
-                                                   level: appState.proficiency,
-                                                   round: pronRound, planning: pronPlanning)
+            return PronunciationNotes.forVoice(
+                PronunciationNotes.systemPrompt(target: appState.targetLanguage,
+                                                level: appState.proficiency,
+                                                round: pronRound, planning: pronPlanning),
+                target: appState.targetLanguage)
         }
         let composedTopic = topicBlurb.isEmpty ? topic : "\(topic). \(topicBlurb)"
         return ConversationEngine.conversationSystemPrompt(
