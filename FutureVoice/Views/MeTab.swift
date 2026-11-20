@@ -271,6 +271,12 @@ struct MeTab: View {
                 contactSection
 
                 Section {
+                    // Which account this is (2026-11-20, founder: nothing in
+                    // the app said what email the learner signed up with).
+                    if let user = auth.session?.user, !user.isAnonymous {
+                        signedInRow(provider: user.appMetadata["provider"]?.stringValue ?? "",
+                                    email: user.email ?? "")
+                    }
                     Button(role: .destructive) {
                         confirmingSignOut = true
                     } label: {
@@ -621,6 +627,32 @@ struct MeTab: View {
     /// cancels web billing, and destroys the auth user; only after that
     /// succeeds do we erase the device. On failure nothing local is touched —
     /// the user keeps a working account and sees the error.
+    /// "Signed in with Apple" over the address. An Apple relay address is
+    /// what Apple gave us when the learner chose to hide their email, so it
+    /// is named as such rather than shown as if it were theirs.
+    @ViewBuilder
+    private func signedInRow(provider: String, email: String) -> some View {
+        let title: String = switch provider {
+        case "apple":  explain("Signed in with Apple")
+        case "google": explain("Signed in with Google")
+        default:       explain("Signed in with email")
+        }
+        let hidden = email.hasSuffix("@privaterelay.appleid.com")
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+            if hidden {
+                Text(explain("Email hidden by Apple"))
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
+            if !email.isEmpty {
+                Text(email)
+                    .font(.footnote).foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
     private func deleteAccount() {
         guard !deletingAccount else { return }
         deletingAccount = true
