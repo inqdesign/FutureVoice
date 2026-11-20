@@ -1745,7 +1745,13 @@ struct ConversationView: View {
                             // their partial has text.
                             if showsTranscript,
                                !turns.isEmpty || !realtime.partial.isEmpty {
-                                PartialTurnView(text: realtime.partial)
+                                // The pronunciation call draws no dictation
+                                // (founder, 2026-11-20): the recognizer writes
+                                // the word it guesses was meant, so a wrong
+                                // sound showed up spelled right and read as
+                                // "it heard me fine". The bubble stays, empty,
+                                // as the "your turn" signal.
+                                PartialTurnView(text: pronThisCall ? "" : realtime.partial)
                                     .id("partial-listening")
                                     .transition(Self.placeholderTransition)
                             }
