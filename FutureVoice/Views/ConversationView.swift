@@ -798,6 +798,11 @@ struct ConversationView: View {
     /// A challenge was ticked since the prompt was last sent — the block
     /// tells the tutor to move on.
     @State private var tutorJustTicked = false
+    /// What the app's check of a self-judged try found that the tutor missed,
+    /// held for the learner's NEXT turn because they had already started it
+    /// (`tutorReconcile`). Rides in the TUTOR MODE block until that turn's
+    /// reply has been said.
+    @State private var tutorPendingTakeBack: String?
     /// What the correction found on the learner's last try, for the block.
     @State private var tutorLastFixes: [String] = []
     /// The learner's last try on the current challenge — the line kept on
@@ -6365,7 +6370,26 @@ struct ConversationView: View {
             ? "as an answer in the real situation it is weak: \(verdict.weak_note ?? "generic")"
             : !slips.isEmpty ? "slips: \(slips.joined(separator: "; "))"
             : "it doesn't do challenge \(i + 1) yet (\"\(challenge.task)\")\(verdict.missing_note.map { ": \($0)" } ?? "")"
+        // The check lands a second or more after the tutor's line, which
+        // asked them something: by then they are often answering it, and a
+        // note now starts "Wait, one thing" over their sentence (reported
+        // 2026-11-20). Then it rides on their next turn's reply instead.
+        if learnerStartedNextTurn(after: turnId) {
+            tutorPendingTakeBack = what
+            sendTutorSystem()
+            Telemetry.log("tutor_takeback", ["when": "next_turn"])
+            return
+        }
+        Telemetry.log("tutor_takeback", ["when": "now"])
         tutorNudge("You moved on, but the app's check of their last try found what you missed: \(what). In at most 15 words take it back (\"Wait, one thing: …\"), name only that, and ask them to say that line once more. The lesson stays on challenge \(i + 1).", waitKind: "self_takeback")
+    }
+
+    /// The learner is already on their next line: words on the mic (or held
+    /// for Send), or a later turn of theirs on file.
+    private func learnerStartedNextTurn(after turnId: UUID) -> Bool {
+        if !realtime.partial.isEmpty || realtime.sendPending { return true }
+        guard let idx = turns.firstIndex(where: { $0.id == turnId }) else { return false }
+        return turns[(idx + 1)...].contains { $0.role == .user }
     }
 
     /// The tutor's line that answered `turnId`, once it has finished.
@@ -6493,6 +6517,7 @@ struct ConversationView: View {
             tutorMissedThisChallenge = false
             tutorCleanOnce = false
             tutorRepeatAsked = false
+            tutorPendingTakeBack = nil
             Telemetry.log("tutor_lesson_started", ["challenges": String(lesson.challenges.count),
                                                    "picked": picked ? "1" : "0"])
             sendTutorSystem()
@@ -6537,6 +6562,16 @@ struct ConversationView: View {
         // The tutor already answered this try itself (not held); the app
         // checks behind it and never speaks first (`tutorReconcile`).
         let selfJudged = tutorSelfJudges
+        // A take-back held for this turn went out in the prompt its reply is
+        // being written from; once that reply has been said, it's spent.
+        if selfJudged, let held = tutorPendingTakeBack {
+            Task { @MainActor in
+                _ = await tutorReply(after: turnId)
+                guard tutorPendingTakeBack == held else { return }
+                tutorPendingTakeBack = nil
+                sendTutorSystem()
+            }
+        }
         if selfJudged, tutorWaitTurnAt != nil {
             tutorWaitNoteAt = Date()
             tutorWaitKind = "self"
@@ -7148,6 +7183,7 @@ struct ConversationView: View {
             tutorPlanning: tutorPlanning,
             tutorSelfJudges: tutorSelfJudges,
             tutorRealGoal: tutorLesson.flatMap(realGoalLine(for:)),
+            tutorTakeBack: tutorPendingTakeBack,
             freeMode: isFreeMode,
             // Like the clock, the index joins after the hello: a list of
             // earlier talks beside "say hello" is a hello about one of them.

@@ -168,6 +168,7 @@ enum ConversationEngine {
         tutorPlanning: Bool = false,
         tutorSelfJudges: Bool = false,
         tutorRealGoal: String? = nil,
+        tutorTakeBack: String? = nil,
         freeMode: Bool = false,
         pastTalks: [String] = [],
         recalledTalks: [String] = []
@@ -557,7 +558,7 @@ enum ConversationEngine {
           or truncate; (2) re-read it against PITCH TO THEIR LEVEL
           (\(levelName)) — a word or clause above that line that isn't the one
           deliberate stretch gets the plainer version. Check (2) is the one
-          that carries their level; (1) is only about not monologuing.\(beginnerQuestions(level, targetLanguage: targetLanguage))\(tutor ? tutorBlock(targetLanguage: targetLanguage, languageName: languageName, lesson: tutorLesson, justTicked: tutorJustTicked, lastFixes: tutorLastFixes, planning: tutorPlanning, selfJudges: tutorSelfJudges, realGoal: tutorRealGoal) : "")
+          that carries their level; (1) is only about not monologuing.\(beginnerQuestions(level, targetLanguage: targetLanguage))\(tutor ? tutorBlock(targetLanguage: targetLanguage, languageName: languageName, lesson: tutorLesson, justTicked: tutorJustTicked, lastFixes: tutorLastFixes, planning: tutorPlanning, selfJudges: tutorSelfJudges, realGoal: tutorRealGoal, takeBack: tutorSelfJudges ? tutorTakeBack : nil) : "")
         """
     }
 
@@ -582,7 +583,19 @@ enum ConversationEngine {
     static func tutorBlock(targetLanguage: String, languageName: String,
                            lesson: TutorLesson? = nil, justTicked: Bool = false,
                            lastFixes: [String] = [], planning: Bool = false,
-                           selfJudges: Bool = false, realGoal: String? = nil) -> String {
+                           selfJudges: Bool = false, realGoal: String? = nil,
+                           takeBack: String? = nil) -> String {
+        // The app's check found what the tutor missed on a try, but they had
+        // already started their next line, so a note then would have talked
+        // over them (2026-11-20). It rides on their next turn instead.
+        let takeBackLine = takeBack.map { """
+
+            ON THEIR TRY BEFORE THIS ONE the app found what you missed: \($0). \
+            In your next line, before anything else, take it back in a few \
+            words ("One thing from before: …"), name only that, and ask them \
+            to say that line once more. The lesson stays on challenge \
+            \((lesson?.current ?? 0) + 1).
+            """ } ?? ""
         let lessonPart: String
         if planning, let lesson {
             // The next round (or a picked topic) is being written. Left on
@@ -691,7 +704,7 @@ enum ConversationEngine {
             DID below); when you're not sure it's a slip, it isn't. The app \
             checks every try a moment after you answer and keeps the \
             checklist: when it found something you didn't, a note in square \
-            brackets tells you — take it back in a few words in your next line.
+            brackets tells you — take it back in a few words in your next line.\(takeBackLine)
             """
         } else if let lesson, let now = lesson.current {
             let rows = lesson.challenges.enumerated().map { i, c in
