@@ -57,7 +57,7 @@ struct DayCardData: Codable, Equatable {
     }
 
     /// Anything on it at all — an empty day has no card.
-    var hasActivity: Bool { talkMinutes > 0 || talks > 0 || studyMinutes > 0 }
+    var hasActivity: Bool { talkMinutes > 0 || talks > 0 || studyMinutes > 0 || !lines.isEmpty }
 
     /// The day as it should be shown: the FROZEN record when one exists, else
     /// read live from the logs. Frozen wins because the logs are pruned at

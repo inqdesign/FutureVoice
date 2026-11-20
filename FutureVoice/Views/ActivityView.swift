@@ -663,7 +663,15 @@ struct ActivityView: View {
                            }.count)
         let study = studyMinutesByDay[day] ?? 0
         let talkSeconds = talkSecondsByDay[day] ?? 0
+        // Everything the card itself lists counts: say it again, speech,
+        // listening, reading, scenes and words included, not only the five
+        // numbers beside it.
+        let start = cal.startOfDay(for: day)
+        let end = cal.date(byAdding: .day, value: 1, to: start) ?? start
+        let otherReps = ActivityEventLog.shared.events(from: start, to: end).count
+            + (log?.sceneReps ?? 0) + (log?.wordReps ?? 0) + (log?.expressionReps ?? 0)
         let isEmpty = talkSeconds == 0 && talks == 0 && shadowed == 0 && reviewed == 0 && study == 0
+            && otherReps == 0
         if !isEmpty {
             HStack(alignment: .top, spacing: 16) {
                 cardPreviewRow(day)
@@ -857,6 +865,9 @@ struct ActivityView: View {
         var days = Set(byDay.keys)
         days.formUnion(cardStore.recordedDays().map { cal.startOfDay(for: $0) })
         days.formUnion(studied)
+        // Today always: a day with only foreground time, a speech take or an
+        // episode heard is in none of the sets above, and its card was hidden.
+        days.insert(cal.startOfDay(for: Date()))
 
         var seconds: [Date: Int] = [:]
         var study: [Date: Int] = [:]
