@@ -44,7 +44,7 @@ const TEST_DEMO = { prompt: "Feeling like you have too much to deal with.", opts
 
 /* ═══════════════════════════ <nw-routine> — my routine, and the weekly test ═══════════════════════════ */
 class NwRoutine extends NwScreen {
-  static poses = ["day", "day-plan", "day-kept", "test", "test-right"];
+  static poses = ["day", "day-plan", "day-one", "day-kept", "test", "test-right"];
   constructor() {
     super(`
       :host{background:#F2F2F7}
@@ -210,6 +210,9 @@ class NwRoutine extends NwScreen {
       [0, 1, 2].forEach(i => this._mark(i, "missed")); this._mark(3, "today", 0); this._mark(4, "ahead", 0, false);
       this._streak(l.keepFirst, false);
     }
+    // 1.3.5: the streak is kept the moment ONE block is started — first block done, the rest still planned,
+    // today's circle SOLID GREEN (PlannerDayView.mark: a kept today returns .kept), flame on
+    if (name === "day-one") { this._fill(0, 1); this._mark(3, "kept"); this._streak(l.kept(4), true); }
     if (name === "day-kept") { for (let i = 0; i < 5; i++) this._fill(i, 1); this._mark(3, "kept"); this._streak(l.kept(4), true); }
     if (name === "test" || name === "test-right") { this._show(true); this._test(name === "test" ? TEST_CAP : TEST_DEMO); }
     if (name === "test-right") this._answer(TEST_DEMO);

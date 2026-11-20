@@ -2,6 +2,34 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8" />
+<script>
+/* The page follows the browser's language (founder, 2026-11-12): a browser that lists Korean gets
+   /creators, everyone else /en/creators. A pick in the footer (?lang=ko|en) is remembered and wins.
+   Old ?pay= links are left alone: they carry an application and go straight on to /pay. */
+(function () {
+  try {
+    var here = location.pathname.indexOf("/en/") === 0 ? "en" : "ko";
+    var q = new URLSearchParams(location.search), key = "nawana.creators-lang";
+    var asked = q.get("lang");
+    if (asked === "ko" || asked === "en") {
+      localStorage.setItem(key, asked);
+      q.delete("lang");
+      var rest = q.toString();
+      history.replaceState(null, "", location.pathname + (rest ? "?" + rest : "") + location.hash);
+    }
+    if (q.get("pay")) return;
+    var want = localStorage.getItem(key);
+    if (want !== "ko" && want !== "en") {
+      var langs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ""];
+      want = langs.some(function (l) { return String(l).toLowerCase().indexOf("ko") === 0; }) ? "ko" : "en";
+    }
+    if (want !== here) {
+      var rest2 = q.toString();
+      location.replace((want === "en" ? "/en/creators" : "/creators") + (rest2 ? "?" + rest2 : "") + location.hash);
+    }
+  } catch (e) {}
+})();
+</script>
 <!-- No viewport-fit=cover: with it, Chrome on iPhone draws the page under its own collapsed address bar, which is taller
      than the safe area it reports, and the header's labels end up hidden behind it. -->
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -12,6 +40,8 @@
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://nawana.app/creators" />
 <link rel="canonical" href="https://nawana.app/creators" />
+<link rel="alternate" hreflang="ko" href="https://nawana.app/creators" />
+<link rel="alternate" hreflang="en" href="https://nawana.app/en/creators" />
 <meta name="theme-color" content="#F7F8FA" />
 <!-- The hands "Creator" is written in: fetched at once, so the word is ready by the time the opening lifts. -->
 <link rel="preload" href="/creators/fonts/caveat.woff2" as="font" type="font/woff2" crossorigin />
@@ -201,6 +231,8 @@ header.top.top .btn{font-size:14.5px;font-weight:800;transition:translate .15s e
 header.top.top .btn:hover{transform:none;translate:0 2px}
 header.top.top .top-gen{position:absolute;top:0;translate:-50% 0}
 header.top.top .top-gen b{height:20px;background:none;border:1.5px solid currentColor;color:inherit}
+header.top.top .tab-lang{font-size:13.5px;font-weight:700;text-decoration:none}
+@media (max-width:560px){header.top.top.titled .tab-lang{display:none}} /* a phone's titled bar has no room for it; it is there at the top of the page */
 @media (max-width:560px){
   header.top.top{padding-inline:16px}
   header.top.top .tab,header.top.top .btn,header.top.top .top-gen{height:42px;padding:8px 12px 0}
@@ -856,6 +888,7 @@ html.intro-go #story-copy > :nth-child(5){animation-delay:.58s}
   <span class="tab tab-id"><a class="mark" href="/creators.html" aria-label="nawana creators"><svg viewBox="130 180 770 660" fill="currentColor" aria-hidden="true"><path d="M287 240Q498 228 704 236Q699 290 703 341Q497 346 289 336Q295 288 287 240Z"/><path d="M190 334Q242 341 293 336Q284 512 290 688Q239 680 184 687Q195 510 190 334Z"/><path d="M293 682Q497 692 700 687Q706 737 698 788Q495 779 288 786Q286 734 293 682Z"/><rect x="469" y="444" width="78" height="124" rx="39"/><rect x="629" y="440" width="78" height="124" rx="39"/><path d="M747 688Q796 682 845 687Q839 737 842 787Q793 781 743 784Q751 736 747 688Z"/></svg></a><span class="crumb">creators</span></span>
   <span class="top-gen" aria-hidden="true"><b>1기</b>우리의 가장 뜨거울 100일</span>
   <span class="sp"></span>
+  <a class="tab tab-lang" href="/en/creators?lang=en" hreflang="en" lang="en" data-track="lang_en">EN</a>
   <a class="btn" href="#apply" data-track="top">지원하기</a>
 </header>
 
@@ -925,7 +958,7 @@ html.intro-go #story-copy > :nth-child(5){animation-delay:.58s}
   <section id="deal" class="recruit">
     <h2>나와나 크리에이터 1기 모집</h2>
     <p class="big">100일 동안 미친듯이 공부하고,<br>그 증거를 올려주세요.<br><mark>나와나는 무료로 드릴게요.</mark></p>
-    <p class="app-line">나와나는 내 목소리로 이미 유창하게 말하는 ‘미래의 나’와 통화하며 언어를 배우는 앱이에요. 영어, 독일어, 일본어, 스페인어, 한국어.</p>
+    <p class="app-line">나와나는 내 목소리로 이미 유창하게 말하는 ‘미래의 나’와 통화하며 언어를 배우는 앱이에요. 영어, 독일어, 일본어, 스페인어, 프랑스어, 중국어, 한국어.</p>
     <dl class="terms">
       <div><dt>드려요</dt><dd><b>100일 동안 나와나 무료</b><span>받은 코드를 앱에 넣으면 바로 써요.</span></dd></div>
       <div><dt>약속</dt><dd><b>정한 날마다 공부한 증거를 올려요</b><span>매일이 제일 좋고, 어려우면 나만의 일정도 괜찮아요. 대신 정한 만큼은 꼭 지켜요.</span></dd></div>
@@ -1019,6 +1052,7 @@ html.intro-go #story-copy > :nth-child(5){animation-delay:.58s}
             <details><summary>꼭 스레드나 인스타여야 하나요?</summary><p>어디든 좋아요. 유튜브, 틱톡, 블로그도 괜찮아요. 꾸준히 올릴 수 있는 곳이면 돼요.</p></details>
             <details><summary>하루 빠지면 끝인가요?</summary><p>아니에요. 사정이 생기면 미리 말씀해주세요. 일정을 같이 다시 잡아요. 말없이 오래 멈추면 무료 이용도 멈춰요.</p></details>
             <details><summary>이미 구독 중이면요?</summary><p>지원서에 적어주시거나 DM으로 알려주세요. 방법을 같이 찾아볼게요.</p></details>
+            <details><summary>무료로 받았다고 밝혀야 하나요?</summary><p>네. 게시물마다 "앱은 나와나로부터 제공받았습니다" 같은 한 줄을 적어주세요.</p></details>
           </div>
           <div class="ftab" data-tab="challenger" hidden>
             <details><summary>하루는 어떻게 채워요?</summary><p>통화 4분 이상과 스피치 1개예요. 둘 다 채우면 그날이 자동으로 체크인돼요. 따로 올리거나 보낼 건 없어요.</p></details>
@@ -1027,7 +1061,7 @@ html.intro-go #story-copy > :nth-child(5){animation-delay:.58s}
             <details><summary>무료는 어떻게 받나요?</summary><p>100일이 끝난 다음 날부터, 지킨 달 수만큼 이어서 무료로 써요. 세 달을 모두 지키면 그 뒤 3개월, 한 달만 지키면 1개월이에요. 낸 돈을 돌려드리는 건 아니에요.</p></details>
             <details><summary>요금제는 뭐예요?</summary><p>Light, Plus, Max 중에서 결제할 때 골라요. 기본은 Light예요. 세 달 치를 한 번에 결제하고, 마지막 10일은 나와나가 드려요. 사는 나라의 통화로 결제해요. Light 기준으로 한국 ₩40,500, 일본 ¥4,050, 유로를 쓰는 나라 €26.97, 미국 $26.97이고, 다른 나라는 지원서에서 나라를 고르면 보여요. 자동으로 다시 결제되지 않아요.</p></details>
             <details><summary>Light로 충분한가요?</summary><p>가볍게 Light로 시작해요. 한 달에 통화 150분, 하루 5분꼴이라 하루 기준인 통화 4분을 매일 채울 수 있어요. 복습, 섀도잉, 스피치 연습은 요금제와 상관없이 마음껏 할 수 있어요. 통화를 더 하고 싶으면 결제할 때 Plus(한 달 450분)나 Max(한 달 600분)를 골라도 되고, Light로 하다가 모자라면 그때 올려도 돼요.</p></details>
-            <details><summary>결제를 취소할 수 있나요?</summary><p>시작하기 전에는 전액 환불해 드려요. 시작한 뒤에도 결제한 날부터 14일 안에는 취소할 수 있어요. 메일로 알려주세요. 자세한 내용은 <a href="/terms-ko.html" target="_blank" rel="noopener">이용약관</a>에 있어요.</p></details>
+            <details><summary>결제를 취소할 수 있나요?</summary><p>시작하기 전에는 전액 환불해 드려요. 시작한 뒤에도 결제한 날부터 14일 안에는 취소할 수 있어요. 메일로 알려주세요. 자세한 내용은 <a href="/terms-ko.html#challenge" target="_blank" rel="noopener">이용약관</a>에 있어요.</p></details>
             <details><summary>SNS에 올려야 하나요?</summary><p>아니요. 챌린저는 공부만 하면 돼요.</p></details>
           </div>
         </div>
@@ -1064,6 +1098,7 @@ html.intro-go #story-copy > :nth-child(5){animation-delay:.58s}
           <li><b>인원:</b> 1기는 20명까지 함께해요.</li>
           <li><b>시작 예정일:</b> 12월 1일 (신청자 수에 따라 변동 가능)</li>
           <li><b>일정:</b> 챌린저와 같은 날 시작해서, 100일 뒤 같은 날 끝나요.</li>
+          <li><b>표시:</b> 게시물마다 "앱은 나와나로부터 제공받았습니다" 같은 한 줄을 적어요.</li>
         </ul>
       </div>
       <div class="kind-note" data-for="challenger" hidden>
@@ -1125,6 +1160,8 @@ html.intro-go #story-copy > :nth-child(5){animation-delay:.58s}
           <label><input type="radio" name="language" value="de"><span>독일어</span></label>
           <label><input type="radio" name="language" value="ja"><span>일본어</span></label>
           <label><input type="radio" name="language" value="es"><span>스페인어</span></label>
+          <label><input type="radio" name="language" value="fr"><span>프랑스어</span></label>
+          <label><input type="radio" name="language" value="zh"><span>중국어</span></label>
           <label><input type="radio" name="language" value="ko"><span>한국어</span></label>
         </div>
         <p class="err">하나 골라주세요.</p>
@@ -1308,7 +1345,7 @@ html.intro-go #story-copy > :nth-child(5){animation-delay:.58s}
 </section>
 
 <footer>
-  <a href="/">nawana</a><a href="/community.html">커뮤니티</a><a href="/privacy-ko.html">개인정보 처리방침</a>
+  <a href="/">nawana</a><a href="/community.html">커뮤니티</a><a href="/privacy-ko.html">개인정보 처리방침</a><a href="/en/creators?lang=en" hreflang="en" lang="en">English</a>
 </footer>
 
 <script type="module" src="/kit/nawana-ui.js"></script>
@@ -2430,8 +2467,9 @@ snd.addEventListener("click", () => {
 
 /* ---------- the form ---------- */
 const form = document.getElementById("form"), done = document.getElementById("done");
-// Cohort 1 takes applications through 19 November, Seoul time. creator-apply refuses after it too.
-const APPLY_UNTIL = Date.parse("2026-11-20T00:00:00+09:00");
+// Cohort 1 takes applications through 19 November where the applicant is (founder, 2026-11-12:
+// not strict, local time). creator-apply accepts until 19 November has ended everywhere.
+const APPLY_UNTIL = new Date(2026, 10, 20).getTime();
 function closeIfOver() {
   if (Date.now() < APPLY_UNTIL) return false;
   form.hidden = true; document.getElementById("deadline").hidden = true;

@@ -22,10 +22,11 @@ import { NwWeekReport } from "./screens/weekreport.js";
 import { NwDiscover } from "./screens/discover.js";
 import { NwFindPeople } from "./screens/findpeople.js";
 import { NwVoice } from "./screens/voice.js";
+import { NwTutorBot } from "./screens/tutorbot.js";
 
 for (const [name, cls] of [["nw-futureself", NwFutureself], ["nw-phone", NwPhone], ["nw-bubble", NwBubble], ["nw-fix", NwFix],
-  ["nw-call", NwCall], ["nw-home", NwHome], ["nw-speech", NwSpeech], ["nw-book", NwBook], ["nw-words", NwWords], ["nw-progress", NwProgress], ["nw-ring", NwRing], ["nw-sayagain", NwSayAgain], ["nw-watch", NwWatch], ["nw-shadow", NwShadow], ["nw-routine", NwRoutine], ["nw-people", NwPeople], ["nw-review", NwReview], ["nw-bookpage", NwBookPage], ["nw-weeklytest", NwWeeklyTest], ["nw-weekreport", NwWeekReport], ["nw-discover", NwDiscover], ["nw-findpeople", NwFindPeople], ["nw-voice", NwVoice]])
+  ["nw-call", NwCall], ["nw-home", NwHome], ["nw-speech", NwSpeech], ["nw-book", NwBook], ["nw-words", NwWords], ["nw-progress", NwProgress], ["nw-ring", NwRing], ["nw-sayagain", NwSayAgain], ["nw-watch", NwWatch], ["nw-shadow", NwShadow], ["nw-routine", NwRoutine], ["nw-people", NwPeople], ["nw-review", NwReview], ["nw-bookpage", NwBookPage], ["nw-weeklytest", NwWeeklyTest], ["nw-weekreport", NwWeekReport], ["nw-discover", NwDiscover], ["nw-findpeople", NwFindPeople], ["nw-voice", NwVoice], ["nw-tutorbot", NwTutorBot]])
   if (!customElements.get(name)) customElements.define(name, cls);
 
 export * from "./core.js";
-export { NwCall, NwHome, NwSpeech, NwBook, NwWords, NwProgress, NwRing, NwSayAgain, NwWatch, NwShadow, NwRoutine, NwPeople, NwReview, NwBookPage, NwWeeklyTest, NwWeekReport, NwDiscover, NwFindPeople, NwVoice };
+export { NwCall, NwHome, NwSpeech, NwBook, NwWords, NwProgress, NwRing, NwSayAgain, NwWatch, NwShadow, NwRoutine, NwPeople, NwReview, NwBookPage, NwWeeklyTest, NwWeekReport, NwDiscover, NwFindPeople, NwVoice, NwTutorBot };

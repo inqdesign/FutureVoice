@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>nawana：和流利的自己一起学语言</title>
-<meta name="description" content="最个人化的语言学习方式。每天和流利的未来的自己通话，再用你亲口说过的话做成的教材来学习。iOS 应用。" />
+<meta name="description" content="最个人化的语言学习方式。每天和流利的未来的自己通话，再用你亲口说过的话做成的教材来学习。iPhone 和 Android 应用。" />
 <meta property="og:title" content="nawana：和流利的自己一起学语言" />
 <meta property="og:description" content="录音 60 秒，就有了流利的未来的你的声音。每天和它通话，再用专属于你的教材学习。" />
 <meta property="og:type" content="website" />
@@ -194,6 +194,24 @@ nav.sec .logo { color: #F5F2EB; }
 .navlinks .btn-store svg { width: 18px; height: 18px; }
 .navlinks .btn-store .tx b { font-size: 14px; }
 .navlinks .btn-store .tx small { display: none; }
+/* Google Play: Google's own badge artwork, unmodified, at the App Store button's height */
+.btn-play { display: inline-flex; line-height: 0; transition: transform 0.15s ease; }
+.btn-play:hover { transform: scale(1.03); }
+.btn-play img { height: 57px; width: auto; display: block; }
+.navlinks .nav-play img { height: 18px; width: auto; display: block; }
+.fd-ctas { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+html.is-android .n-ctas .btn-play, html.is-android .fd-ctas .btn-play { order: -1; }
+@media (max-width: 860px) {
+  html:not(.is-android) .navlinks [data-playstore] { display: none; }
+  html.is-android .navlinks [data-appstore] { display: none; }
+}
+@media (max-width: 430px) {
+  .n-ctas .btn-store, .fd-ctas .btn-store { padding: 8px 14px 9px 12px; gap: 8px; border-radius: 11px; }
+  .n-ctas .btn-store svg, .fd-ctas .btn-store svg { width: 22px; height: 22px; }
+  .n-ctas .btn-store .tx small, .fd-ctas .btn-store .tx small { font-size: 10.5px; }
+  .n-ctas .btn-store .tx b, .fd-ctas .btn-store .tx b { font-size: 16.5px; }
+  .btn-play img { height: 48px; }
+}
 
 /* ── the device: a real iPhone drawn in CSS, showing REAL app screens.
    Screens carry their own light iOS variables so they read identically
@@ -1077,6 +1095,7 @@ html[lang="zh-Hans"] { --sans: "PingFang SC", "Noto Sans SC", "Microsoft YaHei",
   try{var _q=new URLSearchParams(location.search);if(_q.get('ph')==='off'){localStorage.setItem('ph_optout','1');}if(_q.get('ph')==='on'){localStorage.removeItem('ph_optout');}if(localStorage.getItem('ph_optout')==='1'){_opt=true;}}catch(e){}
   if(!_opt){ posthog.init('phc_QFR0wEkAigOahZAlzW9wsYzAUGQEyuurF7PueVdsDoA', {api_host:'https://eu.i.posthog.com', person_profiles:'identified_only', defaults:'2025-05-24'}); posthog.register({app:'nawana'}); }
 </script>
+<script>if (/Android/i.test(navigator.userAgent)) document.documentElement.classList.add("is-android")</script>
 </head>
 <body>
 
@@ -1108,6 +1127,7 @@ html[lang="zh-Hans"] { --sans: "PingFang SC", "Noto Sans SC", "Microsoft YaHei",
       <a href="#pricing" id="nav-pricing" hidden>价格</a>
       <!-- lang:pick --><details class="langpick"><summary aria-label="语言"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></svg><span>简体中文</span></summary><div class="lp-menu"><a href="/" hreflang="en" lang="en">English</a><a href="ko.html" hreflang="ko" lang="ko">한국어</a><a href="ja.html" hreflang="ja" lang="ja">日本語</a><a href="zh-hans.html" hreflang="zh-Hans" lang="zh-Hans" aria-current="page">简体中文</a><a href="zh-hant.html" hreflang="zh-Hant" lang="zh-Hant">繁體中文</a><a href="es.html" hreflang="es" lang="es">Español</a><a href="fr.html" hreflang="fr" lang="fr">Français</a><a href="de.html" hreflang="de" lang="de">Deutsch</a></div></details><!-- /lang:pick -->
       <a class="btn-store" href="#" data-appstore><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><use href="#applelogo"/></svg><span class="tx"><small>在 App Store</small><b>下载</b></span></a>
+      <a class="btn-store nav-play" href="#" data-playstore><img src="badges/play-mark.png" alt="" /><span class="tx"><b>Google Play</b></span></a>
       <button class="nav-burger" id="nav-burger" type="button" aria-label="菜单"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
     </div>
   </div>
@@ -1132,8 +1152,9 @@ html[lang="zh-Hans"] { --sans: "PingFang SC", "Noto Sans SC", "Microsoft YaHei",
       <p class="n-sub rv" style="--d:0.12s">想聊就聊，想聊什么就聊什么，<br />再用专属于你的教材学习。</p>
       <div class="n-ctas rv" style="--d:0.18s">
         <a class="btn-store" href="#" data-appstore><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><use href="#applelogo"/></svg><span class="tx"><small>在 App Store</small><b>下载</b></span></a>
+        <a class="btn-play" href="#" data-playstore><img src="badges/google-play-zh-hans.png" alt="去 Google Play 商店下载" /></a>
       </div>
-      <span class="n-note rv" style="--d:0.24s"><b>iOS 17 及以上</b> · 前 20 分钟免费</span>
+      <span class="n-note rv" style="--d:0.24s"><b>iOS 17 及以上 · Android 8 及以上</b> · 前 20 分钟免费</span>
     </div>
     <div class="s-pin">
       <div class="s-caps">
@@ -1506,7 +1527,7 @@ html[lang="zh-Hans"] { --sans: "PingFang SC", "Noto Sans SC", "Microsoft YaHei",
         <div><dt>个性化复习教材</dt><dd>无限制</dd></div>
         <div><dt>跟读 · 单词 · 重听 · 训练</dt><dd>无限制</dd></div>
       </dl>
-      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>在 App Store 开始 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>获取 App <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
       <button class="btn btn-black p-buy" data-tier="light" type="button" hidden>订阅 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
     </div>
     <div class="plan featured">
@@ -1520,7 +1541,7 @@ html[lang="zh-Hans"] { --sans: "PingFang SC", "Noto Sans SC", "Microsoft YaHei",
         <div><dt>个性化复习教材</dt><dd>无限制</dd></div>
         <div><dt>跟读 · 单词 · 重听 · 训练</dt><dd>无限制</dd></div>
       </dl>
-      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>在 App Store 开始 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>获取 App <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
       <button class="btn btn-black p-buy" data-tier="plus" type="button" hidden>订阅 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
     </div>
     <!-- Max is monthly only, like the app's ladder; under Annual its button
@@ -1536,7 +1557,7 @@ html[lang="zh-Hans"] { --sans: "PingFang SC", "Noto Sans SC", "Microsoft YaHei",
         <div><dt>个性化复习教材</dt><dd>无限制</dd></div>
         <div><dt>跟读 · 单词 · 重听 · 训练</dt><dd>无限制</dd></div>
       </dl>
-      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>在 App Store 开始 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>获取 App <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
       <button class="btn btn-black p-buy" data-tier="max" type="button" hidden>订阅 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
     </div>
   </div>
@@ -1554,9 +1575,9 @@ html[lang="zh-Hans"] { --sans: "PingFang SC", "Noto Sans SC", "Microsoft YaHei",
       <button class="btn sp-btn sp-g" type="button" data-ac-switch>换一种方式登录</button>
       <button class="sp-x" type="button" data-ac-close>关闭</button>
     </div></div>
-    <p class="p-fine">以上为美国 App Store 的价格。其他地区请以 App Store 显示的当地价格为准。</p>
+    <p class="p-fine">以上为美国 App Store 的价格。Google Play 和其他地区请以商店显示的价格为准。</p>
     <p class="p-fine" id="manage-sub" hidden>在网页上订阅的？可以在<a href="#" id="manage-link">管理订阅</a>中更改或取消。</p>
-    <p class="p-fine">通话时间只在对话进行时计算，停顿不计。每个新的情境练习会从这部分时间里用掉 5 分钟，重看免费。哪个月时间不够，可以在应用里加购分钟数；订阅可随时在 App Store 取消。</p>
+    <p class="p-fine">通话时间只在对话进行时计算，停顿不计。每个新的情境练习会从这部分时间里用掉 5 分钟，重看免费。哪个月时间不够，可以在应用里加购分钟数；订阅可随时在 App Store 或 Google Play 取消。</p>
   </div>
 </section>
 
@@ -1569,7 +1590,7 @@ html[lang="zh-Hans"] { --sans: "PingFang SC", "Noto Sans SC", "Microsoft YaHei",
   <div class="trust">
     <div class="tcell rv"><div class="ix">A</div><h4>只录一次</h4><p>设置时的 60 秒，就是全部。在你自己发起的对话之外，绝不录音。</p></div>
     <div class="tcell rv" style="--d:0.08s"><div class="ix">B</div><h4>克隆由你做主</h4><p>随时可以重录或删除。替换后，之前的克隆会被永久删除。</p></div>
-    <div class="tcell rv" style="--d:0.16s"><div class="ix">C</div><h4>练习记录留在你的设备上</h4><p>对话、训练和学习进度都保存在你的 iPhone 上。想在其他设备上接着用，会通过你自己的 iCloud 同步，绝不经过我们的服务器。</p></div>
+    <div class="tcell rv" style="--d:0.16s"><div class="ix">C</div><h4>练习记录留在你的设备上</h4><p>对话、训练和学习进度都保存在你的手机上。想在其他设备上接着用，会通过你自己的 iCloud 或 Google 云端硬盘同步，绝不经过我们的服务器。</p></div>
   </div>
 </section>
 
@@ -1602,7 +1623,7 @@ html[lang="zh-Hans"] { --sans: "PingFang SC", "Noto Sans SC", "Microsoft YaHei",
     </details>
     <details>
       <summary><span class="ix">06</span>我的声音和数据安全吗？</summary>
-      <p class="a"><span>在你自己发起的对话之外，绝不录音。克隆随时可以重做或删除。对话、训练和学习进度保存在你的 iPhone 上；打开同步后，也只会传到你自己的 iCloud，绝不经过我们的服务器。</span></p>
+      <p class="a"><span>在你自己发起的对话之外，绝不录音。克隆随时可以重做或删除。对话、训练和学习进度保存在你的手机上；打开同步后，也只会传到你自己的 iCloud 或 Google 云端硬盘，绝不经过我们的服务器。</span></p>
     </details>
     <details>
       <summary><span class="ix">07</span>可以学哪些语言？</summary>
@@ -1627,8 +1648,9 @@ html[lang="zh-Hans"] { --sans: "PingFang SC", "Noto Sans SC", "Microsoft YaHei",
       <div class="fd-hint">听听未来的你的声音</div>
       <div class="fd-cap" id="d-cap" aria-live="polite"></div>
     </div>
-    <div class="fd-ctas rv" style="--d:0.2s">
+    <div class="fd-ctas rv" id="get-app" style="--d:0.2s">
       <a class="btn-store" href="#" data-appstore><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><use href="#applelogo"/></svg><span class="tx"><small>在 App Store</small><b>下载</b></span></a>
+      <a class="btn-play" href="#" data-playstore><img src="badges/google-play-zh-hans.png" alt="去 Google Play 商店下载" /></a>
     </div>
   </div>
   <audio id="d-audio" src="beta-en.mp3" preload="none"></audio>
@@ -1645,6 +1667,7 @@ html[lang="zh-Hans"] { --sans: "PingFang SC", "Noto Sans SC", "Microsoft YaHei",
       <a href="support.html">帮助与支持</a>
       <a href="mailto:hello.dearroroapp@gmail.com">联系我们</a>
       <a href="#" data-appstore>App Store</a>
+      <a href="#" data-playstore>Google Play</a>
     </div>
   </div>
 </footer>
@@ -1654,10 +1677,22 @@ document.documentElement.classList.add("js");
 
 // ── App Store link — the ONE value to fill at launch ──
 var APP_STORE_URL = "https://apps.apple.com/app/id6792794655";
+var PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.roro.futurevoice";
 document.querySelectorAll("[data-appstore]").forEach(function (a) {
   a.href = APP_STORE_URL;
   if (APP_STORE_URL !== "#") { a.target = "_blank"; a.rel = "noopener"; }
 });
+document.querySelectorAll("[data-playstore]").forEach(function (a) {
+  a.href = PLAY_STORE_URL; a.target = "_blank"; a.rel = "noopener";
+});
+// A pricing button names no store: a phone goes to its own, a computer to the two badges.
+(function () {
+  var ua = navigator.userAgent;
+  document.querySelectorAll("[data-store-cta]").forEach(function (a) {
+    if (/Android/i.test(ua)) { a.href = PLAY_STORE_URL; }
+    else if (!/iPhone|iPad|iPod/i.test(ua)) { a.href = "#get-app"; a.removeAttribute("target"); a.removeAttribute("rel"); }
+  });
+})();
 
 var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -2368,7 +2403,7 @@ if (BILLING.enabled && BILLING.supabaseUrl && BILLING.supabaseAnonKey) {
     if (e.code === "already_subscribed")
       return "你已经在网页上订阅了。可以在下方的“管理订阅”中更改。"
     if (e.code === "store_subscription_active")
-      return "你的 App Store 订阅仍然有效。在这里再买一次会被重复扣费，请到 App Store 管理订阅。"
+      return "你在 App 内购买的订阅仍然有效。在这里再买一次会被重复扣费，请到 App Store 或 Google Play 管理订阅。"
     return "开始结账时出了点问题，请再试一次。"
   }
 

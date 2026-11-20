@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>nawana: Lerne die Sprache mit deinem fließenden Ich</title>
-<meta name="description" content="Die persönlichste Art, eine Sprache zu lernen. Sprich jeden Tag mit der fließenden Stimme deines zukünftigen Ichs und lerne danach aus einem Buch, das aus deinen eigenen Sätzen entsteht. App für iOS." />
+<meta name="description" content="Die persönlichste Art, eine Sprache zu lernen. Sprich jeden Tag mit der fließenden Stimme deines zukünftigen Ichs und lerne danach aus einem Buch, das aus deinen eigenen Sätzen entsteht. App für iPhone und Android." />
 <meta property="og:title" content="nawana: Lerne die Sprache mit deinem fließenden Ich" />
 <meta property="og:description" content="60 Sekunden Aufnahme, und die fließende Stimme deines zukünftigen Ichs ist da. Sprich jeden Tag mit ihr und lerne aus deinem eigenen Lernbuch." />
 <meta property="og:type" content="website" />
@@ -194,6 +194,24 @@ nav.sec .logo { color: #F5F2EB; }
 .navlinks .btn-store svg { width: 18px; height: 18px; }
 .navlinks .btn-store .tx b { font-size: 14px; }
 .navlinks .btn-store .tx small { display: none; }
+/* Google Play: Google's own badge artwork, unmodified, at the App Store button's height */
+.btn-play { display: inline-flex; line-height: 0; transition: transform 0.15s ease; }
+.btn-play:hover { transform: scale(1.03); }
+.btn-play img { height: 57px; width: auto; display: block; }
+.navlinks .nav-play img { height: 18px; width: auto; display: block; }
+.fd-ctas { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+html.is-android .n-ctas .btn-play, html.is-android .fd-ctas .btn-play { order: -1; }
+@media (max-width: 860px) {
+  html:not(.is-android) .navlinks [data-playstore] { display: none; }
+  html.is-android .navlinks [data-appstore] { display: none; }
+}
+@media (max-width: 430px) {
+  .n-ctas .btn-store, .fd-ctas .btn-store { padding: 8px 14px 9px 12px; gap: 8px; border-radius: 11px; }
+  .n-ctas .btn-store svg, .fd-ctas .btn-store svg { width: 22px; height: 22px; }
+  .n-ctas .btn-store .tx small, .fd-ctas .btn-store .tx small { font-size: 10.5px; }
+  .n-ctas .btn-store .tx b, .fd-ctas .btn-store .tx b { font-size: 16.5px; }
+  .btn-play img { height: 48px; }
+}
 
 /* ── the device: a real iPhone drawn in CSS, showing REAL app screens.
    Screens carry their own light iOS variables so they read identically
@@ -1075,6 +1093,7 @@ h1, h2, h3, .w2-lead, .m-line, .s-cap h3 { text-wrap: balance; }
   try{var _q=new URLSearchParams(location.search);if(_q.get('ph')==='off'){localStorage.setItem('ph_optout','1');}if(_q.get('ph')==='on'){localStorage.removeItem('ph_optout');}if(localStorage.getItem('ph_optout')==='1'){_opt=true;}}catch(e){}
   if(!_opt){ posthog.init('phc_QFR0wEkAigOahZAlzW9wsYzAUGQEyuurF7PueVdsDoA', {api_host:'https://eu.i.posthog.com', person_profiles:'identified_only', defaults:'2025-05-24'}); posthog.register({app:'nawana'}); }
 </script>
+<script>if (/Android/i.test(navigator.userAgent)) document.documentElement.classList.add("is-android")</script>
 </head>
 <body>
 
@@ -1106,6 +1125,7 @@ h1, h2, h3, .w2-lead, .m-line, .s-cap h3 { text-wrap: balance; }
       <a href="#pricing" id="nav-pricing" hidden>Preise</a>
       <!-- lang:pick --><details class="langpick"><summary aria-label="Sprache"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></svg><span>Deutsch</span></summary><div class="lp-menu"><a href="/" hreflang="en" lang="en">English</a><a href="ko.html" hreflang="ko" lang="ko">한국어</a><a href="ja.html" hreflang="ja" lang="ja">日本語</a><a href="zh-hans.html" hreflang="zh-Hans" lang="zh-Hans">简体中文</a><a href="zh-hant.html" hreflang="zh-Hant" lang="zh-Hant">繁體中文</a><a href="es.html" hreflang="es" lang="es">Español</a><a href="fr.html" hreflang="fr" lang="fr">Français</a><a href="de.html" hreflang="de" lang="de" aria-current="page">Deutsch</a></div></details><!-- /lang:pick -->
       <a class="btn-store" href="#" data-appstore><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><use href="#applelogo"/></svg><span class="tx"><small>Laden im</small><b>App Store</b></span></a>
+      <a class="btn-store nav-play" href="#" data-playstore><img src="badges/play-mark.png" alt="" /><span class="tx"><b>Google Play</b></span></a>
       <button class="nav-burger" id="nav-burger" type="button" aria-label="Menü"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
     </div>
   </div>
@@ -1130,8 +1150,9 @@ h1, h2, h3, .w2-lead, .m-line, .s-cap h3 { text-wrap: balance; }
       <p class="n-sub rv" style="--d:0.12s">Sprich, wann du willst, worüber du willst,<br />und lerne aus deinem eigenen Buch.</p>
       <div class="n-ctas rv" style="--d:0.18s">
         <a class="btn-store" href="#" data-appstore><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><use href="#applelogo"/></svg><span class="tx"><small>Laden im</small><b>App Store</b></span></a>
+        <a class="btn-play" href="#" data-playstore><img src="badges/google-play-de.png" alt="Jetzt bei Google Play" /></a>
       </div>
-      <span class="n-note rv" style="--d:0.24s"><b>Ab iOS 17</b> · Die ersten 20 Minuten gratis</span>
+      <span class="n-note rv" style="--d:0.24s"><b>Ab iOS 17 · Android 8</b> · Die ersten 20 Minuten gratis</span>
     </div>
     <div class="s-pin">
       <div class="s-caps">
@@ -1504,7 +1525,7 @@ h1, h2, h3, .w2-lead, .m-line, .s-cap h3 { text-wrap: balance; }
         <div><dt>Persönliches Lernbuch zum Wiederholen</dt><dd>Unbegrenzt</dd></div>
         <div><dt>Nachsprechen · Wörter · Wiedergabe · Drills</dt><dd>Unbegrenzt</dd></div>
       </dl>
-      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>Im App Store starten <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>App laden <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
       <button class="btn btn-black p-buy" data-tier="light" type="button" hidden>Abonnieren <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
     </div>
     <div class="plan featured">
@@ -1518,7 +1539,7 @@ h1, h2, h3, .w2-lead, .m-line, .s-cap h3 { text-wrap: balance; }
         <div><dt>Persönliches Lernbuch zum Wiederholen</dt><dd>Unbegrenzt</dd></div>
         <div><dt>Nachsprechen · Wörter · Wiedergabe · Drills</dt><dd>Unbegrenzt</dd></div>
       </dl>
-      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>Im App Store starten <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>App laden <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
       <button class="btn btn-black p-buy" data-tier="plus" type="button" hidden>Abonnieren <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
     </div>
     <!-- Max is monthly only, like the app's ladder; under Annual its button
@@ -1534,7 +1555,7 @@ h1, h2, h3, .w2-lead, .m-line, .s-cap h3 { text-wrap: balance; }
         <div><dt>Persönliches Lernbuch zum Wiederholen</dt><dd>Unbegrenzt</dd></div>
         <div><dt>Nachsprechen · Wörter · Wiedergabe · Drills</dt><dd>Unbegrenzt</dd></div>
       </dl>
-      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>Im App Store starten <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>App laden <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
       <button class="btn btn-black p-buy" data-tier="max" type="button" hidden>Abonnieren <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
     </div>
   </div>
@@ -1552,9 +1573,9 @@ h1, h2, h3, .w2-lead, .m-line, .s-cap h3 { text-wrap: balance; }
       <button class="btn sp-btn sp-g" type="button" data-ac-switch>Anders anmelden</button>
       <button class="sp-x" type="button" data-ac-close>Schließen</button>
     </div></div>
-    <p class="p-fine">Preise im App Store in Deutschland. In anderen Ländern zeigt der App Store den dortigen Preis.</p>
+    <p class="p-fine">Preise im App Store in Deutschland. Bei Google Play und in anderen Ländern zeigt der Store den dortigen Preis.</p>
     <p class="p-fine" id="manage-sub" hidden>Im Web abonniert? Ändern oder kündigen kannst du unter <a href="#" id="manage-link">Abo verwalten</a>.</p>
-    <p class="p-fine">Die Sprechzeit läuft nur, solange das Gespräch läuft. Pausen kosten nichts. Eine neue Szene unter Ansehen verbraucht 5 Minuten derselben Zeit, und eine Szene erneut ansehen ist gratis. Reicht es in einem Monat nicht, kannst du in der App Minuten dazukaufen. Kündigen kannst du jederzeit im App Store.</p>
+    <p class="p-fine">Die Sprechzeit läuft nur, solange das Gespräch läuft. Pausen kosten nichts. Eine neue Szene unter Ansehen verbraucht 5 Minuten derselben Zeit, und eine Szene erneut ansehen ist gratis. Reicht es in einem Monat nicht, kannst du in der App Minuten dazukaufen. Kündigen kannst du jederzeit im App Store oder bei Google Play.</p>
   </div>
 </section>
 
@@ -1567,7 +1588,7 @@ h1, h2, h3, .w2-lead, .m-line, .s-cap h3 { text-wrap: balance; }
   <div class="trust">
     <div class="tcell rv"><div class="ix">A</div><h4>Nur eine einzige Aufnahme</h4><p>60 Sekunden bei der Einrichtung, das ist alles. Außerhalb eines Gesprächs, das du gestartet hast, wird nie aufgenommen.</p></div>
     <div class="tcell rv" style="--d:0.08s"><div class="ix">B</div><h4>Du entscheidest über den Klon</h4><p>Jederzeit neu aufnehmen oder löschen. Ersetzt du ihn, wird der vorherige Klon endgültig gelöscht.</p></div>
-    <div class="tcell rv" style="--d:0.16s"><div class="ix">C</div><h4>Dein Training bleibt auf deinem Gerät</h4><p>Gespräche, Drills und Fortschritt liegen auf deinem iPhone. Willst du auf einem anderen Gerät weitermachen, synchronisieren sie über deine eigene iCloud, nie über unsere Server.</p></div>
+    <div class="tcell rv" style="--d:0.16s"><div class="ix">C</div><h4>Dein Training bleibt auf deinem Gerät</h4><p>Gespräche, Drills und Fortschritt liegen auf deinem Handy. Willst du auf einem anderen Gerät weitermachen, synchronisieren sie über deine eigene iCloud oder dein Google Drive, nie über unsere Server.</p></div>
   </div>
 </section>
 
@@ -1600,7 +1621,7 @@ h1, h2, h3, .w2-lead, .m-line, .s-cap h3 { text-wrap: balance; }
     </details>
     <details>
       <summary><span class="ix">06</span>Sind meine Stimme und meine Daten sicher?</summary>
-      <p class="a"><span>Außerhalb eines Gesprächs, das du gestartet hast, wird nie aufgenommen. Den Klon kannst du jederzeit neu erstellen oder löschen. Gespräche, Drills und Fortschritt bleiben auf deinem iPhone, und wenn du die Synchronisierung einschaltest, gehen sie nur in deine eigene iCloud, nie auf unsere Server.</span></p>
+      <p class="a"><span>Außerhalb eines Gesprächs, das du gestartet hast, wird nie aufgenommen. Den Klon kannst du jederzeit neu erstellen oder löschen. Gespräche, Drills und Fortschritt bleiben auf deinem Handy, und wenn du die Synchronisierung einschaltest, gehen sie nur in deine eigene iCloud oder dein Google Drive, nie auf unsere Server.</span></p>
     </details>
     <details>
       <summary><span class="ix">07</span>Welche Sprachen kann ich lernen?</summary>
@@ -1625,8 +1646,9 @@ h1, h2, h3, .w2-lead, .m-line, .s-cap h3 { text-wrap: balance; }
       <div class="fd-hint">Hör deine zukünftige Stimme</div>
       <div class="fd-cap" id="d-cap" aria-live="polite"></div>
     </div>
-    <div class="fd-ctas rv" style="--d:0.2s">
+    <div class="fd-ctas rv" id="get-app" style="--d:0.2s">
       <a class="btn-store" href="#" data-appstore><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><use href="#applelogo"/></svg><span class="tx"><small>Laden im</small><b>App Store</b></span></a>
+      <a class="btn-play" href="#" data-playstore><img src="badges/google-play-de.png" alt="Jetzt bei Google Play" /></a>
     </div>
   </div>
   <audio id="d-audio" src="beta-en.mp3" preload="none"></audio>
@@ -1643,6 +1665,7 @@ h1, h2, h3, .w2-lead, .m-line, .s-cap h3 { text-wrap: balance; }
       <a href="support.html">Hilfe</a>
       <a href="mailto:hello.dearroroapp@gmail.com">Kontakt</a>
       <a href="#" data-appstore>App Store</a>
+      <a href="#" data-playstore>Google Play</a>
     </div>
   </div>
 </footer>
@@ -1652,10 +1675,22 @@ document.documentElement.classList.add("js");
 
 // ── App Store link — the ONE value to fill at launch ──
 var APP_STORE_URL = "https://apps.apple.com/app/id6792794655";
+var PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.roro.futurevoice";
 document.querySelectorAll("[data-appstore]").forEach(function (a) {
   a.href = APP_STORE_URL;
   if (APP_STORE_URL !== "#") { a.target = "_blank"; a.rel = "noopener"; }
 });
+document.querySelectorAll("[data-playstore]").forEach(function (a) {
+  a.href = PLAY_STORE_URL; a.target = "_blank"; a.rel = "noopener";
+});
+// A pricing button names no store: a phone goes to its own, a computer to the two badges.
+(function () {
+  var ua = navigator.userAgent;
+  document.querySelectorAll("[data-store-cta]").forEach(function (a) {
+    if (/Android/i.test(ua)) { a.href = PLAY_STORE_URL; }
+    else if (!/iPhone|iPad|iPod/i.test(ua)) { a.href = "#get-app"; a.removeAttribute("target"); a.removeAttribute("rel"); }
+  });
+})();
 
 var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -2366,7 +2401,7 @@ if (BILLING.enabled && BILLING.supabaseUrl && BILLING.supabaseAnonKey) {
     if (e.code === "already_subscribed")
       return "Du hast schon ein Abo im Web. Ändern kannst du es unten unter „Abo verwalten“."
     if (e.code === "store_subscription_active")
-      return "Dein Abo im App Store ist noch aktiv. Ein Kauf hier würde dir doppelt berechnet, verwalte es also bitte im App Store."
+      return "Dein Abo aus der App ist noch aktiv. Ein Kauf hier würde dir doppelt berechnet, verwalte es also bitte im App Store oder bei Google Play."
     return "Beim Starten der Zahlung ist etwas schiefgelaufen. Bitte versuch es noch einmal."
   }
 

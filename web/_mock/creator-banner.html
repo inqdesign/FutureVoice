@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<title>creator banner</title>
+<!-- Local only: the hero of /creators as a still banner. Rendered to PNG with headless Chrome at ?w=1200&h=600. -->
+<style>
+@font-face{font-family:"Geist";font-weight:100 900;src:url(/creators/fonts/geist.woff2) format("woff2")}
+@font-face{font-family:"Caveat";font-weight:700;src:url(/creators/fonts/caveat.woff2) format("woff2")}
+@font-face{font-family:"Dancing Script";font-weight:700;src:url(/creators/fonts/dancing-script.woff2) format("woff2")}
+@font-face{font-family:"Pacifico";font-weight:400;src:url(/creators/fonts/pacifico.woff2) format("woff2")}
+@font-face{font-family:"Permanent Marker";font-weight:400;src:url(/creators/fonts/permanent-marker.woff2) format("woff2")}
+@font-face{font-family:"Rock Salt";font-weight:400;src:url(/creators/fonts/rock-salt.woff2) format("woff2")}
+@font-face{font-family:"Homemade Apple";font-weight:400;src:url(/creators/fonts/homemade-apple.woff2) format("woff2")}
+@font-face{font-family:"Kaushan Script";font-weight:400;src:url(/creators/fonts/kaushan-script.woff2) format("woff2")}
+@font-face{font-family:"Nanum Pen Script";font-weight:400;src:url(/creators/fonts/nanum-pen-script.woff2) format("woff2")}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#121110}
+.b{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;text-align:center;
+  background:linear-gradient(rgba(10,13,22,.62),rgba(10,13,22,.5) 45%,rgba(10,13,22,.66)),url(/creators/broll/broll.jpg) center/cover}
+.hot{font-family:"Nanum Pen Script",cursive;font-size:min(11.5vh,4.8vw);line-height:1.05;text-shadow:0 1px 18px rgba(0,0,0,.35)}
+h1{font-family:"Geist",-apple-system,"Helvetica Neue",Arial,sans-serif;font-weight:var(--w,500);letter-spacing:-.03em;font-size:min(16.5vh,6.6vw);line-height:1.12;margin-top:4.5vh;white-space:nowrap;text-shadow:0 1px 18px rgba(0,0,0,.35)}
+.flip{display:inline-block;white-space:nowrap;margin:0 .2em 0 .1em}
+.flip i{display:inline-block;font-style:normal;text-align:center;line-height:0;letter-spacing:0;font-synthesis:none}
+.flip b{font-weight:inherit;text-shadow:none}
+/* The hero's hand-cut badge, saying which cohort. */
+.gen{position:relative;z-index:0;margin-bottom:2.6vh;font-family:-apple-system,"Apple SD Gothic Neo",sans-serif;font-weight:700;font-size:min(5.6vh,2.4vw);line-height:1;padding:.5em 1em}
+.gen::after{content:"";position:absolute;inset:-2px -3px;z-index:-1;background:#0A5CF5;box-shadow:0 4px 18px rgba(10,92,245,.35);border-radius:58% 42% 50% 46%/62% 48% 58% 44%;rotate:-2deg}
+svg{position:fixed;inset:0;width:100%;height:100%;fill:none;stroke:#fff;stroke-linecap:round;stroke-linejoin:round}
+</style></head>
+<body>
+<div class="b">
+  <p class="gen"><span>1기</span></p>
+  <p class="hot">우리의 가장 뜨거울 100일</p>
+  <h1>nawana <span class="flip" id="w"></span> program</h1>
+</div>
+<svg id="f" preserveAspectRatio="none"><path/><path/></svg>
+<script>
+const wq = new URLSearchParams(location.search).get("w"); if (wq) document.documentElement.style.setProperty("--w", wq);
+// The same hands, inks and frame as the page's hero, held still.
+const HANDS = [["Caveat", 700, 1.24, 0], ["Dancing Script", 700, 1.2, .012], ["Pacifico", 400, 1, 0], ["Permanent Marker", 400, .9, 0], ["Rock Salt", 400, .68, .006], ["Homemade Apple", 400, .84, .018], ["Kaushan Script", 400, 1.06, .006]];
+const INKS = ["#12B76A", "#0A5CF5", "#00AFC2", "#FF8A00", "#FF3D8B", "#7A4DFF", "#E9AE00"];
+const CELLS = [["C", .66], ["r", .43], ["e", .47], ["a", .52], ["t", .41], ["o", .5], ["r", .47]];
+document.getElementById("w").innerHTML = CELLS.map(([l, w], i) => { const [f, wt, sc, ink] = HANDS[i]; return `<i style="width:${w}em"><b style="color:${INKS[i]};font-family:'${f}',cursive;font-weight:${wt};font-size:${sc}em;${ink ? `-webkit-text-stroke:${ink}em currentColor` : ""}">${l}</b></i>`; }).join("");
+const svg = document.getElementById("f"), [a, b] = svg.querySelectorAll("path");
+const rnd = (seed) => () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+function hand(W, H, r, wob, seed) {
+  const R = rnd(seed), pts = [];
+  const side = (ax, ay, bx, by) => { const n = Math.max(2, Math.round(Math.hypot(bx - ax, by - ay) / 90)); for (let i = 0; i < n; i++) pts.push([ax + (bx - ax) * i / n, ay + (by - ay) * i / n]); };
+  side(r, 0, W - r, 0); pts.push([W - r * .3, r * .3]); side(W, r, W, H - r); pts.push([W - r * .3, H - r * .3]);
+  side(W - r, H, r, H); pts.push([r * .3, H - r * .3]); side(0, H - r, 0, r); pts.push([r * .3, r * .3]);
+  const j = pts.map(([x, y]) => [x + (R() - .5) * wob * 2, y + (R() - .5) * wob * 2]);
+  j.push([j[0][0], j[0][1] + wob], [j[1][0], j[1][1] + wob * 1.5], [j[1][0] + 50, j[1][1] + wob]);
+  let d = `M${j[0][0].toFixed(1)} ${j[0][1].toFixed(1)}`;
+  for (let i = 1; i < j.length - 1; i++) d += `Q${j[i][0].toFixed(1)} ${j[i][1].toFixed(1)} ${((j[i][0] + j[i + 1][0]) / 2).toFixed(1)} ${((j[i][1] + j[i + 1][1]) / 2).toFixed(1)}`;
+  return d;
+}
+function frame() {
+  const W = innerWidth, H = innerHeight;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  a.style.strokeWidth = 26; b.style.strokeWidth = 19;
+  a.setAttribute("d", hand(W, H, 18, 3.6, 11)); b.setAttribute("d", hand(W, H, 18, 5, 80));
+}
+frame(); addEventListener("resize", frame);
+</script>
+</body></html>

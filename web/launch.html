@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>nawana — Now on the App Store</title>
-<meta name="description" content="nawana — learn a language from your fluent self. Now on the App Store." />
-<meta property="og:title" content="nawana — Now on the App Store" />
-<meta property="og:description" content="Learn a language from your fluent self. Now on the App Store." />
+<title>nawana — Now on iPhone and Android</title>
+<meta name="description" content="nawana — learn a language from your fluent self. Now on iPhone and Android." />
+<meta property="og:title" content="nawana — Now on iPhone and Android" />
+<meta property="og:description" content="Learn a language from your fluent self. Now on iPhone and Android." />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://nawana.app/" />
 <link rel="canonical" href="https://nawana.app/" />
@@ -82,6 +82,9 @@ body{
 .btn-store .tx small{ font-size:12px; font-weight:400; letter-spacing:.01em; }
 .btn-store .tx b{ font-size:19.5px; font-weight:600; letter-spacing:-.01em; }
 .store .qr{ display:none; }
+.btn-play{ display:inline-flex; line-height:0; transition:transform .15s ease; }
+.btn-play:hover{ transform:scale(1.03); }
+.btn-play img{ height:57px; width:auto; display:block; }
 /* hint under the play button — gone once the voice is playing (captions take its place) */
 .hint{ position:fixed; left:50%; top:calc(50% + 118px); transform:translateX(-50%); z-index:5;
   font-family:var(--mono); font-size:11.5px; letter-spacing:.18em; text-transform:uppercase; color:var(--dim);
@@ -121,7 +124,7 @@ body.playing .hint, body.played .hint{ opacity:0; }
 
   <div class="band">
     <div class="brand-block">
-      <div class="eyebrow"><span class="dot"></span><span class="etx">Now on the App Store</span></div>
+      <div class="eyebrow"><span class="dot"></span><span class="etx">Now on iPhone and Android</span></div>
       <div class="brand-word">nawana</div>
       <p class="tag">Learn a language from<br />your fluent self.</p>
       <p class="mini"><a href="/privacy.html" class="mprivacy">Privacy</a> · <a href="/terms.html" class="mterms">Terms</a> · <a href="/impressum.html" class="mimprint">Impressum</a> · <a href="mailto:hello.dearroroapp@gmail.com" class="mcontact">Contact</a></p>
@@ -131,6 +134,7 @@ body.playing .hint, body.played .hint{ opacity:0; }
         <svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 140.3 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
         <span class="tx"><small class="ssmall">Download on the</small><b class="sbig">App Store</b></span>
       </a>
+      <a class="btn-play" href="https://play.google.com/store/apps/details?id=com.roro.futurevoice" target="_blank" rel="noopener" id="playstorebtn"><img id="playbadge" src="badges/google-play-en.png" alt="Get it on Google Play" /></a>
     </div>
   </div>
 
@@ -360,10 +364,10 @@ var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   // ── language: audio + on-page copy. Default from the browser; user can switch. ──
   var AUDIO={ ko:'/beta.mp3', en:'/beta-en.mp3' };
   var I18N={
-    en:{ eyebrow:'Now on the App Store', tag:'Learn a language from<br>your fluent self.',
+    en:{ eyebrow:'Now on iPhone and Android', tag:'Learn a language from<br>your fluent self.',
       hint:'A voice note from the maker', ssmall:'Download on the', sbig:'App Store',
       privacy:'Privacy', terms:'Terms', imprint:'Impressum', contact:'Contact' },
-    ko:{ eyebrow:'App Store 출시', tag:'유창한 나에게<br>언어를 배우세요.',
+    ko:{ eyebrow:'아이폰·안드로이드 출시', tag:'유창한 나에게<br>언어를 배우세요.',
       hint:'만든 사람이 남긴 음성', ssmall:'App Store에서', sbig:'다운로드',
       privacy:'개인정보처리방침', terms:'이용약관', imprint:'Impressum', contact:'문의' }
   };
@@ -382,6 +386,7 @@ var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if((e=qs('.btn-store .sbig'))) e.textContent=t('sbig');
     if((e=qs('.mini .mprivacy'))){ e.textContent=t('privacy'); e.setAttribute('href', l==='ko'?'/privacy-ko.html':'/privacy.html'); }
     if((e=qs('.mini .mterms'))){ e.textContent=t('terms'); e.setAttribute('href', l==='ko'?'/terms-ko.html':'/terms.html'); }
+    if((e=qs('#playbadge'))){ e.src='badges/google-play-'+(l==='ko'?'ko':'en')+'.png'; e.alt=l==='ko'?'Google Play에서 다운로드':'Get it on Google Play'; }
     if((e=qs('.mini .mimprint'))) e.textContent=t('imprint');
     if((e=qs('.mini .mcontact'))) e.textContent=t('contact');
     Array.prototype.forEach.call(document.querySelectorAll('.lang .lopt'), function(b){ b.classList.toggle('on', b.getAttribute('data-lang')===l); });
@@ -393,6 +398,8 @@ var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   applyLang(lang);   // initial: copy + audio + toggle from the resolved language
   var sb=document.getElementById('storebtn');
   if(sb){ sb.addEventListener('click', function(){ try{ if(window.posthog) posthog.capture('appstore_click', {lang:lang, page:'launch'}); }catch(e){} }); }
+  var pb=document.getElementById('playstorebtn');
+  if(pb){ pb.addEventListener('click', function(){ try{ if(window.posthog) posthog.capture('playstore_click', {lang:lang, page:'launch'}); }catch(e){} }); }
 })();
 </script>
 <script>

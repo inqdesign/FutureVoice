@@ -4,8 +4,8 @@
   "text": "<title>nawana: 流暢になった自分と、言葉を学ぶ</title>"
  },
  {
-  "en": "<meta name=\"description\" content=\"The most personal way to learn a language. Talk with your fluent future voice every day, then study from a textbook made of what you actually said. iOS app.\" />",
-  "text": "<meta name=\"description\" content=\"いちばん自分に合った語学学習。流暢になった未来の自分の声と毎日話して、実際に話した内容でできた自分だけの教材で学べます。iOSアプリ。\" />"
+  "en": "<meta name=\"description\" content=\"The most personal way to learn a language. Talk with your fluent future voice every day, then study from a textbook made of what you actually said. For iPhone and Android.\" />",
+  "text": "<meta name=\"description\" content=\"いちばん自分に合った語学学習。流暢になった未来の自分の声と毎日話して、実際に話した内容でできた自分だけの教材で学べます。iPhone・Androidアプリ。\" />"
  },
  {
   "en": "<meta property=\"og:title\" content=\"nawana: Learn the language with the fluent you\" />",
@@ -48,8 +48,8 @@
   "text": "        <a class=\"btn-store\" href=\"#\" data-appstore><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg><span class=\"tx\"><small>App Storeから</small><b>ダウンロード</b></span></a>"
  },
  {
-  "en": "      <span class=\"n-note rv\" style=\"--d:0.24s\"><b>iOS 17+</b> · First 20 minutes free</span>",
-  "text": "      <span class=\"n-note rv\" style=\"--d:0.24s\"><b>iOS 17以降</b> · 最初の20分は無料</span>"
+  "en": "      <span class=\"n-note rv\" style=\"--d:0.24s\"><b>iOS 17+ · Android 8+</b> · First 20 minutes free</span>",
+  "text": "      <span class=\"n-note rv\" style=\"--d:0.24s\"><b>iOS 17以降 · Android 8以降</b> · 最初の20分は無料</span>"
  },
  {
   "en": "        <div class=\"s-cap\"><div class=\"ix\">01 / 05</div><h3>Make the <span class=\"px-k\">fluent future you</span>,<br />in your own voice</h3><p>Read aloud for a minute. You pick the accent and the pace.</p></div>",
@@ -476,8 +476,8 @@
   "text": "        <div><dt>シャドーイング・単語・会話の再生・ドリル</dt><dd>無制限</dd></div>"
  },
  {
-  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Start on the App Store <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
-  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>App Storeで始める <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
+  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Get the app <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
+  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>アプリを入手 <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
  },
  {
   "en": "      <button class=\"btn btn-black p-buy\" data-tier=\"light\" type=\"button\" hidden>Subscribe <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>",
@@ -508,8 +508,8 @@
   "text": "        <div><dt>シャドーイング・単語・会話の再生・ドリル</dt><dd>無制限</dd></div>"
  },
  {
-  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Start on the App Store <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
-  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>App Storeで始める <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
+  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Get the app <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
+  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>アプリを入手 <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
  },
  {
   "en": "      <button class=\"btn btn-black p-buy\" data-tier=\"plus\" type=\"button\" hidden>Subscribe <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>",
@@ -540,8 +540,8 @@
   "text": "        <div><dt>シャドーイング・単語・会話の再生・ドリル</dt><dd>無制限</dd></div>"
  },
  {
-  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Start on the App Store <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
-  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>App Storeで始める <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
+  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Get the app <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
+  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>アプリを入手 <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
  },
  {
   "en": "      <button class=\"btn btn-black p-buy\" data-tier=\"max\" type=\"button\" hidden>Subscribe <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>",
@@ -568,8 +568,8 @@
   "text": "    <p class=\"p-fine\" id=\"manage-sub\" hidden>Webで登録した場合は、<a href=\"#\" id=\"manage-link\">サブスクリプションの管理</a>から変更・解約できます。</p>"
  },
  {
-  "en": "    <p class=\"p-fine\">Talk time only runs while the conversation is moving. Pauses are free. A new Watch scene uses 5 minutes of that same time, and watching one again is free. In a month you run short, you can add minutes in the app, and you can cancel anytime on the App Store.</p>",
-  "text": "    <p class=\"p-fine\">通話時間が減るのは会話が続いているあいだだけで、話が止まっているあいだは数えません。新しいシーン練習は同じ通話時間から1回5分を使い、一度見たシーンをもう一度見るのは無料です。時間が足りない月はアプリで時間を追加でき、サブスクリプションはApp Storeでいつでも解約できます。</p>"
+  "en": "    <p class=\"p-fine\">Talk time only runs while the conversation is moving. Pauses are free. A new Watch scene uses 5 minutes of that same time, and watching one again is free. In a month you run short, you can add minutes in the app, and you can cancel anytime in the App Store or on Google Play.</p>",
+  "text": "    <p class=\"p-fine\">通話時間が減るのは会話が続いているあいだだけで、話が止まっているあいだは数えません。新しいシーン練習は同じ通話時間から1回5分を使い、一度見たシーンをもう一度見るのは無料です。時間が足りない月はアプリで時間を追加でき、サブスクリプションはApp StoreやGoogle Playでいつでも解約できます。</p>"
  },
  {
   "en": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Your voice stays yours</div>",
@@ -588,8 +588,8 @@
   "text": "    <div class=\"tcell rv\" style=\"--d:0.08s\"><div class=\"ix\">B</div><h4>クローンを決めるのは自分</h4><p>いつでも録音し直したり、削除したりできます。作り直すと、前のクローンは完全に削除されます。</p></div>"
  },
  {
-  "en": "    <div class=\"tcell rv\" style=\"--d:0.16s\"><div class=\"ix\">C</div><h4>Practice stays on your device</h4><p>Conversations, drills, and progress live on your iPhone. To pick up on another device, they sync through your own iCloud, never our servers.</p></div>",
-  "text": "    <div class=\"tcell rv\" style=\"--d:0.16s\"><div class=\"ix\">C</div><h4>練習の記録は自分の端末に</h4><p>会話・ドリル・学習の記録はiPhoneに保存されます。ほかの端末で続けたいときは、私たちのサーバーではなく、自分のiCloudで同期します。</p></div>"
+  "en": "    <div class=\"tcell rv\" style=\"--d:0.16s\"><div class=\"ix\">C</div><h4>Practice stays on your device</h4><p>Conversations, drills, and progress live on your phone. To pick up on another device, they sync through your own iCloud or Google Drive, never our servers.</p></div>",
+  "text": "    <div class=\"tcell rv\" style=\"--d:0.16s\"><div class=\"ix\">C</div><h4>練習の記録は自分の端末に</h4><p>会話・ドリル・学習の記録はスマートフォンに保存されます。ほかの端末で続けたいときは、私たちのサーバーではなく、自分のiCloudやGoogleドライブで同期します。</p></div>"
  },
  {
   "en": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Frequently asked</div>",
@@ -644,8 +644,8 @@
   "text": "      <summary><span class=\"ix\">06</span>自分の声とデータは安全ですか？</summary>"
  },
  {
-  "en": "      <p class=\"a\"><span>Nothing is ever recorded outside a conversation you started. You can rebuild or delete the clone anytime. Conversations, drills, and progress stay on your iPhone, and if you turn on sync they go only to your own iCloud, never our servers.</span></p>",
-  "text": "      <p class=\"a\"><span>自分で始めた会話の外で録音することはありません。クローンはいつでも作り直したり削除したりできます。会話・ドリル・学習の記録はiPhoneに保存され、同期をオンにしても送られるのは自分のiCloudだけで、私たちのサーバーには送られません。</span></p>"
+  "en": "      <p class=\"a\"><span>Nothing is ever recorded outside a conversation you started. You can rebuild or delete the clone anytime. Conversations, drills, and progress stay on your phone, and if you turn on sync they go only to your own iCloud or Google Drive, never our servers.</span></p>",
+  "text": "      <p class=\"a\"><span>自分で始めた会話の外で録音することはありません。クローンはいつでも作り直したり削除したりできます。会話・ドリル・学習の記録はスマートフォンに保存され、同期をオンにしても送られるのは自分のiCloudかGoogleドライブだけで、私たちのサーバーには送られません。</span></p>"
  },
  {
   "en": "      <summary><span class=\"ix\">07</span>Which languages can I learn?</summary>",
@@ -744,8 +744,8 @@
   "text": "      return \"すでにWebでサブスクリプションに登録しています。下の「サブスクリプションの管理」から変更できます。\""
  },
  {
-  "en": "      return \"Your App Store subscription is still active. Buying here too would charge you twice, so manage it in the App Store instead.\"",
-  "text": "      return \"App Storeのサブスクリプションがまだ有効です。ここでも購入すると二重に請求されるため、App Store側で管理してください。\""
+  "en": "      return \"Your subscription from the app is still active. Buying here too would charge you twice, so manage it in the App Store or on Google Play instead.\"",
+  "text": "      return \"アプリで購入したサブスクリプションがまだ有効です。ここでも購入すると二重に請求されるため、App StoreかGoogle Play側で管理してください。\""
  },
  {
   "en": "    return \"Something went wrong starting checkout. Please try again.\"",
@@ -762,6 +762,14 @@
  {
   "en": "  s.fix({ text: \"Maybe, if it <b>were safer</b>, I'd <b>give it a try</b>.\", note: \"It’s hypothetical, so it takes were and I’d\" });",
   "text": "  s.fix({ text: \"Maybe, if it <b>were safer</b>, I'd <b>give it a try</b>.\", note: \"仮定の話なので were と I’d を使います\" });"
+ },
+ {
+  "en": "        <a class=\"btn-play\" href=\"#\" data-playstore><img src=\"badges/google-play-en.png\" alt=\"Get it on Google Play\" /></a>",
+  "text": "        <a class=\"btn-play\" href=\"#\" data-playstore><img src=\"badges/google-play-ja.png\" alt=\"Google Play で手に入れよう\" /></a>"
+ },
+ {
+  "en": "      <a class=\"btn-play\" href=\"#\" data-playstore><img src=\"badges/google-play-en.png\" alt=\"Get it on Google Play\" /></a>",
+  "text": "      <a class=\"btn-play\" href=\"#\" data-playstore><img src=\"badges/google-play-ja.png\" alt=\"Google Play で手に入れよう\" /></a>"
  },
  {
   "en": "      <h3 id=\"ac-title\">This account hasn’t been used in the app</h3><p>You’re signed in with <b id=\"ac-who\"></b>. Your subscription goes to this account. If you sign in to the app another way, switch to that one. New to nawana? Go ahead, then sign in to the app the same way.</p>",

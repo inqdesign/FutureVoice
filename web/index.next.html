@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>nawana: Learn the language with the fluent you</title>
-<meta name="description" content="The most personal way to learn a language. Talk with your fluent future voice every day, then study from a textbook made of what you actually said. iOS app." />
+<meta name="description" content="The most personal way to learn a language. Talk with your fluent future voice every day, then study from a textbook made of what you actually said. For iPhone and Android." />
 <meta property="og:title" content="nawana: Learn the language with the fluent you" />
 <meta property="og:description" content="Sixty seconds of recording builds your fluent future voice. Talk with it every day, then study from your own textbook." />
 <meta property="og:type" content="website" />
@@ -194,6 +194,24 @@ nav.sec .logo { color: #F5F2EB; }
 .navlinks .btn-store svg { width: 18px; height: 18px; }
 .navlinks .btn-store .tx b { font-size: 14px; }
 .navlinks .btn-store .tx small { display: none; }
+/* Google Play: Google's own badge artwork, unmodified, at the App Store button's height */
+.btn-play { display: inline-flex; line-height: 0; transition: transform 0.15s ease; }
+.btn-play:hover { transform: scale(1.03); }
+.btn-play img { height: 57px; width: auto; display: block; }
+.navlinks .nav-play img { height: 18px; width: auto; display: block; }
+.fd-ctas { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+html.is-android .n-ctas .btn-play, html.is-android .fd-ctas .btn-play { order: -1; }
+@media (max-width: 860px) {
+  html:not(.is-android) .navlinks [data-playstore] { display: none; }
+  html.is-android .navlinks [data-appstore] { display: none; }
+}
+@media (max-width: 430px) {
+  .n-ctas .btn-store, .fd-ctas .btn-store { padding: 8px 14px 9px 12px; gap: 8px; border-radius: 11px; }
+  .n-ctas .btn-store svg, .fd-ctas .btn-store svg { width: 22px; height: 22px; }
+  .n-ctas .btn-store .tx small, .fd-ctas .btn-store .tx small { font-size: 10.5px; }
+  .n-ctas .btn-store .tx b, .fd-ctas .btn-store .tx b { font-size: 16.5px; }
+  .btn-play img { height: 48px; }
+}
 
 /* ── the device: a real iPhone drawn in CSS, showing REAL app screens.
    Screens carry their own light iOS variables so they read identically
@@ -1075,6 +1093,7 @@ h1, h2, h3, .w2-lead, .m-line, .s-cap h3 { text-wrap: balance; }
   try{var _q=new URLSearchParams(location.search);if(_q.get('ph')==='off'){localStorage.setItem('ph_optout','1');}if(_q.get('ph')==='on'){localStorage.removeItem('ph_optout');}if(localStorage.getItem('ph_optout')==='1'){_opt=true;}}catch(e){}
   if(!_opt){ posthog.init('phc_QFR0wEkAigOahZAlzW9wsYzAUGQEyuurF7PueVdsDoA', {api_host:'https://eu.i.posthog.com', person_profiles:'identified_only', defaults:'2025-05-24'}); posthog.register({app:'nawana'}); }
 </script>
+<script>if (/Android/i.test(navigator.userAgent)) document.documentElement.classList.add("is-android")</script>
 </head>
 <body>
 
@@ -1106,6 +1125,7 @@ h1, h2, h3, .w2-lead, .m-line, .s-cap h3 { text-wrap: balance; }
       <a href="#pricing" id="nav-pricing" hidden>Pricing</a>
       <!-- lang:pick --><details class="langpick"><summary aria-label="Language"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.2 3 14.8 0 18M12 3c-3 3.2-3 14.8 0 18"/></svg><span>English</span></summary><div class="lp-menu"><a href="/" hreflang="en" lang="en" aria-current="page">English</a><a href="ko.html" hreflang="ko" lang="ko">한국어</a><a href="ja.html" hreflang="ja" lang="ja">日本語</a><a href="zh-hans.html" hreflang="zh-Hans" lang="zh-Hans">简体中文</a><a href="zh-hant.html" hreflang="zh-Hant" lang="zh-Hant">繁體中文</a><a href="es.html" hreflang="es" lang="es">Español</a><a href="fr.html" hreflang="fr" lang="fr">Français</a><a href="de.html" hreflang="de" lang="de">Deutsch</a></div></details><!-- /lang:pick -->
       <a class="btn-store" href="#" data-appstore><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><use href="#applelogo"/></svg><span class="tx"><small>Download on the</small><b>App Store</b></span></a>
+      <a class="btn-store nav-play" href="#" data-playstore><img src="badges/play-mark.png" alt="" /><span class="tx"><b>Google Play</b></span></a>
       <button class="nav-burger" id="nav-burger" type="button" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
     </div>
   </div>
@@ -1130,8 +1150,9 @@ h1, h2, h3, .w2-lead, .m-line, .s-cap h3 { text-wrap: balance; }
       <p class="n-sub rv" style="--d:0.12s">Talk when you want, about what you want,<br />and study from your own textbook.</p>
       <div class="n-ctas rv" style="--d:0.18s">
         <a class="btn-store" href="#" data-appstore><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><use href="#applelogo"/></svg><span class="tx"><small>Download on the</small><b>App Store</b></span></a>
+        <a class="btn-play" href="#" data-playstore><img src="badges/google-play-en.png" alt="Get it on Google Play" /></a>
       </div>
-      <span class="n-note rv" style="--d:0.24s"><b>iOS 17+</b> · First 20 minutes free</span>
+      <span class="n-note rv" style="--d:0.24s"><b>iOS 17+ · Android 8+</b> · First 20 minutes free</span>
     </div>
     <div class="s-pin">
       <div class="s-caps">
@@ -1504,7 +1525,7 @@ h1, h2, h3, .w2-lead, .m-line, .s-cap h3 { text-wrap: balance; }
         <div><dt>Personalized review textbook</dt><dd>Unlimited</dd></div>
         <div><dt>Shadowing · words · replay · drills</dt><dd>Unlimited</dd></div>
       </dl>
-      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>Start on the App Store <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>Get the app <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
       <button class="btn btn-black p-buy" data-tier="light" type="button" hidden>Subscribe <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
     </div>
     <div class="plan featured">
@@ -1518,7 +1539,7 @@ h1, h2, h3, .w2-lead, .m-line, .s-cap h3 { text-wrap: balance; }
         <div><dt>Personalized review textbook</dt><dd>Unlimited</dd></div>
         <div><dt>Shadowing · words · replay · drills</dt><dd>Unlimited</dd></div>
       </dl>
-      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>Start on the App Store <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>Get the app <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
       <button class="btn btn-black p-buy" data-tier="plus" type="button" hidden>Subscribe <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
     </div>
     <!-- Max is monthly only, like the app's ladder; under Annual its button
@@ -1534,7 +1555,7 @@ h1, h2, h3, .w2-lead, .m-line, .s-cap h3 { text-wrap: balance; }
         <div><dt>Personalized review textbook</dt><dd>Unlimited</dd></div>
         <div><dt>Shadowing · words · replay · drills</dt><dd>Unlimited</dd></div>
       </dl>
-      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>Start on the App Store <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>Get the app <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
       <button class="btn btn-black p-buy" data-tier="max" type="button" hidden>Subscribe <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
     </div>
   </div>
@@ -1553,7 +1574,7 @@ h1, h2, h3, .w2-lead, .m-line, .s-cap h3 { text-wrap: balance; }
       <button class="sp-x" type="button" data-ac-close>Close</button>
     </div></div>
     <p class="p-fine" id="manage-sub" hidden>Subscribed on the web? Change or cancel it in <a href="#" id="manage-link">Manage your subscription</a>.</p>
-    <p class="p-fine">Talk time only runs while the conversation is moving. Pauses are free. A new Watch scene uses 5 minutes of that same time, and watching one again is free. In a month you run short, you can add minutes in the app, and you can cancel anytime on the App Store.</p>
+    <p class="p-fine">Talk time only runs while the conversation is moving. Pauses are free. A new Watch scene uses 5 minutes of that same time, and watching one again is free. In a month you run short, you can add minutes in the app, and you can cancel anytime in the App Store or on Google Play.</p>
   </div>
 </section>
 
@@ -1566,7 +1587,7 @@ h1, h2, h3, .w2-lead, .m-line, .s-cap h3 { text-wrap: balance; }
   <div class="trust">
     <div class="tcell rv"><div class="ix">A</div><h4>Recorded exactly once</h4><p>Sixty seconds at setup, and that is all. Nothing is ever recorded outside a conversation you started.</p></div>
     <div class="tcell rv" style="--d:0.08s"><div class="ix">B</div><h4>The clone answers to you</h4><p>Re-record or delete it anytime. Replacing it permanently deletes the previous clone.</p></div>
-    <div class="tcell rv" style="--d:0.16s"><div class="ix">C</div><h4>Practice stays on your device</h4><p>Conversations, drills, and progress live on your iPhone. To pick up on another device, they sync through your own iCloud, never our servers.</p></div>
+    <div class="tcell rv" style="--d:0.16s"><div class="ix">C</div><h4>Practice stays on your device</h4><p>Conversations, drills, and progress live on your phone. To pick up on another device, they sync through your own iCloud or Google Drive, never our servers.</p></div>
   </div>
 </section>
 
@@ -1599,7 +1620,7 @@ h1, h2, h3, .w2-lead, .m-line, .s-cap h3 { text-wrap: balance; }
     </details>
     <details>
       <summary><span class="ix">06</span>Is my voice and data safe?</summary>
-      <p class="a"><span>Nothing is ever recorded outside a conversation you started. You can rebuild or delete the clone anytime. Conversations, drills, and progress stay on your iPhone, and if you turn on sync they go only to your own iCloud, never our servers.</span></p>
+      <p class="a"><span>Nothing is ever recorded outside a conversation you started. You can rebuild or delete the clone anytime. Conversations, drills, and progress stay on your phone, and if you turn on sync they go only to your own iCloud or Google Drive, never our servers.</span></p>
     </details>
     <details>
       <summary><span class="ix">07</span>Which languages can I learn?</summary>
@@ -1624,8 +1645,9 @@ h1, h2, h3, .w2-lead, .m-line, .s-cap h3 { text-wrap: balance; }
       <div class="fd-hint">Hear your future voice</div>
       <div class="fd-cap" id="d-cap" aria-live="polite"></div>
     </div>
-    <div class="fd-ctas rv" style="--d:0.2s">
+    <div class="fd-ctas rv" id="get-app" style="--d:0.2s">
       <a class="btn-store" href="#" data-appstore><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><use href="#applelogo"/></svg><span class="tx"><small>Download on the</small><b>App Store</b></span></a>
+      <a class="btn-play" href="#" data-playstore><img src="badges/google-play-en.png" alt="Get it on Google Play" /></a>
     </div>
   </div>
   <audio id="d-audio" src="beta-en.mp3" preload="none"></audio>
@@ -1642,6 +1664,7 @@ h1, h2, h3, .w2-lead, .m-line, .s-cap h3 { text-wrap: balance; }
       <a href="support.html">Support</a>
       <a href="mailto:hello.dearroroapp@gmail.com">Contact</a>
       <a href="#" data-appstore>App Store</a>
+      <a href="#" data-playstore>Google Play</a>
     </div>
   </div>
 </footer>
@@ -1651,10 +1674,22 @@ document.documentElement.classList.add("js");
 
 // ── App Store link — the ONE value to fill at launch ──
 var APP_STORE_URL = "https://apps.apple.com/app/id6792794655";
+var PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.roro.futurevoice";
 document.querySelectorAll("[data-appstore]").forEach(function (a) {
   a.href = APP_STORE_URL;
   if (APP_STORE_URL !== "#") { a.target = "_blank"; a.rel = "noopener"; }
 });
+document.querySelectorAll("[data-playstore]").forEach(function (a) {
+  a.href = PLAY_STORE_URL; a.target = "_blank"; a.rel = "noopener";
+});
+// A pricing button names no store: a phone goes to its own, a computer to the two badges.
+(function () {
+  var ua = navigator.userAgent;
+  document.querySelectorAll("[data-store-cta]").forEach(function (a) {
+    if (/Android/i.test(ua)) { a.href = PLAY_STORE_URL; }
+    else if (!/iPhone|iPad|iPod/i.test(ua)) { a.href = "#get-app"; a.removeAttribute("target"); a.removeAttribute("rel"); }
+  });
+})();
 
 var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -2365,7 +2400,7 @@ if (BILLING.enabled && BILLING.supabaseUrl && BILLING.supabaseAnonKey) {
     if (e.code === "already_subscribed")
       return "You already have a subscription on the web. Change it under “Manage your subscription” below."
     if (e.code === "store_subscription_active")
-      return "Your App Store subscription is still active. Buying here too would charge you twice, so manage it in the App Store instead."
+      return "Your subscription from the app is still active. Buying here too would charge you twice, so manage it in the App Store or on Google Play instead."
     return "Something went wrong starting checkout. Please try again."
   }
 

@@ -270,9 +270,9 @@ footer a{color:var(--faint)}
   <div class="lang" role="group" aria-label="Language">
     <button data-lang="ko" aria-pressed="true">KO</button><button data-lang="en" aria-pressed="false">EN</button>
   </div>
-  <a class="store" href="https://apps.apple.com/app/id6792794655" target="_blank" rel="noopener">
-    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.37 12.6c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.47.83-.72 0-1.82-.81-3-.79-1.54.02-2.96.9-3.76 2.28-1.6 2.78-.41 6.89 1.15 9.14.76 1.1 1.67 2.34 2.86 2.3 1.15-.05 1.58-.74 2.97-.74 1.38 0 1.77.74 2.98.72 1.24-.02 2.02-1.12 2.77-2.23.87-1.28 1.23-2.52 1.25-2.58-.03-.01-2.4-.92-2.42-3.66zM14.1 5.86c.63-.77 1.06-1.83.94-2.89-.91.04-2.02.61-2.67 1.37-.58.67-1.1 1.76-.96 2.8 1.02.08 2.06-.52 2.69-1.28z"/></svg>
-    <span data-i="store">App Store에서 받기</span>
+  <a class="store" href="https://apps.apple.com/app/id6792794655" target="_blank" rel="noopener" data-getapp>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>
+    <span data-i="store">앱 받기</span>
   </a>
 </header>
 
@@ -327,7 +327,7 @@ footer a{color:var(--faint)}
   <div class="v-top"><span class="v-cat" id="vCat"></span><b id="vTitle"></b><span id="vCount"></span><button id="vClose" aria-label="닫기">✕</button></div>
   <div class="track" id="track"></div>
   <div class="v-nav"><button id="vPrev" aria-label="이전">←</button><div class="dots" id="dots"></div><button id="vNext" aria-label="다음">→</button></div>
-  <p class="v-cta"><span data-i="tryIt">직접 해보고 싶다면</span> · <a href="https://apps.apple.com/app/id6792794655" target="_blank" rel="noopener" data-i="store">App Store에서 받기</a></p>
+  <p class="v-cta"><span data-i="tryIt">직접 해보고 싶다면</span> · <a href="https://apps.apple.com/app/id6792794655" target="_blank" rel="noopener" data-getapp data-i="store">앱 받기</a></p>
 </div>
 
 <script type="module">
@@ -336,7 +336,7 @@ const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 
 const T = {
   ko: {
-    crumb:"커뮤니티", store:"App Store에서 받기", videos:"영상", title:"커뮤니티",
+    crumb:"커뮤니티", store:"앱 받기", videos:"영상", title:"커뮤니티",
     lede:"새 소식과 기능 소개를 보고, 만드는 사람과 바로 이야기하세요. 쓰기 불편한 점, 있었으면 하는 기능, 뭐든 좋아요.",
     news:"새 소식", loading:"불러오는 중…", noNews:"아직 소식이 없어요.", more:"더 보기", less:"접기", openLink:"자세히 보기",
     features:"기능 소개", featSub:"기능마다 실제 앱 화면으로 보여드려요. 카드를 누르면 크게 볼 수 있어요.", all:"전체", viewAll:"크게 보기", koOnly:"기능 소개 이미지는 지금은 한국어판만 있어요.",
@@ -353,7 +353,7 @@ const T = {
     cats:{latest:"최신", start:"시작하기", talk:"Talk", watch:"Watch", practice:"복습", progress:"진행"},
   },
   en: {
-    crumb:"Community", store:"Get it on the App Store", videos:"Videos", title:"Community",
+    crumb:"Community", store:"Get the app", videos:"Videos", title:"Community",
     lede:"Read the latest news, flip through feature guides, and talk to the people making nawana. Something awkward, a feature you wish existed, anything.",
     news:"Latest news", loading:"Loading…", noNews:"No news yet.", more:"Read more", less:"Show less", openLink:"Learn more",
     features:"Feature guides", featSub:"Each feature, shown on real app screens. Tap a card to see it large.", all:"All", viewAll:"View large", koOnly:"The feature guide images are in Korean for now.",
@@ -400,6 +400,10 @@ function applyLang(){
   document.querySelectorAll("[data-i]").forEach(el => { const v = t(el.dataset.i); if (typeof v === "string") el.textContent = v; });
   document.querySelectorAll(".lang button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
   document.querySelectorAll("[data-ko][data-en]").forEach(a => a.setAttribute("href", a.dataset[lang]));
+  const ua = navigator.userAgent;
+  // a phone goes to its own store, a computer to the page with both badges
+  const getApp = /Android/i.test(ua) ? "https://play.google.com/store/apps/details?id=com.roro.futurevoice" : /iPhone|iPad|iPod/i.test(ua) ? "https://apps.apple.com/app/id6792794655" : (lang === "ko" ? "/ko.html" : "/") + "#get-app";
+  document.querySelectorAll("[data-getapp]").forEach(a => a.setAttribute("href", getApp));
   $("#featNote").hidden = lang !== "en";
   ["vClose","chatClose"].forEach(id => $("#"+id).setAttribute("aria-label", t("close")));
   $("#vPrev").setAttribute("aria-label", t("prev")); $("#vNext").setAttribute("aria-label", t("next"));

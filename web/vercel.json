@@ -9,6 +9,26 @@
       "destination": "/community.html"
     },
     {
+      "source": "/creators",
+      "destination": "/creators.html"
+    },
+    {
+      "source": "/creators/",
+      "destination": "/creators.html"
+    },
+    {
+      "source": "/en/creators",
+      "destination": "/en/creators.html"
+    },
+    {
+      "source": "/en/creators/",
+      "destination": "/en/creators.html"
+    },
+    {
+      "source": "/pay",
+      "destination": "/creators-pay.html"
+    },
+    {
       "source": "/s/:survey",
       "destination": "/survey.html"
     },

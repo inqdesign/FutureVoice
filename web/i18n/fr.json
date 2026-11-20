@@ -4,8 +4,8 @@
   "text": "<title>nawana : apprends une langue avec ton moi fluide</title>"
  },
  {
-  "en": "<meta name=\"description\" content=\"The most personal way to learn a language. Talk with your fluent future voice every day, then study from a textbook made of what you actually said. iOS app.\" />",
-  "text": "<meta name=\"description\" content=\"La façon la plus personnelle d’apprendre une langue. Parle chaque jour avec la voix fluide de ton futur toi, puis révise avec un carnet fait de ce que tu as vraiment dit. App iOS.\" />"
+  "en": "<meta name=\"description\" content=\"The most personal way to learn a language. Talk with your fluent future voice every day, then study from a textbook made of what you actually said. For iPhone and Android.\" />",
+  "text": "<meta name=\"description\" content=\"La façon la plus personnelle d’apprendre une langue. Parle chaque jour avec la voix fluide de ton futur toi, puis révise avec un carnet fait de ce que tu as vraiment dit. App pour iPhone et Android.\" />"
  },
  {
   "en": "<meta property=\"og:title\" content=\"nawana: Learn the language with the fluent you\" />",
@@ -48,8 +48,8 @@
   "text": "        <a class=\"btn-store\" href=\"#\" data-appstore><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg><span class=\"tx\"><small>Télécharger dans l’</small><b>App Store</b></span></a>"
  },
  {
-  "en": "      <span class=\"n-note rv\" style=\"--d:0.24s\"><b>iOS 17+</b> · First 20 minutes free</span>",
-  "text": "      <span class=\"n-note rv\" style=\"--d:0.24s\"><b>iOS 17 et plus</b> · 20 premières minutes offertes</span>"
+  "en": "      <span class=\"n-note rv\" style=\"--d:0.24s\"><b>iOS 17+ · Android 8+</b> · First 20 minutes free</span>",
+  "text": "      <span class=\"n-note rv\" style=\"--d:0.24s\"><b>iOS 17 et plus · Android 8 et plus</b> · 20 premières minutes offertes</span>"
  },
  {
   "en": "        <div class=\"s-cap\"><div class=\"ix\">01 / 05</div><h3>Make the <span class=\"px-k\">fluent future you</span>,<br />in your own voice</h3><p>Read aloud for a minute. You pick the accent and the pace.</p></div>",
@@ -476,8 +476,8 @@
   "text": "        <div><dt>Shadowing · mots · réécoute · exercices</dt><dd>Illimité</dd></div>"
  },
  {
-  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Start on the App Store <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
-  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Commencer sur l’App Store <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
+  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Get the app <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
+  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Télécharger l’app <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
  },
  {
   "en": "      <button class=\"btn btn-black p-buy\" data-tier=\"light\" type=\"button\" hidden>Subscribe <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>",
@@ -508,8 +508,8 @@
   "text": "        <div><dt>Shadowing · mots · réécoute · exercices</dt><dd>Illimité</dd></div>"
  },
  {
-  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Start on the App Store <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
-  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Commencer sur l’App Store <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
+  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Get the app <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
+  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Télécharger l’app <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
  },
  {
   "en": "      <button class=\"btn btn-black p-buy\" data-tier=\"plus\" type=\"button\" hidden>Subscribe <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>",
@@ -540,8 +540,8 @@
   "text": "        <div><dt>Shadowing · mots · réécoute · exercices</dt><dd>Illimité</dd></div>"
  },
  {
-  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Start on the App Store <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
-  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Commencer sur l’App Store <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
+  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Get the app <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
+  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Télécharger l’app <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
  },
  {
   "en": "      <button class=\"btn btn-black p-buy\" data-tier=\"max\" type=\"button\" hidden>Subscribe <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>",
@@ -568,8 +568,8 @@
   "text": "    <p class=\"p-fine\" id=\"manage-sub\" hidden>Ton abonnement est sur le web ? Modifie-le ou résilie-le dans <a href=\"#\" id=\"manage-link\">Gérer ton abonnement</a>.</p>"
  },
  {
-  "en": "    <p class=\"p-fine\">Talk time only runs while the conversation is moving. Pauses are free. A new Watch scene uses 5 minutes of that same time, and watching one again is free. In a month you run short, you can add minutes in the app, and you can cancel anytime on the App Store.</p>",
-  "text": "    <p class=\"p-fine\">Le temps de conversation ne s’écoule que pendant l’échange. Les pauses sont gratuites. Une nouvelle scène utilise 5 minutes de ce même temps, et revoir une scène est gratuit. Si tu manques de temps un mois, tu peux ajouter des minutes dans l’app, et tu peux résilier à tout moment sur l’App Store.</p>"
+  "en": "    <p class=\"p-fine\">Talk time only runs while the conversation is moving. Pauses are free. A new Watch scene uses 5 minutes of that same time, and watching one again is free. In a month you run short, you can add minutes in the app, and you can cancel anytime in the App Store or on Google Play.</p>",
+  "text": "    <p class=\"p-fine\">Le temps de conversation ne s’écoule que pendant l’échange. Les pauses sont gratuites. Une nouvelle scène utilise 5 minutes de ce même temps, et revoir une scène est gratuit. Si tu manques de temps un mois, tu peux ajouter des minutes dans l’app, et tu peux résilier à tout moment sur l’App Store ou Google Play.</p>"
  },
  {
   "en": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Your voice stays yours</div>",
@@ -588,8 +588,8 @@
   "text": "    <div class=\"tcell rv\" style=\"--d:0.08s\"><div class=\"ix\">B</div><h4>C’est toi qui décides du clone</h4><p>Réenregistre-le ou supprime-le à tout moment. Le remplacer supprime définitivement le clone précédent.</p></div>"
  },
  {
-  "en": "    <div class=\"tcell rv\" style=\"--d:0.16s\"><div class=\"ix\">C</div><h4>Practice stays on your device</h4><p>Conversations, drills, and progress live on your iPhone. To pick up on another device, they sync through your own iCloud, never our servers.</p></div>",
-  "text": "    <div class=\"tcell rv\" style=\"--d:0.16s\"><div class=\"ix\">C</div><h4>Ta pratique reste sur ton appareil</h4><p>Conversations, exercices et progrès restent sur ton iPhone. Pour continuer sur un autre appareil, ils se synchronisent via ton propre iCloud, jamais via nos serveurs.</p></div>"
+  "en": "    <div class=\"tcell rv\" style=\"--d:0.16s\"><div class=\"ix\">C</div><h4>Practice stays on your device</h4><p>Conversations, drills, and progress live on your phone. To pick up on another device, they sync through your own iCloud or Google Drive, never our servers.</p></div>",
+  "text": "    <div class=\"tcell rv\" style=\"--d:0.16s\"><div class=\"ix\">C</div><h4>Ta pratique reste sur ton appareil</h4><p>Conversations, exercices et progrès restent sur ton téléphone. Pour continuer sur un autre appareil, ils se synchronisent via ton propre iCloud ou Google Drive, jamais via nos serveurs.</p></div>"
  },
  {
   "en": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Frequently asked</div>",
@@ -644,8 +644,8 @@
   "text": "      <summary><span class=\"ix\">06</span>Ma voix et mes données sont-elles en sécurité ?</summary>"
  },
  {
-  "en": "      <p class=\"a\"><span>Nothing is ever recorded outside a conversation you started. You can rebuild or delete the clone anytime. Conversations, drills, and progress stay on your iPhone, and if you turn on sync they go only to your own iCloud, never our servers.</span></p>",
-  "text": "      <p class=\"a\"><span>Rien n’est jamais enregistré en dehors d’une conversation que tu as lancée. Tu peux recréer ou supprimer le clone à tout moment. Conversations, exercices et progrès restent sur ton iPhone, et si tu actives la synchronisation, ils ne vont que dans ton propre iCloud, jamais sur nos serveurs.</span></p>"
+  "en": "      <p class=\"a\"><span>Nothing is ever recorded outside a conversation you started. You can rebuild or delete the clone anytime. Conversations, drills, and progress stay on your phone, and if you turn on sync they go only to your own iCloud or Google Drive, never our servers.</span></p>",
+  "text": "      <p class=\"a\"><span>Rien n’est jamais enregistré en dehors d’une conversation que tu as lancée. Tu peux recréer ou supprimer le clone à tout moment. Conversations, exercices et progrès restent sur ton téléphone, et si tu actives la synchronisation, ils ne vont que dans ton propre iCloud ou Google Drive, jamais sur nos serveurs.</span></p>"
  },
  {
   "en": "      <summary><span class=\"ix\">07</span>Which languages can I learn?</summary>",
@@ -744,8 +744,8 @@
   "text": "      return \"Tu as déjà un abonnement sur le web. Modifie-le dans « Gérer ton abonnement », plus bas.\""
  },
  {
-  "en": "      return \"Your App Store subscription is still active. Buying here too would charge you twice, so manage it in the App Store instead.\"",
-  "text": "      return \"Ton abonnement App Store est toujours actif. Payer ici aussi te facturerait deux fois, alors gère-le plutôt dans l’App Store.\""
+  "en": "      return \"Your subscription from the app is still active. Buying here too would charge you twice, so manage it in the App Store or on Google Play instead.\"",
+  "text": "      return \"Ton abonnement pris dans l’app est toujours actif. Payer ici aussi te facturerait deux fois, alors gère-le plutôt dans l’App Store ou sur Google Play.\""
  },
  {
   "en": "    return \"Something went wrong starting checkout. Please try again.\"",
@@ -786,6 +786,14 @@
  {
   "en": "    <a href=\"#review\">Review</a>",
   "text": "    <a href=\"#review\">Révision</a>"
+ },
+ {
+  "en": "        <a class=\"btn-play\" href=\"#\" data-playstore><img src=\"badges/google-play-en.png\" alt=\"Get it on Google Play\" /></a>",
+  "text": "        <a class=\"btn-play\" href=\"#\" data-playstore><img src=\"badges/google-play-fr.png\" alt=\"Disponible sur Google Play\" /></a>"
+ },
+ {
+  "en": "      <a class=\"btn-play\" href=\"#\" data-playstore><img src=\"badges/google-play-en.png\" alt=\"Get it on Google Play\" /></a>",
+  "text": "      <a class=\"btn-play\" href=\"#\" data-playstore><img src=\"badges/google-play-fr.png\" alt=\"Disponible sur Google Play\" /></a>"
  },
  {
   "en": "      <h3 id=\"ac-title\">This account hasn’t been used in the app</h3><p>You’re signed in with <b id=\"ac-who\"></b>. Your subscription goes to this account. If you sign in to the app another way, switch to that one. New to nawana? Go ahead, then sign in to the app the same way.</p>",

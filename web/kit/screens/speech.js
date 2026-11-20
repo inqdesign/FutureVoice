@@ -20,7 +20,13 @@ import { NwScreen, STR, esc, mmss } from "../core.js";
  * sample when there is no challenge), pencil.line + "N sec · My script"; open() taps that row, the
  * prompter reads its text (no camera note: only a challenge asks for the camera), the result is
  * titled with it and has no challenge entry; demo() then stays mic-only and ends on the result.
- * open("challenge") still opens the challenge. */
+ * open("challenge") still opens the challenge.
+ * take-page: the take as it looks since 2026-11-08 (SpeechResultView.page): the prompter with the
+ * camera on, then the camera full bleed behind the score, with the summary on a glass sheet.
+ * camera-photo="/path.jpg" stands in for the camera on the prompter and the take page; unset =
+ * the app's own stand-in gradient. Only a photo of someone who agreed to be shown publicly.
+ * camera-video="/path.mp4" (with take-page and camera-photo): a real take, exported with its script.
+ * The demo is then the take page itself: the score, Play, the take rolling, and back. */
 
 /* SF Symbols, traced at 24×24. */
 const SF = {
@@ -106,7 +112,7 @@ const SAMPLE = "Why practise out loud?";   // SpeechLibrary.builtInTitles.en —
 const ME = "Jiwoo";   // a sample learner — never a real person's name in public material
 
 class NwSpeech extends NwScreen {
-  static poses = ["list", "open", "camera", "prompter", "result", "challenge", "rank-up"];
+  static poses = ["list", "open", "camera", "prompter", "result", "challenge", "rank-up", "take"];
   constructor() {
     super(`
       :host{--blue:#0A5CF5;--sys:#0088FF;--red:#FF383C;--green:#34C759;--orange:#FF8D28;--sec:#8A8A8E;--sep:#C6C6C8}
@@ -233,6 +239,34 @@ class NwSpeech extends NwScreen {
       .rk .sc{font-weight:600;color:var(--green)}
       .sbtn{position:absolute;left:16px;right:16px;bottom:67px;height:44px;border-radius:22px;background:var(--blue);color:#fff;display:grid;place-items:center;font-size:17px;font-weight:600}
       .sdone{position:absolute;left:0;right:0;bottom:36px;font-size:17px;color:var(--blue)}
+
+      /* ── The take page (SpeechResultView.page + SpeechResultSheetPage); offsets from the capture ── */
+      .cam,.tbg{background-image:var(--photo,none),linear-gradient(rgb(191,191,191),rgb(140,107,89),rgb(51,51,51));background-size:cover;background-position:center 22%}
+      .l-take{background:#000}
+      .tbg{position:absolute;inset:0}
+      .tshade{position:absolute;inset:0;background:linear-gradient(transparent 45%,rgba(0,0,0,.7))}
+      .tsave{position:absolute;right:16px;top:62px;width:44px;height:44px;border-radius:50%;background:rgba(40,40,40,.45);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:#fff;display:grid;place-items:center;font-size:24px}
+      .thero{position:absolute;left:20px;right:20px;bottom:192px;display:flex;align-items:flex-end;gap:16px;color:#fff}
+      .tl{flex:1;min-width:0;text-shadow:0 2px 8px rgba(0,0,0,.35)}
+      .tn{font-size:96px;line-height:100px;font-weight:700;font-variant-numeric:tabular-nums}
+      .tv{font-size:22px;line-height:28px;font-weight:600;margin-top:6px}
+      .tlv{font-size:20px;line-height:25px;font-weight:600;margin-top:6px}
+      .tplay{flex:none;width:64px;height:64px;border-radius:50%;background:rgba(40,40,40,.45);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:inset 0 0 0 .75px rgba(255,255,255,.28);display:grid;place-items:center;font-size:30px}
+      .tsheet{position:absolute;left:8.5px;right:8.5px;bottom:9px;height:162px;border-radius:40px 40px 54px 54px;background:rgba(226,222,216,.8);-webkit-backdrop-filter:blur(26px) saturate(1.4);backdrop-filter:blur(26px) saturate(1.4);box-shadow:inset 0 0 0 .75px rgba(255,255,255,.55);color:#000}
+      .tsheet .grab{background:rgba(0,0,0,.28)}
+      .tti{position:absolute;left:19px;right:19px;top:23px;font-size:17px;line-height:22px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .tsu{position:absolute;left:19px;top:46px;font-size:12px;line-height:16px;color:rgba(60,60,67,.6)}
+      .tscores{position:absolute;left:12px;right:12px;top:66px;display:flex;gap:2px}
+      .tscores div{flex:1 1 0;min-width:0;text-align:center}
+      .tscores b{display:block;font-size:28px;line-height:34px;font-weight:700;font-variant-numeric:tabular-nums}
+      .tscores b.ok{color:#1CA63A}.tscores b.mid{color:#E87000}
+      .tscores i{display:block;height:4px;margin:3px 10px;border-radius:2px;background:rgba(120,120,128,.25);overflow:hidden}
+      .tscores i u{display:block;height:100%;border-radius:2px}
+      .tscores span{display:block;font-size:12px;line-height:16px;color:rgba(60,60,67,.6);white-space:nowrap}
+      .tvid{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;opacity:0;transition:opacity .3s}
+      .tshade,.tsave,.thero,.tsheet{transition:opacity .3s}
+      .l-take.playing .tvid{opacity:1}
+      .l-take.playing .tshade,.l-take.playing .tsave,.l-take.playing .thero,.l-take.playing .tsheet{opacity:0}
     `, `
       <div class="layer l-list on">
         <div class="lt"></div><span class="nb">${sf("plus")}</span>
@@ -268,10 +302,18 @@ class NwSpeech extends NwScreen {
         <div class="dim"></div>
         <div class="sheet"><div class="grab"></div><span class="mi"></span><h4></h4><div class="sub"></div><div class="rk"></div>
           <div class="sbtn" data-x="board"></div><div class="sdone" data-x="done"></div></div>
+      </div>
+      <div class="layer l-take">
+        <div class="tbg"></div><div class="tshade"></div>
+        <video class="tvid" muted playsinline preload="none"></video>
+        <span class="tsave">${sf("save")}</span>
+        <div class="thero"><div class="tl"><div class="tn">88</div><div class="tv"></div><div class="tlv"></div></div><span class="tplay press">${sf("play")}</span></div>
+        <div class="tsheet"><div class="grab"></div><div class="tti">How noise-cancelling headphones work</div><div class="tsu"></div><div class="tscores"></div></div>
       </div>`);
   }
   get x() { return this.t === STR.ko ? TX.ko : TX.en; }
   get noCh() { return this.hasAttribute("nochallenges"); }
+  get takePage() { return this.hasAttribute("take-page"); }
   static observedAttributes = ["active", "script-title", "script-text", "script-seconds"];
   attributeChangedCallback(name) {
     if (name.startsWith("script-")) { if (this._built) this._scriptFromAttrs(true); return; }
@@ -315,7 +357,24 @@ class NwSpeech extends NwScreen {
     this._applyScript();
     this.audio();
     this.taking(41);
+    const photo = this.getAttribute("camera-photo");
+    if (photo) this.style.setProperty("--photo", `url("${photo.replace(/"/g, "%22")}")`);
+    this._buildTake();
     this.reset();
+  }
+  /* Sample numbers, in the shape of a Season 2 reading (SpeechResultView.scoreStrip). */
+  _buildTake() {
+    const ko = this.t === STR.ko;
+    this.$(".tv").textContent = ko ? "오디오북 내셔도 되겠어요." : "You could record audiobooks.";
+    this.$(".tlv").textContent = ko ? "외국계 회사 에이스 레벨" : "Star of the global office level";
+    this.$(".tsu").textContent = ko ? "챌린지 · 11월 9일 오후 2:41" : "Challenge · Nov 9, 2:41 PM";
+    const clip = this.getAttribute("camera-video");
+    if (clip) { this._clip = this.$(".tvid"); this._clip.src = clip; }
+    const parts = ko ? ["말하는 속도", "리듬", "쉼", "정확도", "발음"] : ["Speaking speed", "Rhythm", "Pauses", "Accuracy", "Pronunciation"];
+    this.$(".tscores").innerHTML = [76, 79, 92, 97, 97].map((s, i) => {
+      const tone = s >= 85 ? "ok" : "mid", bar = s >= 85 ? "var(--green)" : "var(--orange)";
+      return `<div><b class="${tone}">${s}</b><i><u style="width:${s}%;background:${bar}"></u></i><span>${esc(parts[i])}</span></div>`;
+    }).join("");
   }
   /* The challenge row: "N taking part · 1 min", the board's top three as initials once there is a board. */
   taking(n) {
@@ -360,7 +419,11 @@ class NwSpeech extends NwScreen {
   }
   /** The result's lower half follows the take: a camera take shows its video, a mic-only take the audio row + Measured. */
   takeKind(camera) { this.$(".vid").style.visibility = camera ? "" : "hidden"; this.$(".aud").classList.toggle("on", !camera); }
-  show(name) { this.$$(".layer").forEach(l => l.classList.toggle("on", l.classList.contains("l-" + name))); }
+  show(name) {
+    this.$$(".layer").forEach(l => l.classList.toggle("on", l.classList.contains("l-" + name)));
+    // The take page is a picture to the top of the glass, so its status bar is white.
+    if (this.takePage) this.closest("nw-phone")?.toggleAttribute("dark", name === "take");
+  }
   setCamera(on) {
     const p = this.$(".l-prompt");
     p.classList.toggle("cam-on", on); this.$(".cam").classList.toggle("on", on);
@@ -380,6 +443,15 @@ class NwSpeech extends NwScreen {
     this.$(".arc").style.strokeDashoffset = 215.2; this.$(".gauge b").textContent = "0";
     this.$(".entry").style.visibility = "hidden"; this.takeKind(true);
     this.$(".dim").classList.remove("on"); this.$(".sheet").classList.remove("on");
+    if (this._clip) { this._rollClip(false); this.$(".tn").textContent = "88"; this.show("take"); }
+    else if (this.takePage) { this._challenge = false; this.show("prompt"); this.setCamera(true); }
+  }
+  /* Playing, everything but the reader steps aside and the status bar goes (SpeechResultSheetPage). */
+  _rollClip(on) {
+    const c = this._clip;
+    if (on) { c.currentTime = 0; c.play().catch(() => {}); } else c.pause();
+    this.$(".l-take").classList.toggle("playing", on);
+    this.closest("nw-phone")?.toggleAttribute("nostatus", on);
   }
   _ownResult(on) {
     this.$(".l-result").classList.toggle("ownr", !!on);
@@ -435,6 +507,7 @@ class NwSpeech extends NwScreen {
   }
   async pose(name) {
     this.stop(); this.reset();
+    if (name === "take") { this.$(".tn").textContent = "88"; this.show("take"); return; }
     const ko = this.t === STR.ko;
     if (name === "list") { this.taking(0); return; }
     if (["open", "camera", "prompter"].includes(name)) {
@@ -458,6 +531,20 @@ class NwSpeech extends NwScreen {
     void ko;
   }
   async demo() {
+    if (this._clip) {
+      this.$(".tn").textContent = "0"; await this.sleep(500); this.beat(1);
+      await this.countUp(this.$(".tn"), 88, 900); await this.sleep(2600);
+      await this.tap(this.$(".tplay")); this.beat(2); this._rollClip(true);
+      await this.sleep(16000);
+      this._rollClip(false); await this.sleep(2200);
+      return;
+    }
+    if (this.takePage) {
+      await this.sleep(1300); this.beat(1); await this.record(3800, 21);
+      await this.sleep(300); this.beat(2); this.$(".tn").textContent = "0"; this.show("take");
+      await this.sleep(400); await this.countUp(this.$(".tn"), 88, 900); await this.sleep(3800);
+      return;
+    }
     await this.sleep(1300); await this.open(); await this.sleep(600);
     // With challenges the board only takes camera takes, so the camera goes on. Before challenges
     // nothing asked for it and the default is off (SpeechPrompterView), so that take is mic-only.

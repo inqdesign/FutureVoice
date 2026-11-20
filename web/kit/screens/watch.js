@@ -231,6 +231,7 @@ class NwWatch extends NwScreen {
     this.$(".reel .tr").innerHTML = [...R, ...R].map(x => `<div class="rw"><span>${esc(x)}</span></div>`).join("");
     this.$(".note").textContent = ko ? "파일은 폰에 그대로 있어요. 앱에는 읽은 내용만 남아요." : "Your files stay on your phone. Only what was read is kept here.";
     this.B(".av").textContent = "P"; this.B(".wn").textContent = "Paige";
+    this.$(".wt b").textContent = ko ? "보는 중" : "Watching";
     for (const sel of [".l-box", ".l-map"]) {
       this.$(`${sel} .rec span`).textContent = ko ? "듣는 중 · 누르면 끝" : "Listening, tap to finish";
       this.$(`${sel} .lg span`).textContent = ko ? "한국어" : "English";
@@ -275,7 +276,7 @@ class NwWatch extends NwScreen {
     const ko = this.ko, bs = this.$(".bs"); bs.classList.remove("off");
     if (state === "end") {
       this.$(".b1").innerHTML = `${SY.again}<span>${ko ? "다시 보기" : "Watch again"}</span>`;
-      this.$(".b2").innerHTML = `${SY.books}<span>Study this</span>`;
+      this.$(".b2").innerHTML = `${SY.books}<span>${ko ? "교재로 공부하기" : "Study this"}</span>`;
     } else {
       this.$(".b1").innerHTML = `${SY.restart}<span>${ko ? "다시 시작" : "Restart"}</span>`;
       this.$(".b2").innerHTML = `${SY.pause}<span>${ko ? "일시정지" : "Pause"}</span>`;

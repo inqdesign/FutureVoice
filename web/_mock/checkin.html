@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>체크인 · 목업</title>
+<style>
+@font-face{font-family:"Geist Pixel";font-display:swap;src:url(/GeistPixel.ttf) format("truetype")}
+@font-face{font-family:"Galmuri11";font-display:swap;src:url(/Galmuri11.woff2) format("woff2")}
+:root{--bg:#F7F8FA;--ink:#1C2133;--ink-2:rgba(28,33,51,.62);--line:#E5E3DD;--paper:#FFFEFB;--accent:#0A5CF5;--hi:rgba(255,226,60,.72);--sans:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;--pixel:"Geist Pixel","Galmuri11",var(--sans)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;word-break:keep-all}
+body::before{content:"";position:fixed;inset:0;z-index:-1;background-image:linear-gradient(rgba(10,40,90,.026) 1px,transparent 1px),linear-gradient(90deg,rgba(10,40,90,.026) 1px,transparent 1px);background-size:40px 40px}
+.mock{position:fixed;top:10px;right:10px;font-size:12px;background:#FFE14D;padding:4px 10px;border-radius:999px;font-weight:700;z-index:9}
+.wrap{max-width:440px;margin:0 auto;padding:28px 20px 60px}
+.who{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--ink-2)}
+.who i{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;font-style:normal;font-weight:700}
+.day{margin-top:26px;font-family:var(--pixel);font-size:88px;line-height:.9;letter-spacing:-.02em}
+.day small{font-size:.32em;color:var(--ink-2)}
+.say{margin-top:12px;font-size:20px;font-weight:800;line-height:1.35}
+/* the 100 days, 20 to a row */
+.cal{display:grid;grid-template-columns:repeat(20,1fr);gap:3px;margin-top:22px}
+.cal span{aspect-ratio:1;border-radius:2px;background:rgba(28,33,51,.08)}
+.cal .done{background:var(--ink)}
+.cal .miss{background:transparent;box-shadow:inset 0 0 0 1px rgba(28,33,51,.18)}
+.cal .today{background:var(--hi);box-shadow:inset 0 0 0 1.5px var(--ink)}
+.legend{display:flex;gap:14px;margin-top:8px;font-size:12px;color:var(--ink-2)}
+.card{margin-top:28px;padding:20px;background:var(--paper);border-radius:16px;box-shadow:0 1px 2px rgba(28,33,51,.08),0 10px 28px rgba(28,33,51,.08)}
+label{display:block;font-size:15px;font-weight:700}
+.field{position:relative;margin-top:8px}
+input,textarea{width:100%;font:inherit;font-size:16px;padding:13px 14px 13px 44px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink)}
+textarea{padding-left:14px;min-height:76px;resize:none}
+input:focus,textarea:focus{outline:none;border-color:var(--accent);background:#fff}
+.plat{position:absolute;left:12px;top:50%;translate:0 -50%;width:22px;height:22px;border-radius:6px;display:grid;place-items:center;font-size:11px;font-weight:800;color:#fff;background:#C9C7C0}
+.hint{margin-top:6px;font-size:13px;color:var(--ink-2)}
+.f2{margin-top:18px}
+.btn{display:flex;align-items:center;justify-content:center;width:100%;min-height:54px;margin-top:20px;border:0;border-radius:999px;background:var(--ink);color:#fff;font:inherit;font-size:17px;font-weight:800;cursor:pointer}
+.late{margin-top:14px;text-align:center;font-size:14px;color:var(--ink-2)}
+.late a{color:var(--accent)}
+/* checked in */
+.done-v{display:none;text-align:center;margin-top:30px}
+.checked .form-v{display:none}.checked .done-v{display:block}
+.stamp{display:inline-grid;place-items:center;width:150px;height:150px;border-radius:50%;border:4px solid var(--accent);color:var(--accent);font-family:var(--pixel);font-size:26px;line-height:1.1;rotate:-8deg;animation:stamp .45s cubic-bezier(.3,1.6,.5,1) both}
+@keyframes stamp{from{scale:1.8;opacity:0}}
+.done-v p{margin-top:18px;font-size:18px;font-weight:800}
+.done-v small{display:block;margin-top:6px;font-size:14px;color:var(--ink-2)}
+.done-v a{display:inline-block;margin-top:18px;color:var(--accent);font-weight:700}
+</style>
+</head>
+<body>
+<span class="mock">목업 · 가짜 데이터</span>
+<main class="wrap">
+  <div class="who"><i>민</i><span>민지 · 일본어 B1 · 1기</span></div>
+  <p class="day">DAY 37<small>/100</small></p>
+  <p class="say">오늘 올린 걸 체크인해요.</p>
+  <div class="cal" id="cal" aria-label="100일 중 지난 날들"></div>
+  <div class="legend"><span>■ 체크인</span><span>□ 빈 날</span><span>오늘</span></div>
+
+  <div class="card form-v">
+    <form id="f">
+      <label for="url">오늘 올린 글이나 영상 주소</label>
+      <div class="field"><span class="plat" id="plat">?</span><input id="url" type="url" placeholder="https://" autocomplete="off" /></div>
+      <p class="hint" id="ph">인스타, 유튜브, 틱톡, 스레드, 블로그 어디든 좋아요. 아카이브엔 이 링크만 올라가요.</p>
+      <div class="f2">
+        <label for="note">오늘 한 공부, 한 줄 <span style="font-weight:400;color:var(--ink-2)">없어도 돼요</span></label>
+        <div class="field"><textarea id="note" maxlength="80" placeholder="예: 면접 질문 3개를 튜터 모드로 연습했어요"></textarea></div>
+      </div>
+      <button class="btn" type="submit">DAY 37 체크인</button>
+    </form>
+    <p class="late">어제 깜빡했나요? <a href="#">DAY 36도 체크인할 수 있어요</a></p>
+  </div>
+
+  <div class="done-v">
+    <span class="stamp">DAY 37<br>DONE</span>
+    <p>37일째 체크인했어요.</p>
+    <small>오늘의 벽에 올라갔어요. 내일 또 만나요.</small>
+    <a href="archive.html">오늘 다른 사람들 보러 가기</a>
+  </div>
+</main>
+<script>
+const cal = document.getElementById("cal");
+const missed = new Set([9, 22, 23]);
+cal.innerHTML = Array.from({ length: 100 }, (_, i) => {
+  const d = i + 1, c = d < 37 ? (missed.has(d) ? "miss" : "done") : d === 37 ? "today" : "";
+  return `<span class="${c}" title="DAY ${d}"></span>`;
+}).join("");
+const P = [[/youtu\.?be/, "YT", "#FF0033"], [/instagram\./, "IG", "#E1306C"], [/tiktok\./, "TT", "#111"], [/threads\./, "@", "#111"], [/(x|twitter)\.com/, "X", "#111"]];
+const url = document.getElementById("url"), plat = document.getElementById("plat");
+url.addEventListener("input", () => {
+  const m = P.find(([re]) => re.test(url.value));
+  plat.textContent = m ? m[1] : url.value ? "↗" : "?";
+  plat.style.background = m ? m[2] : url.value ? "#0A5CF5" : "#C9C7C0";
+});
+document.getElementById("f").addEventListener("submit", (e) => { e.preventDefault(); document.body.classList.add("checked"); });
+</script>
+</body>
+</html>

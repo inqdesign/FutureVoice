@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>creator logo sketches</title>
+<style>
+@font-face{font-family:"Nanum Pen Script";src:url(/creators/fonts/nanum-pen-script.woff2) format("woff2")}
+@font-face{font-family:"Caveat";font-weight:700;src:url(/creators/fonts/caveat.woff2) format("woff2")}
+:root{--ink:#1C2133;--accent:#0A5CF5;--paper:#FFFEFB}
+*{box-sizing:border-box}
+body{margin:0;background:#EDEAE2;color:var(--ink);font-family:-apple-system,"Apple SD Gothic Neo",sans-serif;padding:40px 24px 80px}
+h1{font-size:18px;font-weight:600;margin:0 auto 28px;max-width:1120px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;max-width:1120px;margin:0 auto}
+@media (max-width:760px){.grid{grid-template-columns:1fr}}
+.card{background:var(--paper);border-radius:6px;padding:26px 26px 22px;box-shadow:0 1px 0 rgba(28,33,51,.08),0 14px 30px -18px rgba(28,33,51,.35);
+  background-image:linear-gradient(rgba(10,92,245,.07) 1px,transparent 1px);background-size:100% 28px}
+.card h2{font-size:15px;margin:0 0 2px;font-weight:700}
+.card p{font-size:13px;line-height:1.5;margin:0 0 10px;opacity:.72}
+.row{display:flex;align-items:center;gap:22px}
+.big{width:190px;height:160px;flex:none}.big svg{width:100%;height:100%}
+.side{display:flex;flex-direction:column;gap:14px}
+.lock{display:flex;align-items:center;gap:10px}
+.lock svg{width:44px;height:44px}
+.lock b{font-family:"Nanum Pen Script";font-weight:400;font-size:40px;line-height:1}
+.lock b i{font-style:normal;color:var(--accent)}
+.sizes{display:flex;align-items:center;gap:14px}
+.chip{width:56px;height:56px;border-radius:14px;display:grid;place-items:center}
+.chip svg{width:40px;height:40px}
+.chip.dark{background:var(--ink);color:#fff}
+.chip.blue{background:var(--accent);color:#fff}
+.chip.tiny{width:28px;height:28px;border-radius:7px;background:none}
+.chip.tiny svg{width:24px;height:24px}
+svg.m{animation:boil 1.2s steps(1) infinite}
+@keyframes boil{0%{filter:url(#b1)}33%{filter:url(#b2)}66%{filter:url(#b3)}}
+@media (prefers-reduced-motion:reduce){svg.m{animation:none;filter:url(#b1)}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="b1" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="7"/></filter>
+  <filter id="b2" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="2" seed="19"/><feDisplacementMap in="SourceGraphic" scale="7"/></filter>
+  <filter id="b3" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="2" seed="47"/><feDisplacementMap in="SourceGraphic" scale="7"/></filter>
+</svg>
+
+<h1>크리에이터 로고 스케치 · 나와나 마크 + C</h1>
+<div class="grid" id="grid"></div>
+
+<script>
+// Each block of the nawana mark is redrawn as a marker-filled shape: corners a little off, edges a little bowed.
+function rnd(seed){ let s = seed; return () => (s = (s * 16807) % 2147483647) / 2147483647 - .5; }
+function block(x, y, w, h, seed, j = 16){
+  const r = rnd(seed * 7919 + 13), q = () => r() * j * 2;
+  const p = [[x+q(),y+q()],[x+w+q(),y+q()],[x+w+q(),y+h+q()],[x+q(),y+h+q()]];
+  let d = `M${p[0][0].toFixed(1)} ${p[0][1].toFixed(1)}`;
+  for (let i = 1; i <= 4; i++){
+    const a = p[i-1], b = p[i%4];
+    const mx = (a[0]+b[0])/2 + q()*.8, my = (a[1]+b[1])/2 + q()*.8;
+    d += ` Q${mx.toFixed(1)} ${my.toFixed(1)} ${b[0].toFixed(1)} ${b[1].toFixed(1)}`;
+  }
+  return d + "Z";
+}
+const P = (blocks, fill, s0 = 1) => blocks.map((b, i) => `<path d="${block(...b, s0 + i)}" fill="${fill}"/>`).join("");
+const INK = "currentColor", BLUE = "var(--accent)";
+
+// The app mark: top, right, left, bottom, tail.
+const TOP=[291,238,410,100], RIGHT=[701,338,104,347], LEFT=[187,338,104,347], BOT=[291,685,410,100], TAIL=[805,685,98,100];
+
+const marks = {
+  open: (two) => // the ring opened on the right: a C that still has its tail
+    P([TOP, LEFT, BOT, [701,338,104,96], [701,589,104,96]], INK, 3) + P([TAIL], two ? BLUE : INK, 40),
+  pair: (two) => // two C's facing each other close the ring: creator and challenger
+    P([[291,238,178,100], LEFT, [291,685,178,100]], INK, 5) +
+    P([[523,238,178,100], RIGHT, [523,685,178,100], TAIL], two ? BLUE : INK, 21),
+  inside: (two) => // the whole mark, with a pen C written in its window
+    P([TOP, RIGHT, LEFT, BOT, TAIL], INK, 9) +
+    `<path d="M588 452C560 408 492 400 448 432 396 470 392 548 438 588 484 626 556 618 592 574" fill="none" stroke="${two ? BLUE : INK}" stroke-width="58" stroke-linecap="round"/>`,
+  line: (two) => // the C written in one marker stroke along the mark's own path, the tail a dab beside it
+    `<path d="M752 432C760 380 757 330 748 292 600 280 400 296 244 286 232 430 250 600 238 738 400 728 600 746 756 734 760 700 750 668 754 640" fill="none" stroke="${INK}" stroke-width="98" stroke-linejoin="round" stroke-linecap="butt"/>` +
+    `<path d="M826 738L884 732" fill="none" stroke="${two ? BLUE : INK}" stroke-width="98" stroke-linecap="butt"/>`,
+  eyesSide: (two) => // option 1 with its two right stubs lifted off the bars: they become eyes looking out of the opening
+    P([TOP, LEFT, BOT], INK, 3) + P([TAIL], two ? BLUE : INK, 40) +
+    `<path d="M520 458C516 490 523 522 518 556" fill="none" stroke="${INK}" stroke-width="66" stroke-linecap="round"/>` +
+    `<path d="M664 454C668 488 660 520 666 552" fill="none" stroke="${INK}" stroke-width="66" stroke-linecap="round"/>`,
+  eyesStack: (two) => // the stubs stay where they were, one above the other, as two dabs: C and a colon, the sideways smile
+    P([TOP, LEFT, BOT], INK, 3) + P([TAIL], two ? BLUE : INK, 40) +
+    `<path d="M722 424C742 420 766 426 786 422" fill="none" stroke="${INK}" stroke-width="74" stroke-linecap="round"/>` +
+    `<path d="M720 598C744 602 764 594 788 600" fill="none" stroke="${INK}" stroke-width="74" stroke-linecap="round"/>`,
+  final: (two) => // 1-A tidied: bigger eyes, the tail back where the app mark has it (one bar's width off the bottom bar)
+    P([TOP, LEFT, BOT], INK, 3) + P([[745,685,98,100]], two ? BLUE : INK, 40) +
+    `<path d="M508 446C504 486 512 524 506 566" fill="none" stroke="${INK}" stroke-width="78" stroke-linecap="round"/>` +
+    `<path d="M668 442C672 484 664 522 670 562" fill="none" stroke="${INK}" stroke-width="78" stroke-linecap="round"/>`,
+  finalInk: () => marks.final(false),
+  face: (two) => face(two, true),
+  faceBare: (two) => face(two, false),
+};
+// The mark keeps its window; two pen dabs look out of it, and a small C sits at the upper right like the (c) sign.
+function face(two, ring){
+  const c = two ? BLUE : INK;
+  const eyes = `<path d="M432 462C428 492 434 524 430 556" fill="none" stroke="${INK}" stroke-width="62" stroke-linecap="round"/>` +
+               `<path d="M566 458C570 490 562 522 568 552" fill="none" stroke="${INK}" stroke-width="62" stroke-linecap="round"/>`;
+  const sign = ring
+    ? `<path d="M908 142C962 146 998 186 994 238 990 292 948 326 898 322 846 318 812 276 818 226 824 176 862 140 908 142Z" fill="none" stroke="${c}" stroke-width="24" stroke-linejoin="round"/>` +
+      `<path d="M940 208C926 190 898 188 882 204 864 222 864 250 882 266 900 280 926 276 940 258" fill="none" stroke="${c}" stroke-width="26" stroke-linecap="round"/>`
+    : `<path d="M968 190C944 152 890 148 858 180 824 216 826 270 862 300 896 326 946 318 970 284" fill="none" stroke="${c}" stroke-width="44" stroke-linecap="round"/>`;
+  return P([TOP, RIGHT, LEFT, BOT, TAIL], INK, 9) + eyes + sign;
+}
+const svg = (k, two = true, bg) => `<svg class="m" viewBox="60 110 960 800" style="${bg ? `--bg:${bg}` : ""}" aria-hidden="true">${marks[k](two)}</svg>`;
+
+const cards = [
+  ["final",    "1-A 다듬은 것", "눈을 키우고, 꼬리를 아래 막대 가까이로."],
+  ["finalInk", "1-A 한 색", "꼬리까지 검정 한 색으로."],
+  ["eyesSide",  "1-A. 열린 고리 + 나란한 눈", "오른쪽 점 두 개를 떼어서 열린 쪽을 내다보는 눈으로."],
+  ["eyesStack", "1-B. 열린 고리 + 제자리 눈", "점 두 개를 제자리에 둔 채 눈으로. 옆으로 누운 웃는 얼굴 C: 처럼 읽혀요."],
+  ["face",     "3-A. 눈 두 개 + ⓒ", "창 안에 눈 두 개, 오른쪽 위에 동그라미 친 C."],
+  ["faceBare", "3-B. 눈 두 개 + C", "같은 얼굴에 동그라미 없이 C만."],
+  ["open",   "1. 열린 고리", "나와나 마크의 오른쪽을 열어서 C로. 말풍선 꼬리는 그대로 남아요."],
+  ["pair",   "2. 마주 본 두 C", "크리에이터 C와 챌린저 C가 마주 보면 나와나 마크가 돼요."],
+  ["inside", "3. 창 안의 C", "마크는 그대로 두고, 가운데 창에 펜으로 C를 써요. ⓒ처럼 읽혀요."],
+  ["line",   "4. 한 붓으로 쓴 C", "마크의 길을 따라 마커로 한 번에 쓴 C. 꼬리는 옆에 찍은 점이에요."],
+];
+document.getElementById("grid").innerHTML = cards.map(([k, t, d]) => `
+  <section class="card">
+    <h2>${t}</h2><p>${d}</p>
+    <div class="row">
+      <div class="big">${svg(k)}</div>
+      <div class="side">
+        <div class="lock">${svg(k)}<b>creators</b></div>
+        <div class="sizes">
+          <span class="chip dark">${svg(k, false, "#1C2133")}</span>
+          <span class="chip blue">${svg(k, false, "#0A5CF5")}</span>
+          <span class="chip tiny">${svg(k)}</span>
+        </div>
+      </div>
+    </div>
+  </section>`).join("");
+</script>
+</body>
+</html>

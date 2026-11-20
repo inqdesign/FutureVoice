@@ -4,8 +4,8 @@
   "text": "<title>nawana：和流利的自己一起學語言</title>"
  },
  {
-  "en": "<meta name=\"description\" content=\"The most personal way to learn a language. Talk with your fluent future voice every day, then study from a textbook made of what you actually said. iOS app.\" />",
-  "text": "<meta name=\"description\" content=\"最貼近你自己的語言學習方式。每天和變流利的未來的你通話，再用你實際說過的話做成的教材來學習。iOS App。\" />"
+  "en": "<meta name=\"description\" content=\"The most personal way to learn a language. Talk with your fluent future voice every day, then study from a textbook made of what you actually said. For iPhone and Android.\" />",
+  "text": "<meta name=\"description\" content=\"最貼近你自己的語言學習方式。每天和變流利的未來的你通話，再用你實際說過的話做成的教材來學習。iPhone 和 Android App。\" />"
  },
  {
   "en": "<meta property=\"og:title\" content=\"nawana: Learn the language with the fluent you\" />",
@@ -48,8 +48,8 @@
   "text": "        <a class=\"btn-store\" href=\"#\" data-appstore><svg viewBox=\"0 0 384 512\" fill=\"currentColor\" aria-hidden=\"true\"><use href=\"#applelogo\"/></svg><span class=\"tx\"><small>在 App Store</small><b>下載</b></span></a>"
  },
  {
-  "en": "      <span class=\"n-note rv\" style=\"--d:0.24s\"><b>iOS 17+</b> · First 20 minutes free</span>",
-  "text": "      <span class=\"n-note rv\" style=\"--d:0.24s\"><b>iOS 17 以上</b> · 前 20 分鐘免費</span>"
+  "en": "      <span class=\"n-note rv\" style=\"--d:0.24s\"><b>iOS 17+ · Android 8+</b> · First 20 minutes free</span>",
+  "text": "      <span class=\"n-note rv\" style=\"--d:0.24s\"><b>iOS 17 以上 · Android 8 以上</b> · 前 20 分鐘免費</span>"
  },
  {
   "en": "        <div class=\"s-cap\"><div class=\"ix\">01 / 05</div><h3>Make the <span class=\"px-k\">fluent future you</span>,<br />in your own voice</h3><p>Read aloud for a minute. You pick the accent and the pace.</p></div>",
@@ -476,8 +476,8 @@
   "text": "        <div><dt>跟讀 · 單字 · 重聽 · 訓練</dt><dd>無限制</dd></div>"
  },
  {
-  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Start on the App Store <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
-  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>在 App Store 開始 <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
+  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Get the app <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
+  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>取得 App <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
  },
  {
   "en": "      <button class=\"btn btn-black p-buy\" data-tier=\"light\" type=\"button\" hidden>Subscribe <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>",
@@ -508,8 +508,8 @@
   "text": "        <div><dt>跟讀 · 單字 · 重聽 · 訓練</dt><dd>無限制</dd></div>"
  },
  {
-  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Start on the App Store <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
-  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>在 App Store 開始 <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
+  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Get the app <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
+  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>取得 App <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
  },
  {
   "en": "      <button class=\"btn btn-black p-buy\" data-tier=\"plus\" type=\"button\" hidden>Subscribe <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>",
@@ -540,8 +540,8 @@
   "text": "        <div><dt>跟讀 · 單字 · 重聽 · 訓練</dt><dd>無限制</dd></div>"
  },
  {
-  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Start on the App Store <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
-  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>在 App Store 開始 <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
+  "en": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>Get the app <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>",
+  "text": "      <a class=\"btn btn-black p-buy\" href=\"#\" data-appstore data-store-cta>取得 App <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></a>"
  },
  {
   "en": "      <button class=\"btn btn-black p-buy\" data-tier=\"max\" type=\"button\" hidden>Subscribe <svg class=\"arrow\" viewBox=\"0 0 24 24\"><use href=\"#arrowr\"/></svg></button>",
@@ -568,8 +568,8 @@
   "text": "    <p class=\"p-fine\" id=\"manage-sub\" hidden>在網頁上訂閱的嗎？可以在<a href=\"#\" id=\"manage-link\">管理訂閱</a>變更或取消。</p>"
  },
  {
-  "en": "    <p class=\"p-fine\">Talk time only runs while the conversation is moving. Pauses are free. A new Watch scene uses 5 minutes of that same time, and watching one again is free. In a month you run short, you can add minutes in the app, and you can cancel anytime on the App Store.</p>",
-  "text": "    <p class=\"p-fine\">通話時間只在對話進行時計算，停頓不算。每看一個新的情境練習，會從同一份通話時間用掉 5 分鐘，重看免費。時間不夠的月份，可以在 App 裡加購分鐘數，也隨時可以在 App Store 取消訂閱。</p>"
+  "en": "    <p class=\"p-fine\">Talk time only runs while the conversation is moving. Pauses are free. A new Watch scene uses 5 minutes of that same time, and watching one again is free. In a month you run short, you can add minutes in the app, and you can cancel anytime in the App Store or on Google Play.</p>",
+  "text": "    <p class=\"p-fine\">通話時間只在對話進行時計算，停頓不算。每看一個新的情境練習，會從同一份通話時間用掉 5 分鐘，重看免費。時間不夠的月份，可以在 App 裡加購分鐘數，也隨時可以在 App Store 或 Google Play 取消訂閱。</p>"
  },
  {
   "en": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Your voice stays yours</div>",
@@ -588,8 +588,8 @@
   "text": "    <div class=\"tcell rv\" style=\"--d:0.08s\"><div class=\"ix\">B</div><h4>複製聲音由你作主</h4><p>隨時可以重錄或刪除。換成新的時候，先前的複製聲音會永久刪除。</p></div>"
  },
  {
-  "en": "    <div class=\"tcell rv\" style=\"--d:0.16s\"><div class=\"ix\">C</div><h4>Practice stays on your device</h4><p>Conversations, drills, and progress live on your iPhone. To pick up on another device, they sync through your own iCloud, never our servers.</p></div>",
-  "text": "    <div class=\"tcell rv\" style=\"--d:0.16s\"><div class=\"ix\">C</div><h4>練習紀錄留在你的裝置上</h4><p>對話、訓練和進度都存在你的 iPhone 裡。想在其他裝置接著用，會透過你自己的 iCloud 同步，絕不經過我們的伺服器。</p></div>"
+  "en": "    <div class=\"tcell rv\" style=\"--d:0.16s\"><div class=\"ix\">C</div><h4>Practice stays on your device</h4><p>Conversations, drills, and progress live on your phone. To pick up on another device, they sync through your own iCloud or Google Drive, never our servers.</p></div>",
+  "text": "    <div class=\"tcell rv\" style=\"--d:0.16s\"><div class=\"ix\">C</div><h4>練習紀錄留在你的裝置上</h4><p>對話、訓練和進度都存在你的手機裡。想在其他裝置接著用，會透過你自己的 iCloud 或 Google 雲端硬碟同步，絕不經過我們的伺服器。</p></div>"
  },
  {
   "en": "    <div class=\"kicker rv\"><svg class=\"dot\" viewBox=\"0 0 24 24\"><use href=\"#pixeldot\"/></svg>Frequently asked</div>",
@@ -644,8 +644,8 @@
   "text": "      <summary><span class=\"ix\">06</span>我的聲音和資料安全嗎？</summary>"
  },
  {
-  "en": "      <p class=\"a\"><span>Nothing is ever recorded outside a conversation you started. You can rebuild or delete the clone anytime. Conversations, drills, and progress stay on your iPhone, and if you turn on sync they go only to your own iCloud, never our servers.</span></p>",
-  "text": "      <p class=\"a\"><span>在你自己開始的對話之外，絕對不會錄音。複製聲音隨時可以重做或刪除。對話、訓練和進度都留在你的 iPhone 上；開啟同步的話，也只會傳到你自己的 iCloud，絕不經過我們的伺服器。</span></p>"
+  "en": "      <p class=\"a\"><span>Nothing is ever recorded outside a conversation you started. You can rebuild or delete the clone anytime. Conversations, drills, and progress stay on your phone, and if you turn on sync they go only to your own iCloud or Google Drive, never our servers.</span></p>",
+  "text": "      <p class=\"a\"><span>在你自己開始的對話之外，絕對不會錄音。複製聲音隨時可以重做或刪除。對話、訓練和進度都留在你的手機上；開啟同步的話，也只會傳到你自己的 iCloud 或 Google 雲端硬碟，絕不經過我們的伺服器。</span></p>"
  },
  {
   "en": "      <summary><span class=\"ix\">07</span>Which languages can I learn?</summary>",
@@ -744,8 +744,8 @@
   "text": "      return \"你已經在網頁上訂閱了。請在下方「管理訂閱」中變更。\""
  },
  {
-  "en": "      return \"Your App Store subscription is still active. Buying here too would charge you twice, so manage it in the App Store instead.\"",
-  "text": "      return \"你的 App Store 訂閱仍然有效。在這裡再買一次會重複收費，請到 App Store 管理訂閱。\""
+  "en": "      return \"Your subscription from the app is still active. Buying here too would charge you twice, so manage it in the App Store or on Google Play instead.\"",
+  "text": "      return \"你在 App 內購買的訂閱仍然有效。在這裡再買一次會重複收費，請到 App Store 或 Google Play 管理訂閱。\""
  },
  {
   "en": "    return \"Something went wrong starting checkout. Please try again.\"",
@@ -762,6 +762,14 @@
  {
   "en": "  s.fix({ text: \"Maybe, if it <b>were safer</b>, I'd <b>give it a try</b>.\", note: \"It’s hypothetical, so it takes were and I’d\" });",
   "text": "  s.fix({ text: \"Maybe, if it <b>were safer</b>, I'd <b>give it a try</b>.\", note: \"這是假設的情況，所以用 were 和 I’d\" });"
+ },
+ {
+  "en": "        <a class=\"btn-play\" href=\"#\" data-playstore><img src=\"badges/google-play-en.png\" alt=\"Get it on Google Play\" /></a>",
+  "text": "        <a class=\"btn-play\" href=\"#\" data-playstore><img src=\"badges/google-play-zh-hant.png\" alt=\"立即下載 Google Play\" /></a>"
+ },
+ {
+  "en": "      <a class=\"btn-play\" href=\"#\" data-playstore><img src=\"badges/google-play-en.png\" alt=\"Get it on Google Play\" /></a>",
+  "text": "      <a class=\"btn-play\" href=\"#\" data-playstore><img src=\"badges/google-play-zh-hant.png\" alt=\"立即下載 Google Play\" /></a>"
  },
  {
   "en": "      <h3 id=\"ac-title\">This account hasn’t been used in the app</h3><p>You’re signed in with <b id=\"ac-who\"></b>. Your subscription goes to this account. If you sign in to the app another way, switch to that one. New to nawana? Go ahead, then sign in to the app the same way.</p>",

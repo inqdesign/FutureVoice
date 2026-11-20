@@ -18,7 +18,7 @@ import { NwScreen, STR, RM, esc } from "../core.js";
  *   sh.showResult(take?)               the result, no animation
  *   await sh.both()                    scrolls "Both at once" into view, taps it: the duet plays (transport + karaoke from the first word)
  *   await sh.scrollTo(y)               scroll the result (points)
- *   await sh.loop(a, b, {rate, times}) pick words a..b, loop them, at rate (0.5 · 0.75 · 1 · 1.25)
+ *   await sh.loopPhrase(a, b, {rate, times}) pick words a..b, loop them, at rate (0.5 · 0.75 · 1 · 1.25)
  *   every awaited method takes { speed } (time compression for video, 1 = real time). */
 
 const SVG = (body, cls = "ic") => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${body}</svg>`;
@@ -462,7 +462,7 @@ class NwShadow extends NwScreen {
     this._ph(0); this._diffColors();
   }
   /** Tap words a and b, loop the phrase, set the speed pill, play it `times` times. */
-  async loop(a, b, { rate = .5, times = 2, speed = 1 } = {}) {
+  async loopPhrase(a, b, { rate = .5, times = 2, speed = 1 } = {}) {
     this._ws[a].classList.add("sel"); this._ws.forEach((w, i) => i !== a && w.classList.remove("sel"));
     await this.sleep(500 / speed);
     this._loopSetup(false, [a, b]); await this.sleep(600 / speed);
@@ -486,7 +486,7 @@ class NwShadow extends NwScreen {
     // 3 — pick a phrase, loop it, slow it to half speed
     this.beat(3);
     const [a, b] = this._line.phrase;
-    await this.loop(a, b, { rate: .5, times: 2 });
+    await this.loopPhrase(a, b, { rate: .5, times: 2 });
     await this.sleep(1200);   // at rest the line wears the diff again, as the app's does
   }
 }

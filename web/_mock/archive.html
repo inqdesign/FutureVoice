@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>pages · nawana creators</title>
+<style>
+@font-face{font-family:"Geist Pixel";font-display:swap;src:url(/GeistPixel.ttf) format("truetype")}
+@font-face{font-family:"Galmuri11";font-display:swap;src:url(/Galmuri11.woff2) format("woff2")}
+@font-face{font-family:"Guestbook Pen";font-weight:400;font-display:swap;src:url(/creators/fonts/guestbook-pen.woff2) format("woff2")}
+/* A plain reading interface. The character lives in three places only: the logo, the "pages" wordmark, and the 100-page strip. */
+:root{--bg:#F7F8FA;--ink:#1C2133;--ink-2:rgba(28,33,51,.62);--faint:rgba(28,33,51,.42);--line:#E6E4DF;--paper:#fff;--accent:#0A5CF5;--hi:rgba(255,226,60,.72);
+  --sans:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",sans-serif;
+  --pixel:"Geist Pixel","Galmuri11",var(--sans);--pen:"Guestbook Pen","Apple SD Gothic Neo",cursive}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--bg)}
+body{color:var(--ink);font-family:var(--sans);line-height:1.55;-webkit-font-smoothing:antialiased;word-break:keep-all}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mock{position:fixed;bottom:16px;right:18px;z-index:29;padding:4px 10px;border-radius:999px;background:var(--ink);color:#fff;font-size:12px;font-weight:600;opacity:.8}
+
+/* the accents */
+.logo{display:inline-flex;align-items:center;gap:10px;color:var(--ink);text-decoration:none}
+.logo .mark{display:block;width:34px}
+.logo .mark svg{display:block;width:100%;height:auto}
+.logo .crumb{font-family:var(--pen);font-size:34px;line-height:1}
+.brand{margin-top:6px;font-family:var(--pen);font-weight:400;font-size:64px;line-height:1;color:var(--ink)}
+.brand mark{color:inherit;background:linear-gradient(var(--hi),var(--hi)) 0 85%/100% 45% no-repeat;padding:0 .08em}
+.brand small{display:block;margin-top:12px;font-family:var(--sans);font-size:13px;font-weight:500;color:var(--ink-2)}
+.count{margin-top:22px}
+.ticks{display:grid;grid-template-columns:repeat(20,1fr);gap:3px}
+.ticks i{aspect-ratio:1;border-radius:1px;background:rgba(28,33,51,.08)}
+.ticks .on{background:var(--ink)}
+.ticks .today{background:var(--accent)}
+.count p{display:flex;align-items:baseline;gap:6px;margin-top:10px;font-family:var(--pixel);line-height:1}
+.count b{font-weight:400;font-size:22px}
+.count span{font-size:14px;color:var(--faint)}
+
+/* three columns on a desktop: days · feed · people */
+.app{display:grid;grid-template-columns:240px minmax(0,560px) 280px;gap:48px;justify-content:center;max-width:1280px;margin:0 auto;padding:0 32px}
+.side{position:sticky;top:0;height:100vh;overflow-y:auto;padding:36px 0 40px;scrollbar-width:none}
+.side::-webkit-scrollbar{display:none}
+.side .logo{margin-bottom:22px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:24px;padding-top:16px;border-top:1px solid var(--line)}
+.stats b{display:block;font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
+.stats span{font-size:12px;color:var(--ink-2)}
+.sponsor{display:flex;align-items:center;gap:8px;margin-top:16px;font-size:12.5px;color:var(--ink-2)}
+.sponsor i{display:grid;place-items:center;width:18px;height:18px;border-radius:5px;background:var(--ink);color:#fff;font-style:normal;font-weight:800;font-size:10px}
+.sh{margin-top:32px;font-size:12px;font-weight:600;color:var(--faint);letter-spacing:.02em}
+.days,.people{display:flex;flex-direction:column;gap:1px;margin-top:8px}
+.days button,.people button{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:8px;text-align:left;font-size:14.5px}
+.days button:hover,.people button:hover{background:rgba(28,33,51,.04)}
+.days button[aria-pressed="true"],.people button[aria-pressed="true"]{background:rgba(28,33,51,.07);font-weight:600}
+.days b{font-weight:inherit;min-width:64px}
+.days small{margin-left:auto;font-size:12px;color:var(--faint)}
+.av{display:grid;place-items:center;flex:none;width:36px;height:36px;border-radius:50%;overflow:hidden;background:#E6E4DF;color:var(--ink-2);font-weight:600;font-size:14px}
+.av img{display:block;width:100%;height:100%;object-fit:cover}
+.people .sh:first-child{margin-top:4px}
+.pn{font-size:14.5px;font-weight:600;line-height:1.3}
+.pn small{display:block;font-size:12px;font-weight:400;color:var(--ink-2)}
+.prog{margin-left:auto;font-size:12.5px;color:var(--faint);font-variant-numeric:tabular-nums}
+
+/* the feed */
+.feed{padding:36px 0 96px;min-width:0}
+.mobile-top{display:none}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips:empty{display:none}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:var(--ink);color:#fff;font-size:13.5px;font-weight:600}
+.chip span{opacity:.6;font-weight:400}
+.profile{margin-bottom:28px;padding:20px;background:var(--paper);border:1px solid var(--line);border-radius:14px}
+.profile .ptop{display:flex;align-items:center;gap:14px}
+.profile .av{width:52px;height:52px;font-size:20px}
+.profile h2{font-size:20px;font-weight:700}
+.profile h2 small{display:block;font-size:13.5px;font-weight:400;color:var(--ink-2)}
+.grid100{display:grid;grid-template-columns:repeat(20,1fr);gap:3px;margin-top:18px}
+.grid100 span{aspect-ratio:1;border-radius:1px;background:rgba(28,33,51,.08)}
+.grid100 .on{background:var(--ink)}
+.grid100 .today{box-shadow:0 0 0 1.5px var(--accent)}
+.profile p{margin-top:12px;font-size:13.5px;color:var(--ink-2)}
+.profile p b{color:var(--ink);font-weight:600}
+/* who to show: everyone, creators' posts, or challengers' days */
+.side .seg{display:flex}
+.side .seg button{flex:1}
+.mobile-top .seg{margin:12px 0 0}
+.seg{display:inline-flex;gap:2px;margin-bottom:6px;padding:3px;border-radius:10px;background:rgba(28,33,51,.06)}
+.seg button{padding:6px 14px;border-radius:8px;font-size:13.5px;font-weight:500;color:var(--ink-2)}
+.seg button[aria-selected="true"]{background:var(--paper);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(28,33,51,.08)}
+/* challengers post nothing: a day of theirs is one row of what they did in the app */
+.cl{margin-bottom:16px;background:var(--paper);border:1px solid var(--line);border-radius:14px}
+.cl h3{display:flex;align-items:baseline;gap:8px;padding:12px 16px 4px;font-size:13px;font-weight:600}
+.cl h3 span{font-weight:400;color:var(--ink-2)}
+.cr{display:flex;align-items:center;gap:10px;width:100%;padding:9px 16px;text-align:left;border-top:1px solid var(--line)}
+.cl h3 + .cr{border-top:0}
+.cr .av{width:30px;height:30px;font-size:12px}
+.cr .pn{font-size:14px}
+.cr .did{margin-left:auto;display:flex;align-items:center;gap:12px;font-size:12.5px;color:var(--ink-2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ok{flex:none;display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--ink);color:#fff;font-size:11px;font-style:normal}
+.no{flex:none;width:18px;height:18px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--line-2,#D5D2CB)}
+.dayhead{display:flex;align-items:baseline;gap:8px;margin-top:18px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.dayhead b{font-family:var(--pixel);font-weight:400;font-size:17px}
+.dayhead span{font-size:12.5px;color:var(--ink-2)}
+.people .st{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.people .off .pn{color:var(--faint)}
+.people .off .av{opacity:.55}
+.cl .more{display:block;width:100%;padding:10px 16px 12px;border-top:1px solid var(--line);font-size:13px;color:var(--accent);font-weight:600;text-align:left}
+.daylog{margin-top:16px;border-top:1px solid var(--line)}
+.daylog div{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.daylog b{font-family:var(--pixel);font-weight:400}
+.daylog span{color:var(--ink-2);font-variant-numeric:tabular-nums}
+/* one header per day, held at the top while that day is read */
+.dayg{padding-bottom:12px}
+.dtag{position:sticky;top:0;z-index:3;display:flex;align-items:baseline;gap:10px;margin:0 0 14px;padding:12px 0 10px;background:var(--bg);border-bottom:1px solid var(--line);font-weight:400;line-height:1}
+.dtag b{font-family:var(--pixel);font-weight:400;font-size:18px}
+.dtag span{font-size:13px;color:var(--ink-2)}
+.post{margin-bottom:16px;background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.ph{display:flex;align-items:center;gap:10px;padding:14px 16px 12px}
+.ph .av{width:34px;height:34px;font-size:13px}
+.ph .pn{font-size:14.5px}
+.ph .pn button{font-weight:600}
+.ph .pn button:hover{text-decoration:underline}
+.ph .when{font-size:12.5px;font-weight:400;color:var(--ink-2)}
+.plat{display:inline-flex;align-items:center;gap:5px;margin-left:8px;font-size:12px;font-weight:500;color:var(--ink-2)}
+.plat::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--c)}
+.media{position:relative;background:#121110}
+.media img{display:block;width:100%;aspect-ratio:4/5;object-fit:cover}
+.play{position:absolute;inset:0;display:grid;place-items:center}
+.play span{display:grid;place-items:center;width:58px;height:58px;border-radius:50%;background:rgba(0,0,0,.42)}
+.play span::before{content:"";margin-left:5px;border-style:solid;border-width:11px 0 11px 18px;border-color:transparent transparent transparent #fff}
+.embed{background:#F2F1EE}
+.embed iframe{display:block;width:100%;border:0}
+.embed.wide iframe{aspect-ratio:16/9}
+.embed.tall iframe{aspect-ratio:9/16}
+.embed.ig iframe{height:680px}
+.embed.tt iframe{height:740px}
+.embed.th{background:#fff;overflow:hidden}
+.embed.th iframe{width:calc(100% + 26px);height:640px;margin:-13px -13px -13px}
+.linkcard{display:block;margin:0 16px;padding:14px;border:1px solid var(--line);border-radius:10px;font-size:13.5px;color:var(--accent);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* the participant's own day, on top of the feed when they came in by their own link */
+.mine{margin-bottom:28px;padding:18px 18px 16px;background:var(--paper);border:1.5px solid var(--ink);border-radius:14px}
+.mine .who{display:flex;align-items:center;gap:10px}
+.mine .who b{font-size:15px}
+.mine .who small{display:block;font-size:12.5px;color:var(--ink-2)}
+.mine .who .st{margin-left:auto}
+.mine form{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+.mine input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:10px;font:inherit;font-size:15px;background:var(--bg)}
+.mine button.go{align-self:flex-start;padding:10px 18px;border-radius:999px;background:var(--ink);color:#fff;font-size:14.5px;font-weight:600}
+.mine p{margin-top:12px;font-size:13.5px;color:var(--ink-2)}
+.mine p a{color:var(--accent);font-weight:600;text-decoration:none}
+.mine .done{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:14.5px;font-weight:600}
+.mine .row{display:flex;gap:14px;margin-top:12px;font-size:14px;font-variant-numeric:tabular-nums}
+.trybox{position:fixed;bottom:16px;left:18px;z-index:29;display:flex;gap:6px;width:min(380px,calc(100vw - 36px));padding:6px;border-radius:12px;background:var(--paper);border:1px solid var(--line);box-shadow:0 8px 24px rgba(28,33,51,.12)}
+.trybox input{flex:1;min-width:0;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:13px}
+.trybox button{padding:0 12px;border-radius:8px;background:var(--ink);color:#fff;font-size:13px;font-weight:600}
+.textmedia{padding:2px 16px 4px;font-size:17px;line-height:1.6}
+.cap{padding:12px 16px 2px;font-size:15px;line-height:1.55}
+.cap b{font-weight:600;margin-right:6px}
+.pf{display:flex;align-items:center;gap:14px;padding:6px 16px 14px;font-size:12.5px;color:var(--faint)}
+.pf a{color:var(--accent);font-weight:600;text-decoration:none;margin-left:auto}
+.pf a:hover{text-decoration:underline}
+.ad .av{border-radius:9px;background:var(--ink);color:#fff}
+.ad-art{display:grid;place-items:center;aspect-ratio:16/9;background:#EFEDE7;text-align:center}
+.ad-art b{display:block;font-size:28px;font-weight:800;letter-spacing:-.02em;line-height:1.2;color:var(--ink)}
+.ad-art small{display:block;margin-top:8px;font-size:13.5px;color:var(--ink-2)}
+.adtag{margin-left:auto;font-size:11px;font-weight:600;color:var(--ink-2);padding:2px 8px;border-radius:999px;border:1px solid var(--line)}
+.ad-cta{display:block;margin:8px 16px 0;padding:10px;border-radius:10px;background:var(--ink);color:#fff;text-align:center;font-size:14px;font-weight:600;text-decoration:none}
+.empty{padding:60px 0;text-align:center;color:var(--ink-2)}
+
+/* a phone: one column; people as a stories row, days as chips */
+@media (max-width:1020px){
+  .app{grid-template-columns:minmax(0,560px);padding:0 16px}
+  .side{display:none}
+  .feed{padding-top:0}
+  .mobile-top{display:block;margin:0 -16px 8px;padding:16px 16px 12px;border-bottom:1px solid var(--line)}
+  .mobile-top .logo .mark{width:26px}
+  .mobile-top .logo .crumb{font-size:26px}
+  .mobile-top .brand{display:flex;align-items:baseline;gap:12px;margin-top:6px;font-size:44px}
+  .mobile-top .brand small{margin:0;font-family:var(--pixel);font-size:13px;color:var(--faint)}
+  .stories,.daychips{display:flex;gap:12px;overflow-x:auto;margin:14px -16px 0;padding:2px 16px;scrollbar-width:none}
+  .stories::-webkit-scrollbar,.daychips::-webkit-scrollbar{display:none}
+  .stories button{display:flex;flex-direction:column;align-items:center;gap:5px;flex:none;width:58px;font-size:12px;color:var(--ink-2)}
+  .stories .av{width:50px;height:50px;font-size:18px}
+  .stories .face{position:relative}
+  .stories .face .ok,.stories .face .no{position:absolute;right:-2px;bottom:-2px;width:18px;height:18px;box-shadow:0 0 0 2px var(--bg)}
+  .stories .face .no{background:var(--bg);box-shadow:inset 0 0 0 1.5px #D5D2CB,0 0 0 2px var(--bg)}
+  .stories .gap{flex:none;width:1px;margin:6px 2px 22px;background:var(--line)}
+  .stories button[aria-pressed="true"]{color:var(--ink);font-weight:600}
+  .stories button[aria-pressed="true"] .av{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--ink)}
+  .daychips{gap:6px}
+  .daychips button{flex:none;padding:6px 12px;border-radius:999px;border:1px solid var(--line);font-size:13.5px;white-space:nowrap}
+  .daychips button[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+}
+</style>
+</head>
+<body>
+<span class="mock">목업 · 가짜 데이터</span>
+<form class="trybox" id="trybox"><input id="tryurl" type="url" placeholder="인스타·스레드·틱톡·유튜브 글 주소 붙여 보기" /><button>보기</button></form>
+<div class="app">
+  <aside class="side" aria-label="날짜">
+    <a class="logo" href="/creators.html" aria-label="nawana creators"><span class="mark"><svg viewBox="130 180 770 660" fill="currentColor" aria-hidden="true"><path d="M287 240Q498 228 704 236Q699 290 703 341Q497 346 289 336Q295 288 287 240Z"/><path d="M190 334Q242 341 293 336Q284 512 290 688Q239 680 184 687Q195 510 190 334Z"/><path d="M293 682Q497 692 700 687Q706 737 698 788Q495 779 288 786Q286 734 293 682Z"/><rect x="469" y="444" width="78" height="124" rx="39"/><rect x="629" y="440" width="78" height="124" rx="39"/><path d="M747 688Q796 682 845 687Q839 737 842 787Q793 781 743 784Q751 736 747 688Z"/></svg></span><span class="crumb">creators</span></a>
+    <h1 class="brand"><mark>pages</mark><small>1기 · 하루 한 장, 100장</small></h1>
+    <div class="count" aria-label="100장 중 37장째"><div class="ticks" id="ticks"></div><p><b>page 37</b><span>/ 100</span></p></div>
+    <div class="stats"><div><b>24/30</b><span>오늘 체크인</span></div><div><b>918</b><span>쌓인 기록</span></div><div><b>5</b><span>언어</span></div></div>
+    <p class="sponsor"><i>S</i>1기는 샘플 브랜드와 함께해요</p>
+    <p class="sh">날짜</p>
+    <div class="days" id="days"></div>
+  </aside>
+
+  <main class="feed">
+    <div class="mobile-top">
+      <a class="logo" href="/creators.html" aria-label="nawana creators"><span class="mark"><svg viewBox="130 180 770 660" fill="currentColor" aria-hidden="true"><path d="M287 240Q498 228 704 236Q699 290 703 341Q497 346 289 336Q295 288 287 240Z"/><path d="M190 334Q242 341 293 336Q284 512 290 688Q239 680 184 687Q195 510 190 334Z"/><path d="M293 682Q497 692 700 687Q706 737 698 788Q495 779 288 786Q286 734 293 682Z"/><rect x="469" y="444" width="78" height="124" rx="39"/><rect x="629" y="440" width="78" height="124" rx="39"/><path d="M747 688Q796 682 845 687Q839 737 842 787Q793 781 743 784Q751 736 747 688Z"/></svg></span><span class="crumb">creators</span></a>
+      <p class="brand"><mark>pages</mark><small>1기 · page 37 / 100</small></p>
+      <div class="stories" id="stories" aria-label="참가자"></div>
+      <div class="daychips" id="daychips" aria-label="날짜"></div>
+    </div>
+    <div id="mine"></div>
+    <div class="chips" id="chips"></div>
+    <div id="profile"></div>
+    <div id="list"></div>
+  </main>
+
+  <aside class="side" aria-label="참가자">
+    <div class="seg" role="tablist"></div>
+    <div id="people"></div>
+  </aside>
+</div>
+<script>
+const TODAY = 37;
+const PLAT = { ig: ["Instagram", "#E1306C"], yt: ["YouTube", "#FF0033"], tt: ["TikTok", "#111"], th: ["Threads", "#111"], blog: ["Blog", "#12B76A"] };
+// name, language, platform (creators) — photo stands in for a profile picture; null shows the plain placeholder
+const PEOPLE = [
+  { n: "민지", l: "일본어 B1", k: "creator", plat: "ig", photo: "japanese-call" },
+  { n: "준호", l: "영어 A2", k: "creator", plat: "yt", photo: null },
+  { n: "서연", l: "스페인어 B1", k: "creator", plat: "tt", photo: "spanish-call" },
+  { n: "도윤", l: "독일어 A2", k: "creator", plat: "th", photo: null },
+  { n: "하은", l: "영어 B2", k: "creator", plat: "ig", photo: "balcony" },
+  { n: "지후", l: "일본어 A2", k: "creator", plat: "blog", photo: "walking" },
+  { n: "유나", l: "영어 B1", k: "creator", plat: "tt", photo: null },
+  { n: "태민", l: "스페인어 A2", k: "creator", plat: "yt", photo: "podcast" },
+  { n: "수아", l: "영어 B1", k: "challenger", photo: "hand-held" },
+  { n: "현우", l: "영어 A2", k: "challenger", photo: null },
+  { n: "예린", l: "일본어 A2", k: "challenger", photo: null },
+  { n: "동현", l: "영어 B2", k: "challenger", photo: "korean-call" },
+  { n: "채원", l: "독일어 A1", k: "challenger", photo: null },
+  { n: "성민", l: "영어 B1", k: "challenger", photo: "workbook" },
+  { n: "지아", l: "스페인어 A2", k: "challenger", photo: null },
+  { n: "우진", l: "영어 A2", k: "challenger", photo: null },
+];
+const IMGS = ["japanese-call", "walking", "spanish-call", "workbook", "speech", "balcony", "podcast", "take-score", "hand-held", "pronunciation", "korean-call", "app-intro"];
+const LINES = ["튜터 모드로 면접 질문 세 개 연습했어요.", "출근길에 팟캐스트 듣고 한 문장 섀도잉.", "오늘 처음으로 막힘없이 5분 통화!", "단어 카드 20장, 그중 3개를 통화에서 썼어요.", "스피치 챌린지 81점. 어제보다 6점 올랐어요.", "카페 주문 상황을 미리 보고 따라 말하기.", "어제 틀린 과거형, 오늘은 맞게 말했어요.", "오늘은 짧게. 그래도 빠지진 않았다."];
+const TEXTS = { th: ["Heute zum ersten Mal ohne Pause erzählt, was ich am Wochenende gemacht habe.", "Ich habe heute drei neue Wörter im Gespräch benutzt. Es fühlt sich langsam normal an."], blog: ["今日は面接の練習をしました。まだ緊張するけど、昨日より言えた。", "未来の自分と話すと、なぜか言いたいことが出てくる。"] };
+// Sample check-in addresses: real public posts, so the embeds load. Paste your own in the box at the bottom right to try one.
+const SAMPLE_URLS = [
+  "https://www.threads.com/@adaywithboram/post/DfssVjADDMa",
+  "https://www.youtube.com/watch?v=2Z9YUolWBYk",
+];
+// One address in, the platform's own embed out. Anything else (a blog) stays a link card.
+function embedFor(url) {
+  let m;
+  if ((m = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([\w-]{11})/)))
+    return { plat: "yt", src: `https://www.youtube-nocookie.com/embed/${m[1]}`, cls: /shorts\//.test(url) ? "tall" : "wide" };
+  if ((m = url.match(/instagram\.com\/(?:p|reel|reels)\/([\w-]+)/)))
+    return { plat: "ig", src: `https://www.instagram.com/p/${m[1]}/embed/`, cls: "ig" };
+  if ((m = url.match(/tiktok\.com\/@[^/]+\/video\/(\d+)/)))
+    return { plat: "tt", src: `https://www.tiktok.com/embed/v2/${m[1]}`, cls: "tt" };
+  if ((m = url.match(/threads\.(?:net|com)\/(@[^/]+)\/post\/([\w-]+)/)))
+    return { plat: "th", src: `https://www.threads.com/${m[1]}/post/${m[2]}/embed`, cls: "th" };
+  return null;
+}
+const isC = (i) => PEOPLE[i].k === "creator";
+// Sample days: each person misses on their own rhythm.
+const did = (i, day) => !(day === TODAY && i % 5 === 2) && ((day * 7 + i * 13) % (4 + (i % 8) * 2)) !== 0; // a few haven't checked in yet today
+// A challenger's day: talk minutes and the day's speech score. Kept = 4+ minutes and a speech.
+const talkMin = (i, day) => did(i, day) ? 4 + ((day * 5 + i * 3) % 19) : (day + i) % 3;
+const speech = (i, day) => did(i, day) ? 58 + ((day * 11 + i * 7) % 40) : null;
+const DAYS = Array.from({ length: 10 }, (_, k) => TODAY - k);
+const POSTS = [];
+for (const day of DAYS) PEOPLE.forEach((p, i) => {
+  if (!isC(i) || !did(i, day)) return;
+  const k = day * 3 + i;
+  POSTS.push({ i, day, url: SAMPLE_URLS[k % SAMPLE_URLS.length], plat: p.plat, img: IMGS[k % IMGS.length], text: TEXTS[p.plat]?.[k % 2], line: LINES[k % LINES.length], hoursAgo: (TODAY - day) * 24 + (i * 5) % 20 + 1 });
+});
+const ADS = [
+  { lang: "일본어", head: "JLPT N3<br>100일 단어장", sub: "하루 30개, 100일", line: "1기 일본어 참가자에게는 단어장을 보내드려요." },
+  { lang: "영어", head: "IELTS 스피킹<br>모의시험", sub: "첫 회 무료", line: "실제 시험관과 15분, 점수와 피드백까지." },
+];
+const creators = PEOPLE.map((_, i) => i).filter(isC), challengers = PEOPLE.map((_, i) => i).filter((i) => !isC(i));
+
+// A participant comes in by their own link (?me=…); the mock uses a person's index for it.
+const ME = new URLSearchParams(location.search).get("me") ?? "0";
+const me = ME === "" || isNaN(+ME) || !PEOPLE[+ME] ? null : +ME;
+const checkedToday = new Set();
+let fDay = null, fPerson = null, fKind = "all", openDays = new Set();
+const av = (i) => { const p = PEOPLE[i]; return p.photo ? `<span class="av"><img src="/creators/hero/${p.photo}.jpg" alt=""></span>` : `<span class="av">${p.n[0]}</span>`; };
+const ago = (h) => h < 24 ? `${h}시간 전` : `${Math.floor(h / 24)}일 전`;
+const total = (i) => Array.from({ length: TODAY }, (_, d) => did(i, d + 1)).filter(Boolean).length;
+const shown = (i) => fKind === "all" || (fKind === "creator") === isC(i);
+const countOn = (day) => PEOPLE.filter((_, i) => shown(i) && did(i, day)).length;
+
+function postHTML(p) {
+  const who = PEOPLE[p.i], [pl, col] = PLAT[embedFor(p.url)?.plat ?? p.plat];
+  const head = `<div class="ph">${av(p.i)}<div class="pn"><button type="button" data-person="${p.i}">${who.n}</button><span class="plat" style="--c:${col}">${pl}</span><div class="when">${who.l} · ${ago(p.hoursAgo)}</div></div></div>`;
+  // the platform's own embed, loaded only when it scrolls near
+  const e = embedFor(p.url);
+  const media = e
+    ? `<div class="embed ${e.cls}"><iframe src="${e.src}" loading="lazy" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen scrolling="no" title="${pl}"></iframe></div>`
+    : `<a class="linkcard" href="${p.url}" target="_blank" rel="noopener">${p.url.replace(/^https?:\/\//, "")}</a>`;
+  return `<article class="post">${head}${media}<p class="cap"><b>${who.n}</b>${p.line}</p><div class="pf"><span>오늘의 공부 한 줄</span><a href="${p.url}" target="_blank" rel="noopener">${pl}에서 보기</a></div></article>`;
+}
+function adHTML(a) {
+  return `<article class="post ad"><div class="ph"><span class="av">S</span><div class="pn">샘플 브랜드<div class="when">후원 · ${a.lang} 참가자에게</div></div><span class="adtag">광고</span></div>
+    <div class="ad-art"><div><b>${a.head}</b><small>${a.sub}</small></div></div><p class="cap">${a.line}</p><a class="ad-cta" href="#">자세히 보기</a><div class="pf"><span>나와나 크리에이터 프로그램 후원사의 광고예요.</span></div></article>`;
+}
+const dayDid = (i, day) => {
+  const s = speech(i, day);
+  return `<span>통화 ${talkMin(i, day)}분</span><span>${s == null ? "스피치 없음" : `스피치 ${s}점`}</span>${did(i, day) ? `<i class="ok">✓</i>` : `<i class="no"></i>`}`;
+};
+// The day's challengers in one card: who kept it, with what they did.
+function challengerCard(day, who) {
+  const kept = who.filter((i) => did(i, day));
+  const cap = 5, open = openDays.has(day) || fPerson !== null, list = open ? kept : kept.slice(0, cap);
+  if (!kept.length) return "";
+  return `<section class="cl"><h3>챌린저 <span>${kept.length}명 체크인 · 통화 4분 이상 + 스피치</span></h3>
+    ${list.map((i) => `<button class="cr" type="button" data-person="${i}">${av(i)}<span class="pn">${PEOPLE[i].n}<small>${PEOPLE[i].l}</small></span><span class="did">${dayDid(i, day)}</span></button>`).join("")}
+    ${!open && kept.length > cap ? `<button class="more" type="button" data-more="${day}">${kept.length - cap}명 더 보기</button>` : ""}</section>`;
+}
+
+// What the participant sees of their own day. A creator checks in with the post's address,
+// a challenger has nothing to do: the app sends the day by itself.
+function mineHTML() {
+  const p = PEOPLE[me], done = did(me, TODAY) || checkedToday.has(me);
+  const head = `<div class="who">${av(me)}<div><b>${p.n}님, page ${TODAY}</b><small>${isC(me) ? "크리에이터" : "챌린저"} · ${p.l} · ${total(me)}/${TODAY} 지킴</small></div><span class="st">${done ? `<i class="ok">✓</i>` : `<i class="no"></i>`}</span></div>`;
+  if (!isC(me)) {
+    const s = speech(me, TODAY);
+    return `<section class="mine">${head}<div class="row"><span>통화 ${talkMin(me, TODAY)}분${talkMin(me, TODAY) >= 4 ? " ✓" : " / 4분"}</span><span>${s == null ? "스피치 아직" : `스피치 ${s}점 ✓`}</span></div><p>앱에서 한 게 여기로 알아서 들어와요. 따로 체크인할 건 없어요.</p></section>`;
+  }
+  if (done) return `<section class="mine">${head}<div class="done"><i class="ok">✓</i>오늘 체크인했어요. 내일 또 만나요.</div></section>`;
+  return `<section class="mine">${head}<form id="checkin"><input id="ci-url" type="url" required placeholder="오늘 올린 글 주소 (인스타·스레드·틱톡·유튜브·블로그)" /><input id="ci-line" maxlength="80" placeholder="오늘 한 공부, 한 줄 (없어도 돼요)" /><button class="go">page ${TODAY} 체크인</button></form><p>어제 깜빡했나요? <a href="#">page ${TODAY - 1}도 체크인할 수 있어요</a></p></section>`;
+}
+
+function render() {
+  const segHTML = [["all", "전체"], ["creator", "크리에이터"], ["challenger", "챌린저"]]
+    .map(([k, t]) => `<button type="button" role="tab" data-kind="${k}" aria-selected="${fKind === k}">${t}</button>`).join("");
+  document.querySelectorAll(".seg").forEach((el) => { el.innerHTML = segHTML; });
+  document.getElementById("days").innerHTML = [`<button type="button" data-day="" aria-pressed="${fDay === null}"><b>전체</b></button>`]
+    .concat(DAYS.map((d) => `<button type="button" data-day="${d}" aria-pressed="${fDay === d}"><b>page ${d}</b>${d === TODAY ? "오늘" : ""}<small>${countOn(d)}명</small></button>`)).join("");
+  document.getElementById("daychips").innerHTML = [`<button type="button" data-day="" aria-pressed="${fDay === null}">전체</button>`]
+    .concat(DAYS.map((d) => `<button type="button" data-day="${d}" aria-pressed="${fDay === d}">page ${d}</button>`)).join("");
+  const D = fDay ?? TODAY, kept = (i, d) => did(i, d) || (d === TODAY && checkedToday.has(i)), mark = (i) => kept(i, D) ? `<i class="ok">✓</i>` : `<i class="no"></i>`;
+  const row = (i) => {
+    const st = isC(i) ? "" : `<span>${talkMin(i, D)}분${speech(i, D) == null ? "" : ` · ${speech(i, D)}점`}</span>`;
+    return `<button type="button" data-person="${i}" aria-pressed="${fPerson === i}" class="${did(i, D) ? "" : "off"}">${av(i)}<span class="pn"><span>${PEOPLE[i].n}</span><small>${PEOPLE[i].l}</small></span><span class="st">${st}${mark(i)}</span></button>`;
+  };
+  // checked in first, then the rest
+  const sorted = (ids) => [...ids].sort((a, b) => did(b, D) - did(a, D));
+  const n = (ids) => ids.filter((i) => did(i, D)).length;
+  const shownIds = PEOPLE.map((_, i) => i).filter(shown);
+  document.getElementById("people").innerHTML =
+    `<div class="dayhead"><b>page ${D}</b><span>${D === TODAY ? "오늘 · " : ""}${n(shownIds)}/${shownIds.length}명 체크인</span></div>` +
+    (fKind !== "challenger" ? `<p class="sh">크리에이터 ${n(creators)}/${creators.length} · 올린 날</p><div class="people">${sorted(creators).map(row).join("")}</div>` : "") +
+    (fKind !== "creator" ? `<p class="sh">챌린저 ${n(challengers)}/${challengers.length} · 통화 4분 + 스피치</p><div class="people">${sorted(challengers).map(row).join("")}</div>` : "");
+  const story = (i) => `<button type="button" data-person="${i}" aria-pressed="${fPerson === i}"><span class="face">${av(i)}${mark(i)}</span><span>${PEOPLE[i].n}</span></button>`;
+  document.getElementById("stories").innerHTML = [
+    creators.map(story).join(""), `<span class="gap"></span>`, challengers.map(story).join(""),
+  ].join("");
+  const chips = document.getElementById("chips");
+  chips.innerHTML = [
+    fPerson !== null ? `<button class="chip" type="button" data-clear="person">${PEOPLE[fPerson].n} <span>×</span></button>` : "",
+    fDay !== null ? `<button class="chip" type="button" data-clear="day">page ${fDay} <span>×</span></button>` : "",
+  ].join("");
+  chips.style.marginBottom = chips.innerHTML ? "14px" : "0";
+
+  // a person picked: their profile and 100 days on top
+  const prof = document.getElementById("profile");
+  if (fPerson !== null) {
+    const p = PEOPLE[fPerson];
+    const cells = Array.from({ length: 100 }, (_, d) => `<span class="${d + 1 <= TODAY && did(fPerson, d + 1) ? "on" : ""}${d + 1 === TODAY ? " today" : ""}"></span>`).join("");
+    let streak = 0; for (let d = TODAY; d >= 1 && did(fPerson, d); d--) streak++;
+    const what = isC(fPerson) ? `크리에이터 · ${p.l} · ${PLAT[p.plat][0]}` : `챌린저 · ${p.l}`;
+    // a challenger has no posts: their page is the days themselves
+    const log = isC(fPerson) ? "" : `<div class="daylog">${DAYS.filter((d) => fDay === null || d === fDay).map((d) => `<div><b>page ${d}</b><span class="did" style="display:flex;gap:12px;align-items:center">${dayDid(fPerson, d)}</span></div>`).join("")}</div>`;
+    prof.innerHTML = `<section class="profile"><div class="ptop">${av(fPerson)}<h2>${p.n}<small>${what}</small></h2></div><div class="grid100">${cells}</div><p><b>${total(fPerson)}/${TODAY}</b> 체크인 · 지금 <b>${streak}</b>일 연속</p>${log}</section>`;
+  } else prof.innerHTML = "";
+  document.getElementById("mine").innerHTML = me === null ? "" : mineHTML();
+  if (fPerson !== null && !isC(fPerson)) { document.getElementById("list").innerHTML = ""; return; }
+
+  // the feed, newest first: each day's challengers, then its creators' posts
+  const groups = [];
+  for (const day of DAYS) {
+    if (fDay !== null && day !== fDay) continue;
+    const hs = POSTS.filter((p) => p.day === day && (fPerson === null || p.i === fPerson)).map(postHTML);
+    if (hs.join("")) groups.push({ day, hs });
+  }
+  // sponsored cards, only in the full feed
+  if (fPerson === null) { let n = 0; groups.forEach((g, gi) => { if (gi === 0 || gi === 2) { g.hs.splice(Math.min(3, g.hs.length), 0, adHTML(ADS[n++ % 2])); } }); }
+  document.getElementById("list").innerHTML = groups.length
+    ? groups.map((g) => `<section class="dayg"><h2 class="dtag"><b>page ${g.day}</b><span>${g.day === TODAY ? "오늘 · " : ""}${POSTS.filter((p) => p.day === g.day && (fPerson === null || p.i === fPerson)).length}개</span></h2>${g.hs.join("")}</section>`).join("")
+    : `<p class="empty">이날은 아직 올라온 글이 없어요.</p>`;
+}
+
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-day],[data-person],[data-clear],[data-kind],[data-more]");
+  if (!b) return;
+  if (b.dataset.more) { openDays.add(+b.dataset.more); render(); return; }
+  if (b.dataset.clear === "person") fPerson = null;
+  else if (b.dataset.clear === "day") fDay = null;
+  else if (b.dataset.kind) { fKind = b.dataset.kind; render(); return; }
+  else if ("day" in b.dataset) fDay = b.dataset.day === "" ? null : +b.dataset.day;
+  else if ("person" in b.dataset) fPerson = fPerson === +b.dataset.person ? null : +b.dataset.person;
+  render();
+  scrollTo({ top: 0, behavior: "smooth" });
+});
+document.getElementById("ticks").innerHTML = Array.from({ length: 100 }, (_, d) => `<i class="${d + 1 < TODAY ? "on" : d + 1 === TODAY ? "today" : ""}"></i>`).join("");
+// Threads' embed says its own height (a bare number) whenever its content settles; the frame follows it.
+addEventListener("message", (e) => {
+  if (!/^https:\/\/www\.threads\.(com|net)$/.test(e.origin)) return;
+  const h = parseInt(e.data, 10);
+  if (!h) return;
+  for (const f of document.querySelectorAll(".embed.th iframe")) if (f.contentWindow === e.source) f.style.height = h + "px";
+});
+document.addEventListener("submit", (e) => {
+  if (e.target.id !== "checkin") return;
+  e.preventDefault();
+  const url = document.getElementById("ci-url").value.trim();
+  const line = document.getElementById("ci-line").value.trim() || "오늘도 했어요.";
+  POSTS.unshift({ i: me, day: TODAY, url, plat: "ig", line, hoursAgo: 0 });
+  checkedToday.add(me);
+  render();
+});
+document.getElementById("trybox").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const url = document.getElementById("tryurl").value.trim();
+  if (!url) return;
+  POSTS.unshift({ i: 0, day: TODAY, url, plat: "ig", line: "붙여 넣은 주소로 만든 카드예요.", hoursAgo: 0 });
+  fDay = null; fPerson = null; render(); scrollTo({ top: 0, behavior: "smooth" });
+});
+render();
+</script>
+</body>
+</html>

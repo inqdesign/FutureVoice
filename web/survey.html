@@ -64,7 +64,7 @@ textarea{width:100%;min-height:96px;margin-top:10px;padding:12px 14px;font:inher
 <script>
 const SUPABASE_URL = "https://chhzjtigzdotacutwcyo.supabase.co";
 const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoaHpqdGlnemRvdGFjdXR3Y3lvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5OTk3NDUsImV4cCI6MjA5NjU3NTc0NX0.tcGaH-m2jJklxsQ8YaHU1UaxtJAZkoRBq0B--inPHVU";
-const APP_URL = "https://apps.apple.com/app/id6792794655";
+const APP_URL = /Android/i.test(navigator.userAgent) ? "https://play.google.com/store/apps/details?id=com.roro.futurevoice" : "https://apps.apple.com/app/id6792794655";
 
 const params = new URLSearchParams(location.search);
 // nawana.app/s/<survey>?t=<token>; ?s=<survey> for a local preview.
