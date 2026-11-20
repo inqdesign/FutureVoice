@@ -2746,47 +2746,6 @@ and hidden for want of a wordlist. Two facts shaped the rest:
   and `…00a` (ageing), `20261015160000`.
 - Tests: `SpanishTargetTests`.
 
-## Chinese as a TARGET language (2026-11-13)
-
-Simplified only (founder: Korean learners study 간체 with pinyin; Traditional
-is TOCFL/Taiwan). The target code is a bare `zh`; `englishName("zh")` is
-"Simplified Chinese" so no prompt writes Traditional.
-
-- **The pool** (`cefr_words_zh.tsv`, `scripts/build-zh-wordlist.py`): HSK 3.0
-  (GF0025-2021) via drkameleon/complete-hsk-vocabulary (MIT), pinyin from
-  CC-CEDICT as the third column (surname/variant readings dropped, two at
-  most), never CEDICT's glosses. 1 → A1, 2–3 → A2, 4 → B1, 5–6 → B2, 7–9 → C1
-  (HSK's own elementary/intermediate/advanced = CEFR A/B/C), C2 empty.
-  Content words only: pronouns (我们, 怎么样), particles (的 了 吗) and bare
-  numerals are left out. `zh_forms.tsv` maps an erhua-less spelling onto the
-  headword (一点 → 一点儿). Level labels read "B1 · HSK 4".
-- **`ChineseMorph`**: `CFStringTokenizer` (zh-Hans) cuts words the way HSK
-  lists them and returns tone-marked pinyin. Text is folded to Simplified
-  first (ICU Hant-Hans, one UTF-16 unit per character, so ranges map back);
-  the tokenizer reads Traditional one character at a time otherwise. No
-  inflection, so a word is its headword; up to three tokens are joined when
-  the list has the compound. `offListContentWords` is empty, like ja/ko.
-- **`WordSplitter` is the only door** for unspaced text now (`segments`,
-  `segmentRanges`, `displayPieces`, `headwords`, `pieceKeys`,
-  `isFunctionToken`); callers no longer name `JapaneseMorph`.
-- **Characters are the transcriber's**: `saysTheSameThing` compares pinyin
-  WITH tones (說/说, 在/再, 的/得 collapse; 买/卖 doesn't), and both
-  correction prompts carry an ASR CHARACTER GUARD (in `scriptGuard`).
-  `correction-probe.py zh` (69 lines × 2): 1/90 false (跑的 → 跑得, which
-  the code then drops), 0/48 missed. `beginner-probe.py` on Haiku, A2: 0/14
-  multi, 0/14 open.
-- Shadowing folds both sides to Simplified and spells digits in Chinese
-  (3年 = 三年). Presets: the four Mandarin voices Find people already uses,
-  named 李静 · 张浩 · 林兰 · 刘洋 (not yet heard as scene partners; two came
-  out the same size at two speeds, check by ear).
-- **Pronunciation**: Azure zh-CN scores each SYLLABLE with its tone
-  ("mai 3"), but only without `PhonemeAlphabet: IPA`, which returns no
-  phonemes at all (the function skips it for zh-CN). A wrong syllable
-  scores ~4; a wrong TONE only 63–92 and is never flagged (macOS voices,
-  2026-11-13), so the course's tone chapter is judged by the focus-word bar.
-- Exams HSKK, TSC, OPIc. Speech sample `…00b` is in the app only; no
-  challenge row was added. Tests: `ChineseTargetTests`.
-
 ## French as a TARGET language (2026-11-13)
 
 Founder: French is a top-3 language worldwide, so it goes in, built the way
@@ -2846,6 +2805,47 @@ the language PRACTISED.
   nasal vowels, é/è, eu, r, liaison and silent endings. Numbers: vingt et
   une, septante/huitante/nonante, the old year reading.
 - Tests: `FrenchTargetTests`.
+## Chinese as a TARGET language (2026-11-13)
+
+Simplified only (founder: Korean learners study 간체 with pinyin; Traditional
+is TOCFL/Taiwan). The target code is a bare `zh`; `englishName("zh")` is
+"Simplified Chinese" so no prompt writes Traditional.
+
+- **The pool** (`cefr_words_zh.tsv`, `scripts/build-zh-wordlist.py`): HSK 3.0
+  (GF0025-2021) via drkameleon/complete-hsk-vocabulary (MIT), pinyin from
+  CC-CEDICT as the third column (surname/variant readings dropped, two at
+  most), never CEDICT's glosses. 1 → A1, 2–3 → A2, 4 → B1, 5–6 → B2, 7–9 → C1
+  (HSK's own elementary/intermediate/advanced = CEFR A/B/C), C2 empty.
+  Content words only: pronouns (我们, 怎么样), particles (的 了 吗) and bare
+  numerals are left out. `zh_forms.tsv` maps an erhua-less spelling onto the
+  headword (一点 → 一点儿). Level labels read "B1 · HSK 4".
+- **`ChineseMorph`**: `CFStringTokenizer` (zh-Hans) cuts words the way HSK
+  lists them and returns tone-marked pinyin. Text is folded to Simplified
+  first (ICU Hant-Hans, one UTF-16 unit per character, so ranges map back);
+  the tokenizer reads Traditional one character at a time otherwise. No
+  inflection, so a word is its headword; up to three tokens are joined when
+  the list has the compound. `offListContentWords` is empty, like ja/ko.
+- **`WordSplitter` is the only door** for unspaced text now (`segments`,
+  `segmentRanges`, `displayPieces`, `headwords`, `pieceKeys`,
+  `isFunctionToken`); callers no longer name `JapaneseMorph`.
+- **Characters are the transcriber's**: `saysTheSameThing` compares pinyin
+  WITH tones (說/说, 在/再, 的/得 collapse; 买/卖 doesn't), and both
+  correction prompts carry an ASR CHARACTER GUARD (in `scriptGuard`).
+  `correction-probe.py zh` (69 lines × 2): 1/90 false (跑的 → 跑得, which
+  the code then drops), 0/48 missed. `beginner-probe.py` on Haiku, A2: 0/14
+  multi, 0/14 open.
+- Shadowing folds both sides to Simplified and spells digits in Chinese
+  (3年 = 三年). Presets: the four Mandarin voices Find people already uses,
+  named 李静 · 张浩 · 林兰 · 刘洋 (not yet heard as scene partners; two came
+  out the same size at two speeds, check by ear).
+- **Pronunciation**: Azure zh-CN scores each SYLLABLE with its tone
+  ("mai 3"), but only without `PhonemeAlphabet: IPA`, which returns no
+  phonemes at all (the function skips it for zh-CN). A wrong syllable
+  scores ~4; a wrong TONE only 63–92 and is never flagged (macOS voices,
+  2026-11-13), so the course's tone chapter is judged by the focus-word bar.
+- Exams HSKK, TSC, OPIc. Speech sample `…00b` is in the app only; no
+  challenge row was added. Tests: `ChineseTargetTests`.
+
 ## One line per language, measured (2026-11-06)
 
 The shared prompt rules carry English examples, and the other languages
@@ -3842,6 +3842,50 @@ call time." `PronunciationCall.swift`, `PronunciationCallViews.swift`.
   word is kept on the topic (`missedWords`, newest 8), the next round on
   that sound is written around those words, and a word leaves the list
   when it is said right. The course lists them ("To redo").
+- **English only since 2026-11-19** (founder, `PronunciationCall.isOffered`).
+  The bars above were set on en-US and never checked elsewhere. From 11-03
+  the function's `btoa` threw on any non-Latin-1 reference, so every Korean,
+  Japanese and Chinese take was a 502 ("Sorry, once more?" on a right
+  reading); fixed, and the fix showed the rest: Azure's ko-KR faults native
+  speech (five native voices and the founder 34–58 on "예쁜"), and native
+  voices reading the right sentence passed 0/5 in Japanese, 4/10 in French,
+  3/5 in Spanish, 4/5 in German (two real German learners: 0 passes in 8
+  takes). The ring and the in-call switch show the page only for English;
+  the server answers a `pron_call` take in any other language, and every
+  Korean take on any surface, with 503 (words only). A language comes back
+  after NATIVE recordings pass its own bars. Shadowing and speech keep their
+  Azure scores outside Korean.
+- **Korean is judged by COMPARISON** (same day, `PronunciationContrast`).
+  A score held to a bar cannot work outside English: on real native Korean
+  (FLEURS, 1,087 words with the tense/plain consonant swapped in the
+  reference) a bar of 50 caught 136 wrong consonants and a bar of 85 failed
+  one native word in nine. So the take is read twice, against the sentence
+  and against the sentence with the lesson's consonant swapped (빵을 /
+  방을, the function's `alternates`), and whichever spelling scores higher
+  on that word is what was said: right 926, wrong 11, within 5 points 150
+  (too close to call passes). Outside English nothing else stops a reading
+  but a word left out; the card shows the word and what it came out as, no
+  score. Offered: `ko.tense`, `ko.asp`, `ko.three`, `ko.eoo`, `ko.eu`
+  (aspirated vs plain 180 / 2 / 20, ㅓ vs ㅗ 279 / 1 / 18, ㅡ vs ㅜ 244 / 2 /
+  21; tense vs aspirated unmeasured, so the three-way topic compares each
+  with plain). **Spanish, French, German and Japanese the same evening**,
+  each sound's swap measured on FLEURS dev + test (`scratchpad` harness:
+  the native's word against the same word with the sound swapped in the
+  reference), with a margin per language where a native reading is almost
+  never taken for the other sound (`margin(locale:)`: ko 5, es/fr 10,
+  ja/de 15). Offered: es rr, r, ñ, j · fr u, eu, an/on · de ü (words of
+  four letters up; "für" alone was 8 of 10 wrong), ö, ei/ie, the ich-sound
+  · ja small っ and the KATAKANA long mark (the planner is told to put a
+  katakana loanword in every ja.long sentence). Japanese takes one beat
+  out per alternate and lines the two reads up by letter, since they cut
+  words differently (立っ·て against 立て). Measured and left out: fr é/è
+  and in/an, de long/short and z, ja つ/す. Every other topic of those
+  languages is hidden until its own swap passes. A sentence with nothing
+  to swap sends no alternate and is judged on its words (503). The rules
+  are regexes in lower case, exactly as measured: change one only with a
+  re-run. macOS `say` voices are NOT a yardstick: the same method looked
+  poor on them and an open Korean CTC model could not transcribe them. Not
+  measured on a learner's in-between sound.
 - Unmeasured on learners other than the founder. Captures `-capture call-pron` /
   `call-pron-miss` / `call-pron-sheet`. Android: owed.
 
@@ -3940,6 +3984,32 @@ its trailer was invisible to git whenever it sat in its own paragraph.
   `play-release.py` compares it with iOS's Info.plist, blocks a production
   send on a mismatch, and `--match-ios` writes it.
 
+## The creator program (2026-11-09)
+
+Founder: 100 days of studying hard, and sharing the proof of it. Learners apply at
+`nawana.app/creators`; they get nawana free, and promise to post on the
+schedule they agreed and to make clear they use nawana. No format, no
+review, the app need not appear. Korean only so far. A cohort (1기) runs 100
+days from a start date announced separately.
+
+- **Path**: `web/creators.html` → edge function `creator-apply` (honeypot,
+  Telegram line built from the form's fixed choices only) → `creator_apply()`
+  (service role only) → `creator_applications`. One row per handle
+  (`creator_contact_key`); sending again replaces it only while `status = new`.
+- **The desk is `/admin/creators`** (`admin/src/creators.ts` + `creators.html`,
+  the console's stylesheet borrowed like Dear RoRo). new → talking → active →
+  paused / ended, or declined. Applicants' text is untrusted and reaches that
+  page through `textContent` only. The 21-day strip shows talk minutes (read
+  live through the comp redemption) and days the founder marked as posted
+  (`creator_posts`); nothing reads the social networks.
+- **The free access is a STANDING comp code**, so it rolls monthly with no
+  chore; "end" sets `cancel_at_period_end` and the nightly sweep ends it. A
+  learner can redeem one comp code ever, so a code is remade only while unused.
+  The desk defaults to Plus, Light is the other choice.
+- **A free app in exchange for posts must be disclosed** (Korean FTC
+  endorsement guidelines, German UWG), so the page and the code DM ask for a
+  line per post such as "앱은 나와나로부터 제공받았습니다". Keep it on the page.
+
 ## Source of truth
 
 - **Domain types** → `FutureVoice/Models/Models.swift`. Update there first.
@@ -3959,7 +4029,7 @@ its trailer was invisible to git whenever it sat in its own paragraph.
   the real mix is profitable at 450 and only an all-talk month (never
   seen; max 263) loses. A Plus 400 was written and withdrawn the same hour.
 - **Plus was 450 min and Max 900 min for new buyers from 2026-10-27** (`20261027120000_plus_450_max_900`, founder decision; prices unchanged). Re-measured that day, a talk minute is ~$0.046 all in (Claude reply + Gemini console minus Dear RoRo's image SKUs + Cartesia estimated), not the $0.03 the bullets below price with. Fully used: Plus +$0.5 US / −$4.7 KR, Max +$1.1 / −$8.9; Light 150 min is +$1.4–1.6 and untouched. The pool moved instead of the price because the price is on the paywall and no paying account comes near the pool. Every live Plus/Max row was stamped with 600 min first. `docs/launch-billing.md` "2026-10-27 revision" has the table.
-- **Every plan is a BOUNDED pool, and the tail buys minutes** (2026-09-26, `20260926110000_bounded_plans_and_topups`, founder decision: "Plus unlimited is too much risk"). This supersedes the two bullets above where they say Plus is uncapped. The numbers that forced it: a talk minute costs ~$0.03 all in (the TTS of the time, 145–170 cr/min + Gemini), a scene ~$0.12, net revenue is $8.49 on Light's $9.99 — so Light fully used (150 + 30) cost $8.1 and lost money in Korea/EU, Plus's 120 scenes alone cost $14.4 of its $16.99 net, and one trialer talked 35 min a day, which on an uncapped Plus is −$27/mo on that account. The pricing principle asks what a plan earns when EVERY subscriber uses everything, so: **Light 150 min + 10 scenes at $9.99** (33% at full use — the SCENES paid for the minutes: one scene costs four talk minutes, so 60 → 10 scenes buys back the 150 the plan is bought for; the heaviest Light account ever played four in a month, and a Light learner who hits it has Plus to move to), **Plus 600 min + 30 scenes at $24.99 / ₩29,000** — 20 minutes a day. The USD price was raised on 2026-09-26 (the dollar was the cheapest storefront in real terms, and only 3 of 24 payers are on it against 18 in Korea); **KRW deliberately was not**, because raising it would put Apple's ₩0→정가 consent sheet in front of every Korean subscriber, which is the mechanism that killed the Korean trials. So Plus is +$0.8 fully used in the US and **−$4.4 in Korea**, which the founder chose twice over cutting the pool to 450 min. Bounded (−$80/month if all 18 Korean accounts maxed out) and far away (heaviest paying account projects to 232 min per 30 days). Revisit when a Korean Plus crosses ~450 min in a period — and then by the POOL, not the price. The difference from unlimited is that the worst case is a known four dollars, not $90 at `abuse_seconds`, and **+100 min for $4.99** (`talk_topups`, consumable `com.roro.futurevoice.talk_100`, 29%) in place of "unlimited" — built end to end but **NOT on sale**: two products for now, no ASC consumable, and `TalkTopUpButton` draws nothing without a live price, so the app is a two-subscription app with no code change. The consequence to hold: a Plus learner who empties the pool has nothing to buy and no tier to move to, which is why Plus is the generous side of the pair. Five things to keep: ① **nobody who already bought is touched** — `user_subscriptions.monthly_seconds` / `.talk_unlimited` / `.monthly_scenes` stamp what a row was SOLD, every meter reads the stamp before the plan (`consume_metered_seconds`, `talk_allowance`, `begin_scene_play`, `scene_allowance`), so the Light row from September keeps 150 min + 30 scenes (a row still TRIALING is stamped with the CURRENT plan's figures instead — `20260926130000` — because the stamp outlives the trial and a Light-sized stamp would have converted a Plus trial into a 150-minute Plus). **The three legacy Plus rows are the one deliberate exception to the stamp's own rule** (`20260926140000`, founder's call the same day): uncapped talk is a tail we keep paying for ($90 at `abuse_seconds`), so they were moved to **900 min + 60 scenes** — 3× the new pool, bounded at −$17 worst case, and 8× more than the heaviest of them has ever talked (108 / 93 / 5 min, 0 / 28 / 1 scenes in September), so nothing that would have run now stops. What they DO notice is the screen: a capped row draws the Home ring, says "N of 900 min" and can buy packs. The stamp survives renewals because neither webhook writes those columns — but NOT a plan change (2026-10-12, `20261012140000`): a trigger clears it whenever `plan_id` moves, so a Light that upgrades gets Plus's pool the moment Apple charges for it, and a legacy Plus that downgrades doesn't carry 900 minutes onto Light; a stamp set in the same statement wins. Re-stamp AFTER a plan change if a row must keep a size; the app's `AccountStatus.isUncappedTalk` (entitled + nil cap from `talk_allowance`) is what every "no ring / N min talked / no invite row" rule hangs off now — **never the tier**; `isPlusPlan` says only which size was bought, and the paywall card reads `subscription_plans.talk_unlimited` (in the catalog select since this date; the column has existed since 2026-08-21, so the old deploy-ordering objection no longer applies). ② **A top-up lands in `user_credits.balance`** through `apple-topup` → `apply_talk_topup` (JWS verified with the same chain as `apple-claim`, keyed on the transaction id, and the app FINISHES the consumable only after the server answers — `TalkTopUpService.redeem`, also on `Transaction.updates`, so an offline purchase is retried, never lost). It is spent BEFORE the plan's pool (step 1, as invite minutes always were — the button lives on the spent-pool sheet, so the pool is empty when it is bought) and shows as "+N extra min" (`talk_allowance().bonus` → `bonusSeconds`, which the app had never decoded). `TalkTopUpButton` is the one button (sheet + Usage page); it draws only with a live App Store price, for entitled, counted, non-trial accounts; the free account gets the plans, not a pack. ③ **Plus now has a ring, a fraction and a spent-pool sheet like Light** — the 2026-08-21 "Plus never counts anything down" rule was about an UNCOUNTED pool and applies only to the grandfathered rows. ④ **The annual plans came OFF SALE the same day** (`20260926160000`): at the new pools Light annual is break-even (−$0.4/yr) but **Plus annual is −$137/yr** fully used, and an annual discount cannot be repaired on its own — Plus monthly already loses $4.61, so a discount multiplies a loss, and breaking even would mean listing above 12× monthly. It is a CATALOG flag (`is_active = false`), not an App Store change: the paywall's period picker is data-driven, the Annual segment disappears, and the picker hides itself at one option; the four ASC products stay (a product id is permanent) and one UPDATE brings them back. Nothing live is cut off — every meter joins the plan by id with no `is_active` filter and every live row carries its stamp. Light annual could have stayed on its own numbers, but an Annual tab holding a Plus card with no price is worse than no tab. **It is a PAUSE, not a deletion**: annual comes back at **"2 months free" (10 × monthly — Light $99.99 / ₩150,000 / €99.99, Plus $199.99 / ₩290,000 / €229.99)** once those prices are set in ASC, which `20260926170000` is written and waiting for. That shape fixes Light (+$17/yr) and halves Plus's annual loss (−$137 → −$89) but cannot remove it — no discount can, while Plus monthly is −$4.61; at NO discount the year is still −$55 — so the annual simply follows whatever Plus monthly is re-derived to. Ten months is also the same offer in every storefront, which the old table never was (33/39/25% on Light, 40/40/46% on Plus), and the paywall badge now says "2 months free" whenever the LIVE prices divide that way (`PaywallView.annualSavingLabel`, percentage otherwise). ⑤ App Store Connect is by hand and is the real cut-over: intro offers deleted (done 2026-09-26; verified 0 on all four via the ASC API, the two remaining offer codes are the launch 50%) — no price changes and no consumable; `docs/launch-billing.md` "2026-09-26 revision" has the table and the checklist. The 3-day trial went with it (0 of 20 trials had converted; the paying subscribers had all bought without one; and Korea's ₩0→정가 consent sheet was where four of the last six purchase attempts died), and the free pool went 600 → **1200 s** (`20260926100000_twenty_free_minutes`, `AccountStatus.freeGrantSeconds`) — of 29 signups only the 28% who hit the 10-minute wall ever subscribed, so the runway costs only them, ~$0.1 a signup.
+- **Every plan is a BOUNDED pool, and the tail buys minutes** (2026-09-26, `20260926110000_bounded_plans_and_topups`, founder decision: "Plus unlimited is too much risk"). This supersedes the two bullets above where they say Plus is uncapped. The numbers that forced it: a talk minute costs ~$0.03 all in (the TTS of the time, 145–170 cr/min + Gemini), a scene ~$0.12, net revenue is $8.49 on Light's $9.99 — so Light fully used (150 + 30) cost $8.1 and lost money in Korea/EU, Plus's 120 scenes alone cost $14.4 of its $16.99 net, and one trialer talked 35 min a day, which on an uncapped Plus is −$27/mo on that account. The pricing principle asks what a plan earns when EVERY subscriber uses everything, so: **Light 150 min + 10 scenes at $9.99** (33% at full use — the SCENES paid for the minutes: one scene costs four talk minutes, so 60 → 10 scenes buys back the 150 the plan is bought for; the heaviest Light account ever played four in a month, and a Light learner who hits it has Plus to move to), **Plus 600 min + 30 scenes at $24.99 / ₩29,000** — 20 minutes a day. The USD price was raised on 2026-09-26 (the dollar was the cheapest storefront in real terms, and only 3 of 24 payers are on it against 18 in Korea); **KRW deliberately was not**, because raising it would put Apple's ₩0→정가 consent sheet in front of every Korean subscriber, which is the mechanism that killed the Korean trials. So Plus is +$0.8 fully used in the US and **−$4.4 in Korea**, which the founder chose twice over cutting the pool to 450 min. Bounded (−$80/month if all 18 Korean accounts maxed out) and far away (heaviest paying account projects to 232 min per 30 days). Revisit when a Korean Plus crosses ~450 min in a period — and then by the POOL, not the price. The difference from unlimited is that the worst case is a known four dollars, not $90 at `abuse_seconds`, and **+100 min for $4.99** (`talk_topups`, consumable `com.roro.futurevoice.talk_100`, 29%) in place of "unlimited" — built end to end but **NOT on sale**: two products for now, no ASC consumable, and `TalkTopUpButton` draws nothing without a live price, so the app is a two-subscription app with no code change. The consequence to hold: a Plus learner who empties the pool has nothing to buy and no tier to move to, which is why Plus is the generous side of the pair. Five things to keep: ① **nobody who already bought is touched** — `user_subscriptions.monthly_seconds` / `.talk_unlimited` / `.monthly_scenes` stamp what a row was SOLD, every meter reads the stamp before the plan (`consume_metered_seconds`, `talk_allowance`, `begin_scene_play`, `scene_allowance`), so the Light row from September keeps 150 min + 30 scenes (a row still TRIALING is stamped with the CURRENT plan's figures instead — `20260926130000` — because the stamp outlives the trial and a Light-sized stamp would have converted a Plus trial into a 150-minute Plus). **The three legacy Plus rows are the one deliberate exception to the stamp's own rule** (`20260926140000`, founder's call the same day): uncapped talk is a tail we keep paying for ($90 at `abuse_seconds`), so they were moved to **900 min + 60 scenes** — 3× the new pool, bounded at −$17 worst case, and 8× more than the heaviest of them has ever talked (108 / 93 / 5 min, 0 / 28 / 1 scenes in September), so nothing that would have run now stops. What they DO notice is the screen: a capped row draws the Home ring, says "N of 900 min" and can buy packs. The stamp survives renewals because neither webhook writes those columns — but NOT a plan change (2026-10-12; first filed under the same version as another migration and never run in prod, applied as `20261104100000`): a trigger clears it whenever `plan_id` moves, so a Light that upgrades gets Plus's pool the moment Apple charges for it, and a legacy Plus that downgrades doesn't carry 900 minutes onto Light; a stamp set in the same statement wins. Re-stamp AFTER a plan change if a row must keep a size; the app's `AccountStatus.isUncappedTalk` (entitled + nil cap from `talk_allowance`) is what every "no ring / N min talked / no invite row" rule hangs off now — **never the tier**; `isPlusPlan` says only which size was bought, and the paywall card reads `subscription_plans.talk_unlimited` (in the catalog select since this date; the column has existed since 2026-08-21, so the old deploy-ordering objection no longer applies). ② **A top-up lands in `user_credits.balance`** through `apple-topup` → `apply_talk_topup` (JWS verified with the same chain as `apple-claim`, keyed on the transaction id, and the app FINISHES the consumable only after the server answers — `TalkTopUpService.redeem`, also on `Transaction.updates`, so an offline purchase is retried, never lost). It is spent BEFORE the plan's pool (step 1, as invite minutes always were — the button lives on the spent-pool sheet, so the pool is empty when it is bought) and shows as "+N extra min" (`talk_allowance().bonus` → `bonusSeconds`, which the app had never decoded). `TalkTopUpButton` is the one button (sheet + Usage page); it draws only with a live App Store price, for entitled, counted, non-trial accounts; the free account gets the plans, not a pack. ③ **Plus now has a ring, a fraction and a spent-pool sheet like Light** — the 2026-08-21 "Plus never counts anything down" rule was about an UNCOUNTED pool and applies only to the grandfathered rows. ④ **The annual plans came OFF SALE the same day** (`20260926160000`): at the new pools Light annual is break-even (−$0.4/yr) but **Plus annual is −$137/yr** fully used, and an annual discount cannot be repaired on its own — Plus monthly already loses $4.61, so a discount multiplies a loss, and breaking even would mean listing above 12× monthly. It is a CATALOG flag (`is_active = false`), not an App Store change: the paywall's period picker is data-driven, the Annual segment disappears, and the picker hides itself at one option; the four ASC products stay (a product id is permanent) and one UPDATE brings them back. Nothing live is cut off — every meter joins the plan by id with no `is_active` filter and every live row carries its stamp. Light annual could have stayed on its own numbers, but an Annual tab holding a Plus card with no price is worse than no tab. **It is a PAUSE, not a deletion**: annual comes back at **"2 months free" (10 × monthly — Light $99.99 / ₩150,000 / €99.99, Plus $199.99 / ₩290,000 / €229.99)** once those prices are set in ASC, which `20260926170000` is written and waiting for. That shape fixes Light (+$17/yr) and halves Plus's annual loss (−$137 → −$89) but cannot remove it — no discount can, while Plus monthly is −$4.61; at NO discount the year is still −$55 — so the annual simply follows whatever Plus monthly is re-derived to. Ten months is also the same offer in every storefront, which the old table never was (33/39/25% on Light, 40/40/46% on Plus), and the paywall badge now says "2 months free" whenever the LIVE prices divide that way (`PaywallView.annualSavingLabel`, percentage otherwise). ⑤ App Store Connect is by hand and is the real cut-over: intro offers deleted (done 2026-09-26; verified 0 on all four via the ASC API, the two remaining offer codes are the launch 50%) — no price changes and no consumable; `docs/launch-billing.md` "2026-09-26 revision" has the table and the checklist. The 3-day trial went with it (0 of 20 trials had converted; the paying subscribers had all bought without one; and Korea's ₩0→정가 consent sheet was where four of the last six purchase attempts died), and the free pool went 600 → **1200 s** (`20260926100000_twenty_free_minutes`, `AccountStatus.freeGrantSeconds`) — of 29 signups only the 28% who hit the 10-minute wall ever subscribed, so the runway costs only them, ~$0.1 a signup.
 - **A Watch scene costs FIVE talk minutes for everyone who subscribes from 2026-10-19** (`20261019120000_scenes_cost_talk_time`, founder decision). A scene is ~930 characters (~3 talk minutes upstream), so five minutes is above cost and below the voiceover's 3x, and with it any mix of talking and watching costs at most what the same minutes spent talking would: the plan's margin is the talk minute's alone. Charged ONCE at the claim (`begin_scene_play(p_talk => true)` → `consume_metered_seconds(300, 'talk_seconds', action 'scene_play')`), later lines ride `charge_tts_pooled(p_pool => 'scene_paid')` (ledger only, spends nothing); a spent pool is the talk wall (`daily_cap_reached`). **Short of a whole scene is answered at the TAP**, before a script is written: `BillingGate.sceneAnswer()` → `.short` raises the spent-pool sheet (`TalkWall`) from the composer, the map's person card and Find people, and `SceneCostNote` says "a scene needs 5 min · 3 min left" beforehand. Both sides count plan minutes + extra minutes (`sceneSpendableSeconds`), and the claim pays that way too — extra first, the plan the rest — so a scene the screen says fits is never refused. **Watching a scene AGAIN is free, always** (founder): a saved dialogue's lines go as `purpose: "scene-replay"` with no scene key (`WatchView.isReplay`, Android `replaySaved`), and `record_scene_replay` records the line and spends nothing — not the free review pool, which charges past 12,000 characters a day. Its only limit is an abuse ceiling (60,000 characters a day) answered as 429, never a paywall. Three rules hold it: **every account that had a subscription row that day stays on the COUNT** (`scene_count_billing`, 37 rows; the founder moves one by deleting its row after asking them); **a free account pays five minutes of its free talk time too** (2026-11-16, `20261116120000_free_scenes_cost_talk_time`, founder: no free sample; it was one sample scene that took no minutes, which met a learner with all 20 free minutes left with the plans on their second scene; short of five minutes the tap gets the plans); and **only a build that sends `scene_billing: "talk"` is charged in minutes** — a store build that prints "10 scenes" keeps the count, because the server never charges in a unit the screen doesn't name. `scene_allowance` keeps every old field and adds `scene_billing` / `scene_talk_seconds` (with no plan: what a purchase would bring, which the paywall draws). The price is said before the tap: the paywall ladder and footnote, Usage, the guide, and `SceneCostNote` under the composer box, the browse leaf and the saved-scenarios sheet. Capture with `-scenetalk 1`.
 - **The plans page is three rows and one line** (2026-11-03, founder: "simple;
   everything is talk minutes"). A row is name · minutes · about N a day ·
@@ -4308,6 +4378,7 @@ Nothing here names a language. Adding German is a `de` column in the catalogs pl
 - **iOS-first.** The Mac app is the iPhone app under Mac Catalyst (see "The Mac app"); never fork a screen for it — Mac differences live in `MacLayout.swift` and `#if targetEnvironment(macCatalyst)`.
 - **Don't write to disk outside `documentDirectory`** unless using `cacheDirectory` with a clear cleanup policy.
 - **Deterministic scores stay deterministic.** Shadow match scores and scorecard metrics are computed in code; the LLM only writes qualitative notes anchored to those numbers. Don't let an LLM invent a number the code can compute.
+- **A migration version is used by ONE file.** `db push` and `scripts/apply-migration.sh` treat a recorded version as done whatever file it came from, so the second file of a pair never runs (two did not, found 2026-11-04). The `pre-commit` hook refuses a new duplicate and `apply-migration.sh` refuses a version already recorded; pick the next free timestamp.
 - **Drill cards must be speakable utterances**, never meta-rules ("use articles correctly"). `DrillStore.looksLikeMetaRule` is the safety net; keep prompts emitting concrete sentences.
 
 ## UI rules (strict)
