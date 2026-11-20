@@ -2266,6 +2266,63 @@ enum DebugCapture {
                                durationMs: 4200, timestamp: Date(), suggestion: nil),
                     targetLanguage: "ja")
             })
+        case "call-zh":
+            // A Chinese call with pinyin: both sides' lines and the coach's
+            // "try saying". Launch with `-futurevoice.targetLanguage zh`.
+            let reply = CoachReply(say: "我想去[北京]看看长城。",
+                                   meaning: "[베이징]에 가서 만리장성을 보고 싶어.",
+                                   turnId: UUID())
+            return AnyView(NavigationStack {
+                VStack(spacing: 0) {
+                    VStack(alignment: .leading, spacing: 18) {
+                        DialogueLine(speaker: .user, name: "You") {
+                            FuriganaText("我还没去过中国，但是下个月想去。")
+                        }
+                        DialogueLine(speaker: .other, name: "Future self") {
+                            FuriganaText("真的吗？太好了！你想去哪个城市？")
+                        }
+                        DialogueLine(speaker: .user, name: "You", scale: .call) {
+                            Text("Listening…").foregroundStyle(.secondary).italic()
+                        }
+                        Spacer()
+                    }
+                    .padding(20)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    VStack(spacing: 10) {
+                        CoachReplyLabel(reply: reply).padding(.horizontal, 32)
+                        Capsule().fill(Color(.secondarySystemBackground))
+                            .frame(width: 156, height: 64)
+                    }
+                    .padding(.top, 14).padding(.bottom, 20)
+                }
+            }.environmentObject(appState))
+        case "say-again-zh":
+            // Say it again on a Chinese scene, mid-run: pinyin on the
+            // dialogue above and on the prompter's line.
+            sayItAgainStage = "reading"
+            var c = ScenarioCurriculum()
+            c.dialogue = [
+                .init(speaker: "counterpart", text: "好久不见！你最近怎么样？"),
+                .init(speaker: "user", text: "还不错，就是工作有点儿忙。"),
+                .init(speaker: "counterpart", text: "新工作怎么样？习惯了吗？"),
+                .init(speaker: "user", text: "一开始不太习惯，现在好多了。"),
+            ]
+            c.shadowLines = (c.dialogue ?? []).filter { $0.speaker == "user" }
+                .map { .init(text: $0.text, note: "") }
+            var li = Counterpart.empty
+            li.name = "李静"
+            li.voicePresetId = VoicePreset.sceneDefault.id
+            return AnyView(SayItAgainView(source: .scene(title: "咖啡馆 · 聊天",
+                                                           targetLanguage: "zh",
+                                                           curriculum: c,
+                                                           counterpart: li))
+                .environmentObject(appState))
+        case "call-settings-zh":
+            return AnyView(CallSettingsSheet().environmentObject(appState))
+        case "wordcard-zh":
+            return AnyView(NavigationStack {
+                WordCard(word: "银行", currentWord: .constant("银行"))
+            }.environmentObject(appState))
         case "shadow-zh":
             // A Chinese line with pinyin over every character (`ChinesePinyin`).
             // Launch with `-futurevoice.targetLanguage zh`.

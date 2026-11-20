@@ -73,7 +73,18 @@ enum ChinesePinyin {
             let tok = token.pinyin.lowercased()
             return alts.first(where: { $0.lowercased() == tok }) ?? alts[0]
         }
-        return token.pinyin
+        return erhua(key, token.pinyin)
+    }
+
+    /// 儿 closing a word off the list is the r on the syllable before it
+    /// (点儿 diǎnr); the tokenizer writes it as a syllable of its own.
+    /// Listed words keep the list's reading (女儿 nǚ'ér).
+    static func erhua(_ key: String, _ pinyin: String) -> String {
+        guard key.count > 1, key.hasSuffix("儿") else { return pinyin }
+        for tail in ["ér", "er"] where pinyin.hasSuffix(tail) {
+            return String(pinyin.dropLast(tail.count)) + "r"
+        }
+        return pinyin
     }
 
     // MARK: - One syllable per character
