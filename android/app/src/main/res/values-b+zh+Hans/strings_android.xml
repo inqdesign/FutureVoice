@@ -555,4 +555,8 @@
     <string name="speech_category_podcast">播客</string>
     <string name="speech_category_short_talk">短篇演讲</string>
     <string name="sign_in_and_everything_you_practice_stays_on_any_phone">登录后，你练习过的一切都会留在账号里，换了手机也不会不见。</string>
+    <string name="signed_in_with_apple">已通过 Apple 登录</string>
+    <string name="signed_in_with_google">已通过 Google 登录</string>
+    <string name="signed_in_with_email">已通过邮箱登录</string>
+    <string name="email_hidden_by_apple">邮箱已由 Apple 隐藏</string>
 </resources>

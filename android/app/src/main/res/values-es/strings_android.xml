@@ -575,4 +575,8 @@
     <string name="speech_category_podcast">Pódcast</string>
     <string name="speech_category_short_talk">Charla breve</string>
     <string name="sign_in_and_everything_you_practice_stays_on_any_phone">Inicia sesión y todo lo que practiques se queda en tu cuenta, aunque cambies de teléfono.</string>
+    <string name="signed_in_with_apple">Sesión iniciada con Apple</string>
+    <string name="signed_in_with_google">Sesión iniciada con Google</string>
+    <string name="signed_in_with_email">Sesión iniciada con correo</string>
+    <string name="email_hidden_by_apple">Correo oculto por Apple</string>
 </resources>

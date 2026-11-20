@@ -581,4 +581,8 @@
     <string name="speech_category_short_talk">Short talk</string>
     <!-- iOS "Sign in, and everything you practice stays with you on whichever iPhone you use.", with "phone" for "iPhone". -->
     <string name="sign_in_and_everything_you_practice_stays_on_any_phone">Sign in, and everything you practice stays with you on whichever phone you use.</string>
+    <string name="signed_in_with_apple">Signed in with Apple</string>
+    <string name="signed_in_with_google">Signed in with Google</string>
+    <string name="signed_in_with_email">Signed in with email</string>
+    <string name="email_hidden_by_apple">Email hidden by Apple</string>
 </resources>

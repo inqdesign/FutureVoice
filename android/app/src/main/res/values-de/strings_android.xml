@@ -548,4 +548,8 @@
     <string name="speech_category_podcast">Podcast</string>
     <string name="speech_category_short_talk">Kurzvortrag</string>
     <string name="sign_in_and_everything_you_practice_stays_on_any_phone">Melde dich an, dann bleibt alles, was du übst, in deinem Konto – auf jedem Handy.</string>
+    <string name="signed_in_with_apple">Mit Apple angemeldet</string>
+    <string name="signed_in_with_google">Mit Google angemeldet</string>
+    <string name="signed_in_with_email">Mit E-Mail angemeldet</string>
+    <string name="email_hidden_by_apple">E-Mail von Apple verborgen</string>
 </resources>

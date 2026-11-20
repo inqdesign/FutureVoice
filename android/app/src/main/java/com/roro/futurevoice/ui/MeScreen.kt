@@ -111,7 +111,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun MeScreen(
-    @Suppress("UNUSED_PARAMETER") email: String?,
+    email: String?,
     persona: UserPersona?,
     targetLanguage: String,
     nativeLanguage: String,
@@ -602,6 +602,20 @@ fun MeScreen(
                 // ── Account ──
                 GroupedSectionSpacer()
                 GroupedCard {
+                    // Which account this is (iOS 2026-11-20): nothing said
+                    // what email the learner signed up with.
+                    if (!email.isNullOrEmpty()) {
+                        val provider = remember { AuthRepository().provider }
+                        val title = stringResource(when (provider) {
+                            "apple" -> R.string.signed_in_with_apple
+                            "google" -> R.string.signed_in_with_google
+                            else -> R.string.signed_in_with_email
+                        })
+                        val subtitle = if (email.endsWith("@privaterelay.appleid.com"))
+                            stringResource(R.string.email_hidden_by_apple) + "\n" + email else email
+                        MeRow(null, title, subtitle = subtitle, kind = MeRowKind.PLAIN)
+                        GroupedRowDivider()
+                    }
                     MeRow(Icons.AutoMirrored.Filled.Logout, stringResource(R.string.sign_out_dc1649),
                         kind = MeRowKind.DESTRUCTIVE_LABEL, onClick = { confirmingSignOut = true })
                     GroupedRowDivider()

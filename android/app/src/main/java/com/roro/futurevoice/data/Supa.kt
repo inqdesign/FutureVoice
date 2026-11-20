@@ -53,6 +53,11 @@ class AuthRepository {
     val email: String?
         get() = Supa.client.auth.currentUserOrNull()?.email
 
+    /** "apple" · "google" · "email": how this account signs in. */
+    val provider: String?
+        get() = (Supa.client.auth.currentUserOrNull()?.appMetadata?.get("provider")
+            as? kotlinx.serialization.json.JsonPrimitive)?.content
+
     /**
      * The voice is heard BEFORE the sign-up (iOS, 2026-08-18): what the
      * server needs to clone is a SESSION, not an account. "Get started"

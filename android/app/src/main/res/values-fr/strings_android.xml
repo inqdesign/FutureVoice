@@ -562,4 +562,8 @@
     <string name="speech_category_podcast">Podcast</string>
     <string name="speech_category_short_talk">Mini-conférence</string>
     <string name="sign_in_and_everything_you_practice_stays_on_any_phone">Connecte-toi et tout ce que tu pratiques reste dans ton compte, même si tu changes de téléphone.</string>
+    <string name="signed_in_with_apple">Connecté avec Apple</string>
+    <string name="signed_in_with_google">Connecté avec Google</string>
+    <string name="signed_in_with_email">Connecté par e-mail</string>
+    <string name="email_hidden_by_apple">E-mail masqué par Apple</string>
 </resources>

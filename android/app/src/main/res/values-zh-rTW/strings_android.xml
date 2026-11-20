@@ -555,4 +555,8 @@
     <string name="speech_category_podcast">Podcast</string>
     <string name="speech_category_short_talk">短篇演講</string>
     <string name="sign_in_and_everything_you_practice_stays_on_any_phone">登入後，你練習過的一切都會留在帳號裡，換了手機也不會不見。</string>
+    <string name="signed_in_with_apple">已使用 Apple 登入</string>
+    <string name="signed_in_with_google">已使用 Google 登入</string>
+    <string name="signed_in_with_email">已使用電子郵件登入</string>
+    <string name="email_hidden_by_apple">電子郵件已由 Apple 隱藏</string>
 </resources>
