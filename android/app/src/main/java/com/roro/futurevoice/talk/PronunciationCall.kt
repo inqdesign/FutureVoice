@@ -939,6 +939,30 @@ object PronunciationJudge {
 /** What the app tells the voice after each take (`RealtimeTalkClient.nudge`).
  *  English instructions; the model speaks the target language. */
 object PronunciationNotes {
+    /** A bare Korean letter (ㅓ, ㄲ) is read out wrongly by the voice (iOS,
+     *  founder 2026-11-20). A vowel is said by its syllable (어), a consonant
+     *  by its letter name (쌍기역). The card keeps the letters. */
+    fun spokenLetters(text: String): String = buildString {
+        for (ch in text) {
+            val code = ch.code
+            when {
+                code in 0x314F..0x3163 -> append((0xC544 + (code - 0x314F) * 28).toChar())
+                CONSONANT_NAMES.containsKey(ch) -> append(CONSONANT_NAMES.getValue(ch))
+                else -> append(ch)
+            }
+        }
+    }
+
+    fun forVoice(text: String, target: String): String =
+        if (target.startsWith("ko")) spokenLetters(text) else text
+
+    private val CONSONANT_NAMES = mapOf(
+        'ㄱ' to "기역", 'ㄲ' to "쌍기역", 'ㄴ' to "니은", 'ㄷ' to "디귿", 'ㄸ' to "쌍디귿",
+        'ㄹ' to "리을", 'ㅁ' to "미음", 'ㅂ' to "비읍", 'ㅃ' to "쌍비읍", 'ㅅ' to "시옷",
+        'ㅆ' to "쌍시옷", 'ㅇ' to "이응", 'ㅈ' to "지읒", 'ㅉ' to "쌍지읒", 'ㅊ' to "치읓",
+        'ㅋ' to "키읔", 'ㅌ' to "티읕", 'ㅍ' to "피읖", 'ㅎ' to "히읗",
+    )
+
     fun systemPrompt(target: String, level: CefrLevel, round: PronunciationRound?, planning: Boolean): String {
         val lang = LanguageCatalog.englishName(target)
         var now = ""

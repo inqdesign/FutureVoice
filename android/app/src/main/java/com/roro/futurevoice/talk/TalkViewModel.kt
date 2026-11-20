@@ -2271,8 +2271,8 @@ class TalkViewModel(context: Context) : ViewModel() {
     }
 
     private fun pronSystemPrompt(cfg: TalkConfig): String =
-        PronunciationNotes.systemPrompt(cfg.targetLanguage, cfg.level,
-            _state.value.pronRound, _state.value.pronPlanning) + ConversationPrompt.REALTIME_STYLE_RULES
+        PronunciationNotes.forVoice(PronunciationNotes.systemPrompt(cfg.targetLanguage, cfg.level,
+            _state.value.pronRound, _state.value.pronPlanning), cfg.targetLanguage) + ConversationPrompt.REALTIME_STYLE_RULES
 
     /** How a pronunciation call opens: silent while the first round is
      *  written (the card says "Preparing…"), then asks for the first
@@ -2881,7 +2881,8 @@ class TalkViewModel(context: Context) : ViewModel() {
     /** A tutor note for a call that may be paused (iOS `tutorNudge`,
      *  74d3ccf3): a paused call has hung up, so the note waits and goes out
      *  when the call is picked back up ([connectRealtime]). */
-    private fun tutorNudge(note: String, waitKind: String = "other") {
+    private fun tutorNudge(rawNote: String, waitKind: String = "other") {
+        val note = if (pronThisCall) PronunciationNotes.forVoice(rawNote, config?.targetLanguage ?: "") else rawNote
         if (tutorWaitTurnAt != null && tutorWaitNoteAt == null) {
             tutorWaitNoteAt = System.currentTimeMillis()
             tutorWaitKind = if (pronThisCall) "pron" else waitKind
