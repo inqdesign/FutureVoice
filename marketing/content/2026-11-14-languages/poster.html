@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>nawana languages poster</title>
+<style>
+@font-face{font-family:"Geist";font-weight:100 900;src:url(/web/creators/fonts/geist.woff2) format("woff2")}
+:root{--ink:#0D1117;--sub:#5B6372;--line:rgba(13,17,23,.09);--accent:#0A5CF5}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1350px;overflow:hidden}
+body{position:relative;color:var(--ink);font-family:"Geist","Apple SD Gothic Neo",-apple-system,sans-serif;-webkit-font-smoothing:antialiased;
+  background:#F7F8FA;background-image:linear-gradient(rgba(10,40,90,.045) 2px,transparent 2px),linear-gradient(90deg,rgba(10,40,90,.045) 2px,transparent 2px);background-size:54px 54px;background-position:-1px -1px}
+.wrap{position:absolute;inset:0;padding:96px 84px 0}
+.label{font-size:26px;font-weight:700;color:var(--accent);letter-spacing:-.01em}
+h1{margin-top:22px;font-size:84px;line-height:1.08;font-weight:800;letter-spacing:-.045em}
+.desc{margin-top:22px;font-size:31px;line-height:1.45;color:var(--sub);font-weight:500;letter-spacing:-.02em}
+
+table{margin-top:58px;width:100%;border-collapse:collapse}
+th{font-size:23px;font-weight:700;color:var(--sub);text-align:center;padding:0 0 18px;letter-spacing:-.01em}
+th:first-child{text-align:left}
+td{border-top:2px solid var(--line);height:88px;text-align:center;vertical-align:middle}
+td:first-child{text-align:left}
+tr:last-child td{border-bottom:2px solid var(--line)}
+.name{display:flex;align-items:baseline;gap:16px}
+.name b{font-size:40px;font-weight:800;letter-spacing:-.03em}
+.name span{font-size:23px;color:var(--sub);font-weight:600}
+.name i{font-style:normal;align-self:center;font-size:17px;font-weight:800;color:#fff;background:var(--accent);border-radius:99px;padding:4px 11px 3px;letter-spacing:.02em}
+.ok{display:inline-grid;place-items:center;width:46px;height:46px;border-radius:50%;background:var(--accent)}
+.ok svg{width:24px;height:24px}
+.txt{display:inline-flex;gap:8px;justify-content:center}
+.txt em{font-style:normal;font-size:22px;font-weight:700;color:var(--accent);background:rgba(10,92,245,.1);border-radius:99px;padding:8px 14px 7px}
+[lang=ja]{font-family:"Hiragino Sans","Geist",sans-serif}
+[lang=zh-Hans]{font-family:"PingFang SC","Geist",sans-serif}
+[lang=zh-Hant]{font-family:"PingFang TC","Geist",sans-serif}
+
+.foot{position:absolute;left:84px;right:84px;bottom:78px;display:flex;align-items:flex-end;justify-content:space-between}
+.note{font-size:22px;color:var(--sub);font-weight:500;line-height:1.5;letter-spacing:-.01em}
+.brand{display:flex;align-items:center;gap:14px}
+.brand svg{width:46px;height:40px;color:var(--ink)}
+.brand div{font-size:34px;font-weight:800;letter-spacing:-.04em;line-height:1}
+.brand small{display:block;margin-top:6px;font-size:20px;font-weight:600;color:var(--sub);letter-spacing:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="label">nawana 언어</p>
+  <h1>일곱 개 언어로<br>배울 수 있어요</h1>
+  <p class="desc">앱 화면도, 100일 챌린지도 같은 일곱 언어로 돼요.</p>
+
+  <table>
+    <thead><tr><th></th><th>배우기</th><th>앱 화면</th><th>100일 챌린지</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+</div>
+
+<div class="foot">
+  <p class="note">프랑스어와 중국어는<br>지금 테스트 중이에요.</p>
+  <div class="brand">
+    <svg viewBox="130 180 770 660" fill="currentColor" aria-hidden="true"><path d="M287 240Q498 228 704 236Q699 290 703 341Q497 346 289 336Q295 288 287 240Z"/><path d="M190 334Q242 341 293 336Q284 512 290 688Q239 680 184 687Q195 510 190 334Z"/><path d="M293 682Q497 692 700 687Q706 737 698 788Q495 779 288 786Q286 734 293 682Z"/><rect x="469" y="444" width="78" height="124" rx="39"/><rect x="629" y="440" width="78" height="124" rx="39"/><path d="M747 688Q796 682 845 687Q839 737 842 787Q793 781 743 784Q751 736 747 688Z"/></svg>
+    <div>nawana<small>nawana.app</small></div>
+  </div>
+</div>
+
+<script>
+const OK = '<span class="ok"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>';
+const ROWS = [
+  ["English", "en", "영어"],
+  ["Deutsch", "de", "독일어"],
+  ["日本語", "ja", "일본어"],
+  ["Español", "es", "스페인어"],
+  ["Français", "fr", "프랑스어", true],
+  ["中文", "zh-Hans", "중국어", true, '<span class="txt"><em lang="zh-Hans">简体</em></span>', '<span class="txt"><em lang="zh-Hans">简体</em><em lang="zh-Hant">繁體</em></span>'],
+  ["한국어", "ko", "한국어"],
+];
+document.getElementById("rows").innerHTML = ROWS.map(([n, l, ko, isNew, learn, app]) =>
+  `<tr><td><div class="name"><b lang="${l}">${n}</b>${n === ko ? "" : `<span>${ko}</span>`}${isNew ? "<i>NEW</i>" : ""}</div></td>` +
+  `<td>${learn || OK}</td><td>${app || OK}</td><td>${OK}</td></tr>`).join("");
+</script>
+</body>
+</html>

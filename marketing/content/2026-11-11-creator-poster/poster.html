@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>nawana creator program · poster</title>
+<!-- A 4:5 moving poster for the creator program: the creator mark, the title with "Creator" changing hands,
+     and a phone playing a sample with Instagram's Reels chrome over it. Recorded in real time:
+       /opt/homebrew/opt/node@22/bin/node scripts/marketing/record.mjs \
+         marketing/content/2026-11-11-creator-poster/poster.html --size 1080x1350 --seconds 10 \
+         --wait-for "document.documentElement.dataset.scene" --out marketing/content/2026-11-11-creator-poster/poster.mp4 -->
+<style>
+@font-face{font-family:"Geist";font-weight:100 900;src:url(/web/creators/fonts/geist.woff2) format("woff2")}
+@font-face{font-family:"Nanum Pen Script";src:url(/web/creators/fonts/nanum-pen-script.woff2) format("woff2")}
+@font-face{font-family:"Caveat";font-weight:700;src:url(/web/creators/fonts/caveat.woff2) format("woff2")}
+@font-face{font-family:"Dancing Script";font-weight:700;src:url(/web/creators/fonts/dancing-script.woff2) format("woff2")}
+@font-face{font-family:"Pacifico";src:url(/web/creators/fonts/pacifico.woff2) format("woff2")}
+@font-face{font-family:"Permanent Marker";src:url(/web/creators/fonts/permanent-marker.woff2) format("woff2")}
+@font-face{font-family:"Rock Salt";src:url(/web/creators/fonts/rock-salt.woff2) format("woff2")}
+@font-face{font-family:"Homemade Apple";src:url(/web/creators/fonts/homemade-apple.woff2) format("woff2")}
+@font-face{font-family:"Kaushan Script";src:url(/web/creators/fonts/kaushan-script.woff2) format("woff2")}
+@font-face{font-family:"Reenie Beanie";src:url(/web/creators/fonts/reenie-beanie.woff2) format("woff2")}
+@font-face{font-family:"Yellowtail";src:url(/web/creators/fonts/yellowtail.woff2) format("woff2")}
+@font-face{font-family:"Gloria Hallelujah";src:url(/web/creators/fonts/gloria-hallelujah.woff2) format("woff2")}
+@font-face{font-family:"Satisfy";src:url(/web/creators/fonts/satisfy.woff2) format("woff2")}
+:root{--ink:#1C2133;--accent:#0A5CF5;--bg:#F7F8FA;--hi:rgba(255,226,60,.78)}
+*{box-sizing:border-box;margin:0}
+html,body{width:1080px;height:1350px;overflow:hidden}
+body{position:relative;background:var(--bg);color:var(--ink);font-family:"Geist","Apple SD Gothic Neo",sans-serif;-webkit-font-smoothing:antialiased;}
+/* film grain, the page's own */
+.grain{position:absolute;inset:-120px;z-index:9;pointer-events:none;opacity:.24;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .52 2.4 0 0 0 -.95'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23g)'/%3E%3C/svg%3E");
+  animation:grain .9s steps(1) infinite}
+@keyframes grain{0%{translate:0 0}17%{translate:-38px 22px}33%{translate:24px -46px}50%{translate:-58px -18px}67%{translate:42px 36px}83%{translate:-14px 58px}}
+@keyframes boil{0%{filter:url(#boil-1)}33%{filter:url(#boil-2)}66%{filter:url(#boil-3)}}
+/* the marker frame */
+.frame{position:absolute;inset:0;z-index:8;pointer-events:none;box-shadow:inset 0 0 0 20px var(--ink);animation:boil .5s steps(1) infinite}
+
+/* top row: the mark and its word, the cohort tag */
+.top{position:absolute;left:64px;right:64px;top:58px;display:flex;align-items:center;gap:16px;z-index:3}
+.top .mk{display:block;width:78px;flex:none}
+.top .mk svg{display:block;overflow:visible;animation:boil-m .5s steps(1) infinite}
+@keyframes boil-m{0%{filter:url(#boil-m1)}33%{filter:url(#boil-m2)}66%{filter:url(#boil-m3)}}
+.top .mk rect{transition:translate .35s cubic-bezier(.3,.7,.2,1)}
+.top .word{font-family:"Nanum Pen Script";font-size:62px;line-height:1;padding-bottom:6px}
+.gen{margin-left:auto;display:flex;align-items:center;gap:12px;padding:12px 24px 12px 20px;background:var(--accent);color:#fff;font-weight:700;font-size:30px;border-radius:14px 22px 12px 20px/20px 12px 22px 15px;rotate:-2deg}
+.gen i{width:14px;height:14px;border-radius:50%;background:#fff}
+
+/* the title */
+.title{position:absolute;left:64px;top:176px;z-index:3}
+.hot{font-family:"Nanum Pen Script";font-size:66px;line-height:1}
+h1{margin-top:14px;font-weight:600;font-size:132px;line-height:1.02;letter-spacing:-.045em}
+.flip{display:inline-block;white-space:nowrap;animation:boil .44s steps(1) infinite}
+.flip i{display:inline-block;font-style:normal;text-align:center;line-height:0;letter-spacing:0;font-synthesis:none}
+.flip b{font-weight:inherit}
+.sub{margin-top:30px;font-size:38px;font-weight:600;line-height:1.42;letter-spacing:-.02em}
+.sub mark{background:linear-gradient(transparent 46%,var(--hi) 46%);color:inherit;padding:0 4px}
+
+/* the phone: a sample playing, Instagram's Reels chrome over it */
+.phone{position:absolute;right:62px;top:360px;width:420px;aspect-ratio:9/19.3;padding:13px;border-radius:68px;background:#0B0C10;box-shadow:0 0 0 3px #2A2D36,0 50px 90px -30px rgba(20,25,45,.55),0 18px 34px -12px rgba(20,25,45,.35);rotate:5deg;z-index:2}
+.screen{position:relative;width:100%;height:100%;border-radius:56px;overflow:hidden;background:#000}
+.screen video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.island{position:absolute;left:50%;top:16px;translate:-50% 0;width:120px;height:34px;border-radius:20px;background:#000;z-index:3}
+.reels{--u:1.7px;position:absolute;inset:0;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5);z-index:2}
+.reels::after{content:"";position:absolute;left:0;right:0;bottom:0;height:34%;background:linear-gradient(transparent,rgba(0,0,0,.62))}
+.reels::before{content:"";position:absolute;left:0;right:0;top:0;height:18%;background:linear-gradient(rgba(0,0,0,.4),transparent)}
+.reels > *{position:absolute;z-index:1}
+.rtop{left:calc(var(--u)*16);right:calc(var(--u)*16);top:calc(var(--u)*34);display:flex;justify-content:space-between;align-items:center;font-size:calc(var(--u)*15);font-weight:700;line-height:1}
+.rrail{right:calc(var(--u)*9);bottom:calc(var(--u)*50);display:flex;flex-direction:column;gap:calc(var(--u)*13);align-items:center;font-size:calc(var(--u)*8.5);font-weight:600}
+.rrail span{display:flex;flex-direction:column;align-items:center;gap:calc(var(--u)*4);line-height:1}
+.reels svg{display:block;width:calc(var(--u)*21);height:calc(var(--u)*21);fill:none;stroke:#fff;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 1px 1px rgba(0,0,0,.45))}
+.rrail svg.like{fill:#FF3040;stroke:#FF3040;animation:like 5s ease-in-out infinite}
+@keyframes like{0%,36%{fill:none;stroke:#fff;scale:1}40%{scale:1.35}44%,100%{fill:#FF3040;stroke:#FF3040;scale:1}}
+.rinfo{left:calc(var(--u)*11);right:calc(var(--u)*44);bottom:calc(var(--u)*48);font-size:calc(var(--u)*12);line-height:1.35}
+.rwho{display:flex;align-items:center;gap:calc(var(--u)*6);font-weight:700;font-size:calc(var(--u)*12.5);white-space:nowrap}
+.rwho .av{display:grid;place-items:center;width:calc(var(--u)*26);height:calc(var(--u)*26);border-radius:50%;background:#fff;color:var(--ink)}
+.rwho .av svg{width:calc(var(--u)*17);height:calc(var(--u)*14.6);stroke:none;fill:currentColor;filter:none}
+.rwho em{font-style:normal;font-weight:600;font-size:calc(var(--u)*11);border:1px solid rgba(255,255,255,.75);border-radius:calc(var(--u)*6);padding:calc(var(--u)*1) calc(var(--u)*6);text-shadow:none}
+.rcap{margin-top:calc(var(--u)*6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rsong{margin-top:calc(var(--u)*3);font-size:calc(var(--u)*11);opacity:.9}
+.rbar{left:0;right:0;bottom:0;height:calc(var(--u)*40);display:flex;align-items:flex-start;justify-content:space-around;padding:calc(var(--u)*8) calc(var(--u)*10) 0;background:#000}
+.rbar svg{width:calc(var(--u)*20);height:calc(var(--u)*20);filter:none}
+.rbar .me{width:calc(var(--u)*20);height:calc(var(--u)*20);border-radius:50%;background:#fff;display:grid;place-items:center;color:var(--ink)}
+.rbar .me svg{width:calc(var(--u)*13);height:calc(var(--u)*11.2);stroke:none;fill:currentColor}
+.rprog{left:0;right:0;bottom:calc(var(--u)*40);height:calc(var(--u)*1.6);background:rgba(255,255,255,.3)}
+.rprog i{display:block;height:100%;width:0;background:#fff;animation:prog 10s linear infinite}
+@keyframes prog{to{width:100%}}
+
+/* foot: where to go */
+.foot{position:absolute;left:64px;bottom:66px;z-index:3}
+.foot .cta{display:inline-block;padding:20px 34px;background:var(--ink);color:#fff;font-size:36px;font-weight:700;border-radius:999px}
+.foot .url{margin-top:18px;font-size:30px;font-weight:600;letter-spacing:-.01em;opacity:.7}
+.note{position:absolute;left:70px;top:770px;z-index:3;font-family:"Nanum Pen Script";font-size:54px;line-height:1.1;rotate:-4deg;color:var(--accent)}
+.note svg{display:block;width:150px;margin:6px 0 0 150px;fill:none;stroke:var(--accent);stroke-width:5;stroke-linecap:round;stroke-linejoin:round;animation:boil .5s steps(1) infinite}
+
+/* arriving */
+.in{opacity:0;translate:0 34px;animation:rise .8s cubic-bezier(.2,.7,.2,1) forwards;animation-delay:calc(var(--d)*1s)}
+@keyframes rise{to{opacity:1;translate:0 0}}
+.phone{opacity:0;animation:phone 1.1s cubic-bezier(.2,.75,.2,1) .5s forwards}
+@keyframes phone{from{opacity:0;translate:0 140px;rotate:11deg}to{opacity:1;translate:0 0;rotate:5deg}}
+
+/* the quiet version: mark, title, phone, one line */
+.top{left:0;right:0;top:64px;justify-content:center}
+.top .mk{flex:none;width:98px;height:84px}
+.top .mk svg{width:98px;height:84px}
+.title{left:0;right:0;top:196px;text-align:center}
+h1{margin-top:0;font-size:68px;line-height:1.04;white-space:nowrap}
+h1 > span{display:inline!important}
+.phone{left:50%;right:auto;top:340px;width:392px;margin-left:-196px;rotate:0deg}
+@keyframes phone{from{opacity:0;translate:0 120px}to{opacity:1;translate:0 0}}
+.url{position:absolute;left:0;right:0;bottom:56px;text-align:center;font-size:30px;font-weight:600;letter-spacing:-.01em;z-index:3}
+.reels{--u:1.6px}
+
+/* Instagram's Reels screen, as it is: the film is 9:16 above the tab bar */
+.phone{aspect-ratio:392/741}
+.screen video{inset:0 0 auto 0;height:calc(100% - var(--tab));object-fit:cover}
+.screen{--tab:64px}
+.reels::after{bottom:var(--tab)}
+.rtop{top:calc(var(--u)*36);font-size:calc(var(--u)*17)}
+.rtop .rt{display:flex;align-items:center;gap:calc(var(--u)*2)}
+.rtop .rt svg{width:calc(var(--u)*15);height:calc(var(--u)*15);stroke-width:2.4}
+.rrail{bottom:calc(var(--tab) + var(--u)*10);gap:calc(var(--u)*15);font-size:calc(var(--u)*8.6)}
+.rrail .aud{width:calc(var(--u)*20);height:calc(var(--u)*20);border-radius:calc(var(--u)*5);border:calc(var(--u)*1.4) solid #fff;background:#fff;color:var(--ink);display:grid;place-items:center;margin-top:calc(var(--u)*2)}
+.rrail .aud svg{width:calc(var(--u)*13);height:calc(var(--u)*11.2);stroke:none;fill:currentColor;filter:none}
+.rinfo{bottom:calc(var(--tab) + var(--u)*10)}
+.rcap i{font-style:normal;opacity:.75}
+.rsong span{display:inline-block;padding:calc(var(--u)*2) calc(var(--u)*7);border-radius:999px;background:rgba(255,255,255,.2);text-shadow:none}
+.rsong{margin-top:calc(var(--u)*6);white-space:nowrap}
+.rsong span{max-width:100%;overflow:hidden;text-overflow:ellipsis;vertical-align:top}
+.rinfo{right:calc(var(--u)*36)}
+.rbar{height:var(--tab)}
+.rprog{bottom:var(--tab)}
+
+/* the phone at its full height again, and drawn by hand: a marker outline instead of a body */
+.phone{aspect-ratio:392/840;padding:15px;background:none;box-shadow:none;border-radius:0}
+.screen{--tab:64px;--bar:46px;border-radius:54px}
+.screen video{inset:var(--bar) 0 auto 0;height:calc(100% - var(--tab) - var(--bar))}
+.reels::before{top:var(--bar)}
+.rtop{top:calc(var(--bar) + var(--u)*10)}
+.island{top:10px;width:104px;height:28px}
+.status{position:absolute;left:0;right:0;top:0;height:var(--bar);z-index:3;display:flex;align-items:center;justify-content:space-between;padding:4px 30px 0 34px;color:#fff;font-size:17px;font-weight:600}
+.status span{display:flex;align-items:center;gap:6px}
+.status svg{height:13px;width:auto;fill:#fff}
+.sketch{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:4;animation:boil-s .6s steps(1) infinite}
+@keyframes boil-s{0%{filter:url(#boil-s)}33%{filter:url(#boil-s2)}66%{filter:url(#boil-s3)}}
+.sketch path{fill:none;stroke:var(--ink);stroke-linecap:round;stroke-linejoin:round}
+
+/* ── Instagram, from the capture: every size is the capture's (1185 px wide) brought to this screen ── */
+.phone{width:408px;margin-left:-204px;aspect-ratio:71.5/147.6} /* an iPhone's own proportions: 71.5 x 147.6 mm */
+.screen{--tab:78px;--bar:0px;--u:calc(100cqw/1185);container-type:inline-size;background:#0C0F14}
+.reels{--u:calc(100cqw/1185)}
+.screen video{inset:0 0 auto 0;height:calc(100% - var(--tab));object-fit:cover}
+.status{height:auto;top:calc(var(--u)*66);padding:0 calc(var(--u)*105) 0 calc(var(--u)*122);font-size:calc(var(--u)*45);font-weight:600;letter-spacing:-.01em;text-shadow:0 1px 3px rgba(0,0,0,.35)}
+.status span{gap:calc(var(--u)*18)}
+.status svg{height:calc(var(--u)*34)}
+.island{display:none}
+.reels::before{top:0;height:22%;background:linear-gradient(rgba(0,0,0,.34),transparent)}
+.reels::after{bottom:var(--tab);height:30%;background:linear-gradient(transparent,rgba(0,0,0,.5))}
+.reels svg{width:calc(var(--u)*106);height:calc(var(--u)*106);stroke-width:1.8}
+.rtop{left:calc(var(--u)*58);right:calc(var(--u)*46);top:calc(var(--u)*206)}
+.rtop svg:first-child{width:calc(var(--u)*92);height:calc(var(--u)*92)}
+.rtop{align-items:center}
+.rrail{right:calc(var(--u)*34);bottom:calc(var(--tab) + var(--u)*58);gap:calc(var(--u)*50);font-size:calc(var(--u)*36);font-weight:600}
+.rrail span{gap:calc(var(--u)*8)}
+.rrail .aud{width:calc(var(--u)*92);height:calc(var(--u)*92);border-radius:calc(var(--u)*22);border:calc(var(--u)*5) solid #fff;margin-top:calc(var(--u)*-6)}
+.rrail .aud svg{width:calc(var(--u)*56);height:calc(var(--u)*48)}
+.rinfo{left:calc(var(--u)*47);right:calc(var(--u)*200);bottom:calc(var(--tab) + var(--u)*58);font-size:calc(var(--u)*38);line-height:1.3}
+.rwho{gap:calc(var(--u)*30);font-size:calc(var(--u)*40);align-items:center}
+.rwho .av{position:relative;width:calc(var(--u)*104);height:calc(var(--u)*104);flex:none}
+.rwho .av::before{content:"";position:absolute;inset:calc(var(--u)*-12);border-radius:50%;padding:calc(var(--u)*6);background:conic-gradient(from 200deg,#FEDA75,#FA7E1E,#D62976,#962FBF,#FEDA75);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.rwho .av svg{width:calc(var(--u)*66);height:calc(var(--u)*57)}
+.rwho .nm{display:flex;flex-direction:column;gap:calc(var(--u)*6);min-width:0}
+.rwho .nm b{font-weight:700}
+.rwho .nm small{font-size:calc(var(--u)*35);font-weight:500;opacity:.78;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rcap{margin-top:calc(var(--u)*34);font-weight:500}
+.rprog{bottom:var(--tab);height:calc(var(--u)*4)}
+.rbar{height:var(--tab);display:block;padding:calc(var(--u)*26) calc(var(--u)*47) 0;background:#0C0F14}
+.rbar span{display:flex;align-items:center;height:calc(var(--u)*138);padding:0 calc(var(--u)*60);border-radius:999px;background:#1A1E26;color:#F2F3F5;font-size:calc(var(--u)*46);text-shadow:none}
+html.still .rrail svg.like{fill:none!important;stroke:#fff!important}
+html.crayon .flip{animation:none;filter:url(#crayon)}
+.brush{display:inline-flex;align-items:flex-end;gap:.035em;height:1em;margin:0 .16em 0 .14em;vertical-align:-.12em;animation:mk .5s steps(1) infinite}
+.brush svg{height:1.1em;width:auto;overflow:visible;fill:none;stroke:currentColor;stroke-width:15;stroke-linecap:round;stroke-linejoin:round}
+@keyframes mk{0%{filter:url(#marker)}33%{filter:url(#marker2)}66%{filter:url(#marker3)}}
+html.still .brush{filter:url(#marker)}
+
+/* the carousel's ground and light (marketing/templates/carousel.html): the faint 54px grid, and the phone on a long 45° cast shadow */
+body{background:#F7F8FA;background-image:linear-gradient(rgba(10,40,90,.045) 2px,transparent 2px),linear-gradient(90deg,rgba(10,40,90,.045) 2px,transparent 2px);background-size:54px 54px;background-position:-1px -1px}
+.castlayer{position:absolute;inset:0;z-index:1;pointer-events:none;-webkit-mask-image:linear-gradient(#000 calc(100% - 72px),transparent);mask-image:linear-gradient(#000 calc(100% - 72px),transparent)}
+.shadow{position:absolute;left:50%;top:343px;width:402px;margin-left:-201px;aspect-ratio:402/836.200;border-radius:66px;opacity:0;animation:phone 1.1s cubic-bezier(.2,.75,.2,1) .5s forwards}
+html.still .shadow{opacity:1;translate:none}
+.phone .screen{box-shadow:0 0 0 3px #F7F8FA}
+html.still *{animation:none!important}
+html.still .sketch{filter:url(#boil-s)}
+html.still .in,html.still .phone{opacity:1;translate:none}
+html.still .rrail svg.like{fill:#FF3040;stroke:#FF3040}
+html.still .rprog i{width:8%}
+html:not([data-scene]) *{animation-play-state:paused!important}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="boil-1" x="-10%" y="-20%" width="120%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="7"/></filter>
+  <filter id="boil-2" x="-10%" y="-20%" width="120%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="17"/><feDisplacementMap in="SourceGraphic" scale="7"/></filter>
+  <filter id="boil-3" x="-10%" y="-20%" width="120%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="41"/><feDisplacementMap in="SourceGraphic" scale="7"/></filter>
+  <filter id="boil-s" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="1" seed="5"/><feDisplacementMap in="SourceGraphic" scale="2.2"/></filter>
+  <filter id="boil-s2" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="1" seed="23"/><feDisplacementMap in="SourceGraphic" scale="2.2"/></filter>
+  <filter id="boil-s3" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="1" seed="61"/><feDisplacementMap in="SourceGraphic" scale="2.2"/></filter>
+  <!-- crayon: the stroke's edge roughened, and paper showing through it in flecks -->
+  <filter id="crayon" x="-5%" y="-10%" width="110%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="4" result="w"/>
+    <feDisplacementMap in="SourceGraphic" in2="w" scale="5" result="d"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" seed="9" result="n"/>
+    <feColorMatrix in="n" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -3.2 2.05" result="holes"/>
+    <feComposite in="d" in2="holes" operator="in"/>
+  </filter>
+  <!-- marker: the stroke's edge a little uneven, as felt drags on paper -->
+  <filter id="marker" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="2" seed="8"/><feDisplacementMap in="SourceGraphic" scale="3.2"/></filter>
+  <filter id="marker2" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="2" seed="31"/><feDisplacementMap in="SourceGraphic" scale="3.2"/></filter>
+  <filter id="marker3" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="2" seed="57"/><feDisplacementMap in="SourceGraphic" scale="3.2"/></filter>
+  <filter id="boil-m1" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="6"/><feDisplacementMap in="SourceGraphic" scale="14"/></filter>
+  <filter id="boil-m2" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="27"/><feDisplacementMap in="SourceGraphic" scale="14"/></filter>
+  <filter id="boil-m3" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="52"/><feDisplacementMap in="SourceGraphic" scale="14"/></filter>
+  <symbol id="mark" viewBox="130 180 770 660"><path d="M287 240Q498 228 704 236Q699 290 703 341Q497 346 289 336Q295 288 287 240Z"/><path d="M190 334Q242 341 293 336Q284 512 290 688Q239 680 184 687Q195 510 190 334Z"/><path d="M293 682Q497 692 700 687Q706 737 698 788Q495 779 288 786Q286 734 293 682Z"/><rect class="eye" x="469" y="444" width="78" height="124" rx="39"/><rect class="eye" x="629" y="440" width="78" height="124" rx="39"/><path d="M747 688Q796 682 845 687Q839 737 842 787Q793 781 743 784Q751 736 747 688Z"/></symbol>
+</svg>
+
+<div class="top">
+  <span class="mk in" style="--d:.1"><svg viewBox="130 180 770 660" fill="currentColor"><path d="M287 240Q498 228 704 236Q699 290 703 341Q497 346 289 336Q295 288 287 240Z"/><path d="M190 334Q242 341 293 336Q284 512 290 688Q239 680 184 687Q195 510 190 334Z"/><path d="M293 682Q497 692 700 687Q706 737 698 788Q495 779 288 786Q286 734 293 682Z"/><rect id="e1" x="469" y="444" width="78" height="124" rx="39"/><rect id="e2" x="629" y="440" width="78" height="124" rx="39"/><path d="M747 688Q796 682 845 687Q839 737 842 787Q793 781 743 784Q751 736 747 688Z"/></svg></span>
+</div>
+
+<div class="title">
+  <h1 class="in" style="--d:.3">nawana <span id="creator-word">Creator</span> program</h1>
+</div>
+
+
+<div class="castlayer"><div class="shadow" id="cast"></div></div>
+<div class="phone">
+  <div class="screen">
+    <video id="v" src="/web/creators/samples/speech-script.mp4" muted loop playsinline preload="auto"></video>
+    <div class="status"><span>9:41</span><span><svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.500" width="3" height="6.500" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1" opacity=".4"/></svg><svg viewBox="0 0 17 12"><path d="M8.500 2.200c2.300 0 4.400.900 6 2.400l1.100-1.200A10.300 10.300 0 0 0 8.500.600c-2.700 0-5.200 1-7.100 2.800l1.100 1.200a8.700 8.700 0 0 1 6-2.400zm0 3.300c1.400 0 2.700.500 3.700 1.400l1.100-1.200a7 7 0 0 0-9.600 0l1.100 1.200c1-.9 2.300-1.400 3.700-1.400zm0 3.300c-.800 0-1.500.300-2 .800l2 2.200 2-2.200c-.500-.500-1.200-.800-2-.800z"/></svg><svg viewBox="0 0 26 12"><rect x="0" y="0" width="22" height="12" rx="3.500"/><rect x="23.500" y="4" width="2" height="4" rx="1"/></svg></span></div>
+    <span class="island"></span>
+    <!-- Instagram's reel screen as it is today (from a capture of the app): back and camera on top, the counted
+         buttons down the right, the account with its audio under the name, the caption, a comment field below the film. -->
+    <div class="reels">
+      <div class="rtop"><svg viewBox="0 0 24 24"><path d="M15 4.500 7.500 12l7.500 7.500" stroke-width="2.200"/></svg><svg viewBox="0 0 24 24"><path d="M3.500 9A2.500 2.500 0 0 1 6 6.500h1.600L9 4.300h6l1.400 2.200H18A2.500 2.500 0 0 1 20.500 9v8.500A2.500 2.500 0 0 1 18 20H6a2.500 2.500 0 0 1-2.500-2.500z"/><circle cx="12" cy="13" r="3.700"/></svg></div>
+      <div class="rrail">
+        <span><svg class="like" viewBox="0 0 24 24"><path d="M12 20.500S3.500 15.400 3.500 9.200A4.700 4.700 0 0 1 12 6.500a4.700 4.700 0 0 1 8.500 2.700c0 6.200-8.500 11.300-8.500 11.300z"/></svg>128</span>
+        <span><svg viewBox="0 0 24 24"><path d="M12 3.500a8.500 8.500 0 0 1 7.400 12.700l1.100 4.300-4.300-1.100A8.500 8.500 0 1 1 12 3.500z"/></svg>12</span>
+        <span><svg viewBox="0 0 24 24"><path d="M5 12V9.500A3.500 3.500 0 0 1 8.500 6H18M15 3l3 3-3 3M19 12v2.500a3.500 3.500 0 0 1-3.500 3.500H6M9 21l-3-3 3-3"/></svg>3</span>
+        <span><svg viewBox="0 0 24 24"><path d="M4.200 5.200h15.600c.800 0 1.300.900.900 1.600L13 20c-.500.800-1.700.600-1.900-.300L9.300 12 4 7c-.700-.600-.300-1.800.200-1.800zM9.300 12l10.900-6.300"/></svg>9</span>
+        <span><svg viewBox="0 0 24 24"><path d="M4 9h16M4 15h10" stroke-width="2.200"/></svg></span>
+        <span class="aud"><svg><use href="#mark"/></svg></span>
+      </div>
+      <div class="rinfo">
+        <div class="rwho"><span class="av"><svg><use href="#mark"/></svg></span><span class="nm"><b>nawana_creators</b><small>♫ nawana_creators · 원본 오디오</small></span></div>
+        <div class="rcap">미래의 나와 100일 동안 말하기 · Day 1 #100일챌린지 #nawana</div>
+      </div>
+      <div class="rprog"><i></i></div>
+      <div class="rbar"><span>댓글 달기...</span></div>
+    </div>
+  </div>
+  <svg class="sketch" id="sketch" aria-hidden="true"></svg>
+</div>
+
+<p class="url in" style="--d:.9">1기 모집 · nawana.app/creators</p>
+
+
+<script>
+// The long cast shadow, the carousel's: the silhouette repeated along the 45° line, darkest against the phone, gone at `reach`.
+(function () {
+  const reach = 195, peak = .58, step = 3, n = Math.round(reach / step), parts = [];
+  const A = (d) => peak * Math.pow(Math.max(0, 1 - d / reach), 1.7);
+  for (let i = 1; i <= n; i++) { const d = i * step, a = (A(d) - A(d + step)) / (1 - A(d + step)); parts.push(`${d}px ${d}px ${Math.round(3 + d * .16)}px rgba(13,17,23,${a.toFixed(4)})`); }
+  document.getElementById("cast").style.boxShadow = parts.join(",");
+})();
+// The phone's outline, drawn by hand in one pass: straight sides that wander a hair, and corners that are true arcs
+// concentric with the screen's (screen radius + the gap between them), so the frame reads as a phone's.
+(function () {
+  const svg = document.getElementById("sketch"), ph = svg.parentElement, sc = ph.querySelector(".screen");
+  const W = ph.offsetWidth, H = ph.offsetHeight, pad = sc.offsetLeft, rs = parseFloat(getComputedStyle(sc).borderTopLeftRadius);
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const SW = 10, g = pad - SW / 2 - 3;          // the line's centre sits g outside the screen: 3px of paper, then the line
+  const i = pad - g, r = rs + g;                // inset of the line's centre from the phone box, and its corner radius
+  let seed = 11; const j = () => ((seed = (seed * 16807) % 2147483647) / 2147483647 - .5) * 2.4;
+  const x0 = i, y0 = i, x1 = W - i, y1 = H - i;
+  const side = (ax, ay, bx, by) => `Q${(ax + bx) / 2 + j()} ${(ay + by) / 2 + j()} ${bx} ${by}`;
+  const d = `M${x0 + r} ${y0} ${side(x0 + r, y0, x1 - r, y0)} A${r} ${r} 0 0 1 ${x1} ${y0 + r} ${side(x1, y0 + r, x1, y1 - r)} A${r} ${r} 0 0 1 ${x1 - r} ${y1} ` +
+            `${side(x1 - r, y1, x0 + r, y1)} A${r} ${r} 0 0 1 ${x0} ${y1 - r} ${side(x0, y1 - r, x0, y0 + r)} A${r} ${r} 0 0 1 ${x0 + r} ${y0}Z`;
+  const o = i - SW / 2 - 2; // the side buttons sit just outside the line
+  svg.innerHTML = `<path d="${d}" stroke-width="${SW}"/>` +
+    `<path d="M${o} ${H * .2} v40M${o} ${H * .28} v64M${W - o} ${H * .25} v84" stroke-width="6"/>`;
+})();
+// "Creator": a different handwriting per letter, changing hands in a wave (the page's own).
+const HANDS = [["Caveat", 700, 1.24, .014], ["Dancing Script", 700, 1.2, .012], ["Pacifico", 400, 1, 0], ["Permanent Marker", 400, .9, 0], ["Rock Salt", 400, .68, .006], ["Homemade Apple", 400, .84, .018], ["Kaushan Script", 400, 1.06, .006], ["Reenie Beanie", 400, 1.34, .02], ["Yellowtail", 400, 1.16, .008], ["Gloria Hallelujah", 400, .9, .03], ["Satisfy", 400, 1.14, .012]];
+const INKS = ["#0A5CF5", "#F0442E", "#FF8A00", "#E9AE00", "#12B76A", "#FF3D8B", "#7A4DFF", "#00AFC2", "#D9368B", "#2E9E3F"];
+const paint = (el, [family, weight, scale, ink], color) => { el.style.color = color; el.style.fontFamily = `"${family}",cursive`; el.style.fontWeight = weight; el.style.fontSize = scale + "em"; el.style.webkitTextStroke = ink ? `${ink}em currentColor` : ""; };
+const v = document.getElementById("v");
+Promise.all([
+  ...HANDS.map(([f, w]) => document.fonts.load(`${w} 40px "${f}"`, "Creator").catch(() => {})),
+  document.fonts.load('600 40px "Geist"').catch(() => {}), document.fonts.load('40px "Nanum Pen Script"', "우리").catch(() => {}),
+  new Promise((r) => { if (v.readyState >= 3) r(); else { v.addEventListener("canplay", r, { once: true }); setTimeout(r, 4000); } }),
+]).then(() => {
+  // "Creator" written with one marker: every letter is a stroke drawn here, in a capital and a small form, so the
+  // word can mix the two (the marker face itself has no small letters). ?case=UllUllU sets the still's mix.
+  const word = document.getElementById("creator-word");
+  const GLYPH = [ // [capital, small], each [width, path] in a 100-high box, baseline at 90
+    [[64, "M54 28C42 10 12 16 10 52C8 84 40 92 56 74"], [46, "M38 56C28 44 10 50 10 70C10 90 30 92 40 80"]],
+    [[56, "M12 88L12 16C40 10 50 28 40 42C32 52 20 52 12 50M24 52L48 88"], [42, "M12 50L12 90M12 64C16 52 28 46 36 54"]],
+    [[54, "M46 16L12 17L12 88L46 87M12 52L40 51"], [50, "M10 68L40 66C42 48 14 42 10 68C8 92 34 92 42 80"]],
+    [[62, "M8 88L30 14L52 88M17 62L44 61"], [52, "M40 56C30 42 10 50 10 70C10 90 32 92 40 74M40 50L40 82C40 88 44 90 49 87"]],
+    [[58, "M6 18L52 16M29 18L29 88"], [42, "M18 22L18 78C18 90 28 92 36 86M6 47L34 45"]],
+    [[66, "M32 14C10 14 8 50 10 62C14 92 50 94 54 60C58 26 46 14 32 14Z"], [48, "M24 48C8 48 6 88 24 90C42 90 42 50 24 48Z"]],
+    [[56, "M12 88L12 16C40 10 50 28 40 42C32 52 20 52 12 50M24 52L48 88"], [42, "M12 50L12 90M12 64C16 52 28 46 36 54"]],
+  ];
+  const TILT = [-4, 3, -2, 4, -3, 2, -4];
+  const q = new URLSearchParams(location.search);
+  const cs = (q.get("case") || "UllUllU").split("").map((c) => (c === "U" ? 0 : 1));
+  const I0 = (q.get("inks") || "").split(",").map(Number); const ink0 = I0.length === 7 ? I0 : [0, 1, 2, 3, 4, 5, 6];
+  word.className = "brush";
+  word.innerHTML = GLYPH.map(() => "<svg><path/></svg>").join("");
+  const cells = [...word.querySelectorAll("svg")], inked = ink0.slice();
+  const draw1 = (k) => { const [w, d] = GLYPH[k][cs[k]], box = Math.max(GLYPH[k][0][0], GLYPH[k][1][0]); cells[k].setAttribute("viewBox", `0 0 ${box} 100`); cells[k].firstChild.setAttribute("d", d); cells[k].firstChild.setAttribute("transform", `translate(${(box - w) / 2} 0)`); cells[k].style.color = INKS[inked[k] % INKS.length]; cells[k].style.rotate = TILT[k] * (cs[k] ? .6 : 1) + "deg"; };
+  cells.forEach((_, k) => draw1(k));
+  const unusedInk = () => { const free = INKS.map((_, i) => i).filter((i) => !inked.includes(i)); return free[Math.floor(Math.random() * free.length)]; };
+  // one letter at a time changes case and colour, a wave running through the word
+  let k = 0;
+  const tick = () => { cs[k] = 1 - cs[k]; inked[k] = unusedInk(); draw1(k); k = (k + 1) % cells.length; setTimeout(tick, k === 0 ? 900 : 130); };
+  if (!q.has("still")) setTimeout(tick, 1500);
+  // the mark blinks now and then
+  const eyes = [[document.getElementById("e1"), 444], [document.getElementById("e2"), 440]];
+  const blink = () => {
+    const t0 = performance.now();
+    const f = (now) => { const p = Math.min(1, (now - t0) / 220), b = Math.sin(p * Math.PI), h = 124 * (1 - .86 * b);
+      for (const [e, y] of eyes) { e.setAttribute("height", h); e.setAttribute("y", y + (124 - h) / 2); e.setAttribute("rx", Math.min(39, h / 2)); }
+      if (p < 1) requestAnimationFrame(f); };
+    requestAnimationFrame(f);
+  };
+  if (!new URLSearchParams(location.search).has("still")) {
+    [900, 2600, 2900, 4700, 6300, 8200, 8500, 10400, 11600].forEach((t) => setTimeout(blink, t));
+    const look = (x) => eyes.forEach(([e]) => { e.style.translate = x + "px 0"; });
+    [[1500, 46], [2300, 0], [3600, -40], [4300, 0], [5400, 46], [5900, -40], [6800, 0], [9200, 46], [10000, 0]].forEach(([t, x]) => setTimeout(() => look(x), t));
+  }
+  if (new URLSearchParams(location.search).has("crayon")) document.documentElement.classList.add("crayon");
+  const still = new URLSearchParams(location.search).get("still");
+  if (still != null) {
+    document.documentElement.classList.add("still");
+    // Played up to the frame and stopped there (the recorder's file server can't seek).
+    const at = parseFloat(still) || 0;
+    const ready = () => { document.documentElement.dataset.scene = "1"; };
+    const watch = () => { if (v.currentTime >= at) { v.pause(); requestAnimationFrame(() => requestAnimationFrame(ready)); } else requestAnimationFrame(watch); };
+    v.currentTime = 0; v.play().then(watch).catch(ready);
+    return;
+  }
+  document.documentElement.dataset.scene = "1";
+  setTimeout(() => { v.currentTime = 0; v.play().catch(() => {}); }, 1700);
+});
+</script>
+</body>
+</html>

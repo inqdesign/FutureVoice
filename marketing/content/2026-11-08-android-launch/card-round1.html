@@ -1,0 +1,169 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>nawana · Android launch card</title>
+<style>
+/* One 1080×1350 card, four layouts (?v=a|b|c|d, ?lang=ko|en, ?still for the PNG).
+   Ground and type from marketing/templates/carousel.html; light only. Where the mosaic is
+   big its cells are 54px, the ground grid's pitch, and it sits on grid lines, so it reads
+   as the background's own squares lighting up inside the shape. */
+:root{
+  color-scheme:light;
+  --card:#F7F8FA; --grid:rgba(10,40,90,.045);
+  --ink:#0D1117; --sub:#5A6170; --faint:#9AA1AD; --accent:#0A5CF5;
+  --pixel:"Geist Pixel","Galmuri14","Apple SD Gothic Neo",system-ui,sans-serif;
+  --pixel-ko:"Galmuri14","Geist Pixel","Apple SD Gothic Neo",system-ui,sans-serif;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--card);overflow:hidden}
+.card{position:absolute;left:0;top:0;width:1080px;height:1350px;transform-origin:0 0;background:var(--card);overflow:hidden;color:var(--ink);font-family:var(--sans);
+  background-image:linear-gradient(var(--grid) 2px,transparent 2px),linear-gradient(90deg,var(--grid) 2px,transparent 2px);background-size:54px 54px;background-position:-1px -1px}
+.card>*{position:absolute;margin:0}
+
+.ttl{font-family:var(--pixel);font-weight:400;letter-spacing:0;white-space:nowrap}
+:lang(ko) .ttl{font-family:var(--pixel-ko)}
+.ttl em,.where em{font-style:normal;color:var(--accent)}
+.desc{font-size:34px;line-height:50px;color:var(--sub);font-weight:500;letter-spacing:-.3px;word-break:keep-all}
+.where{font-family:var(--pixel);white-space:nowrap}
+.free{font-size:32px;line-height:44px;color:var(--sub);font-weight:500}
+.foot{display:flex;justify-content:space-between;align-items:baseline}
+.wm{font-family:var(--pixel);font-size:54px;line-height:1;letter-spacing:1px}
+.url{font-family:var(--pixel);font-size:36px;line-height:1;color:var(--accent)}
+.fs{box-shadow:0 2px 3px rgba(13,17,23,.05),0 24px 60px rgba(10,60,180,.12)}
+.say{display:none}
+.mark{display:none}
+
+/* ── A · headline on top, the big pill in the middle, where-to-get-it under it ── */
+[data-v=a] .ttl{left:54px;right:54px;top:120px;text-align:center;font-size:126px;line-height:150px}
+[data-v=a]:lang(en) .ttl{font-size:150px;line-height:160px;top:112px}
+[data-v=a] .desc{left:84px;right:84px;top:458px;text-align:center}
+[data-v=a] .fs{left:108px;top:594px;width:864px;height:270px}            /* 16 × 5 cells */
+[data-v=a] .where{left:0;right:0;top:960px;text-align:center;font-size:70px;line-height:80px}
+[data-v=a] .free{left:0;right:0;top:1062px;text-align:center}
+[data-v=a] .foot{left:108px;right:108px;bottom:84px}
+
+/* ── B · the headline IS the card; a small pill sits under it like a full stop ── */
+[data-v=b] .ttl{left:54px;top:190px;line-height:1.12}                   /* size fitted in JS */
+[data-v=b] .fs{left:var(--b-pill-x,54px);top:var(--b-pill,700px);width:540px;height:162px}  /* 10 × 3 at 54px */
+[data-v=b] .desc{left:54px;right:54px;top:var(--b-desc,860px)}
+[data-v=b] .where{left:54px;top:1150px;font-size:56px;line-height:64px}
+[data-v=b] .free{left:54px;top:1222px;font-size:30px}
+[data-v=b] .foot{right:54px;top:1150px;flex-direction:column;align-items:flex-end;gap:22px}
+[data-v=b] .mark{display:block;left:54px;top:108px;width:54px;height:54px;background:var(--accent)}
+
+/* ── C · a big Futureself circle saying hi, headline under it ── */
+[data-v=c] .fs{left:270px;top:108px;width:432px;height:432px}             /* 8 × 8 cells */
+[data-v=c] .say{display:block;left:714px;top:170px;width:330px;font-size:30px;--max:100%}
+[data-v=c] .ttl{left:54px;right:54px;top:630px;text-align:center;font-size:112px;line-height:136px}
+[data-v=c]:lang(en) .ttl{font-size:136px;line-height:146px;top:620px}
+[data-v=c] .desc{left:84px;right:84px;top:930px;text-align:center}
+[data-v=c] .where{left:0;right:0;top:1086px;text-align:center;font-size:52px;line-height:60px}
+[data-v=c] .free{left:0;right:0;top:1150px;text-align:center;font-size:30px}
+[data-v=c] .foot{left:108px;right:108px;bottom:72px}
+
+/* ── D · "Google Play" is the hero line; the headline introduces it ── */
+[data-v=d] .ttl{left:54px;top:162px;font-size:84px;line-height:108px}
+[data-v=d]:lang(en) .ttl{font-size:96px;line-height:112px}
+[data-v=d] .desc{left:54px;right:54px;top:420px}
+[data-v=d] .where{left:54px;top:604px;line-height:1}                     /* size fitted to 972px in JS */
+[data-v=d] .fs{left:54px;top:918px;width:540px;height:162px}              /* 10 × 3 at 54px */
+[data-v=d] .free{left:648px;top:972px;width:378px;font-size:34px;line-height:48px;color:var(--ink);font-weight:600}
+[data-v=d] .foot{left:54px;right:54px;bottom:72px}
+[data-v=d]:lang(en) .fs{width:432px}
+[data-v=d]:lang(en) .free{left:540px;width:486px}
+[data-v=d] .mark{display:block;left:54px;top:108px;width:27px;height:27px;background:var(--accent)}
+</style>
+
+<section class="card" id="card">
+  <span class="mark"></span>
+  <h1 class="ttl" id="ttl"></h1>
+  <p class="desc" id="desc"></p>
+  <nw-futureself class="fs" shape="pill" mode="speaking" level="0"></nw-futureself>
+  <nw-bubble class="say" who="self">Hey! So what are we talking about today?</nw-bubble>
+  <div class="where" id="where"></div>
+  <div class="free" id="free"></div>
+  <div class="foot"><span class="wm" id="wm"></span><span class="url" id="url"></span></div>
+</section>
+
+<script type="module">
+import "/web/kit/nawana-ui.js";
+
+/* strings: lifted verbatim from copy.md (the accent span only colours a word) */
+const COPY = {
+  ko: { title: "<em>안드로이드</em>에도<br>나와나가 왔어요",
+        body: "아이폰과 같은 앱 그대로,<br>내 목소리로 말하는 유창한 나와 통화해요.",
+        where: "Google Play", wm: "nawana", url: "nawana.app", free: "첫 20분은 무료예요" },
+  en: { title: "Now on<br><em>Android</em>",
+        body: "The same app as on iPhone.<br>Talk with your fluent self, in your own voice.",
+        where: "Google Play", wm: "nawana", url: "nawana.app", free: "Your first 20 minutes are free" },
+};
+const q = new URLSearchParams(location.search);
+const lang = q.get("lang") === "en" ? "en" : "ko";
+const v = ["a", "b", "c", "d"].includes(q.get("v")) ? q.get("v") : "a";
+const still = q.has("still");
+const root = document.documentElement;
+root.lang = lang; root.dataset.v = v;
+const t = COPY[lang], $ = id => document.getElementById(id);
+$("ttl").innerHTML = t.title; $("desc").innerHTML = t.body;
+$("where").textContent = t.where; $("free").textContent = t.free;
+$("wm").textContent = t.wm; $("url").textContent = t.url;
+const fs = document.querySelector(".fs");
+if (v === "c") fs.setAttribute("shape", "circle");
+if (v === "d") $("where").innerHTML = "Google <em>Play</em>";
+fs.setAttribute("cell", { a: 54, b: 54, c: 54, d: 54 }[v]);
+
+/* fit to a smaller window when opened by hand; record.mjs opens it at 1080×1350 */
+const fit = () => { const s = Math.min(innerWidth / 1080, innerHeight / 1350, 1); $("card").style.transform = s < 1 ? `scale(${s})` : "none"; };
+addEventListener("resize", fit); fit();
+
+await document.fonts.ready;
+await customElements.whenDefined("nw-futureself");
+
+/* B and D: the hero line is sized to fill the 972px column exactly */
+const fitWidth = (el, w) => { el.style.fontSize = "100px"; el.style.fontSize = `${Math.floor(100 * w / el.scrollWidth)}px`; };
+if (v === "b" && lang === "ko") {
+  /* Korean only fills the width if the title runs over four lines (same words, more breaks);
+     the pill sits beside the short second line */
+  $("ttl").innerHTML = "<em>안드로이드</em><br>에도<span id=gap></span><br>나와나가<br>왔어요";
+  fitWidth($("ttl"), 880);
+  const lh = $("ttl").offsetHeight / 4, line2 = $("ttl").offsetTop + lh * 1.5;
+  root.style.setProperty("--b-pill", `${Math.round((line2 - 81) / 54) * 54}px`);
+  const x2 = $("ttl").offsetLeft + $("gap").offsetLeft + 40;
+  root.style.setProperty("--b-pill-x", `${Math.ceil(x2 / 54) * 54}px`);
+  root.style.setProperty("--b-desc", `${$("ttl").offsetTop + $("ttl").offsetHeight + 30}px`);
+} else if (v === "b") {
+  fitWidth($("ttl"), 840);
+  const bottom = $("ttl").offsetTop + $("ttl").offsetHeight;
+  const pillTop = Math.ceil((bottom + 40) / 54) * 54;                  // next grid line
+  root.style.setProperty("--b-pill", `${pillTop}px`);
+  root.style.setProperty("--b-desc", `${pillTop + 162 + 44}px`);
+}
+if (v === "d") fitWidth($("where"), 972);
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const ramp = (from, to, ms) => new Promise(done => {
+  const t0 = performance.now();
+  const step = now => { const k = Math.min(1, (now - t0) / ms), e = k * k * (3 - 2 * k);
+    fs.level = (from + (to - from) * e).toFixed(3); k < 1 ? requestAnimationFrame(step) : done(); };
+  requestAnimationFrame(step);
+});
+
+if (still) {
+  /* the still: speaking, lit */
+  fs.mode = "speaking"; fs.level = q.get("level") || "1";
+  root.dataset.scene = "still";
+} else {
+  /* one 9 s loop: dark → lights centre-out → speaks → settles back to dark */
+  root.dataset.scene = "loop";
+  for (;;) {
+    fs.mode = "speaking"; fs.level = "0";
+    await sleep(500);
+    await ramp(0, 1, 1700);          // centre-out ignition (speaking mode lights from the middle)
+    await sleep(900);
+    fs.level = "voice";              // then it talks
+    if (v === "c") document.querySelector(".say").play?.(140);
+    await sleep(4900);
+    await ramp(.5, 0, 1000);         // and lets go, so the loop meets its own start
+  }
+}
+</script>

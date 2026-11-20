@@ -1,0 +1,307 @@
+<title>좋아하는 장면을 같이 연기해요</title>
+<style>
+
+/* Layout (founder approved 2026-11-09): one 1080×1350 post at a time; centred text block on top, ONE whole phone below, on a long cast shadow.
+   Inside the phone everything is authored in iOS points (402×874) and scaled ×1.5. Light only, by choice.
+   Screens are the real app from web/kit (nw-watch). NO pixel font in marketing (founder 2026-11-13) — the only pixel type is what the app itself draws inside a phone screen. */
+:root{
+  color-scheme:light;
+  --page:#E9ECF1; --card:#F7F8FA; --grid:rgba(10,40,90,.045);
+  --ink:#0D1117; --sub:#5A6170; --faint:#9AA1AD; --line:#DCE0E7;
+  --label:#767D8A; --body:#434A57; --blue:#0A5CF5; --ios-blue:#007AFF;
+  --sys-bg:#FFFFFF; --sys-grouped:#F2F2F7; --sys-fill:#EFEFF4; --sys-gray:#8E8E93; --sys-gray3:#C7C7CC;
+  --me-bubble:#D3E2FD; --fix-bg:#EBF2FE; --btn-tint:#D6E4FB; --sys-red:#FF3B30; --sys-green:#34C759; --sys-orange:#E07B1F;
+  --display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif; /* NO pixel font in marketing */
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--sans)}
+.wrap{max-width:1100px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-wrap:wrap;gap:28px 40px;align-items:flex-start;justify-content:center}
+.viewer{flex:0 1 540px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.side{flex:1 1 300px;min-width:0;max-width:440px;font-size:14px;line-height:1.6;color:var(--sub)}
+.side h1{font-family:var(--display);font-weight:800;font-size:26px;line-height:1.25;color:var(--ink);margin:0 0 10px;text-wrap:balance}
+.side h3{font-size:13px;letter-spacing:.06em;color:var(--ink);margin:22px 0 6px}
+.side ol{padding-left:18px;margin:0}
+.side li{margin-bottom:4px}
+.side .list button{all:unset;cursor:pointer;color:var(--ink)}
+.side .list button[aria-current="true"]{color:var(--blue);font-weight:600}
+.side .list button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.vp{position:relative;width:100%;aspect-ratio:4/5;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(13,17,23,.08),0 18px 50px rgba(13,17,23,.10);background:var(--card);touch-action:pan-y}
+.track{position:absolute;inset:0;display:flex;transition:transform .45s cubic-bezier(.3,.7,.2,1)}
+.slot{flex:0 0 100%;height:100%;position:relative;overflow:hidden}
+.controls{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.dots{display:flex;gap:7px}
+.dots button{width:8px;height:8px;border-radius:50%;border:0;padding:0;background:#C5CBD5;cursor:pointer}
+.dots button[aria-current="true"]{background:var(--blue);width:22px;border-radius:4px}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;height:36px;min-width:36px;padding:0 14px;font:inherit;font-size:13px;cursor:pointer}
+.btn:focus-visible,.dots button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.btn-row{display:flex;gap:6px}
+
+/* ───────── the post, authored at 1080×1350 ───────── */
+.card{position:absolute;left:0;top:0;width:1080px;height:1350px;transform-origin:0 0;transform:scale(var(--s,.5));background:var(--card);overflow:hidden;
+  background-image:linear-gradient(var(--grid) 2px,transparent 2px),linear-gradient(90deg,var(--grid) 2px,transparent 2px);background-size:54px 54px;background-position:-1px -1px}
+
+.cap{position:absolute;left:83px;right:83px;top:62px;height:40px;z-index:3;display:flex;justify-content:space-between;align-items:center;font-size:30px;font-weight:400;letter-spacing:-.2px;color:var(--label)}
+.cap .num{font-variant-numeric:tabular-nums}
+
+.ttl{position:absolute;left:83px;right:83px;top:226px;transform:translateY(-50%);margin:0;text-align:center;white-space:nowrap;font-family:var(--display);font-weight:800;font-size:92px;line-height:100px;letter-spacing:-1.6px;color:var(--ink);transition:opacity .4s ease .75s}
+.ttl .en{color:var(--blue)}
+.desc{position:absolute;left:130px;right:130px;top:350px;transform:translateY(-50%);margin:0;text-align:center;font-size:30px;line-height:36px;font-weight:400;letter-spacing:-.3px;word-break:keep-all;color:var(--body);transition:opacity .4s ease .75s}
+.desc b{color:var(--ink);font-weight:600}
+.card:has(.ttl br) .ttl{top:226px;font-size:76px;line-height:86px;letter-spacing:-1.2px}
+.card:has(.ttl br) .desc{top:388px}
+
+.device,.shadow{position:absolute;left:278px;top:167px;width:524px;height:1099.2px;transform-origin:50% 0;transform:translateY(309px) scale(.71947);transition:transform 1.15s cubic-bezier(.45,0,.2,1)}
+.device{z-index:2}
+.device nw-phone{width:524px}
+.shadow{border-radius:84px}
+.castlayer{position:absolute;inset:0;z-index:1;pointer-events:none;-webkit-mask-image:linear-gradient(#000 calc(100% - 72px),transparent);mask-image:linear-gradient(#000 calc(100% - 72px),transparent)}
+
+.card.zoom .device,.card.zoom .shadow{transform:none}
+.card.zoom .ttl,.card.zoom .desc,.card.zoom .swipe{opacity:0;transition:opacity .4s ease}
+html.locked .device,html.locked .shadow,html.locked .ttl,html.locked .desc,html.locked .swipe{transition:none!important}
+
+.swipe{position:absolute;left:83px;right:83px;bottom:40px;z-index:3;display:flex;justify-content:space-between;font-size:28px;color:var(--label);transition:opacity .4s ease .75s}
+.swipe b{font-family:var(--display);font-weight:800;color:var(--blue)}
+
+.c-outro{text-align:center}
+.c-outro .wm{position:absolute;left:0;right:0;top:226px;transform:translateY(-50%);font-family:var(--display);font-weight:800;font-size:92px;line-height:100px;letter-spacing:2px}
+.c-outro .tg{position:absolute;left:0;right:0;top:356px;transform:translateY(-50%);font-size:44px;line-height:58px;font-weight:600}
+.pill{position:absolute;left:300px;top:560px;width:480px;height:266px;z-index:2}
+.pill nw-futureself{position:absolute;inset:0;width:100%;height:100%}
+.c-outro .shadow{left:300px;top:560px;width:480px;height:266px;border-radius:133px;transform:none;transition:none}
+.c-outro .free{position:absolute;left:0;right:0;top:1120px;font-size:32px;line-height:40px;color:var(--body);z-index:3}
+.c-outro .url{position:absolute;left:0;right:0;top:1188px;font-family:var(--display);font-weight:800;font-size:40px;line-height:48px;color:var(--blue);z-index:3}
+
+@media (prefers-reduced-motion:reduce){
+  .track,.device,.shadow,.ttl,.desc,.swipe{transition:none!important}
+}
+
+html.solo,html.solo body{margin:0;background:var(--card);overflow:hidden}
+html.solo .wrap{display:block;padding:0;max-width:none}
+html.solo .side,html.solo .controls{display:none}
+html.solo .viewer{display:block}
+html.solo .vp{width:1080px;max-width:none;aspect-ratio:auto;height:1350px;border-radius:0;box-shadow:none}
+html.solo .track{transition:none}
+</style>
+<div class="wrap" lang="ko">
+  <div class="viewer">
+    <div class="vp" id="vp" aria-roledescription="carousel" aria-label="캐러셀 미리보기">
+      <div class="track" id="track">
+
+        <div class="slot"><section class="card" data-k="cover">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">01 / 05</span></header>
+          <h2 class="ttl">좋아하는 장면을<br>같이 연기해요</h2>
+          <p class="desc">유창한 내가 상대역이 되고,<br><b>그 장면 안에서</b> 같이 말해요.</p>
+          <div class="castlayer"><div class="shadow" data-reach="250"></div></div>
+          <div class="device"><nw-phone><nw-watch></nw-watch></nw-phone></div>
+          <div class="swipe"><span>옆으로 넘겨보세요 →</span><b>nawana.app</b></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="box">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">02 / 05</span></header>
+          <h2 class="ttl">상황 칸에<br>그 장면을 써요</h2>
+          <p class="desc">카페·면접 대신,<br><b>이야기 속 한 장면</b>을 적어요.</p>
+          <div class="castlayer"><div class="shadow" data-reach="250"></div></div>
+          <div class="device"><nw-phone><nw-watch start="box" material="none"></nw-watch></nw-phone></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="scene">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">03 / 05</span></header>
+          <h2 class="ttl">리허설이 아니라<br>장면 안이에요</h2>
+          <p class="desc">상대는 그 캐릭터로,<br>나는 맞은편 인물로 말해요.</p>
+          <div class="castlayer"><div class="shadow" data-reach="250"></div></div>
+          <div class="device"><nw-phone><nw-watch></nw-watch></nw-phone></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="study">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">04 / 05</span></header>
+          <h2 class="ttl">그 대사가<br>내 교재로</h2>
+          <p class="desc">마음에 든 대사는 섀도잉하고,<br><b>한 권의 교재</b>로 남아요.</p>
+          <div class="castlayer"><div class="shadow" data-reach="250"></div></div>
+          <div class="device"><nw-phone><nw-watch></nw-watch></nw-phone></div>
+        </section></div>
+
+        <div class="slot"><section class="card c-outro" data-k="outro">
+          <header class="cap"><span class="series">나와나로 할 수 있는 것</span><span class="num">05 / 05</span></header>
+          <div class="wm">nawana</div>
+          <div class="tg">유창한 나에게<br>언어를 배우세요.</div>
+          <div class="castlayer"><div class="shadow" data-reach="180"></div></div>
+          <div class="pill"><nw-futureself mode="speaking" level="voice"></nw-futureself></div>
+          <div class="free">첫 20분은 무료예요</div>
+          <div class="url">nawana.app</div>
+        </section></div>
+
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="prev" aria-label="이전 장">←</button>
+      <div class="dots" id="dots"></div>
+      <div class="btn-row"><button class="btn" id="replay">처음부터 재생</button><button class="btn" id="next" aria-label="다음 장">→</button></div>
+    </div>
+  </div>
+
+  <aside class="side">
+    <h1>좋아하는 장면을 같이 연기해요</h1>
+    <p>Watch 시리즈(cat: watch), e08 "나만의 상황"의 확장편이에요. 상황 칸에 이야기 속 한 장면을 적으면, 유창한 내가 상대 캐릭터가 되고 나는 맞은편에서 그 장면 안에서 말해요. 화면은 모두 실제 앱(web/kit의 nw-watch)이에요. 대사는 특정 영화 인용이 아니라 중립·가상 장면의 생성된 영어 문장이에요.</p>
+    <h3>장 목록</h3>
+    <ol class="list" id="list">
+      <li><button data-go="0">커버 · 사람 지도</button></li>
+      <li><button data-go="1">상황 칸에 그 장면을 써요 · 컴포저 박스</button></li>
+      <li><button data-go="2">리허설이 아니라 장면 안 · 장면 재생</button></li>
+      <li><button data-go="3">그 대사가 내 교재로 · 섀도잉 · 교재</button></li>
+      <li><button data-go="4">마지막 장 · nawana.app</button></li>
+    </ol>
+    <h3>상태 고정</h3>
+    <p>주소 뒤에 ?solo=N&amp;state=zoom 또는 state=wide를 붙이면 그 상태로 고정돼요. 없으면 장면이 넓게 시작해서 다가갔다가 돌아와요.</p>
+  </aside>
+</div>
+
+<script type="module">
+import "/web/kit/nawana-ui.js";
+const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const sleep = ms => new Promise(r => setTimeout(r, RM ? 0 : ms));
+
+const vp = $("#vp");
+const setScale = () => $$(".card").forEach(c => c.style.setProperty("--s", vp.clientWidth / 1080));
+new ResizeObserver(setScale).observe(vp); setScale();
+
+/* The long cast shadow (same solver as the template). */
+function castShadow(reach, peak = .58) {
+  const step = 3, n = Math.round(reach / step);
+  const A = s => peak * Math.pow(Math.max(0, 1 - s / reach), 1.7);
+  const parts = [];
+  for (let i = 1; i <= n; i++) {
+    const s = i * step, a = (A(s) - A(s + step)) / (1 - A(s + step));
+    parts.push(`${s}px ${s}px ${Math.round(3 + s * .16)}px rgba(13,17,23,${a.toFixed(4)})`);
+  }
+  return parts.join(",");
+}
+$$(".shadow").forEach(el => el.style.boxShadow = castShadow(+el.dataset.reach));
+
+customElements.whenDefined("nw-phone").then(() => $$("nw-phone").forEach(p => {
+  const st = document.createElement("style");
+  st.textContent = ".body{box-shadow:inset 0 0 0 calc(100cqw * 2.2 / 430) #6E7076,inset 0 0 0 calc(100cqw * 3.4 / 430) #2A2B2E!important}";
+  p.shadowRoot.append(st);
+}));
+
+/* ── the scene the learner asks for, and the scene that gets written ──
+   A neutral, invented "scene from a story" — never a real film title, never a real movie quote.
+   The lines are MATERIAL, so English (the target language), generated for the learner's level. */
+const SCENE_REQ = "좋아하는 영화 속 한 장면처럼, 오래된 친구를 카페에서 몇 년 만에 다시 만나는 장면. 상대는 그 친구 역할로.";
+const SCENE_HEAD = ["Theo · at the old café", "Running into an old friend", "You run into a friend you haven't seen in years, and sit down to catch up."];
+const SCENE_LINES = [
+  ["Theo", "Wait... is that really you?", false],
+  ["Future self", "It's been what, five years? You haven't changed at all.", true],
+  ["Theo", "Neither have you. Come on, sit down.", false],
+  ["Future self", "I can't believe you're back in town.", true],
+  ["Theo", "Only for a few days. I had to see this place again.", false],
+];
+
+/* The camera. Phone wide ⇄ zoomed, the text fading as it moves.
+   ?state=zoom|wide locks a card in that state (for stills); the scene still plays with the same timing. */
+const ZOOM_MS = 1150;
+const params = new URLSearchParams(location.search);
+const LOCK = params.get("state");
+if (LOCK) { document.documentElement.classList.add("locked"); if (LOCK === "zoom") $$(".card").forEach(c => c.classList.add("zoom")); }
+const zoom = async (c, on = true) => { if (!LOCK) c.classList.toggle("zoom", on); await sleep(ZOOM_MS); };
+
+/* Each card: one loop. Starts wide (the text is read), moves in for the moment on the screen, comes back. */
+const PLAY = {
+  /* 01 — the Watch tab: me in the middle, my people around. A still in the grid. */
+  async cover(c) {
+    const w = $("nw-watch", c);
+    w.stop(); w.reset(); w._show("l-map");
+    await sleep(6000);
+  },
+  /* 02 — "Your own situation" box (Mode.custom), nothing attached: dictate a SCENE from a story into it,
+     then the CTA lights. No chips, no files note (material="none"). */
+  async box(c, alive) {
+    const w = $("nw-watch", c);
+    w.stop(); w.reset(); w._show("l-box");
+    const f = w.B(".fld"), box = w.B(".box"), cta = w.B(".cta");
+    await sleep(1400);
+    await zoom(c);
+    box.classList.add("recording"); await sleep(450);
+    w.B(".reel").classList.add("off"); f.className = "fld";
+    let said = "";
+    for (const word of SCENE_REQ.split(" ")) { if (!alive()) return; said += (said ? " " : "") + word; f.textContent = said; await sleep(155); }
+    await sleep(450); box.classList.remove("recording");
+    cta.classList.add("on"); await sleep(650);
+    cta.classList.add("tap"); await sleep(160); cta.classList.remove("tap");
+    await sleep(1900);
+    await zoom(c, false); await sleep(400);
+  },
+  /* 03 — the scene PLAYS: the counterpart as the character, the fluent self opposite, line by line.
+     Not a rehearsal — inside the scene, in the tone of the story. */
+  async scene(c, alive) {
+    const w = $("nw-watch", c);
+    w.stop(); w.reset(); w._show("l-scene");
+    w._header(...SCENE_HEAD); w._bar("play");
+    await sleep(1200);
+    await zoom(c);
+    let prev = null;
+    for (const [who, t, me] of SCENE_LINES) {
+      if (!alive()) return;
+      const l = w._line(who, t, me); l.classList.add("new"); void l.offsetWidth; l.classList.remove("new"); l.classList.add("now");
+      prev?.classList.remove("now"); prev = l;
+      const sc = w.$(".sc"), over = sc.offsetTop + sc.scrollHeight - 744; sc.style.transform = over > 0 ? `translateY(${-over}px)` : "none";
+      await sleep(1650);
+    }
+    prev.classList.remove("now");
+    await sleep(1500);
+    await zoom(c, false); await sleep(400);
+  },
+  /* 04 — the scene stays as study: "Shadow this" / "Save phrase" under a line, and the end bar's
+     "Study this" — the scene becomes a book. */
+  async study(c, alive) {
+    const w = $("nw-watch", c);
+    w.stop(); w.reset(); w._show("l-scene");
+    w._header(...SCENE_HEAD);
+    w._scene(SCENE_LINES.slice(0, 3), -1); w._bar("end");
+    await sleep(1200);
+    await zoom(c);
+    const line = w.$$(".sc .ln.me")[0] || w.$$(".sc .ln")[1];
+    const sh = line && line.querySelector(".sh");
+    for (let i = 0; i < 2 && alive(); i++) {
+      if (sh) { sh.classList.add("tap"); await sleep(650); sh.classList.remove("tap"); }
+      await sleep(1900);
+    }
+    await zoom(c, false); await sleep(400);
+  },
+  async outro() { await sleep(6000); },
+};
+
+const track = $("#track"), slots = $$(".slot"), cards = $$(".card"), dots = $("#dots"), list = $$("#list button");
+slots.forEach((_, i) => { const b = document.createElement("button"); b.setAttribute("aria-label", `${i + 1}번 장`); b.onclick = () => go(i); dots.append(b); });
+let idx = 0, gen = 0;
+function go(i) {
+  idx = (i + slots.length) % slots.length;
+  track.style.transform = `translateX(${-idx * 100}%)`;
+  $$("button", dots).forEach((b, j) => b.setAttribute("aria-current", j === idx));
+  list.forEach((b, j) => b.setAttribute("aria-current", j === idx));
+  $$("nw-watch").forEach(s => s.stop());
+  run(cards[idx]);
+}
+async function run(card) {
+  const g = ++gen, alive = () => g === gen;
+  await customElements.whenDefined("nw-watch");
+  await sleep(350);
+  document.documentElement.dataset.scene = card.dataset.k;   // record.mjs --wait-for
+  do { await PLAY[card.dataset.k](card, alive); } while (alive() && !RM);
+}
+$("#prev").onclick = () => go(idx - 1);
+$("#next").onclick = () => go(idx + 1);
+$("#replay").onclick = () => go(idx);
+list.forEach(b => b.onclick = () => go(+b.dataset.go));
+addEventListener("keydown", e => { if (e.key === "ArrowRight") go(idx + 1); if (e.key === "ArrowLeft") go(idx - 1); });
+let x0 = null;
+vp.addEventListener("pointerdown", e => x0 = e.clientX);
+vp.addEventListener("pointerup", e => { if (x0 == null) return; const d = e.clientX - x0; x0 = null; if (Math.abs(d) > 40) go(idx + (d < 0 ? 1 : -1)); });
+const solo = +(params.get("solo") || 0);
+if (solo) document.documentElement.classList.add("solo");
+const m = solo ? [0, solo] : /^#card(\d)$/.exec(location.hash);
+go(m ? +m[1] - 1 : 0);
+</script>

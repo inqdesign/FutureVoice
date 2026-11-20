@@ -1,0 +1,58 @@
+<!doctype html><meta charset="utf-8"><title>Harin 1</title>
+<style>
+@font-face{font-family:GP;src:url(/web/GeistPixel.ttf)}
+@font-face{font-family:GM;src:url(/web/Galmuri14.woff2)}
+:root{--ink:#0D1117;--blue:#0A5CF5;--mute:#5B6472;--line:#E3E7EE}
+*{box-sizing:border-box;margin:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:#F7F8FA;color:var(--ink);font-family:-apple-system,"Apple SD Gothic Neo",sans-serif}
+body{background-image:linear-gradient(#0d11170a 1px,transparent 1px),linear-gradient(90deg,#0d11170a 1px,transparent 1px);background-size:54px 54px}
+#top{position:absolute;left:96px;right:96px;top:64px;height:60px;display:flex;justify-content:space-between;align-items:center;font-size:30px;color:var(--mute)}
+#steps{display:flex;gap:14px}
+.st{padding:10px 24px;border-radius:40px;background:#fff;border:2px solid var(--line);font-weight:600}
+.st.on{background:var(--blue);border-color:var(--blue);color:#fff}
+#tag{font-size:26px}
+#stage{position:absolute;left:150px;right:150px;top:170px;bottom:120px;display:flex;flex-direction:column;justify-content:center;gap:34px}
+.who{font-family:GM;font-size:42px}
+.who.user{color:var(--blue)} .who.counterpart{color:var(--mute)}
+.en{font-size:74px;font-weight:700;line-height:1.24;letter-spacing:-.8px}
+.ko{font-size:46px;line-height:1.4;color:var(--mute);word-break:keep-all}
+.big{font-family:GM;font-size:76px;line-height:1.3}
+.cap{font-family:GM;font-size:56px;color:var(--blue)}
+.mid{align-items:center;text-align:center}
+.bar{height:16px;border-radius:9px;background:var(--line);overflow:hidden;margin-top:10px}
+.bar i{display:block;height:100%;background:var(--blue)}
+.card{background:#fff;border:2px solid var(--line);border-radius:36px;padding:64px 72px;display:flex;flex-direction:column;gap:28px}
+.eyebrow{font-family:GM;font-size:38px;color:var(--blue)}
+.facts{display:flex;gap:18px;flex-wrap:wrap}
+.facts b{font-weight:600;font-size:36px;padding:12px 28px;border-radius:40px;background:#EEF3FE;color:var(--blue)}
+.disc{font-size:30px;color:var(--mute)}
+.wm{font-family:GP;font-size:120px}
+</style>
+<div id="top"><div id="steps"></div><div id="tag">가상 인물 · AI 음성</div></div>
+<div id="stage"></div>
+<script src="timeline.js"></script>
+<script>
+const STEPS=["듣기","표현","따라 말하기","내 차례"];
+const stage=document.getElementById('stage'),steps=document.getElementById('steps'),topb=document.getElementById('top');
+const esc=s=>(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;");
+let last=-1;
+function body(s){const tc=TL.title_card,o=TL.outro_screen;switch(s.view){
+case"cold":return `<div class="cap">${esc(s.cap)}</div><div class="who counterpart">영사</div><div class="en">${esc(s.en)}</div><div class="ko">${esc(s.ko)}</div>`;
+case"coldgap":return `<div class="cap">${esc(s.cap)}</div><div class="ko" style="font-size:60px;color:var(--ink)">${esc(s.ko)}</div><div class="bar"><i></i></div>`;
+case"persona":return `<div class="card"><div class="eyebrow">${esc(tc.eyebrow)}</div><div class="big">${esc(tc.title)}</div><div class="ko">${esc(tc.sub)}</div><div class="facts"><b>하린, 28살</b><b>회사 마케팅팀 3년 차</b><b>미국 경영 석사 합격</b></div><div class="disc">${esc(TL.disclosure)}</div></div>`;
+case"lead":return `<div class="big" style="text-align:center">${esc(s.text)}</div>`;
+case"line":return `<div class="who ${s.who}">${esc(s.name)}</div><div class="en">${esc(s.en)}</div><div class="ko">${esc(s.ko)}</div>`;
+case"gap":return `<div class="cap">${esc(s.name)}</div>${s.en?`<div class="en">${esc(s.en)}</div>`:""}<div class="ko" ${s.en?"":'style="font-size:64px;color:var(--ink)"'}>${esc(s.ko)}</div><div class="bar"><i></i></div>`;
+case"expr":return `<div class="card"><div class="eyebrow">표현 ${s.n}</div><div class="en">${esc(s.en)}</div><div class="ko" style="color:var(--ink)">${esc(s.meaning)}</div><div class="ko" style="font-size:38px">${esc(s.note)}</div></div>`;
+case"outro":case"end":return `<div class="wm" style="text-align:center">nawana</div><div class="big" style="text-align:center;font-size:58px">${esc(o.line1)}</div><div class="ko" style="text-align:center">${esc(o.line2)} · ${esc(o.url)}</div>`;
+default:return "";}}
+window.__render=t=>{let i=TL.segs.findIndex(s=>t>=s.t0&&t<s.t1);
+ if(i<0){i=t<TL.segs[0].t0?0:TL.segs.length-1}
+ const s=TL.segs[i];
+ if(i!==last){last=i;stage.innerHTML=body(s);
+  steps.innerHTML=s.sec?STEPS.map(x=>`<div class="st ${x===s.sec?'on':''}">${x}</div>`).join(""):"";}
+ const fade=Math.min(1,Math.max(0,(t-s.t0)/.18));stage.style.opacity=fade;
+ const b=stage.querySelector('.bar i');if(b)b.style.width=Math.min(100,100*(t-s.t0)/(s.t1-s.t0))+"%";};
+window.__ready=document.fonts.load('40px GM','한').then(()=>document.fonts.load('40px GP','n')).then(()=>document.fonts.ready);
+window.__render(0.5);
+</script>

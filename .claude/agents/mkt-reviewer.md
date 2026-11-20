@@ -26,7 +26,10 @@ PASS. Be specific and strict; a vague "looks good" is a failed review. Read firs
 4. **Visual.** Extract frames from every MP4 (`ffmpeg -ss T -i NN.mp4 -frames:v 1 f.png`,
    3–4 per card) and look: text overflow or clipping, title over 2 lines, the key moment
    outside the card, blank or half-faded first frame, colour outside the palette, mosaic
-   used as a background, inconsistent card order/numbers (02 / 06).
+   used as a background, inconsistent card order/numbers (02 / 06). **Any pixel font
+   (Geist Pixel, Galmuri) in the piece's own text — title, number, wordmark, URL, label —
+   is an automatic FIX** (founder ban, 2026-11-13); only an app screen inside a kit phone
+   may show it. Grep the html for `pixel|Geist|Galmuri` as well as looking.
 5. **Channel fit.** Sizes, durations ≤ 60 s, caption length, hashtag count, Threads ≤ 500.
 6. **Safety.** No real user's data or name (the founder's included), no invented
    testimonials, no impersonation, no claims about other products beyond fair comparison.

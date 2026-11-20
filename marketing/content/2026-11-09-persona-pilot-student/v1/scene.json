@@ -1,0 +1,95 @@
+{
+ "turns": [
+  {
+   "speaker": "counterpart",
+   "text": "Good morning. Please hand me your passport and I-20 form."
+  },
+  {
+   "speaker": "user",
+   "text": "Good morning, officer. Here are my documents."
+  },
+  {
+   "speaker": "counterpart",
+   "text": "I see you're applying for a master's in supply chain management at Ridgefield State. Why leave a steady job at a logistics company for this?"
+  },
+  {
+   "speaker": "user",
+   "text": "I loved my work in Busan, but to move into a global role, I need training in risk analysis that my company just doesn't offer."
+  },
+  {
+   "speaker": "counterpart",
+   "text": "And how are you planning to fund this entire program?"
+  },
+  {
+   "speaker": "user",
+   "text": "I'm covering half of the costs with my own savings, and my parents are helping with the rest."
+  },
+  {
+   "speaker": "counterpart",
+   "text": "With a specialized degree like this from a US school, how do I know you won't just stay and look for a job in America?"
+  },
+  {
+   "speaker": "user",
+   "text": "Korea's export sector is growing fast, and companies there really need people with international training. My family is here, and my career plans are here too."
+  },
+  {
+   "speaker": "counterpart",
+   "text": "Your plan sounds solid, and your finances check out. Your visa is approved, so expect your passport back in three business days."
+  },
+  {
+   "speaker": "user",
+   "text": "Thank you so much! Have a great day."
+  }
+ ],
+ "title": "US Student Visa Interview",
+ "words": [
+  {
+   "text": "steady",
+   "note": "Describing a secure job position",
+   "example": "Why leave a steady position at a logistics firm for this?"
+  },
+  {
+   "text": "logistics",
+   "note": "Referring to supply chain and shipping industries",
+   "example": "Why leave a steady position at a logistics firm for this?"
+  },
+  {
+   "text": "advance",
+   "note": "Moving up in a professional career",
+   "example": "I loved my work in Busan, but to advance into senior global roles, I need advanced training in risk analysis that my company simply doesn't offer."
+  },
+  {
+   "text": "expenses",
+   "note": "The cost of living and studying",
+   "example": "I am covering half of the expenses with my own savings, and my parents are supporting the rest."
+  },
+  {
+   "text": "specialized",
+   "note": "Focused on a specific subject or skill",
+   "example": "With a specialized degree like this from a US school, how do I know you won't just stay and look for a job in America?"
+  },
+  {
+   "text": "export",
+   "note": "Goods sold to other countries",
+   "example": "Korea's export sector is expanding rapidly, and local firms desperately need professionals with international training."
+  },
+  {
+   "text": "expanding",
+   "note": "Growing or increasing in size",
+   "example": "Korea's export sector is expanding rapidly, and local firms desperately need professionals with international training."
+  },
+  {
+   "text": "rooted",
+   "note": "Strongly connected to a place",
+   "example": "My strong family ties and my career goals are firmly rooted here."
+  }
+ ],
+ "expressions": [
+  "hand me",
+  "simply doesn't offer",
+  "covering half of",
+  "look for a job",
+  "firmly rooted here",
+  "check out"
+ ]
+}

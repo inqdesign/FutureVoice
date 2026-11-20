@@ -50,8 +50,8 @@ Only the founder moves a piece to `founder-approved` and `published`.
 
 - `web/kit/` — the app's screens as live web components (`nw-call`, `nw-home`, `nw-review`,
   `nw-weeklytest`, …). Catalogue: `web/kit/index.html`. Fidelity harness: `web/kit/_harness.html`.
-- `marketing/templates/carousel.html` — the carousel template (fixed text block on top, a
-  live app screen below, `?solo=N` shows one card at 1080×1350 for recording).
+- `marketing/templates/carousel.html` — the carousel template (centred text block on top, one
+  whole phone below on a long cast shadow, moving in with `zoom(c)`, `?solo=N` shows one card at 1080×1350 for recording).
 - `scripts/marketing/record.mjs` — records any page to MP4/PNG in real Chrome:
 
       /opt/homebrew/opt/node@22/bin/node scripts/marketing/record.mjs \

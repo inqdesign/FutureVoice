@@ -19,6 +19,7 @@ questions. Read `marketing/README.md` once per session; agents read BRAND/CHANNE
 | fix the look / motion | `mkt-designer` → `mkt-reviewer` |
 | post / upload / community | `mkt-publisher` (only for a founder-approved, PASSed piece) |
 | website, pricing on the site, a new app screen for the kit | `mkt-web` (→ `mkt-reviewer` for public copy) |
+| the monthly community recap ("월간 리포트", "이번 달 리캡") | follow `marketing/recaps/README.md`: copy the last recap, re-pull the numbers, re-render → `mkt-reviewer` |
 
 ## The pipeline for one piece
 
@@ -40,7 +41,8 @@ questions. Read `marketing/README.md` once per session; agents read BRAND/CHANNE
        file_path: marketing/content/<piece>/carousel.html   (after changing its kit import
        to "kit/nawana-ui.js" in a scratch copy)
        files: kit/nawana-ui.js, kit/core.js, kit/screens/*.js  → from web/kit/…
-              GeistPixel.ttf, Galmuri14.woff2                  → from web/
+              (GeistPixel.ttf / Galmuri14.woff2 only if a kit phone screen needs them;
+               marketing type itself is never pixel — BRAND.md)
 
    plus the caption text in chat. Ask for approval or changes. Record the answer in status.md.
 7. **Package** — after an explicit "올려도 돼 / approved": `mkt-publisher` writes `post.md`,

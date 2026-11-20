@@ -1,0 +1,132 @@
+<!doctype html>
+<!-- Viral reel mockup (9:16, ~22 s). Storyboard only: six frames, live kit screens, no pixel font.
+     Serve from the repo root:  python3 -m http.server 8765  →  /marketing/content/2026-11-16-viral-reel/storyboard.html -->
+<html lang="ko"><meta charset="utf-8"><title>Viral reel mockup</title>
+<style>
+:root{--ink:#0D1117;--blue:#0A5CF5;--ground:#F7F8FA;--sub:#5B6270}
+*{box-sizing:border-box}
+body{margin:0;background:#E9ECF1;font-family:-apple-system,"SF Pro Display","Apple SD Gothic Neo",sans-serif;color:var(--ink);padding:40px 32px 60px}
+h1{font-size:30px;font-weight:800;letter-spacing:-.03em;margin:0 0 6px}
+.lede{color:var(--sub);font-size:15px;margin:0 0 28px;max-width:900px;line-height:1.5}
+.row{display:flex;gap:22px;flex-wrap:wrap}
+.cell{width:270px}
+.frame{width:270px;aspect-ratio:9/16;border-radius:18px;overflow:hidden;position:relative;
+  background:var(--ground);
+  background-image:linear-gradient(#0d111708 1px,transparent 1px),linear-gradient(90deg,#0d111708 1px,transparent 1px);
+  background-size:13.5px 13.5px;box-shadow:0 10px 30px rgba(10,30,70,.14)}
+.frame.dark{background:#0D1117;background-image:none;color:#fff}
+.cap{position:absolute;left:16px;right:16px;top:30px;text-align:center;z-index:2}
+.cap b{display:block;font-size:22px;font-weight:800;letter-spacing:-.04em;line-height:1.18}
+.cap span{display:block;margin-top:7px;font-size:11.5px;color:var(--sub);line-height:1.4}
+.cap b em{font-style:normal;color:var(--blue)}
+.dev{position:absolute;left:50%;bottom:-70px;transform:translateX(-50%)}
+.dev nw-phone{width:190px}
+.tag{position:absolute;left:10px;top:10px;font-size:10px;font-weight:700;color:var(--sub);z-index:3}
+.dark .tag{color:#7D8590}
+.sub{position:absolute;left:14px;right:14px;bottom:22px;z-index:3;text-align:center}
+.sub i{font-style:normal;display:inline-block;background:#0D1117;color:#fff;font-size:12px;font-weight:600;padding:6px 10px;border-radius:8px;line-height:1.35}
+.sub i.y{background:#fff;color:#0D1117;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.note{margin-top:10px;font-size:12.5px;line-height:1.5}
+.note .t{font-weight:700}
+.note .a{color:var(--sub)}
+.out{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
+.out .wm{font-size:34px;font-weight:800;letter-spacing:-.05em}
+.out .l1{margin-top:14px;font-size:16px;font-weight:700;letter-spacing:-.02em}
+.out .l2{margin-top:6px;font-size:12px;color:#AEB4C0}
+.out .url{margin-top:26px;font-size:13px;font-weight:700;color:#7FA8FF}
+.pill{width:120px;height:50px;border-radius:999px;overflow:hidden;margin-top:22px}
+.pill nw-futureself{width:100%;height:100%;display:block}
+section{margin-top:40px}
+h2{font-size:18px;font-weight:800;letter-spacing:-.02em;margin:0 0 10px}
+ul{margin:0;padding-left:18px;font-size:14px;line-height:1.7;max-width:900px}
+</style>
+<h1>“내 목소리가 영어를 한다” — 릴스 · 틱톡 · 쇼츠 목업</h1>
+<p class="lede">9:16 · 약 22초 · 소리 켜고 보는 영상. 첫 2초에 “내 목소리가 유창한 영어로 말한다”는 한 장면만 보여주고, 나머지는 그 장면이 진짜라는 증거예요. 화면은 모두 앱 키트(web/kit)의 실제 화면입니다.</p>
+
+<div class="row">
+  <div class="cell">
+    <div class="frame"><div class="tag">0:00–0:02 · 훅</div>
+      <div class="cap"><b>30초 녹음했더니<br><em>내 목소리</em>가<br>영어를 해요</b></div>
+      <div class="dev"><nw-phone><nw-voice data-pose="meet"></nw-voice></nw-phone></div>
+      <div class="sub"><i>“Hey, it's you, a few years from now.”</i></div>
+    </div>
+    <div class="note"><span class="t">소리:</span> <span class="a">첫 프레임부터 클론 목소리로 영어 한 줄. 자막은 영어 그대로.</span></div>
+  </div>
+
+  <div class="cell">
+    <div class="frame"><div class="tag">0:02–0:06 · 과정</div>
+      <div class="cap"><b>한국어로 30초 읽기</b><span>영어로 녹음하는 게 아니에요</span></div>
+      <div class="dev"><nw-phone><nw-voice data-pose="recording"></nw-voice></nw-phone></div>
+    </div>
+    <div class="note"><span class="t">컷:</span> <span class="a">녹음 화면 2배속 → 링이 차는 순간 컷. “영어를 못 해도 내 목소리는 만들어진다”가 핵심.</span></div>
+  </div>
+
+  <div class="cell">
+    <div class="frame"><div class="tag">0:06–0:11 · 반전</div>
+      <div class="cap"><b>그리고 전화가 와요</b><span>유창해진 나한테서</span></div>
+      <div class="dev"><nw-phone><nw-call data-pose="speaking" level="B1"></nw-call></nw-phone></div>
+      <div class="sub"><i class="y">“So, how was your week?”</i></div>
+    </div>
+    <div class="note"><span class="t">소리:</span> <span class="a">같은 목소리, 자연스러운 속도. 듀엣·스티치 포인트: “내 목소리로 해봤다”.</span></div>
+  </div>
+
+  <div class="cell">
+    <div class="frame"><div class="tag">0:11–0:16 · 공감</div>
+      <div class="cap"><b>나는 이렇게 더듬는데</b><span>고칠 곳만 바로 짚어줘요</span></div>
+      <div class="dev"><nw-phone><nw-call data-pose="fix" level="B1"></nw-call></nw-phone></div>
+    </div>
+    <div class="note"><span class="t">소리:</span> <span class="a">학습자 실제 목소리(더듬는 영어) → 교정 카드가 뜨는 순간 0.5초 정지.</span></div>
+  </div>
+
+  <div class="cell">
+    <div class="frame"><div class="tag">0:16–0:20 · 보상</div>
+      <div class="cap"><b>같은 대화를<br><em>맞게</em> 다시 말해요</b></div>
+      <div class="dev"><nw-phone><nw-sayagain data-pose="reading"></nw-sayagain></nw-phone></div>
+    </div>
+    <div class="note"><span class="t">소리:</span> <span class="a">고친 문장을 내가 읽고, 유창한 내가 이어 받는 한 왕복.</span></div>
+  </div>
+
+  <div class="cell">
+    <div class="frame dark"><div class="tag">0:20–0:22 · 끝</div>
+      <div class="out">
+        <div class="wm">nawana</div>
+        <div class="l1">유창한 나에게 언어를 배우세요.</div>
+        <div class="l2">첫 20분은 무료예요</div>
+        <div class="pill"><nw-futureself mode="speaking" level="voice"></nw-futureself></div>
+        <div class="url">nawana.app</div>
+      </div>
+    </div>
+    <div class="note"><span class="t">루프:</span> <span class="a">마지막 소리가 첫 프레임의 “Hey, it's you”로 이어져 다시 재생되게.</span></div>
+  </div>
+</div>
+
+<section>
+  <h2>왜 퍼질 수 있나</h2>
+  <ul>
+    <li><b>2초 안에 설명이 끝나는 신기함</b> — “내 목소리가 영어를 한다”는 소리만 들어도 이해돼요.</li>
+    <li><b>따라 하고 싶은 포맷</b> — “내 목소리로 해봤다” 듀엣·스티치. 각자 자기 결과를 올리게 돼요.</li>
+    <li><b>댓글 유도</b> — 캡션 질문: “몇 년 뒤의 나한테 제일 먼저 뭘 물어볼래요?”</li>
+    <li><b>시리즈 확장</b> — 같은 포맷으로 독일어·일본어·스페인어 편, “유창한 내가 내 면접을 대신 본다면” 편.</li>
+  </ul>
+</section>
+<section>
+  <h2>캡션 초안</h2>
+  <ul>
+    <li>30초 녹음했더니 몇 년 뒤의 내가 영어로 전화했어요. 목소리가 진짜 나예요.</li>
+    <li>몇 년 뒤의 나한테 제일 먼저 뭘 물어볼래요?</li>
+  </ul>
+</section>
+
+<script type="module">
+import "/web/kit/nawana-ui.js";
+document.documentElement.lang = "ko";
+const sel = "nw-voice,nw-call,nw-sayagain";
+for (const el of document.querySelectorAll(sel)) {
+  await customElements.whenDefined(el.localName);
+  el.setAttribute("fill", ""); el.setAttribute("static", ""); el.setAttribute("statusbar", "");
+}
+await new Promise(r => setTimeout(r, 120));
+for (const el of document.querySelectorAll(sel)) await el.pose(el.dataset.pose || "recording");
+document.body.dataset.ready = "1";
+</script>
+</html>

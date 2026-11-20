@@ -1,0 +1,352 @@
+<title>내 한 주로 만든 시험</title>
+<style>
+
+/* Layout (founder approved 2026-11-09): one 1080×1350 post at a time; centred text block on top, ONE whole phone below, on a long cast shadow.
+   Inside the phone everything is authored in iOS points (402×874) and scaled ×1.5. Light only, by choice. */
+:root{
+  color-scheme:light;
+  --page:#E9ECF1; --card:#F7F8FA; --grid:rgba(10,40,90,.045);
+  --ink:#0D1117; --sub:#5A6170; --faint:#9AA1AD; --line:#DCE0E7;
+  --label:#767D8A; --body:#434A57; --blue:#0A5CF5; --ios-blue:#007AFF;
+  /* iOS system values sampled from the app's own screenshots */
+  --sys-bg:#FFFFFF; --sys-grouped:#F2F2F7; --sys-fill:#EFEFF4; --sys-gray:#8E8E93; --sys-gray3:#C7C7CC;
+  --me-bubble:#D3E2FD; --fix-bg:#EBF2FE; --btn-tint:#D6E4FB; --sys-red:#FF3B30; --sys-green:#34C759; --sys-orange:#E07B1F;
+  --pixel:"Geist Pixel","Galmuri14","Apple SD Gothic Neo",system-ui,sans-serif;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--sans)}
+.wrap{max-width:1100px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-wrap:wrap;gap:28px 40px;align-items:flex-start;justify-content:center}
+.viewer{flex:0 1 540px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.side{flex:1 1 300px;min-width:0;max-width:440px;font-size:14px;line-height:1.6;color:var(--sub)}
+.side h1{font-family:var(--pixel);font-weight:400;font-size:26px;line-height:1.25;color:var(--ink);margin:0 0 10px;text-wrap:balance}
+.side h3{font-size:13px;letter-spacing:.06em;color:var(--ink);margin:22px 0 6px}
+.side ol{padding-left:18px;margin:0}
+.side li{margin-bottom:4px}
+.side .list button{all:unset;cursor:pointer;color:var(--ink)}
+.side .list button[aria-current="true"]{color:var(--blue);font-weight:600}
+.side .list button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.vp{position:relative;width:100%;aspect-ratio:4/5;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(13,17,23,.08),0 18px 50px rgba(13,17,23,.10);background:var(--card);touch-action:pan-y}
+.track{position:absolute;inset:0;display:flex;transition:transform .45s cubic-bezier(.3,.7,.2,1)}
+.slot{flex:0 0 100%;height:100%;position:relative;overflow:hidden}
+.controls{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.dots{display:flex;gap:7px}
+.dots button{width:8px;height:8px;border-radius:50%;border:0;padding:0;background:#C5CBD5;cursor:pointer}
+.dots button[aria-current="true"]{background:var(--blue);width:22px;border-radius:4px}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;height:36px;min-width:36px;padding:0 14px;font:inherit;font-size:13px;cursor:pointer}
+.btn:focus-visible,.dots button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.btn-row{display:flex;gap:6px}
+
+/* ───────── the post, authored at 1080×1350 ───────── */
+.card{position:absolute;left:0;top:0;width:1080px;height:1350px;transform-origin:0 0;transform:scale(var(--s,.5));background:var(--card);overflow:hidden;
+  background-image:linear-gradient(var(--grid) 2px,transparent 2px),linear-gradient(90deg,var(--grid) 2px,transparent 2px);background-size:54px 54px;background-position:-1px -1px}
+
+/* top row: stays in both states */
+.cap{position:absolute;left:83px;right:83px;top:62px;height:40px;z-index:3;display:flex;justify-content:space-between;align-items:center;font-size:30px;font-weight:400;letter-spacing:-.2px;color:var(--label)}
+.cap .num{font-variant-numeric:tabular-nums}
+
+/* text block. Both are anchored by their CENTRE, so one or two lines grow evenly around the same y. */
+.ttl{position:absolute;left:83px;right:83px;top:226px;transform:translateY(-50%);margin:0;text-align:center;white-space:nowrap;font-family:var(--pixel);font-weight:400;font-size:92px;line-height:100px;letter-spacing:-1.6px;color:var(--ink);transition:opacity .4s ease .75s}
+.ttl .en{color:var(--blue)}
+.desc{position:absolute;left:130px;right:130px;top:350px;transform:translateY(-50%);margin:0;text-align:center;font-size:30px;line-height:36px;font-weight:400;letter-spacing:-.3px;word-break:keep-all;color:var(--body);transition:opacity .4s ease .75s}
+.desc b{color:var(--ink);font-weight:600}
+.desc .n{display:block;margin-top:12px;font-size:23px;line-height:30px;color:var(--faint);font-weight:400}
+.card:has(.ttl br) .ttl{top:226px;font-size:76px;line-height:86px;letter-spacing:-1.2px}
+.card:has(.ttl br) .desc{top:388px}
+
+/* the phone and its shadow are authored at the ZOOM size (524 wide, top 167) and scaled down for the wide state. */
+.device,.shadow{position:absolute;left:278px;top:167px;width:524px;height:1099.2px;transform-origin:50% 0;transform:translateY(309px) scale(.71947);transition:transform 1.15s cubic-bezier(.45,0,.2,1)}
+.device{z-index:2}
+.device nw-phone{width:524px}
+.shadow{border-radius:84px}
+.castlayer{position:absolute;inset:0;z-index:1;pointer-events:none;-webkit-mask-image:linear-gradient(#000 calc(100% - 72px),transparent);mask-image:linear-gradient(#000 calc(100% - 72px),transparent)}
+
+/* zoom: text gone, labels stay, phone 524 wide. */
+.card.zoom .device,.card.zoom .shadow{transform:none}
+.card.zoom .ttl,.card.zoom .desc,.card.zoom .swipe{opacity:0;transition:opacity .4s ease}
+html.locked .device,html.locked .shadow,html.locked .ttl,html.locked .desc,html.locked .swipe{transition:none!important}
+
+/* ── cover: same composition, plus the swipe line in the band under the phone ── */
+.swipe{position:absolute;left:83px;right:83px;bottom:40px;z-index:3;display:flex;justify-content:space-between;font-size:28px;color:var(--label);transition:opacity .4s ease .75s}
+.swipe b{font-family:var(--pixel);font-weight:400;color:var(--blue)}
+
+/* ── outro: same top row and text slots; the Futureself pill takes the phone's place and casts the same shadow ── */
+.c-outro{text-align:center}
+.c-outro .wm{position:absolute;left:0;right:0;top:226px;transform:translateY(-50%);font-family:var(--pixel);font-size:92px;line-height:100px;letter-spacing:2px}
+.c-outro .tg{position:absolute;left:0;right:0;top:356px;transform:translateY(-50%);font-size:44px;line-height:58px;font-weight:600}
+.pill{position:absolute;left:300px;top:560px;width:480px;height:266px;z-index:2}
+.pill nw-futureself{position:absolute;inset:0;width:100%;height:100%}
+.c-outro .shadow{left:300px;top:560px;width:480px;height:266px;border-radius:133px;transform:none;transition:none}
+.c-outro .free{position:absolute;left:0;right:0;top:1120px;font-size:32px;line-height:40px;color:var(--body);z-index:3}
+.c-outro .url{position:absolute;left:0;right:0;top:1188px;font-family:var(--pixel);font-size:40px;line-height:48px;color:var(--blue);z-index:3}
+
+@media (prefers-reduced-motion:reduce){
+  .track,.device,.shadow,.ttl,.desc,.swipe{transition:none!important}
+}
+
+/* ?solo=N: one card at its real 1080×1350, no viewer chrome: what scripts/marketing/record.mjs records */
+html.solo,html.solo body{margin:0;background:var(--card);overflow:hidden}
+html.solo .wrap{display:block;padding:0;max-width:none}
+html.solo .side,html.solo .controls{display:none}
+html.solo .viewer{display:block}
+html.solo .vp{width:1080px;max-width:none;aspect-ratio:auto;height:1350px;border-radius:0;box-shadow:none}
+html.solo .track{transition:none}
+</style>
+<div class="wrap" lang="ko" id="wrap">
+  <div class="viewer">
+    <div class="vp" id="vp" aria-roledescription="carousel" aria-label="내 한 주로 만든 시험">
+      <div class="track" id="track">
+
+        <div class="slot"><section class="card" data-k="cover">
+          <header class="cap"><span class="series">주간 테스트</span><span class="num">01 / 06</span></header>
+          <h2 class="ttl">내 한 주로<br>만든 시험</h2>
+          <p class="desc">그 주에 <b>내가 공부한 것</b>으로만 시험을 만들어요.</p>
+          <div class="castlayer"><div class="shadow" data-reach="250"></div></div>
+          <div class="device"><nw-phone><nw-weeklytest sample="interview"></nw-weeklytest></nw-phone></div>
+          <div class="swipe"><span>옆으로 넘겨보세요 →</span><b>nawana.app</b></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="calls">
+          <header class="cap"><span class="series">주간 테스트</span><span class="num">02 / 06</span></header>
+          <h2 class="ttl">통화가 가르친<br>단어와 표현</h2>
+          <p class="desc">빈칸에 들어갈 말은 <b>유창한 내가 통화에서 쓴 표현</b>이에요.</p>
+          <div class="castlayer"><div class="shadow" data-reach="250"></div></div>
+          <div class="device"><nw-phone><nw-weeklytest sample="interview"></nw-weeklytest></nw-phone></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="week">
+          <header class="cap"><span class="series">주간 테스트</span><span class="num">03 / 06</span></header>
+          <h2 class="ttl">한 주가<br>통째로 들어와요</h2>
+          <p class="desc">교정됐던 문장도, 다시 들어 볼 만했던 줄도 <b>그대로</b> 문제가 돼요.<span class="n">한 주가 얇으면 시험은 열리지 않아요. 내 한 주가 기준이니까요.</span></p>
+          <div class="castlayer"><div class="shadow" data-reach="250"></div></div>
+          <div class="device"><nw-phone><nw-weeklytest sample="interview"></nw-weeklytest></nw-phone></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="known">
+          <header class="cap"><span class="series">주간 테스트</span><span class="num">04 / 06</span></header>
+          <h2 class="ttl">맞히면<br>어디서나 아는 말</h2>
+          <p class="desc">맞힌 단어와 문장은 <b>복습 카드와 교재에서도</b> 아는 것으로 바뀌어요.<span class="n">시험, 카드, 교재가 하나로 이어져요.</span></p>
+          <div class="castlayer"><div class="shadow" data-reach="250"></div></div>
+          <div class="device"><nw-phone><nw-weeklytest sample="interview"></nw-weeklytest></nw-phone></div>
+        </section></div>
+
+        <div class="slot"><section class="card" data-k="appeal">
+          <header class="cap"><span class="series">주간 테스트</span><span class="num">05 / 06</span></header>
+          <h2 class="ttl">"제 답도<br>맞아요"</h2>
+          <p class="desc">틀렸다고 나와도 내 답이 맞으면, <b>한 번 눌러</b> 맞은 걸로 바로잡아요.</p>
+          <div class="castlayer"><div class="shadow" data-reach="250"></div></div>
+          <div class="device"><nw-phone><nw-weeklytest sample="interview"></nw-weeklytest></nw-phone></div>
+        </section></div>
+
+        <div class="slot"><section class="card c-outro" data-k="outro">
+          <header class="cap"><span class="series">주간 테스트</span><span class="num">06 / 06</span></header>
+          <div class="wm">nawana</div>
+          <div class="tg">유창한 나에게<br>언어를 배우세요.</div>
+          <div class="castlayer"><div class="shadow" data-reach="180"></div></div>
+          <div class="pill"><nw-futureself mode="speaking" level="voice"></nw-futureself></div>
+          <div class="free">첫 20분은 무료예요</div>
+          <div class="url">nawana.app</div>
+        </section></div>
+
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="prev" aria-label="이전 장">←</button>
+      <div class="dots" id="dots"></div>
+      <div class="btn-row"><button class="btn" id="replay">처음부터 재생</button><button class="btn" id="next" aria-label="다음 장">→</button></div>
+    </div>
+  </div>
+
+  <aside class="side">
+    <h1>내 한 주로 만든 시험</h1>
+    <p>주간 테스트 재설계(1.3.2 / build 136). 가운데 글자, 통째로 보이는 폰 한 대. 폰 화면은 UI 키트의 <code>nw-weeklytest sample="interview"</code> 그대로예요(빈칸·문법·결과). 불꽃·게이지 없음. <code>?lang=en</code>이면 영어판이에요.</p>
+    <h3>장 목록</h3>
+    <ol class="list" id="list">
+      <li><button data-go="0">커버 · 내 한 주로 만든 시험 · 빈칸 문항</button></li>
+      <li><button data-go="1">02 · 통화가 가르친 단어와 표현 · 빈칸 정답</button></li>
+      <li><button data-go="2">03 · 한 주가 통째로 · 문법 문항</button></li>
+      <li><button data-go="3">04 · 맞히면 어디서나 아는 말 · 결과</button></li>
+      <li><button data-go="4">05 · 제 답도 맞아요 · 틀린 문항(이의는 카피로만)</button></li>
+      <li><button data-go="5">마지막 장 · nawana.app</button></li>
+    </ol>
+    <h3>상태 고정</h3>
+    <p>주소 뒤에 ?solo=N&amp;state=zoom 또는 state=wide를 붙이면 그 상태로 고정돼요.</p>
+  </aside>
+</div>
+
+<script type="module">
+const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const sleep = ms => new Promise(r => setTimeout(r, RM ? 0 : ms));
+const params = new URLSearchParams(location.search);
+
+/* ?lang=en — the English text block (copy.md, written separately, not translated). The phone's
+   material stays as the interview sample; the kit chrome follows the wrap's lang once a screen is built. */
+const EN = {
+  cover: { ttl: "A test made<br>from your week", desc: "Built only from <b>what you studied</b> that week." },
+  calls: { ttl: "Words your<br>calls taught", desc: "The blank wants <b>a phrase the fluent you used</b> on a call." },
+  week: { ttl: "Your whole<br>week, at once", desc: `The sentences you fixed and the lines worth hearing again, <b>all of it</b>.<span class="n">A thin week simply doesn't open the test. Your own week is the measure.</span>` },
+  known: { ttl: "Get it right,<br>known everywhere", desc: `A right answer turns known in <b>your review cards and books</b> too.<span class="n">The test, your cards and your books move together.</span>` },
+  appeal: { ttl: '"My answer<br>is right too"', desc: "Marked wrong but you were right? <b>One tap</b> counts it correct." },
+  outro: { tg: "Learn a language<br>from your fluent self.", free: "Your first 20 minutes are free" },
+};
+if (params.get("lang") === "en") {
+  $("#wrap").lang = "en"; document.title = "Weekly test";
+  for (const card of $$(".card")) {
+    const k = card.dataset.k, e = EN[k];
+    if (e?.ttl && $(".ttl", card)) $(".ttl", card).innerHTML = e.ttl;
+    if (e?.desc && $(".desc", card)) $(".desc", card).innerHTML = e.desc;
+  }
+  $$(".series").forEach(s => s.textContent = "Weekly test");
+  const cv = $('[data-k="cover"]'); if (cv) $(".swipe span", cv).textContent = "Swipe →";
+  const ou = $('[data-k="outro"]'); $(".tg", ou).innerHTML = EN.outro.tg; $(".free", ou).textContent = EN.outro.free;
+}
+
+import "/web/kit/nawana-ui.js";
+
+const vp = $("#vp");
+const setScale = () => $$(".card").forEach(c => c.style.setProperty("--s", vp.clientWidth / 1080));
+new ResizeObserver(setScale).observe(vp); setScale();
+
+/* The long cast shadow (same solver as the template): the silhouette repeated along the 45° line. */
+function castShadow(reach, peak = .58) {
+  const step = 3, n = Math.round(reach / step);
+  const A = s => peak * Math.pow(Math.max(0, 1 - s / reach), 1.7);
+  const parts = [];
+  for (let i = 1; i <= n; i++) {
+    const s = i * step, a = (A(s) - A(s + step)) / (1 - A(s + step));
+    parts.push(`${s}px ${s}px ${Math.round(3 + s * .16)}px rgba(13,17,23,${a.toFixed(4)})`);
+  }
+  return parts.join(",");
+}
+$$(".shadow").forEach(el => el.style.boxShadow = castShadow(+el.dataset.reach));
+
+/* nw-phone carries its own soft drop shadow; here the cast shadow is the only one. */
+customElements.whenDefined("nw-phone").then(() => $$("nw-phone").forEach(p => {
+  const st = document.createElement("style");
+  st.textContent = ".body{box-shadow:inset 0 0 0 calc(100cqw * 2.2 / 430) #6E7076,inset 0 0 0 calc(100cqw * 3.4 / 430) #2A2B2E!important}";
+  p.shadowRoot.append(st);
+}));
+
+/* no em dash on a posted image (BRAND): sweep the shadow trees, colon (English) or full stop (Korean) */
+function undash(root) {
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+  for (let n = w.currentNode; n; n = w.nextNode()) {
+    if (n.shadowRoot) undash(n.shadowRoot);
+    if (n.nodeType === 3 && n.data.includes("—")) n.data = n.data.replace(/\s*—\s*(?=([가-힣])?)/g, (_, ko) => ko ? ". " : ": ");
+  }
+}
+setInterval(() => $$(".card").forEach(c => undash(c)), 120);
+
+/* The camera. Phone wide ⇄ zoomed, the text fading as it moves.
+   ?state=zoom|wide locks a card for stills; the scene still plays with the same timing. */
+const ZOOM_MS = 1150;
+const LOCK = params.get("state");
+if (LOCK) { document.documentElement.classList.add("locked"); if (LOCK === "zoom") $$(".card").forEach(c => c.classList.add("zoom")); }
+const zoom = async (c, on = true) => { if (!LOCK) c.classList.toggle("zoom", on); await sleep(ZOOM_MS); };
+
+/* open the screen straight onto the result, no fade from whatever it was last showing */
+function showResult(t) {
+  const still = document.createElement("style"); still.textContent = "*{transition:none!important}";
+  t.shadowRoot.append(still);
+  t.result();
+  void t.shadowRoot.querySelector(".root").offsetWidth;
+  setTimeout(() => still.remove(), 50);
+}
+
+/* Each card: one loop. Starts wide (the text is read), moves in for the moment on the screen, comes back so the loop meets its start.
+   Every screen is the real kit nw-weeklytest on the interview-week sample (its own engine output). */
+const PLAY = {
+  /* cover — the clean fill-in-the-blank question, read wide (the title carries the message; the phone is a glimpse) */
+  async cover(c) {
+    const t = $("nw-weeklytest", c);
+    t.show(t.items.gap);
+    await sleep(6000);
+  },
+  /* 02 — the gap: the fluent self's line with its phrase blanked, "took the initiative" fills it, right */
+  async calls(c) {
+    const t = $("nw-weeklytest", c), it = t.items.gap;
+    t.show(it);
+    await sleep(1800);
+    await zoom(c);
+    await sleep(900);
+    await t.tapOpt(it.answer); t.choose(it.answer);
+    await sleep(3400);
+    await zoom(c, false);
+    await sleep(500);
+  },
+  /* 03 — grammar: a past-tense slip asked in a new sentence, rebuilt right from tiles (the decoy "tell" stays in the tray) */
+  async week(c) {
+    const t = $("nw-weeklytest", c), it = t.items.grammar;
+    t.show(it);
+    await sleep(1800);
+    await zoom(c);
+    await sleep(700);
+    for (const w of it.answer.split(" ")) { await t.tapTile(w); await sleep(165); }
+    await sleep(400);
+    await t.tapBtn(); t.check(null);
+    await sleep(3800);
+    await zoom(c, false);
+    await sleep(500);
+  },
+  /* 04 — the result: 6 / 7, "잘한 한 주예요", the one missed row (back in review now); known-everywhere is the copy */
+  async known(c) {
+    const t = $("nw-weeklytest", c);
+    showResult(t);
+    await sleep(700);
+    await zoom(c);
+    const n = t.shadowRoot.querySelector(".res .sc .n"); if (n) await t.countUp(n, 6, 900);
+    await sleep(3600);
+    await zoom(c, false);
+    await sleep(500);
+  },
+  /* 05 — a translate item marked WRONG ("이번엔 아니에요"): the exact moment the appeal lives, told in COPY only.
+     No appeal button is drawn — the kit has none, by design. */
+  async appeal(c) {
+    const t = $("nw-weeklytest", c), it = t.items.translate;
+    t.show(it);
+    await sleep(1700);
+    await zoom(c);
+    await sleep(600);
+    for (const w of it.wrong.order) { await t.tapTile(w); await sleep(165); }
+    await sleep(400);
+    await t.tapBtn(); t.check(it.wrong.verdicts);
+    await sleep(4000);
+    await zoom(c, false);
+    await sleep(500);
+  },
+  async outro() { await sleep(6000); },
+};
+
+const track = $("#track"), slots = $$(".slot"), cards = $$(".card"), dots = $("#dots"), list = $$("#list button");
+slots.forEach((_, i) => { const b = document.createElement("button"); b.setAttribute("aria-label", `${i + 1}번 장`); b.onclick = () => go(i); dots.append(b); });
+let idx = 0, gen = 0;
+function go(i) {
+  idx = (i + slots.length) % slots.length;
+  track.style.transform = `translateX(${-idx * 100}%)`;
+  $$("button", dots).forEach((b, j) => b.setAttribute("aria-current", j === idx));
+  list.forEach((b, j) => b.setAttribute("aria-current", j === idx));
+  $$("nw-weeklytest").forEach(s => s.stop());
+  run(cards[idx]);
+}
+async function run(card) {
+  const g = ++gen, alive = () => g === gen;
+  await customElements.whenDefined("nw-weeklytest");
+  await sleep(350);
+  document.documentElement.dataset.scene = card.dataset.k;   // record.mjs --wait-for
+  do { await PLAY[card.dataset.k](card, alive); } while (alive() && !RM);
+}
+$("#prev").onclick = () => go(idx - 1);
+$("#next").onclick = () => go(idx + 1);
+$("#replay").onclick = () => go(idx);
+list.forEach(b => b.onclick = () => go(+b.dataset.go));
+addEventListener("keydown", e => { if (e.key === "ArrowRight") go(idx + 1); if (e.key === "ArrowLeft") go(idx - 1); });
+let x0 = null;
+vp.addEventListener("pointerdown", e => x0 = e.clientX);
+vp.addEventListener("pointerup", e => { if (x0 == null) return; const d = e.clientX - x0; x0 = null; if (Math.abs(d) > 40) go(idx + (d < 0 ? 1 : -1)); });
+const solo = +(params.get("solo") || 0);
+if (solo) document.documentElement.classList.add("solo");
+const m = solo ? [0, solo] : /^#card(\d+)$/.exec(location.hash);
+go(m ? +m[1] - 1 : 0);
+</script>

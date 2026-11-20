@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<title>nawana · Android launch card · round 2</title>
+<style>
+/* One 1080×1350 Threads card, five layouts (?v=e|f|g|h|i, ?lang=ko, ?still).
+   Round 2 (founder rejected round 1, kept as card-round1.html): bold modern sans (Pretendard,
+   OFL, the font the Android app ships), no standalone mosaic, the hero is the REAL Android
+   app: the phones in assets/ are cropped (frame + screen, corners masked) from the Play
+   listing screenshots, never redrawn. The iPhone in H is the kit's nw-phone + nw-home. */
+@font-face{font-family:"Pretendard";src:url(assets/pretendard.ttf) format("truetype");font-weight:45 930}
+:root{
+  color-scheme:light;
+  --card:#F7F8FA; --ink:#0D1117; --sub:#5A6170; --faint:#9AA1AD; --accent:#0A5CF5;
+  --sans:"Pretendard","Apple SD Gothic Neo",-apple-system,system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:#fff;overflow:hidden}
+.card{position:absolute;left:0;top:0;width:1080px;height:1350px;transform-origin:0 0;overflow:hidden;
+  background:var(--card);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;word-break:keep-all}
+.card>*{position:absolute;margin:0}
+[data-v=e] .v:not(.ve),[data-v=f] .v:not(.vf),[data-v=g] .v:not(.vg),[data-v=h] .v:not(.vh),[data-v=i] .v:not(.vi){display:none!important}
+
+/* shared type */
+.hl{font-weight:800;letter-spacing:-.045em;line-height:1.08;white-space:nowrap}
+.hl em{font-style:normal;color:var(--accent)}
+.body{font-weight:500;letter-spacing:-.02em;color:var(--sub)}
+.wm{font-weight:800;letter-spacing:-.04em;font-size:40px;line-height:1;display:flex;align-items:center;gap:12px}
+.wm i{display:block;width:20px;height:20px;border-radius:5px;background:var(--accent)}
+.play{display:inline-flex;align-items:center;gap:14px;height:68px;padding:0 30px;border-radius:34px;background:var(--ink);color:#fff;
+  font-weight:700;font-size:28px;letter-spacing:-.02em;white-space:nowrap}
+.play b{display:block;width:0;height:0;border-left:15px solid currentColor;border-top:10px solid transparent;border-bottom:10px solid transparent;margin-left:2px}
+.meta{font-weight:600;font-size:27px;letter-spacing:-.02em;color:var(--sub);white-space:nowrap}
+.url{font-weight:700;font-size:28px;letter-spacing:-.02em;color:var(--accent)}
+.phone{display:block;width:100%;height:auto}
+.ph{filter:drop-shadow(0 50px 70px rgba(13,40,100,.22)) drop-shadow(0 10px 20px rgba(13,17,23,.12))}
+
+/* ── E · one phone rising from the bottom edge, headline above, light ground ── */
+[data-v=e] .card{background:radial-gradient(900px 700px at 50% 92%,#DCE7FF 0%,rgba(220,231,255,0) 70%),var(--card)}
+[data-v=e] .top{left:72px;right:72px;top:64px;display:flex;justify-content:space-between;align-items:center}
+[data-v=e] .hl{left:0;right:0;top:158px;text-align:center;font-size:112px}
+[data-v=e] .sub{left:0;right:0;top:426px;display:flex;justify-content:center;align-items:center;gap:22px}
+[data-v=e] .ph{left:250px;top:560px;width:580px;transform:rotate(-5deg);transform-origin:50% 0}
+
+/* ── F · two phones with depth, headline left-aligned, a cool blue-tinted ground ── */
+[data-v=f] .card{background:linear-gradient(160deg,#FFFFFF 0%,#EEF3FD 55%,#DFE8FB 100%)}
+[data-v=f] .hl{left:72px;top:150px;font-size:104px}
+[data-v=f] .body{left:72px;top:404px;font-size:32px;line-height:48px}
+[data-v=f] .wm{left:72px;top:72px}
+[data-v=f] .back{left:652px;top:480px;width:470px;transform:rotate(7deg);filter:drop-shadow(0 30px 50px rgba(13,40,100,.18)) brightness(.97)}
+[data-v=f] .front{left:362px;top:620px;width:500px;transform:rotate(-3deg)}
+[data-v=f] .side{left:72px;bottom:72px;display:flex;flex-direction:column;align-items:flex-start;gap:22px}
+[data-v=f] .side .meta{color:var(--ink)}
+
+/* ── G · the poster: full-bleed app blue, white type, the phone glowing ── */
+[data-v=g] .card{background:radial-gradient(820px 640px at 50% 22%,#3D82FF 0%,rgba(61,130,255,0) 72%),#0A5CF5;color:#fff}
+[data-v=g] .wm{left:64px;top:68px;color:#fff;font-size:34px}
+[data-v=g] .wm i{background:#fff;width:17px;height:17px}
+[data-v=g] .ph{left:280px;top:-220px;width:520px;filter:drop-shadow(0 0 2px rgba(255,255,255,.9)) drop-shadow(0 0 70px rgba(255,255,255,.5)) drop-shadow(0 40px 80px rgba(0,20,80,.45))}
+[data-v=g] .hl{left:0;right:0;top:916px;text-align:center;font-size:112px;color:#fff}
+[data-v=g] .hl em{color:#C9DCFF}
+[data-v=g] .sub{left:0;right:0;top:1190px;display:flex;justify-content:center;align-items:center;gap:22px}
+[data-v=g] .sub .play{background:#fff;color:var(--accent)}
+[data-v=g] .sub .meta{color:rgba(255,255,255,.9)}
+
+/* ── H · iPhone and Android side by side, the same app, centred headline (founder's pick) ──
+   Both devices are 318 wide with the kit iPhone's proportions: 10.35 px bezel, ~646 px screen.
+   The iPhone is the kit (nw-phone + nw-home tabbar); the Android is the Play screenshot's SCREEN
+   (assets/android-screen-home-*.png, frame dropped) in a CSS Pixel-style frame. The goal arc is
+   drawn the app's way on both (TalkRing.kt / ConversationHome.talkRing): 20 pt round-capped
+   stroke on the r=140 circle of a 300 box, from 12 o'clock, tail fading from 40% accent. */
+@font-face{font-family:"Galmuri14";src:url(assets/Galmuri14.woff2) format("woff2")}
+@font-face{font-family:"Pixelify Sans";src:url(assets/PixelifySans.woff2) format("woff2");font-weight:400 700}
+/* the ground: round 1's card ground and faint 54 px grid, exactly (card-round1.html / carousel template) */
+[data-v=h] .card{background-color:#F7F8FA;
+  background-image:linear-gradient(rgba(10,40,90,.045) 2px,transparent 2px),linear-gradient(90deg,rgba(10,40,90,.045) 2px,transparent 2px);background-size:54px 54px;background-position:-1px -1px}
+[data-v=h] .lock{left:72px;top:60px;display:flex;align-items:center;gap:16px}
+[data-v=h] .lock img{width:60px;height:60px;border-radius:13.4px;box-shadow:0 0 0 1px rgba(13,17,23,.10),0 4px 14px rgba(13,17,23,.08)}
+[data-v=h] .lock b{font-family:"Pixelify Sans",var(--sans);font-weight:400;font-size:42px;line-height:1;letter-spacing:0;color:var(--ink)}
+[data-v=h] .hurl{right:72px;top:76px;font-size:28px}
+[data-v=h] .hl{left:0;right:0;top:160px;text-align:center;font-size:92px}
+/* ?px=1|2: only "안드로이드" in the pixel face (Galmuri14), sized in whole multiples of its 14 px grid
+   so every pixel block is the same size, baseline-matched to the Pretendard around it */
+[data-px] [data-v=h] .hl em,[data-v=h][data-px] .hl em{font-family:"Galmuri14";font-weight:400;letter-spacing:0;-webkit-text-stroke:var(--pxs,0) #0A5CF5;line-height:0;position:relative;top:var(--pxy,0)}
+[data-v=h][data-px="1"] .hl em{font-size:84px;--pxs:4px;--pxy:6px}
+[data-v=h][data-px="2"] .hl em{font-size:98px;--pxs:5px;--pxy:5px}
+[data-v=h][data-px="3"] .hl em{font-size:var(--pxf,71px);--pxs:var(--pxw,5px);--pxy:var(--pxo,5px)}
+[data-v=h] .body{left:0;right:0;top:382px;text-align:center;font-size:30px;line-height:46px}
+[data-v=h] .pair{left:0;right:0;top:518px;display:flex;justify-content:center;gap:44px}
+[data-v=h] .dev{position:relative;width:318px;height:667.1px;filter:drop-shadow(0 30px 40px rgba(13,40,100,.16)) drop-shadow(0 6px 12px rgba(13,17,23,.10))}
+[data-v=h] nw-phone{width:318px}
+/* the Android device: Pixel-style, black glass, thin metal band, buttons on the right */
+.adev{position:absolute;inset:0;border-radius:48.4px;background:#0B0B0C;
+  box-shadow:inset 0 0 0 1.63px #6E7076,inset 0 0 0 2.52px #2A2B2E}
+.adev .btn{position:absolute;right:-1.8px;width:2.4px;border-radius:1.5px;background:linear-gradient(270deg,#4A4C51,#76797F)}
+.adev .pw{top:126px;height:44px} .adev .vol{top:196px;height:78px}
+.adev .scr{position:absolute;left:10.35px;top:10.35px;right:10.35px;bottom:10.35px;border-radius:38px;overflow:hidden;background:#F2F2F7}
+.adev .scr>img{position:absolute;left:0;top:0;width:100%;height:auto;display:block}
+.adev .handle{position:absolute;left:50%;bottom:7px;width:84px;height:3.4px;margin-left:-42px;border-radius:2px;background:#1C1C1E;opacity:.82}
+.goal{position:absolute;background:var(--conic);
+  -webkit-mask:var(--arc) center/100% 100% no-repeat;mask:var(--arc) center/100% 100% no-repeat;pointer-events:none}
+.adev .goal{left:40.15px;top:225.4px;width:217px;height:217px}
+[data-v=h] .stores{left:0;right:0;top:1228px;display:flex;justify-content:center;align-items:center;gap:18px}
+[data-v=h] .stores img{height:64px;width:auto;display:block}
+/* the sticker: the five target languages (LanguageCatalog / the Android wordlists: en es de ja ko),
+   each in its own language, with the theme accent the app switches to for it (kit HERO_LANG) */
+[data-v=h] .langs{left:50%;top:489px;transform:translateX(-50%) rotate(-1.8deg);z-index:3;display:flex;align-items:center;gap:8px;
+  padding:9px 10px 9px 22px;border-radius:999px;background:#fff;white-space:nowrap;
+  box-shadow:0 0 0 1px rgba(13,17,23,.05),0 14px 30px rgba(13,40,100,.18),0 3px 6px rgba(13,17,23,.08)}
+[data-v=h] .langs>b{font-size:19px;font-weight:700;letter-spacing:-.03em;color:var(--sub);margin-right:6px}
+[data-v=h] .langs span{display:flex;align-items:center;gap:7px;height:40px;padding:0 15px 0 13px;border-radius:20px;background:#F2F3F6;
+  font-size:20px;font-weight:600;letter-spacing:-.02em;color:var(--ink)}
+[data-v=h] .langs i{display:block;width:9px;height:9px;border-radius:50%;background:var(--c)}
+/* sticker variants (?s=1..5; none = the pill across the phone tops). Each language carries the
+   theme accent the app switches to for it (kit HERO_LANG). */
+[data-v=h][data-s] .langs{display:none!important}
+.stk{position:absolute;z-index:4;display:none}
+[data-v=h][data-s="1"] .s1,[data-v=h][data-s="2"] .s2,[data-v=h][data-s="3"] .s3,[data-v=h][data-s="4"] .s4,[data-v=h][data-s="5"] .s5{display:block}
+.tag{position:absolute;display:flex;align-items:center;gap:8px;height:48px;padding:0 18px 0 16px;border-radius:24px;background:#fff;white-space:nowrap;
+  font-size:21px;font-weight:700;letter-spacing:-.02em;color:var(--ink);
+  box-shadow:0 0 0 1px rgba(13,17,23,.05),0 12px 26px rgba(13,40,100,.17),0 2px 5px rgba(13,17,23,.08)}
+.tag i{display:block;width:11px;height:11px;border-radius:50%;background:var(--c)}
+.tag.lab{background:var(--ink);color:#fff;font-size:18px;font-weight:700;height:44px;padding:0 18px}
+
+/* s1: a compact card on the iPhone's left edge, the five as a list */
+.s1{left:64px;top:752px;width:162px;padding:16px 16px 12px;border-radius:20px;background:#fff;transform:rotate(-6deg);
+  box-shadow:0 0 0 1px rgba(13,17,23,.05),0 14px 30px rgba(13,40,100,.18),0 3px 6px rgba(13,17,23,.08)}
+.s1 b{display:block;font-size:15px;font-weight:700;letter-spacing:-.03em;color:var(--sub);margin-bottom:6px}
+.s1 p{margin:0;display:flex;align-items:center;gap:9px;height:36px;font-size:20px;font-weight:700;letter-spacing:-.02em;border-top:1px solid #EEF0F3}
+.s1 i,.s2 i,.s3 i{display:block;width:10px;height:10px;border-radius:50%;background:var(--c);flex:none}
+/* s2: a round seal on the Android's right edge, the label running round the top */
+.s2{left:838px;top:668px;width:184px;height:184px;border-radius:50%;background:#fff;transform:rotate(8deg);
+  box-shadow:0 0 0 1px rgba(13,17,23,.05),0 14px 30px rgba(13,40,100,.18),0 3px 6px rgba(13,17,23,.08)}
+.s2 svg{position:absolute;inset:0;width:100%;height:100%}
+.s2 .ls{position:absolute;left:0;right:0;top:50px;display:flex;flex-direction:column;align-items:center;gap:1px}
+.s2 p{margin:0;display:flex;align-items:center;gap:7px;height:21px;font-size:16px;font-weight:700;letter-spacing:-.02em}
+.s2 i{width:8px;height:8px}
+/* s3: a two-row pill across the gap, under the rings */
+.s3{left:50%;top:972px;transform:translateX(-50%) rotate(-3deg);padding:12px 16px;border-radius:26px;background:#fff;
+  box-shadow:0 0 0 1px rgba(13,17,23,.05),0 14px 30px rgba(13,40,100,.18),0 3px 6px rgba(13,17,23,.08)}
+.s3 .r{display:flex;align-items:center;gap:8px;justify-content:center}
+.s3 .r+.r{margin-top:6px}
+.s3 b{font-size:15px;font-weight:700;letter-spacing:-.03em;color:var(--sub);margin-right:4px}
+.s3 span{display:flex;align-items:center;gap:6px;height:30px;padding:0 11px 0 10px;border-radius:15px;background:#F2F3F6;font-size:17px;font-weight:700;letter-spacing:-.02em}
+.s3 i{width:8px;height:8px}
+/* s4: layered tags fanned off the Android's bottom-right corner */
+.s4{left:866px;top:968px;width:220px;height:260px}
+
+
+/* ── I · extreme close-up on the call's correction, ink ground, headline in a clean block ── */
+[data-v=i] .card{background:#0D1117;color:#fff}
+[data-v=i] .zoom{left:-139px;top:-238px;width:1149px;
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,transparent 790px,#000 846px);mask-image:linear-gradient(to bottom,transparent 0,transparent 790px,#000 846px)}
+[data-v=i] .zoom img{width:1149px;height:2388px}
+[data-v=i] .rim{left:-139px;top:-238px;width:1149px;height:2388px;border-radius:128px;box-shadow:0 0 0 2px rgba(255,255,255,.16),0 0 80px rgba(92,149,255,.18);
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,transparent 790px,#000 846px);mask-image:linear-gradient(to bottom,transparent 0,transparent 790px,#000 846px)}
+[data-v=i] .wm{left:72px;top:72px;color:#fff}
+[data-v=i] .hl{left:72px;top:150px;font-size:104px;color:#fff}
+[data-v=i] .hl em{color:#5C95FF}
+[data-v=i] .sub{left:72px;top:418px;display:flex;align-items:center;gap:22px}
+[data-v=i] .sub .play{background:#fff;color:var(--ink)}
+[data-v=i] .sub .meta{color:rgba(255,255,255,.7)}
+[data-v=i] .url{right:72px;top:84px;color:rgba(255,255,255,.7);font-size:26px}
+</style>
+
+<section class="card" id="card">
+  <!-- E -->
+  <div class="v ve top"><span class="wm"><i></i>nawana</span><span class="url" data-t="url"></span></div>
+  <h1 class="v ve hl" data-t="title"></h1>
+  <div class="v ve sub"><span class="play"><b></b>Google Play</span><span class="meta" data-t="free"></span></div>
+  <div class="v ve ph"><img class="phone" src="assets/android-01_home.png" alt=""></div>
+
+  <!-- F -->
+  <span class="v vf wm"><i></i>nawana</span>
+  <h1 class="v vf hl" data-t="titleL"></h1>
+  <p class="v vf body" data-t="body"></p>
+  <div class="v vf back"><img class="phone" src="assets/android-02_call.png" alt=""></div>
+  <div class="v vf ph front"><img class="phone" src="assets/android-01_home.png" alt=""></div>
+  <div class="v vf side"><span class="play"><b></b>Google Play</span><span class="meta" data-t="free"></span><span class="url" data-t="url"></span></div>
+
+  <!-- G -->
+  <span class="v vg wm"><i></i>nawana</span>
+  <h1 class="v vg hl" data-t="title"></h1>
+  <div class="v vg sub"><span class="play"><b></b>Google Play</span><span class="meta" data-t="free"></span></div>
+  <div class="v vg ph"><img class="phone" src="assets/android-01_home.png" alt=""></div>
+
+  <!-- H -->
+  <div class="v vh lock"><img src="assets/app-icon.png" alt=""><b>nawana</b></div>
+  <span class="v vh url hurl" data-t="url"></span>
+  <h1 class="v vh hl" data-t="title"></h1>
+  <p class="v vh body" data-t="body"></p>
+  <div class="v vh pair">
+    <div class="dev"><nw-phone><nw-home id="ios" tabbar static greeting="How was your day?" initial="A"></nw-home></nw-phone></div>
+    <div class="dev"><div class="adev"><span class="btn pw"></span><span class="btn vol"></span>
+      <div class="scr"><img id="aimg" src="assets/android-screen-home-ko.png" alt=""><div class="goal"></div><i class="handle"></i></div></div></div>
+  </div>
+  <div class="v vh langs"><b data-t="learn"></b><span lang="en" style="--c:#0A5CF5"><i></i>English</span><span lang="es" style="--c:#0AA3C2"><i></i>Español</span><span lang="de" style="--c:#F58F0D"><i></i>Deutsch</span><span lang="ja" style="--c:#F23B52"><i></i>日本語</span><span lang="ko" style="--c:#0DA36B"><i></i>한국어</span></div>
+  <div class="v vh stk s1" id="s1"></div><div class="v vh stk s2" id="s2"></div><div class="v vh stk s3" id="s3"></div><div class="v vh stk s4" id="s4"></div>
+  <div class="v vh stk s5" id="s5"></div>
+  <div class="v vh stores"><img id="b-as" src="assets/badge-appstore-ko.svg" alt="App Store"><img id="b-gp" src="assets/badge-googleplay-ko.png" alt="Google Play"></div>
+
+  <!-- I -->
+  <div class="v vi zoom"><img src="assets/android-02_call-zoom.png" alt=""></div>
+  <div class="v vi rim"></div>
+  <span class="v vi wm"><i></i>nawana</span>
+  <span class="v vi url" data-t="url"></span>
+  <h1 class="v vi hl" data-t="titleL"></h1>
+  <div class="v vi sub"><span class="play"><b></b>Google Play</span><span class="meta" data-t="free"></span></div>
+</section>
+
+<script type="module">
+
+/* strings: lifted verbatim from copy.md (the accent span only colours a word) */
+const COPY = {
+  ko: { title: "<em>안드로이드</em>에도<br>나와나가 왔어요", titleL: "<em>안드로이드</em>에도<br>나와나가 왔어요",
+        body: "아이폰과 같은 앱 그대로,<br>내 목소리로 말하는 유창한 나와 통화해요.",
+        url: "nawana.app", free: "첫 20분은 무료예요", learn: "배울 수 있는 언어" },
+  en: { title: "Now on<br><em>Android</em>", titleL: "Now on<br><em>Android</em>",
+        body: "The same app as on iPhone.<br>Talk with your fluent self, in your own voice.",
+        url: "nawana.app", free: "Your first 20 minutes are free", learn: "Learn" },
+};
+const q = new URLSearchParams(location.search);
+const lang = q.get("lang") === "en" ? "en" : "ko";
+const v = ["e", "f", "g", "h", "i"].includes(q.get("v")) ? q.get("v") : "e";
+const root = document.documentElement, $id = id => document.getElementById(id);
+root.lang = lang; root.dataset.v = v;
+if (q.get("s")) root.dataset.s = q.get("s");
+if (q.get("px")) root.dataset.px = q.get("px");
+for (const k of ["pxf", "pxw", "pxo"]) if (q.get(k)) root.style.setProperty(`--${k}`, q.get(k) + "px");
+/* H title options (?t=1..3, ko): founder's rewrites; t2 also shortens the body to one line */
+const TITLES = {
+  "1": { title: "<em>안드로이드</em>에서도<br>나와나를 만나요" },
+  "2": { title: "이제 <em>안드로이드</em>에서도<br>유창한 나와 통화해요", body: "아이폰과 같은 앱 그대로, 내 목소리로." },
+  "3": { title: "나와나,<br><em>안드로이드</em>에도 나왔어요" },
+};
+if (lang === "ko" && TITLES[q.get("t")]) Object.assign(COPY.ko, TITLES[q.get("t")]);
+for (const el of document.querySelectorAll("[data-t]")) el.innerHTML = COPY[lang][el.dataset.t];
+/* the kit reads the page language when its screens connect, so it loads after lang is set */
+await import("/web/kit/nawana-ui.js");
+
+const fit = () => { const s = Math.min(innerWidth / 1080, innerHeight / 1350, 1); document.getElementById("card").style.transform = s < 1 ? `scale(${s})` : "none"; };
+addEventListener("resize", fit); fit();
+
+await document.fonts.ready;
+
+/* the five target languages, each in its own language, with its theme accent */
+const LANGS = [["English", "#0A5CF5"], ["Español", "#0AA3C2"], ["Deutsch", "#F58F0D"], ["日本語", "#F23B52"], ["한국어", "#0DA36B"]];
+const tag = (name, c, x, y, r, cls = "") => `<span class="tag ${cls}" style="left:${x}px;top:${y}px;transform:rotate(${r}deg)${c ? `;--c:${c}` : ""}">${c ? "<i></i>" : ""}${name}</span>`;
+if (v === "h") {
+  const L = Object.fromEntries(LANGS);
+  const row = ([n, c]) => `<p style="--c:${c}"><i></i>${n}</p>`;
+  $id("s1").innerHTML = `<b>${COPY[lang].learn}</b>` + LANGS.map(row).join("");
+  $id("s2").innerHTML = `<svg viewBox="0 0 184 184"><defs><path id="arc" d="M30 92 A62 62 0 0 1 154 92"/></defs>
+    <circle cx="92" cy="92" r="84" fill="none" stroke="#0A5CF5" stroke-width="1.5" stroke-dasharray="3 4" opacity=".5"/>
+    <text font-family="Pretendard" font-weight="700" font-size="15" fill="#5A6170" letter-spacing="-.2"><textPath href="#arc" startOffset="50%" text-anchor="middle">${COPY[lang].learn}</textPath></text></svg>
+    <div class="ls">${LANGS.map(row).join("")}</div>`;
+  const chip = ([n, c]) => `<span style="--c:${c}"><i></i>${n}</span>`;
+  $id("s3").innerHTML = `<div class="r"><b>${COPY[lang].learn}</b>${LANGS.slice(0, 2).map(chip).join("")}</div><div class="r">${LANGS.slice(2).map(chip).join("")}</div>`;
+  $id("s4").innerHTML = [
+    tag(COPY[lang].learn, "", 10, 0, -7, "lab"),
+    tag("English", L.English, 34, 46, 5),
+    tag("Español", L["Español"], 4, 92, -4),
+    tag("Deutsch", L.Deutsch, 40, 138, 7),
+    tag("日本語", L["日本語"], 14, 184, -6),
+    tag("한국어", L["한국어"], 50, 226, 3),
+  ].join("");
+  /* s5: each language its own sticker, scattered around the outside edges of the pair */
+  $id("s5").innerHTML = [
+    tag(COPY[lang].learn, "", 46, 626, -6, "lab"),
+    tag("English", L.English, 64, 776, 7),
+    tag("Español", L["Español"], 104, 962, -5),
+    tag("Deutsch", L.Deutsch, 852, 690, 6),
+    tag("日本語", L["日本語"], 918, 860, -9),
+    tag("한국어", L["한국어"], 860, 1040, 4),
+  ].join("");
+}
+/* H with a title option: one headline size for all three, the largest that fits the longest line in 936 px */
+if (v === "h" && q.get("t")) {
+  const ttl = document.querySelector("[data-v=h] .hl.vh") || [...document.querySelectorAll(".vh.hl")][0];
+  await document.fonts.ready;
+  const probe = ttl.cloneNode(); probe.style.cssText = "position:absolute;visibility:hidden;font-size:92px;white-space:nowrap;left:0;top:0";
+  probe.className = "hl"; document.getElementById("card").append(probe);
+  let widest = 0; for (const t of Object.values(TITLES)) for (const line of t.title.split("<br>")) { probe.innerHTML = line; widest = Math.max(widest, probe.scrollWidth); }
+  probe.remove();
+  ttl.style.fontSize = `${Math.min(92, Math.floor(92 * 936 / widest))}px`;
+  root.dataset.fit = `${widest}`;
+  /* ?loose=1|2 (t2 + px3): the founder found the line cramped. Real word gaps, looser tracking,
+     a little air either side of the pixel word, a bit more leading; one size step down if a line
+     outgrows the 936 px measure, the pixel word scaled with it so the matched heights hold. */
+  const loose = { "1": { ls: "-0.02em", ws: "0.30em" }, "2": { ls: "0em", ws: "0.35em" } }[q.get("loose")];
+  if (loose && q.get("t") === "2") {
+    const gap = `<i style="display:inline-block;width:${loose.ws}"></i>`;
+    ttl.innerHTML = `<span class="ln" style="display:inline-block">이제${gap}<em>안드로이드</em>에서도</span><br><span class="ln" style="display:inline-block">유창한${gap}나와${gap}통화해요</span>`;
+    ttl.style.letterSpacing = loose.ls; ttl.style.lineHeight = "1.16";
+    const em = ttl.querySelector("em"); em.style.letterSpacing = "0"; em.style.margin = "0 0.08em 0 0";
+    let F = 92;
+    const widest = () => Math.max(...[...ttl.querySelectorAll(".ln")].map(l => l.getBoundingClientRect().width));
+    for (let i = 0; i < 8 && widest() > 936; i++) {
+      F -= 4; ttl.style.fontSize = `${F}px`;
+      root.style.setProperty("--pxf", `${(71 * F / 92).toFixed(2)}px`);
+      root.style.setProperty("--pxw", `${(5 * F / 92).toFixed(2)}px`);
+      root.style.setProperty("--pxo", `${(5 * F / 92).toFixed(2)}px`);
+    }
+    root.dataset.fit = `${F} ${Math.round(widest())}`;
+  }
+  /* a one-line body sits in the middle of the two-line slot */
+  if (TITLES[q.get("t")].body) document.querySelector(".vh.body").style.top = "382px";
+}
+if (v === "h") {
+  /* the goal arc's shape: 2/3 of the circle from 12 o'clock, round caps (300 box, r 140, 20 wide) */
+  /* ko: 2/3 (founder) = 6 min 40 s of the 10-min goal, which the ring prints as "06:40" (talkClock). en: the en Play screenshot prints 03:00 on its ring, so its arc is 3 of 10 min */
+  const P = +(q.get("p") || (lang === "en" ? 0.30 : 400 / 600)), th = 2 * Math.PI * P, ex = (150 + 140 * Math.sin(th)).toFixed(2), ey = (150 - 140 * Math.cos(th)).toFixed(2);
+  const arc = `url("data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'><path d='M150 10 A140 140 0 ${P > .5 ? 1 : 0} 1 ${ex} ${ey}' fill='none' stroke='#fff' stroke-width='20' stroke-linecap='round'/></svg>`)}")`;
+  root.style.setProperty("--arc", arc);
+  /* talkRing's gradient: 40% accent at the tail (one cap-width before 12) to full accent at fadeEnd */
+  const cap = 360 * (10 / (2 * Math.PI * 130)), fadeEnd = P > .12 ? Math.min(60 / 360, P * .4) / P : 0;
+  const solid = fadeEnd * (360 * P + cap);
+  const conic = fadeEnd ? `conic-gradient(from ${-cap}deg,rgba(10,92,245,.4) 0deg,#0A5CF5 ${solid}deg,#0A5CF5 360deg)` : "#0A5CF5";
+  root.style.setProperty("--conic", conic);
+  if (lang === "en") { $id("aimg").src = "assets/android-screen-home-en.png"; $id("b-as").src = "assets/badge-appstore-en.svg"; $id("b-gp").src = "assets/badge-googleplay-en.png"; }
+  await customElements.whenDefined("nw-home");
+  const home = $id("ios"); await home.pose?.("home");
+  const sr = home.shadowRoot;
+  /* the real header chip is the streak chip (ConversationHome.streakChip: flame.fill, secondary
+     until today's promise is kept, then "N day streak"); the kit draws its "Activity" state */
+  const FLAME = '<svg viewBox="0 0 24 24" style="width:15px;height:17px;color:#8E8E93"><path fill="currentColor" d="M12.4 1.8c.4 3.1 2.3 4.7 4 6.6 1.6 1.8 3 3.8 3 6.7 0 4.2-3.2 7.1-7.3 7.1S4.6 19.4 4.6 15.4c0-2.5 1.1-4.4 2.5-5.9.3-.3.8-.1.8.3.1 1.2.6 2.3 1.4 2.9-.2-4.5 1-8.3 3.1-10.9zM12.2 13c-1.6 1.6-2.7 3.1-2.7 4.9 0 1.6 1.2 2.8 2.7 2.8s2.7-1.2 2.7-2.8c0-1.8-1-3.3-2.7-4.9z"/></svg>';
+  /* mirror the Android screenshot's own header and ring label (en capture: "1 day streak", E, 03:00) */
+  if (lang === "en") { sr.querySelector(".av").textContent = "E"; sr.querySelector(".ring small").textContent = "03:00"; }
+  /* ConversationHome.goalHeadline: once anything is talked the line under the label is the time
+     talked (PracticeStats.talkClock, %02d:%02d); the Android asset's baked label was redrawn the same way */
+  else sr.querySelector(".ring small").textContent = "06:40";
+  /* the ring's page dots (ConversationHome: three 6 pt circles, 8 apart, primary / primary 20%,
+     36 pt under the 280 frame's bottom → centre 173 pt below the ring centre at 201,437) */
+  const dots = document.createElement("div");
+  dots.setAttribute("style", "position:absolute;left:0;right:0;top:607px;height:6px;display:flex;justify-content:center;gap:8px;z-index:2");
+  dots.innerHTML = [1, .2, .2].map(o => `<i style="display:block;width:6px;height:6px;border-radius:50%;background:rgba(0,0,0,${o})"></i>`).join("");
+  sr.querySelector(".sc").append(dots);
+  /* the kit greeting sits 27 pt above the Android capture's; line them up across the pair */
+  sr.querySelector(".greet").style.top = "201.2px";
+  /* the profile photo in the avatar (AvatarStore.ProfileAvatar: scaledToFill, clipped to a circle, inside the usage ring's track) */
+  const av = sr.querySelector(".av"); av.style.background = "none"; av.style.overflow = "hidden";
+  av.innerHTML = '<img src="assets/avatar-photo.jpg" style="display:block;width:100%;height:100%;object-fit:cover;border-radius:50%">';
+  const act = sr.querySelector(".act"); act.style.gap = "4px"; act.innerHTML = `${FLAME}<b>${lang === "en" ? "1 day streak" : "2일 연속"}</b>`;
+  /* the same arc as on the Android, inside the kit's own 300 pt ring box */
+  const g = document.createElement("div"); g.className = "goal";
+  g.setAttribute("style", `position:absolute;inset:0;background:${conic};-webkit-mask:${arc} center/100% 100% no-repeat;mask:${arc} center/100% 100% no-repeat;pointer-events:none`);
+  sr.querySelector(".ring .arc").after(g);
+}
+await Promise.all([...document.images].map(i => i.decode().catch(() => {})));
+root.dataset.scene = "still";
+</script>

@@ -1,0 +1,47 @@
+{
+ "title": "US Student Visa Interview",
+ "turns": [
+  {
+   "speaker": "counterpart",
+   "text": "Good morning. Please pass your passport and I-20 form through the window."
+  },
+  {
+   "speaker": "user",
+   "text": "Good morning. Here's my passport and my documents."
+  },
+  {
+   "speaker": "counterpart",
+   "text": "I see you've been working full-time for three years. Why leave a stable job right now?"
+  },
+  {
+   "speaker": "user",
+   "text": "I like my job, but Korean brands are going global fast, and I need stronger business skills to work on that when I come back."
+  },
+  {
+   "speaker": "counterpart",
+   "text": "Graduate school in the US is quite expensive. How are you funding your tuition and living costs?"
+  },
+  {
+   "speaker": "user",
+   "text": "I'm using my own savings, and my parents are helping with the rest."
+  },
+  {
+   "speaker": "counterpart",
+   "text": "With an American master's degree, you could easily stay and find a job there. How do I know you'll come back?"
+  },
+  {
+   "speaker": "user",
+   "text": "My goal has always been to build my career here in Seoul. Staying in the US just isn't part of my plan."
+  },
+  {
+   "speaker": "counterpart",
+   "text": "Everything looks in order. Your visa is approved, and you'll get your passport back in a few days."
+  },
+  {
+   "speaker": "user",
+   "text": "Thank you so much. Have a great day!"
+  }
+ ],
+ "words": [],
+ "expressions": []
+}

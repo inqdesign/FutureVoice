@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>nawana creator program · teaser</title>
+<!-- A 9:16 teaser for the creator program, built from the page's own drawing: the hero film, the marker frame,
+     the boiling "Creator", the highlighter, the tear-off calendar. Recorded in real time:
+       /opt/homebrew/opt/node@22/bin/node scripts/marketing/record.mjs \
+         marketing/content/2026-11-11-creator-teaser/teaser2.html --size 1080x1920 --seconds 14 \
+         --wait-for "document.documentElement.dataset.scene" --out marketing/content/2026-11-11-creator-teaser/teaser2.mp4
+     ?t=<seconds> jumps the timeline there (for stills). -->
+<style>
+@font-face{font-family:"Caveat";font-weight:700;src:url(/web/creators/fonts/caveat.woff2) format("woff2")}
+@font-face{font-family:"Dancing Script";font-weight:700;src:url(/web/creators/fonts/dancing-script.woff2) format("woff2")}
+@font-face{font-family:"Pacifico";font-weight:400;src:url(/web/creators/fonts/pacifico.woff2) format("woff2")}
+@font-face{font-family:"Permanent Marker";font-weight:400;src:url(/web/creators/fonts/permanent-marker.woff2) format("woff2")}
+@font-face{font-family:"Rock Salt";font-weight:400;src:url(/web/creators/fonts/rock-salt.woff2) format("woff2")}
+@font-face{font-family:"Homemade Apple";font-weight:400;src:url(/web/creators/fonts/homemade-apple.woff2) format("woff2")}
+@font-face{font-family:"Kaushan Script";font-weight:400;src:url(/web/creators/fonts/kaushan-script.woff2) format("woff2")}
+@font-face{font-family:"Reenie Beanie";font-weight:400;src:url(/web/creators/fonts/reenie-beanie.woff2) format("woff2")}
+@font-face{font-family:"Yellowtail";font-weight:400;src:url(/web/creators/fonts/yellowtail.woff2) format("woff2")}
+@font-face{font-family:"Gloria Hallelujah";font-weight:400;src:url(/web/creators/fonts/gloria-hallelujah.woff2) format("woff2")}
+@font-face{font-family:"Satisfy";font-weight:400;src:url(/web/creators/fonts/satisfy.woff2) format("woff2")}
+@font-face{font-family:"Nanum Pen Script";font-weight:400;src:url(/web/creators/fonts/nanum-pen-script.woff2) format("woff2")}
+@font-face{font-family:"Galmuri11";src:url(/web/Galmuri11.woff2) format("woff2")}
+@font-face{font-family:"Geist Pixel";src:url(/web/GeistPixel.ttf) format("truetype")}
+:root{--bg:#F7F8FA;--ink:#1C2133;--accent:#0A5CF5;--hi:rgba(255,226,60,.72);--paper:#FFFEFB;
+  --sans:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;--pen:"Nanum Pen Script","Apple SD Gothic Neo",cursive;--pixel:"Geist Pixel","Galmuri11",var(--sans)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#121110;font-family:var(--sans);-webkit-font-smoothing:antialiased;word-break:keep-all}
+.layer{position:absolute;inset:0}
+@keyframes boil{0%{filter:url(#boil-1)}25%{filter:url(#boil-2)}50%{filter:url(#boil-3)}75%{filter:url(#boil-4)}}
+/* the cuts: every clip plays underneath, one is on top at a time */
+#cuts video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;visibility:hidden}
+#cuts video.on{visibility:visible}
+#cuts .shade{position:absolute;inset:0;background:linear-gradient(rgba(10,13,22,.5),rgba(10,13,22,.12) 30%,rgba(10,13,22,.2) 55%,rgba(10,13,22,.72))}
+/* the day stamp: a calendar page's own words, as big as the screen allows */
+#stamp{position:absolute;left:0;right:0;bottom:210px;text-align:center;color:#fff;font-family:var(--pixel);line-height:.9;text-shadow:0 6px 40px rgba(0,0,0,.45)}
+#stamp small{display:inline-block;font-size:92px;padding:10px 34px 16px;background:var(--accent);border-radius:20px 30px 18px 26px/26px 18px 30px 20px;text-shadow:none;rotate:-2deg}
+#stamp b{display:block;margin-top:18px;font-weight:400;font-size:560px;letter-spacing:-.03em}
+#say{position:absolute;left:80px;right:80px;top:230px;text-align:center;color:#fff;font-family:var(--pen);font-size:128px;line-height:1.05;text-shadow:0 2px 30px rgba(0,0,0,.5);opacity:0;transition:opacity .3s ease}
+#say.in{opacity:1}
+#flash{background:#fff;opacity:0;pointer-events:none}
+/* the close, on the page's paper */
+#paper{background:var(--bg);visibility:hidden}
+#paper.in{visibility:visible}
+#paper::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(10,40,90,.045) 2px,transparent 2px),linear-gradient(90deg,rgba(10,40,90,.045) 2px,transparent 2px);background-size:90px 90px}
+canvas{position:absolute;inset:0;width:1080px;height:1920px}
+#end{position:absolute;left:0;right:0;top:230px;text-align:center;color:var(--ink);padding:0 70px}
+#end > *{opacity:0;scale:.86;transition:opacity .25s ease,scale .4s cubic-bezier(.3,1.5,.5,1)}
+#end > .in{opacity:1;scale:1}
+.gen{position:relative;z-index:0;display:inline-flex;align-items:center;gap:16px;font-size:44px;font-weight:700;line-height:1;padding:24px 44px;color:#fff}
+.gen::after{content:"";position:absolute;inset:-4px -6px;z-index:-1;background:var(--accent);box-shadow:0 8px 40px rgba(10,92,245,.4);border-radius:22px 36px 20px 30px/30px 20px 36px 24px;rotate:-1.5deg;animation:boil .44s steps(1) infinite}
+.gen i{width:26px;height:26px;border-radius:46% 54% 50% 50%/52% 48% 54% 46%;background:#fff}
+h1{margin-top:56px;font-family:var(--pixel);font-weight:400;font-size:176px;line-height:1.06;letter-spacing:-.01em}
+#creator-word{display:inline-block;white-space:nowrap;animation:boil .44s steps(1) infinite}
+#creator-word i{display:inline-block;font-style:normal;text-align:center;line-height:0;letter-spacing:0;font-synthesis:none}
+#creator-word b{font-weight:inherit}
+#end .free{margin-top:64px;font-size:84px;font-weight:800;letter-spacing:-.02em;line-height:1.3}
+mark{color:inherit;background:linear-gradient(var(--hi),var(--hi)) 0 88%/0 56% no-repeat;padding:0 .1em;margin:0 -.1em;transition:background-size .6s cubic-bezier(.3,.7,.25,1)}
+mark.on{background-size:100% 56%}
+#end .url{margin-top:56px;font-family:var(--pixel);font-size:68px}
+#frame{color:#fff;pointer-events:none}
+#frame.black{color:#0B0B0D}
+#frame::before{content:"";position:absolute;inset:0;box-shadow:inset 0 0 0 12px currentColor}
+#frame svg{position:absolute;inset:0;width:100%;height:100%;fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="boil-1" x="-10%" y="-20%" width="120%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="10" xChannelSelector="R" yChannelSelector="G"/></filter>
+  <filter id="boil-2" x="-10%" y="-20%" width="120%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="17"/><feDisplacementMap in="SourceGraphic" scale="10" xChannelSelector="R" yChannelSelector="G"/></filter>
+  <filter id="boil-3" x="-10%" y="-20%" width="120%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="41"/><feDisplacementMap in="SourceGraphic" scale="10" xChannelSelector="R" yChannelSelector="G"/></filter>
+  <filter id="boil-4" x="-10%" y="-20%" width="120%" height="140%"><feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="73"/><feDisplacementMap in="SourceGraphic" scale="10" xChannelSelector="R" yChannelSelector="G"/></filter>
+</svg>
+<div class="layer" id="cuts">
+  <video src="/web/creators/hero/balcony.mp4" muted loop playsinline preload="auto"></video>
+  <video src="/web/creators/hero/japanese-call.mp4" muted loop playsinline preload="auto"></video>
+  <video src="/web/creators/hero/hand-held.mp4" muted loop playsinline preload="auto"></video>
+  <video src="/web/creators/hero/speech.mp4" muted loop playsinline preload="auto"></video>
+  <video src="/web/creators/hero/workbook.mp4" muted loop playsinline preload="auto"></video>
+  <video src="/web/creators/hero/korean-call.mp4" muted loop playsinline preload="auto"></video>
+  <video src="/web/creators/hero/walking.mp4" muted loop playsinline preload="auto"></video>
+  <video src="/web/creators/hero/pronunciation.mp4" muted loop playsinline preload="auto"></video>
+  <video src="/web/creators/hero/app-intro.mp4" muted loop playsinline preload="auto"></video>
+  <video src="/web/creators/hero/spanish-call.mp4" muted loop playsinline preload="auto"></video>
+  <video src="/web/creators/hero/podcast.mp4" muted loop playsinline preload="auto"></video>
+  <span class="shade"></span>
+  <p id="say">100일 동안<br>미친듯이 공부하고</p>
+  <div id="stamp"><small>DAY</small><b id="num">1</b></div>
+</div>
+<div class="layer" id="paper">
+  <canvas id="cv" width="1080" height="1920"></canvas>
+  <div id="end">
+    <p class="gen"><i></i>1기 모집</p>
+    <h1>nawana<br><span id="creator-word">Creator</span><br>program</h1>
+    <p class="free"><mark>나와나는 무료로 드릴게요</mark></p>
+    <p class="url">nawana.app/creators</p>
+  </div>
+</div>
+<div class="layer" id="flash"></div>
+<div class="layer" id="frame"><svg id="frame-svg" viewBox="0 0 1080 1920" preserveAspectRatio="none"><path/><path/></svg></div>
+
+<script src="/web/creators/vendor/matter-0.20.0.min.js"></script>
+<script>
+const $ = (s) => document.querySelector(s), $$ = (s) => [...document.querySelectorAll(s)];
+/* ---- the frame: the page's own hand, at this size ---- */
+(() => {
+  const [a, b] = $$("#frame-svg path"), W = 1080, H = 1920;
+  const rnd = (seed) => () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  function hand(r, wob, seed) {
+    const R = rnd(seed), x0 = 0, y0 = 0, x1 = W, y1 = H, pts = [];
+    const side = (ax, ay, bx, by) => { const n = Math.max(2, Math.round(Math.hypot(bx - ax, by - ay) / 200)); for (let i = 0; i < n; i++) pts.push([ax + (bx - ax) * i / n, ay + (by - ay) * i / n]); };
+    side(x0 + r, y0, x1 - r, y0); pts.push([x1 - r * .3, y0 + r * .3]);
+    side(x1, y0 + r, x1, y1 - r); pts.push([x1 - r * .3, y1 - r * .3]);
+    side(x1 - r, y1, x0 + r, y1); pts.push([x0 + r * .3, y1 - r * .3]);
+    side(x0, y1 - r, x0, y0 + r); pts.push([x0 + r * .3, y0 + r * .3]);
+    const j = pts.map(([x, y]) => [x + (R() - .5) * wob * 2, y + (R() - .5) * wob * 2]);
+    j.push([j[0][0], j[0][1] + wob], [j[1][0], j[1][1] + wob * 1.5], [j[1][0] + 100, j[1][1] + wob]);
+    let d = `M${j[0][0].toFixed(1)} ${j[0][1].toFixed(1)}`;
+    for (let i = 1; i < j.length - 1; i++) d += `Q${j[i][0].toFixed(1)} ${j[i][1].toFixed(1)} ${((j[i][0] + j[i + 1][0]) / 2).toFixed(1)} ${((j[i][1] + j[i + 1][1]) / 2).toFixed(1)}`;
+    return d;
+  }
+  a.style.strokeWidth = 34; b.style.strokeWidth = 24;
+  const frames = [11, 47, 83, 129].map((sd) => [hand(34, 6, sd), hand(34, 8.5, sd * 7 + 3)]);
+  let k = 0; const show = () => { a.setAttribute("d", frames[k][0]); b.setAttribute("d", frames[k][1]); };
+  show(); setInterval(() => { k = (k + 1) % frames.length; show(); }, 440);
+})();
+
+/* ---- "Creator", a different hand and ink per letter ---- */
+const HANDS = [["Caveat", 700, 1.24, 0], ["Dancing Script", 700, 1.2, .012], ["Pacifico", 400, 1, 0], ["Permanent Marker", 400, .9, 0], ["Rock Salt", 400, .68, .006], ["Homemade Apple", 400, .84, .018], ["Kaushan Script", 400, 1.06, .006], ["Reenie Beanie", 400, 1.34, .02], ["Yellowtail", 400, 1.16, .008], ["Gloria Hallelujah", 400, .88, .014], ["Satisfy", 400, 1.14, .01]];
+const INKS = ["#0A5CF5", "#F0442E", "#FF8A00", "#E9AE00", "#12B76A", "#FF3D8B", "#7A4DFF", "#00AFC2", "#D9368B", "#2E9E3F"];
+const paint = (el, [family, weight, scale, ink], color) => { el.style.color = color; el.style.fontFamily = `"${family}",cursive`; el.style.fontWeight = weight; el.style.fontSize = scale + "em"; el.style.webkitTextStroke = ink ? `${ink}em currentColor` : ""; };
+function startWord() {
+  const word = $("#creator-word");
+  const CELLS = [["C", .66], ["r", .43], ["e", .47], ["a", .52], ["t", .41], ["o", .5], ["r", .47]];
+  word.innerHTML = CELLS.map(([l, w]) => `<i style="width:${w}em"><b>${l}</b></i>`).join("");
+  const letters = [...word.querySelectorAll("b")];
+  const wearing = letters.map((el, i) => { paint(el, HANDS[i], INKS[i]); return i; }), inked = letters.map((_, i) => i);
+  const unused = (list, taken) => { const free = list.map((_, i) => i).filter((i) => !taken.includes(i)); return free[Math.floor(Math.random() * free.length)]; };
+  let k = 0;
+  const tick = () => { wearing[k] = unused(HANDS, wearing); inked[k] = unused(INKS, inked); paint(letters[k], HANDS[wearing[k]], INKS[inked[k]]); k = (k + 1) % letters.length; setTimeout(tick, k === 0 ? 620 : 95); };
+  setTimeout(tick, 700);
+}
+
+
+/* ---- the cuts: DAY 1 to DAY 100, each on another clip, faster and faster ---- */
+// [day, seconds on screen]
+const DAYS = [[1, 1.0], [2, .8], [3, .7], [7, .6], [12, .55], [18, .5], [23, .45], [31, .4], [40, .35], [48, .3], [57, .27], [66, .24], [74, .21], [81, .19], [88, .17], [93, .15], [96, .13], [98, .12], [99, .12], [100, .9]];
+const vids = $$("#cuts video"), num = $("#num"), stamp = $("#stamp");
+function cut(i) {
+  vids.forEach((v, k) => v.classList.toggle("on", k === i % vids.length));
+  num.textContent = DAYS[i][0];
+  // the stamp lands: a little big and tilted, then settles
+  const r = (i % 2 ? 1 : -1) * (2 + (i * 7) % 4);
+  stamp.animate([{ scale: 1.22, rotate: r + "deg" }, { scale: 1, rotate: r * .3 + "deg" }], { duration: 160, easing: "cubic-bezier(.2,.8,.3,1)", fill: "forwards" });
+}
+
+/* ---- the close: a hundred calendar pages pour down ---- */
+const cv = $("#cv"), ctx = cv.getContext("2d"), W = 1080, H = 1920;
+const INK = "#1C2133", PAPER = "#FFFEFB", BLUE = "#0A5CF5", size = { w: 112, h: 139 };
+let engine = null, pages = [];
+function sheet(x, y, a, w, h, n, lift) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+  ctx.shadowColor = "rgba(28,33,51,.16)"; ctx.shadowBlur = lift; ctx.shadowOffsetY = lift / 3;
+  ctx.fillStyle = PAPER; ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h, w * .06); ctx.fill();
+  ctx.shadowColor = "transparent";
+  ctx.fillStyle = BLUE; ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h * .24, [w * .06, w * .06, 0, 0]); ctx.fill();
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillStyle = "#fff"; ctx.font = `${Math.round(h * .13)}px "Geist Pixel", sans-serif`; ctx.fillText("DAY", 0, -h / 2 + h * .125);
+  ctx.fillStyle = INK; ctx.font = `${Math.round(h * (n >= 100 ? .36 : .44))}px "Geist Pixel", sans-serif`; ctx.fillText(String(n), 0, h * .13);
+  ctx.restore();
+}
+function pour() {
+  const M = Matter; engine = M.Engine.create({ enableSleeping: true }); engine.gravity.y = 3;
+  const wall = (x, y, w, h) => M.Bodies.rectangle(x, y, w, h, { isStatic: true });
+  M.Composite.add(engine.world, [wall(W / 2, H - 20, W * 2, 80), wall(-10, H / 2, 60, H * 4), wall(W + 10, H / 2, 60, H * 4)]);
+  let last = performance.now();
+  (function loop(now) {
+    M.Engine.update(engine, Math.min(32, now - last)); last = now;
+    ctx.clearRect(0, 0, W, H);
+    for (const p of pages) sheet(p.body.position.x, p.body.position.y, p.body.angle, size.w, size.h, p.n, 8);
+    requestAnimationFrame(loop);
+  })(last);
+  let n = 1;
+  const drop = () => {
+    for (let k = 0; k < 4 && n <= 100; k++, n++) {
+      const body = M.Bodies.rectangle(80 + Math.random() * (W - 160), -100 - Math.random() * 500, size.w, size.h * .34, { chamfer: { radius: 4 }, friction: .3, frictionStatic: .4, frictionAir: .01, restitution: .04, density: .0012 });
+      M.Body.setAngle(body, Math.random() * 6.28); M.Body.setVelocity(body, { x: (Math.random() - .5) * 10, y: 14 + Math.random() * 10 });
+      M.Body.setAngularVelocity(body, (Math.random() - .5) * .5);
+      M.Composite.add(engine.world, body); pages.push({ body, n });
+    }
+    if (n <= 100) setTimeout(drop, 45);
+  };
+  drop();
+}
+
+/* ---- the timeline ---- */
+const wait = (s) => new Promise((r) => setTimeout(r, s * 1000));
+async function run() {
+  startWord();
+  setTimeout(() => $("#say").classList.add("in"), 250);
+  setTimeout(() => $("#say").classList.remove("in"), 3400);
+  for (let i = 0; i < DAYS.length; i++) { cut(i); await wait(DAYS[i][1]); }
+  // DAY 100: a white flash, and the page's paper with the hundred pages pouring onto it
+  $("#flash").animate([{ opacity: 1 }, { opacity: 0 }], { duration: 420, easing: "ease-out" });
+  $("#paper").classList.add("in"); $("#frame").classList.add("black"); $("#cuts").style.visibility = "hidden";
+  pour();
+  const end = [...$("#end").children];
+  for (const [i, t] of [[0, .25], [1, .2], [2, .55], [3, .35]]) { await wait(t); end[i].classList.add("in"); }
+  await wait(.25); $("#end mark").classList.add("on");
+}
+Promise.all([
+  document.fonts.ready.then(() => Promise.all([...HANDS.map(([f, w]) => document.fonts.load(`${w} 40px "${f}"`, "Creator")), document.fonts.load('40px "Geist Pixel"', "DAY 100 nawana"), document.fonts.load('40px "Nanum Pen Script"', "100일 동안 미친듯이 공부하고")])),
+  ...vids.map((v) => new Promise((ok) => { if (v.readyState >= 3) ok(); else { v.addEventListener("canplay", ok, { once: true }); setTimeout(ok, 5000); } })),
+]).then(() => { vids.forEach((v, k) => { v.currentTime = (k * 1.3) % 5; v.play().catch(() => {}); }); document.documentElement.dataset.scene = "1"; run(); });
+</script>
+</body>
+</html>

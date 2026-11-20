@@ -350,7 +350,7 @@ const PLAY = {
       await sh.sleep(2000);
       wide(c);
       await sh.sleep(900);
-      await sh.loop(6, 8, { rate: .5, times: 2 });
+      await sh.loopPhrase(6, 8, { rate: .5, times: 2 });
       await sh.sleep(400);
       res(c); await sh.sleep(900);
     });

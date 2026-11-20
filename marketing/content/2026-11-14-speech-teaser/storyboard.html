@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>speech app teaser · storyboard</title>
+<!-- Storyboard for the speech app teaser (2026-11-14). Five key frames of a 9:16 reel, drawn at 1080×1920
+     and shown at 0.3×. Nothing rendered to video yet: the founder checks these frames first.
+     Look = the app's own: black ground, system serif (New York), Dear RoRo's crayon cut-outs, the mic icon.
+     No pixel font. The lines are the real first words of live challenge scripts. -->
+<style>
+*{box-sizing:border-box;margin:0}
+body{background:#2a2a2a;padding:40px;font-family:-apple-system,"Apple SD Gothic Neo",sans-serif;color:#ddd}
+.row{display:flex;gap:28px;align-items:flex-start}
+.cell{width:324px}
+.cap{margin-top:14px;font-size:14px;line-height:1.45;color:#bbb}
+.cap b{color:#fff;font-weight:700}
+.f{width:1080px;height:1920px;transform:scale(.3);transform-origin:0 0;position:relative;overflow:hidden;background:#000;color:#F2EEE6}
+.wrap{width:324px;height:576px;border-radius:14px;overflow:hidden}
+.serif{font-family:ui-serif,"New York",Georgia,serif}
+.line{position:absolute;left:96px;right:96px;font-size:68px;line-height:1.18;letter-spacing:-.01em}
+.line .cur{display:inline-block;width:5px;height:64px;background:#F2EEE6;vertical-align:-8px;margin-left:6px}
+.dim{opacity:.32}
+.fig{position:absolute;left:50%;translate:-50% 0}
+.grain{position:absolute;inset:0;opacity:.18;pointer-events:none;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .6 0 0 0 0 .6 0 0 0 0 .6 2.4 0 0 0 -.95'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23g)'/%3E%3C/svg%3E")}
+.tag{position:absolute;left:0;right:0;text-align:center;font-size:30px;letter-spacing:.32em;text-transform:uppercase;color:#8d8a84;font-family:-apple-system,sans-serif;font-weight:600}
+</style>
+</head>
+<body>
+<div class="row">
+
+  <!-- 1 -->
+  <div class="cell">
+    <div class="wrap"><div class="f">
+      <svg viewBox="0 0 400 400" style="position:absolute;left:290px;top:610px;width:500px" fill="none" stroke="#3B63D1" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"><path d="M160 135 a40 40 0 0 1 80 0 v60 a40 40 0 0 1 -80 0 z" /><path d="M172 130 h56 M172 152 h56"/><path d="M142 160 v40 a58 58 0 0 0 116 0 v-40" stroke-dasharray="190 400"/></svg>
+      <div class="grain"></div>
+    </div></div>
+    <div class="cap"><b>0–2s</b> Black. The mic draws itself in one crayon line, then stops halfway. Silence, one breath.</div>
+  </div>
+
+  <!-- 2 -->
+  <div class="cell">
+    <div class="wrap"><div class="f">
+      <img class="fig" src="media/challenge-0010.png" style="top:560px;height:1180px">
+      <div class="line serif" style="top:220px">Ladies and gentlemen, welcome aboard<span class="cur"></span></div>
+      <div class="grain"></div>
+    </div></div>
+    <div class="cap"><b>2–4s</b> A person steps in. Their first line types on, word by word, and is cut off before it ends.</div>
+  </div>
+
+  <!-- 3 -->
+  <div class="cell">
+    <div class="wrap"><div class="f">
+      <img class="fig" src="media/challenge-002B.png" style="top:620px;height:1120px">
+      <div class="line serif" style="top:220px">All right, everyone, come a little closer<span class="cur"></span></div>
+      <div class="line serif dim" style="top:1780px;font-size:40px;text-align:center">Hey everyone, welcome back…</div>
+      <div class="grain"></div>
+    </div></div>
+    <div class="cap"><b>4–9s</b> Faster cuts on the beat: docent, podcaster, the award, the detective, the review… Each line half-said.</div>
+  </div>
+
+  <!-- 4 -->
+  <div class="cell">
+    <div class="wrap"><div class="f">
+      <img src="media/challenge-0001.png" style="position:absolute;left:-40px;top:760px;height:640px">
+      <img src="media/challenge-0005.png" style="position:absolute;left:150px;top:760px;height:640px;opacity:.55">
+      <img src="media/challenge-0020.png" style="position:absolute;left:330px;top:760px;height:640px;opacity:.35">
+      <img src="media/challenge-002D.png" style="position:absolute;left:530px;top:760px;height:640px;opacity:.2">
+      <img src="media/challenge-0024.png" style="position:absolute;left:720px;top:760px;height:640px;opacity:.12">
+      <div class="line serif" style="top:430px;text-align:center;left:60px;right:60px">Everyone has a line.</div>
+      <div class="grain"></div>
+    </div></div>
+    <div class="cap"><b>9–12s</b> All ten stand in a row. The lights go out one by one, right to left, until the stage is empty.</div>
+  </div>
+
+  <!-- 5 -->
+  <div class="cell">
+    <div class="wrap"><div class="f" style="background:#F2ECE2;color:#1C1C1C">
+      <img src="media/icon.png" style="position:absolute;left:240px;top:520px;width:600px">
+      <div class="line serif" style="top:1230px;text-align:center;font-size:88px">Your turn.</div>
+      <div class="tag" style="top:1420px">Coming soon</div>
+      <div class="grain" style="opacity:.1"></div>
+    </div></div>
+    <div class="cap"><b>12–15s</b> The light comes up on cream: the full mic, the one line, "Coming soon". No name yet.</div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -12,8 +12,9 @@ You are the designer on nawana's marketing team. Read first, every time:
 ## How a carousel is built
 
 1. Copy `marketing/templates/carousel.html` to `marketing/content/<piece>/carousel.html`.
-   It already has: the 1080×1350 card shell (eyebrow · pixel title · description · stage),
-   cover/compare/outro card types, the phone window that pans, `?solo=N` for recording,
+   It already has: the 1080×1350 card shell (top labels · sans title · description · one
+   whole phone on a long cast shadow), cover/outro card types, `zoom(c)` to move in on the
+   screen (text fades, phone grows), `?solo=N` (`&state=wide|zoom` for stills) for recording,
    and `PLAY` — one async scene per card.
 2. Put the copy in exactly as `copy.md` has it. Don't rewrite words — ask the copywriter.
 3. Each feature card plays a REAL app screen: `<nw-phone><nw-call></nw-call></nw-phone>`,
@@ -21,8 +22,9 @@ You are the designer on nawana's marketing team. Read first, every time:
    `nw-people`, `nw-speech`, `nw-routine`, `nw-weeklytest`, `nw-weekreport`, `nw-ring`,
    `nw-words`, `nw-progress`, plus `nw-futureself`, `nw-bubble`, `nw-fix` for stickers.
    Script the scene with the screen's own API (`s.say()`, `s.listen()`, `s.fix()`, `open()`,
-   `pose()` … — read the screen file's header) inside `run(async s => …)`; pan the phone
-   (`pan(c, y)`) so the moment that matters is inside the card.
+   `pose()` … — read the screen file's header) inside `run(async s => …)`; the phone is
+   never cropped: `zoom(c)` in for the moment that matters, because small rows only read
+   zoomed, and `zoom(c, false)` back so the loop meets its start.
 4. If the brief needs a screen the kit doesn't have, STOP and tell the lead: a new screen
    is `mkt-web`'s job (capture + fidelity pass), never something you draw.
 5. Render every card:
@@ -43,7 +45,10 @@ You are the designer on nawana's marketing team. Read first, every time:
 
 - Keep the text layout; make each card's motion show ONE thing (the one the title says).
 - Prefer the screen's real moment over decoration. Stickers only when they add a fact.
-- Light theme, one accent, pixel titles — see BRAND.md. A new visual idea goes to the lead
+- Light theme, one accent, heavy sans titles — see BRAND.md. **Never a pixel font**
+  (Geist Pixel, Galmuri) on any card, number, wordmark or URL: the founder banned it on
+  2026-11-13. Grep your file for `pixel|Geist|Galmuri` before rendering; zero hits outside
+  the kit's phone screens. A new visual idea goes to the lead
   as an option, it doesn't replace the system silently.
 
 ## Limits

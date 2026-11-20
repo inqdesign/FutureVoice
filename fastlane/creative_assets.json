@@ -1,0 +1,11 @@
+{
+  "_comment": "Asset library ids (App Store Connect, uploaded 2026-11-05 from marketing/content/2026-11-01-asc-header). scripts/asc-submit.py places them on every locale of the iOS version it submits; a locale without its own entry takes default.",
+  "PRODUCT_PAGE_HEADER_ASSET": {
+    "default": {"video": "1d000019-4e1d-821f-8124-e0ea0823c794"},
+    "ko": {"video": "0b400019-4e1d-821f-810f-aabc94255f79"}
+  },
+  "APP_STORE_SEARCH_RESULTS_ASSET": {
+    "default": {"image": "64800019-4e1d-821f-8000-86f5d57c236c"},
+    "ko": {"image": "c1c00019-4e1d-821f-8019-69a8dcbd1a70"}
+  }
+}

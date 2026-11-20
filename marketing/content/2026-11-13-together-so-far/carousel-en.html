@@ -1,0 +1,415 @@
+<title>Together, so far · 2026-11-13</title>
+<style>
+@font-face{font-family:"Geist";font-weight:100 900;font-display:block;src:url(../../../web/creators/fonts/geist.woff2) format("woff2")}
+
+/* Layout (founder approved 2026-11-09): one 1080×1350 post at a time; centred text block on top, the visual below on a long cast shadow.
+   This piece: number cards, no phone (cards 7 and 8 are ranked lists, 2026-11-13; bars flat, no cast shadow). Founder 2026-11-13: NO display face, every word in the system sans;
+   titles and hero numbers carry the card through weight (700–800) and tight tracking. Light only, by choice. */
+:root{
+  color-scheme:light;
+  --page:#E9ECF1; --card:#F7F8FA; --grid:rgba(10,40,90,.045);
+  --ink:#0D1117; --sub:#5A6170; --faint:#9AA1AD; --line:#DCE0E7;
+  --label:#767D8A; --body:#434A57; --blue:#0A5CF5;
+  --rest:#C9D0DB;
+  --sans:"Geist",-apple-system,"SF Pro Display","Apple SD Gothic Neo",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--sans)}
+.wrap{max-width:1100px;margin:0 auto;padding-inline:16px;padding-block:28px 56px;display:flex;flex-wrap:wrap;gap:28px 40px;align-items:flex-start;justify-content:center}
+.viewer{flex:0 1 540px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.side{flex:1 1 300px;min-width:0;max-width:440px;font-size:14px;line-height:1.6;color:var(--sub)}
+.side h1{font-weight:600;font-size:26px;letter-spacing:-.5px;line-height:1.25;color:var(--ink);margin:0 0 10px;text-wrap:balance}
+.side h3{font-size:13px;letter-spacing:.06em;color:var(--ink);margin:22px 0 6px}
+.side ol{padding-left:18px;margin:0}
+.side li{margin-bottom:4px}
+.side .list button{all:unset;cursor:pointer;color:var(--ink)}
+.side .list button[aria-current="true"]{color:var(--blue);font-weight:600}
+.side .list button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.vp{position:relative;width:100%;aspect-ratio:4/5;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(13,17,23,.08),0 18px 50px rgba(13,17,23,.10);background:var(--card);touch-action:pan-y}
+.track{position:absolute;inset:0;display:flex;transition:transform .45s cubic-bezier(.3,.7,.2,1)}
+.slot{flex:0 0 100%;height:100%;position:relative;overflow:hidden}
+.controls{display:flex;align-items:center;gap:10px;justify-content:space-between}
+.dots{display:flex;gap:7px}
+.dots button{width:8px;height:8px;border-radius:50%;border:0;padding:0;background:#C5CBD5;cursor:pointer}
+.dots button[aria-current="true"]{background:var(--blue);width:22px;border-radius:4px}
+.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;height:36px;min-width:36px;padding:0 14px;font:inherit;font-size:13px;cursor:pointer}
+.btn:focus-visible,.dots button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.btn-row{display:flex;gap:6px}
+
+/* ───────── the post, authored at 1080×1350 ───────── */
+.card{position:absolute;left:0;top:0;width:1080px;height:1350px;transform-origin:0 0;transform:scale(var(--s,.5));background:var(--card);overflow:hidden;font-family:var(--sans);
+  background-image:linear-gradient(var(--grid) 2px,transparent 2px),linear-gradient(90deg,var(--grid) 2px,transparent 2px);background-size:54px 54px;background-position:-1px -1px}
+
+/* top row */
+.cap{position:absolute;left:83px;right:83px;top:62px;height:40px;z-index:3;display:flex;justify-content:space-between;align-items:center;font-size:31px;font-weight:500;letter-spacing:-.3px;color:var(--label)}
+.cap .num{font-variant-numeric:tabular-nums}
+
+/* text block: two-line title centred on y 226, description hangs from y 346 (it may run to three lines on card 4) */
+.ttl{position:absolute;left:60px;right:60px;top:226px;transform:translateY(-50%);margin:0;text-align:center;white-space:nowrap;font-weight:600;font-size:82px;line-height:94px;letter-spacing:-2px;color:var(--ink)}
+.desc{position:absolute;left:90px;right:90px;top:346px;margin:0;text-align:center;font-size:34px;line-height:46px;font-weight:400;letter-spacing:-.5px;word-break:keep-all;color:var(--body)}
+.desc b{color:var(--ink);font-weight:600}
+
+/* the template's phone rules (no phone on this piece any more; .shadow is card 8's base) */
+.device,.shadow{position:absolute;left:278px;top:167px;width:524px;height:1099.2px;transform-origin:50% 0;transform:translateY(309px) scale(.71947)}
+.device{z-index:2}
+.device nw-phone{width:524px}
+.shadow{border-radius:84px}
+/* the cast shadow runs past the card's bottom edge, so it thins out before the edge instead of being sliced */
+.castlayer{position:absolute;inset:0;z-index:1;pointer-events:none;-webkit-mask-image:linear-gradient(#000 calc(100% - 72px),transparent);mask-image:linear-gradient(#000 calc(100% - 72px),transparent)}
+
+/* cover: the swipe line in the band at the bottom */
+.swipe{position:absolute;left:83px;right:83px;bottom:44px;z-index:3;display:flex;justify-content:space-between;align-items:baseline;font-size:31px;font-weight:500;letter-spacing:-.3px;color:var(--label)}
+.swipe b{font-weight:600;letter-spacing:-.6px;color:var(--blue)}
+/* the nawana footer on every inner card (founder 2026-11-13) */
+.foot{position:absolute;left:83px;right:83px;bottom:44px;z-index:3;display:flex;justify-content:space-between;align-items:baseline;font-size:31px;font-weight:500;letter-spacing:-.3px;color:var(--label)}
+.foot b{font-size:38px;font-weight:600;letter-spacing:-1.2px;color:var(--ink)}
+.foot span{font-weight:600;color:var(--blue)}
+
+/* ───────── hero numbers ───────── */
+.hero{position:absolute;left:0;right:0;z-index:2;display:flex;justify-content:center;align-items:baseline;gap:18px;white-space:nowrap}
+.hero .n{font-weight:600;color:var(--blue);letter-spacing:-.055em;line-height:1;font-variant-numeric:lining-nums}
+.hero .u{font-weight:600;color:var(--ink);letter-spacing:-.04em;line-height:1}
+
+/* 01 cover */
+.c-cover .hero{top:500px}
+.c-cover .hero .n{font-size:540px}
+.c-cover .hero .u{font-size:120px}
+
+/* 02 turns: the big number, its unit under it, then the calls on a second line */
+.c-turns .hero{top:530px}
+.c-turns .hero .n{font-size:236px}
+.c-turns .unit{position:absolute;left:0;right:0;top:796px;z-index:3;text-align:center;font-size:52px;line-height:60px;font-weight:600;letter-spacing:-1.4px;color:var(--ink)}
+.c-turns .rule{position:absolute;left:390px;right:390px;top:918px;height:3px;border-radius:2px;background:var(--line);z-index:2}
+.c-turns .calls{top:978px}
+.c-turns .calls .n{font-size:150px;color:var(--ink)}
+.c-turns .calls .u{font-size:60px}
+
+/* 03 countries: one share bar, segment widths are the real shares (43 · 21 · 10 · 26) */
+.c-where .hero{top:456px}
+.c-where .hero .n{font-size:256px}
+.c-where .hero .u{font-size:84px}
+.barcap{position:absolute;left:83px;right:83px;top:752px;z-index:3;margin:0;font-size:31px;line-height:40px;font-weight:600;letter-spacing:-.4px;color:var(--label)}
+.bar,.barshadow{position:absolute;left:83px;right:83px;top:806px;height:124px}
+.bar{z-index:2;display:flex;gap:8px}
+.bar i{display:block;height:100%;border-radius:10px}
+.bar i:first-child{border-radius:30px 10px 10px 30px}
+.bar i:last-child{border-radius:10px 30px 30px 10px}
+.barshadow{border-radius:30px}
+.keys{position:absolute;left:83px;right:83px;top:956px;z-index:3;display:flex;gap:8px}
+.keys div{min-width:0;white-space:nowrap}
+.keys div.end{text-align:right}
+.keys b{display:block;font-weight:600;font-size:50px;line-height:58px;letter-spacing:-1.4px;color:var(--ink)}
+.keys b small{font-size:32px;font-weight:600;letter-spacing:-.3px;color:var(--body);margin-right:6px}
+.allc{position:absolute;left:83px;right:83px;top:1132px;z-index:3;margin:0;text-align:center;font-size:24px;line-height:34px;font-weight:500;letter-spacing:-.3px;color:var(--label);word-break:keep-all}
+.keys span{display:block;font-size:32px;line-height:40px;font-weight:500;color:var(--body);letter-spacing:-.4px}
+
+/* 04 hours: a plain day, cut into the ground's own cells; two lit blocks, no hour figures */
+.day,.lit{position:absolute;top:900px;height:170px}
+.day{left:83px;right:83px;z-index:2;display:flex;gap:6px}
+.day i{flex:1;border-radius:8px;background:#E3E7EE}
+.day i:first-child{border-radius:26px 8px 8px 26px}
+.day i:last-child{border-radius:8px 26px 26px 8px}
+.lit{z-index:3;border-radius:14px;background:var(--blue)}
+.mark{position:absolute;top:700px;z-index:3;transform:translateX(-50%);text-align:center;white-space:nowrap}
+.mark b{display:block;font-size:66px;line-height:76px;font-weight:600;letter-spacing:-2px;color:var(--ink)}
+.mark s{display:block;margin:22px auto 0;width:4px;height:84px;border-radius:2px;background:var(--blue);text-decoration:none}
+
+/* 05 week: seven bars, heights are the real shares */
+.chartcap{position:absolute;left:83px;right:83px;top:516px;z-index:3;margin:0;font-size:31px;line-height:40px;font-weight:600;letter-spacing:-.4px;color:var(--label)}
+.week{position:absolute;left:83px;right:83px;top:580px;height:540px;z-index:2;display:flex;gap:30px;align-items:flex-end}
+.week div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.week b{font-size:50px;line-height:60px;font-weight:600;letter-spacing:-1.6px;color:var(--ink);margin-bottom:14px}
+.week b small{font-size:32px;font-weight:600;letter-spacing:-.4px;margin-left:1px}
+.week i{display:block;width:100%;border-radius:18px 18px 6px 6px;background:var(--rest)}
+.week .mon b{color:var(--blue)}
+.week .mon i{background:var(--blue)}
+.days{position:absolute;left:83px;right:83px;top:1140px;z-index:3;display:flex;gap:30px}
+.days span{flex:1;text-align:center;font-size:40px;line-height:48px;font-weight:600;letter-spacing:-.6px;color:var(--body)}
+.days span.mon{color:var(--blue);font-weight:600}
+
+/* 06 languages: five rows; bar lengths are the real shares of call time */
+.c-langs .chartcap{top:540px}
+.langs{position:absolute;left:83px;right:83px;top:612px;z-index:2;display:flex;flex-direction:column;gap:42px}
+.langs div{display:grid;grid-template-columns:200px 1fr;align-items:center;column-gap:24px}
+.langs span{font-size:46px;line-height:56px;font-weight:600;letter-spacing:-1.4px;color:var(--ink)}
+.langs p{margin:0;display:flex;align-items:center;gap:22px;white-space:nowrap}
+.langs i{display:block;height:74px;border-radius:12px 22px 22px 12px;background:var(--blue);flex:none}
+.langs b{font-size:46px;line-height:56px;font-weight:600;letter-spacing:-1.4px;color:var(--ink)}
+.langs b small{font-size:32px;font-weight:600;letter-spacing:-.4px;color:var(--body);margin-left:6px}
+
+/* 07 ways to call (seven rows) + 08 beyond the call (nine rows): highest first, bar lengths are the real shares
+   of people who called, one scale for both cards; flat, no shadow */
+.c-feats .chartcap{top:494px}
+.feats{position:absolute;left:83px;right:83px;top:560px;z-index:2;display:flex;flex-direction:column;gap:26px}
+.feats div{display:grid;grid-template-columns:392px 1fr;align-items:center;column-gap:22px}
+.feats span{font-size:37px;line-height:52px;font-weight:600;letter-spacing:-1px;color:var(--ink);white-space:nowrap}
+.feats p{margin:0;display:flex;align-items:center;gap:18px;white-space:nowrap}
+.feats i{display:block;height:44px;border-radius:8px 18px 18px 8px;background:var(--rest);flex:none}
+.feats b{font-size:40px;line-height:52px;font-weight:600;letter-spacing:-1.2px;color:var(--body);font-variant-numeric:tabular-nums}
+.feats .top i{background:var(--blue)}
+.feats .new{font-style:normal;font-size:22px;line-height:1;font-weight:600;letter-spacing:.5px;color:var(--blue);background:#E3ECFE;border-radius:999px;padding:8px 14px 7px;margin-left:-4px}
+.feats .top b{color:var(--blue)}
+.c-ways .feats{top:572px;gap:42px}
+.c-ways .feats i{height:52px}
+
+/* 09 thanks: the Futureself pill recessed in glass (no cast shadow, founder 2026-11-13), then the wordmark and the address */
+.pill{position:absolute;left:300px;top:576px;width:480px;height:266px;z-index:2;border-radius:133px;overflow:hidden}
+.pill nw-futureself{position:absolute;inset:0;width:100%;height:100%}
+.pill .glass{position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  box-shadow:inset 0 14px 26px rgba(13,30,70,.30),inset 0 4px 8px rgba(13,30,70,.22),inset 0 -6px 14px rgba(255,255,255,.55),inset 0 0 0 2px rgba(13,30,70,.10);
+  background:linear-gradient(180deg,rgba(255,255,255,.0) 0%,rgba(255,255,255,0) 55%,rgba(255,255,255,.10) 100%)}
+.c-thanks .wm{position:absolute;left:0;right:0;top:1000px;z-index:3;text-align:center;font-size:104px;line-height:112px;font-weight:600;letter-spacing:-4px;color:var(--ink)}
+.c-thanks .url{position:absolute;left:0;right:0;top:1130px;z-index:3;text-align:center;font-size:44px;line-height:52px;font-weight:600;letter-spacing:-.8px;color:var(--blue)}
+
+/* ?anim=1 (video only): the card reads in order. Title, then the line under it, then the picture; bars grow, rows arrive one by one. */
+html.anim .card :is(.ttl,.desc,.hero,.unit,.rule,.barcap,.chartcap,.keys,.allc,.mark,.days,.day,.lit,.pill,.wm,.url,.swipe){opacity:0}
+html.anim .card :is(.week div,.langs div,.feats div){opacity:0}
+html.anim .card :is(.bar i,.langs i,.feats i){transform:scaleX(0);transform-origin:0 50%}
+html.anim .card .week i{transform:scaleY(0);transform-origin:50% 100%}
+html.anim.go .card .ttl{opacity:1;transition:opacity .8s ease .3s}
+html.anim.go .card .desc{opacity:1;transition:opacity .8s ease 1.6s}
+html.anim.go .card :is(.hero,.unit,.rule,.barcap,.chartcap,.keys,.allc,.mark,.days,.day,.lit,.pill,.wm,.url,.swipe){opacity:1;transition:opacity .8s ease 3.2s}
+html.anim.go .card .allc{transition-delay:4.4s}
+html.anim.go .card .lit{transition-delay:3.8s}
+html.anim.go .card :is(.week div,.langs div,.feats div){opacity:1;transition:opacity .5s ease calc(3.2s + var(--n,0) * .22s)}
+html.anim.go .card :is(.bar i,.langs i,.feats i){transform:none;transition:transform .9s cubic-bezier(.2,.7,.2,1) calc(3.4s + var(--n,0) * .22s)}
+html.anim.go .card .week i{transform:none;transition:transform .9s cubic-bezier(.2,.7,.2,1) calc(3.4s + var(--n,0) * .22s)}
+html.anim.go .card .bar i{transition-delay:3.4s}
+
+/* ?solo=N: one card at its real 1080×1350, no viewer chrome: what scripts/marketing/record.mjs records */
+html.solo,html.solo body{margin:0;background:var(--card);overflow:hidden}
+html.solo .wrap{display:block;padding:0;max-width:none}
+html.solo .side,html.solo .controls{display:none}
+html.solo .viewer{display:block}
+html.solo .vp{width:1080px;max-width:none;aspect-ratio:auto;height:1350px;border-radius:0;box-shadow:none}
+html.solo .track{transition:none}
+@media (prefers-reduced-motion:reduce){ .track{transition:none!important} }
+</style>
+<div class="wrap" lang="ko">
+  <div class="viewer">
+    <div class="vp" id="vp" aria-roledescription="carousel" aria-label="Carousel preview">
+      <div class="track" id="track">
+
+        <!-- Every word is copy.md's (Korean set). Every number is data.md's. -->
+        <div class="slot"><section class="card c-cover" data-k="cover">
+          <header class="cap"><span>Our first two months, since Sep 12</span><span class="num">01 / 09</span></header>
+          <h2 class="ttl">85 hours<br>of talking, together</h2>
+          <p class="desc">Every call with your fluent self<br>over two months, added up.</p>
+          <div class="hero"><span class="n" data-reach="130">85</span><span class="u">hours</span></div>
+          <div class="swipe"><span>Swipe to see more →</span><b>nawana.app</b></div>
+        </section></div>
+
+        <div class="slot"><section class="card c-turns" data-k="turns">
+          <header class="cap"><span>Our first two months, since Sep 12</span><span class="num">02 / 09</span></header>
+          <h2 class="ttl">Over 14,000 times,<br>someone spoke up</h2>
+          <p class="desc">That's every turn from about 2,000 calls.<br>Each one, a person saying something in a new language.</p>
+          <div class="hero"><span class="n" data-reach="90">14,000+</span></div>
+          <div class="unit">Turns spoken</div>
+          <div class="rule"></div>
+          <div class="hero calls"><span class="u">About</span><span class="n" data-reach="60">2,000</span><span class="u">calls</span></div>
+        </section></div>
+
+        <div class="slot"><section class="card c-where" data-k="where">
+          <header class="cap"><span>Our first two months, since Sep 12</span><span class="num">03 / 09</span></header>
+          <h2 class="ttl">Calling in from<br>26 countries</h2>
+          <p class="desc">Korea, Germany and the US, and 23 more,<br>from Australia and Canada to Japan and the UK.</p>
+          <div class="hero"><span class="n" data-reach="80">26</span><span class="u">countries</span></div>
+          <p class="barcap">Where our learners are</p>
+          <div class="bar" role="img" aria-label="Korea 43%, Germany 22%, US 10%, 23 other countries about 25%">
+            <i style="flex:43;background:#0A5CF5"></i><i style="flex:22;background:#5C93F8"></i><i style="flex:10;background:#A9C6FB"></i><i style="flex:25;background:#C9D0DB"></i>
+          </div>
+          <div class="keys">
+            <div style="flex:43"><b>43%</b><span>Korea</span></div>
+            <div style="flex:22"><b>22%</b><span>Germany</span></div>
+            <div style="flex:10"><b>10%</b><span>US</span></div>
+            <div class="end" style="flex:25"><b>~25%</b><span>23 other<br>countries</span></div>
+          </div>
+          <p class="allc">Korea · Germany · US · Australia · Canada · Japan · Singapore · Cameroon · UK<br>Switzerland · France · Austria · Philippines · Poland · Indonesia · Brazil · Mexico<br>China · Hungary · Spain · Latvia · Türkiye · South Africa · India · Hong Kong · Sweden</p>
+        </section></div>
+
+        <div class="slot"><section class="card c-hours" data-k="hours">
+          <header class="cap"><span>Our first two months, since Sep 12</span><span class="num">04 / 09</span></header>
+          <h2 class="ttl">Before work,<br>and before bed</h2>
+          <p class="desc">In Korea and in Germany alike,<br>calls cluster early in the morning and late at night.<br><b>When you call, someone else is starting one too.</b></p>
+          <div class="day" id="day" role="img" aria-label="Two peaks in a day: before work and before bed"></div>
+          <div class="lit" id="lit-am"></div><div class="lit" id="lit-pm"></div>
+          <div class="mark" id="m-am"><b>Before work</b><s></s></div>
+          <div class="mark" id="m-pm"><b>Before bed</b><s></s></div>
+        </section></div>
+
+        <div class="slot"><section class="card c-week" data-k="week">
+          <header class="cap"><span>Our first two months, since Sep 12</span><span class="num">05 / 09</span></header>
+          <h2 class="ttl">Midweek is<br>the busiest</h2>
+          <p class="desc">Wednesday and Thursday carry 37% of all calls.<br>Most calls are on weekdays, and weekends are quieter.</p>
+          <p class="chartcap">Calls by day · in each learner's local time</p>
+          <div class="week" id="week" role="img" aria-label="Mon 15%, Tue 13%, Wed 18%, Thu 19%, Fri 14%, Sat 10%, Sun 11%"></div>
+          <div class="days" id="days"></div>
+        </section></div>
+
+        <div class="slot"><section class="card c-langs" data-k="langs">
+          <header class="cap"><span>Our first two months, since Sep 12</span><span class="num">06 / 09</span></header>
+          <h2 class="ttl">Different languages,<br>the same practice</h2>
+          <p class="desc">English, German, Japanese, Korean and Spanish.<br>People are calling in five languages.</p>
+          <p class="chartcap">Language practised · by call time</p>
+          <div class="langs" role="img" aria-label="English 74%, German 21%, Japanese 3%, Korean 1%, Spanish under 1%">
+            <div><span>English</span><p><i data-share="74"></i><b>74%</b></p></div>
+            <div><span>German</span><p><i data-share="21"></i><b>21%</b></p></div>
+            <div><span>Japanese</span><p><i data-share="3"></i><b>3%</b></p></div>
+            <div><span>Korean</span><p><i data-share="1"></i><b>1%</b></p></div>
+            <div><span>Spanish</span><p><i data-share="0.5"></i><b><small>&lt;</small>1%</b></p></div>
+          </div>
+        </section></div>
+
+        <div class="slot"><section class="card c-feats c-ways" data-k="ways">
+          <header class="cap"><span>Our first two months, since Sep 12</span><span class="num">07 / 09</span></header>
+          <h2 class="ttl">So many ways<br>to call</h2>
+          <p class="desc">The share of callers who have tried each one.<br><b>Nearly half have turned on coach mode.</b></p>
+          <p class="chartcap">Tried it · share of callers</p>
+          <div class="feats" data-rows="Free talk:97|Coach mode:46|Scenario talk:27|Daily call:22|Talk about the news:18|Tutor mode:14:new|Pronunciation coach:4:new" role="img" aria-label="Free talk 97%, Coach mode 46%, Scenario talk 27%, Daily call 22%, Talk about the news 18%, Tutor mode 14% (new), Pronunciation coach 4% (new)"></div>
+        </section></div>
+
+        <div class="slot"><section class="card c-feats c-beyond" data-k="feats">
+          <header class="cap"><span>Our first two months, since Sep 12</span><span class="num">08 / 09</span></header>
+          <h2 class="ttl">And beyond<br>the call</h2>
+          <p class="desc">The share of callers who have tried each one.<br><b>Shadowing comes out on top.</b></p>
+          <p class="chartcap">Tried it · share of callers</p>
+          <div class="feats" data-rows="Shadowing:46|Word &amp; phrase cards:29|Watch scenes:26|Weekly report:26|Weekly test:18|Ask the tutor:18:new|Speech:13:new|Say it again:12|Listening:11" role="img" aria-label="Shadowing 46%, Word and phrase cards 29%, Watch scenes 26%, Weekly report 26%, Weekly test 18%, Ask the tutor 18% (new), Speech 13% (new), Say it again 12%, Listening 11%"></div>
+        </section></div>
+
+        <div class="slot"><section class="card c-thanks" data-k="thanks">
+          <header class="cap"><span>Our first two months, since Sep 12</span><span class="num">09 / 09</span></header>
+          <h2 class="ttl">Thank you for<br>being here</h2>
+          <p class="desc">All of this came from the time you made on busy days,<br>and the trust you put in nawana.</p>
+          <div class="pill"><nw-futureself mode="speaking" level="0.86"></nw-futureself><span class="glass"></span></div>
+          <div class="wm">nawana</div>
+          <div class="url">nawana.app</div>
+        </section></div>
+
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn" id="prev" aria-label="Previous">←</button>
+      <div class="dots" id="dots"></div>
+      <div class="btn-row"><button class="btn" id="replay">Replay</button><button class="btn" id="next" aria-label="Next">→</button></div>
+    </div>
+  </div>
+
+  <aside class="side">
+    <h1>Together, so far</h1>
+    <p>Nine cards on the first two months since Sep 12. Numbers from data.md, words from copy.md (English).</p>
+    <h3>Cards</h3>
+    <ol class="list" id="list">
+      <li><button data-go="0">Cover · 85 hours</button></li>
+      <li><button data-go="1">14,000 turns · about 2,000 calls</button></li>
+      <li><button data-go="2">26 countries</button></li>
+      <li><button data-go="3">Before work, before bed</button></li>
+      <li><button data-go="4">Midweek</button></li>
+      <li><button data-go="5">Five languages</button></li>
+      <li><button data-go="6">Ways to call</button></li>
+      <li><button data-go="7">Beyond the call</button></li>
+      <li><button data-go="8">Thank you</button></li>
+    </ol>
+  </aside>
+</div>
+
+<script type="module">
+import "/web/kit/nawana-ui.js";
+const RM = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const sleep = ms => new Promise(r => setTimeout(r, RM ? 0 : ms));
+
+const vp = $("#vp");
+const setScale = () => $$(".card").forEach(c => c.style.setProperty("--s", vp.clientWidth / 1080));
+new ResizeObserver(setScale).observe(vp); setScale();
+
+/* The long cast shadow: the silhouette repeated along the 45° line, one faint layer per 3 px.
+   Layer alphas are solved so the stacked result follows A(s): darkest against the object, zero at `reach`. */
+function castShadow(reach, peak = .58) {
+  const step = 3, n = Math.round(reach / step);
+  const A = s => peak * Math.pow(Math.max(0, 1 - s / reach), 1.7);
+  const parts = [];
+  for (let i = 1; i <= n; i++) {
+    const s = i * step, a = (A(s) - A(s + step)) / (1 - A(s + step));
+    parts.push(`${s}px ${s}px ${Math.round(3 + s * .16)}px rgba(13,17,23,${a.toFixed(4)})`);
+  }
+  return parts.join(",");
+}
+
+/* 04: a day as 24 cells; the two lit blocks are marks, not data (data.md has no hourly curve). */
+const CW = (914 - 23 * 6) / 24, cellL = h => 83 + h * (CW + 6);
+$("#day").innerHTML = "<i></i>".repeat(24);
+[["am", 6, 9], ["pm", 20, 23]].forEach(([k, a, b]) => {
+  Object.assign($("#lit-" + k).style, { left: cellL(a) + "px", width: (b - a) * CW + (b - a - 1) * 6 + "px" });
+  $("#m-" + k).style.left = cellL(a) + ((b - a) * CW + (b - a - 1) * 6) / 2 + "px";
+});
+
+/* 05: seven bars from data.md, Monday in the accent */
+const WEEK = [["Mon", 15], ["Tue", 13], ["Wed", 18], ["Thu", 19], ["Fri", 14], ["Sat", 10], ["Sun", 11]];
+const PEAK = [2, 3]; /* Wednesday and Thursday, each learner's own time zone, Android included (founder check 2026-11-13) */
+const MAXH = 470;
+$("#week").innerHTML = WEEK.map(([d, v], i) => `<div class="${PEAK.includes(i) ? "mon" : ""}"><b>${v}<small>%</small></b><i style="height:${Math.round(v / 19 * MAXH)}px"></i></div>`).join("");
+$("#days").innerHTML = WEEK.map(([d], i) => `<span class="${PEAK.includes(i) ? "mon" : ""}">${d}</span>`).join("");
+
+/* 06: bar lengths are shares of call time; 74% fills 560 px */
+$$(".langs i").forEach(el => { el.style.width = Math.max(10, +el.dataset.share / 74 * 560) + "px"; });
+
+$$(".card:not(.c-cover):not(.c-thanks)").forEach(c => c.insertAdjacentHTML("beforeend", `<div class="foot"><b>nawana</b><span>nawana.app</span></div>`));
+
+/* 07 + 08: ranked rows from copy.md, highest first, top row in the accent. Both cards carry the same caption,
+   so they share ONE scale (100% = 540 px): 98% and 32% must not draw the same length. Flat bars, no shadow (founder 2026-11-13). */
+$$(".feats").forEach(el => el.innerHTML = el.dataset.rows.split("|").map((r, i) => { const [f, v, n] = r.split(":");
+  return `<div class="${i ? "" : "top"}"><span>${f}</span><p><i style="width:${Math.max(12, Math.round(v / 100 * 370))}px"></i><b>${v}%</b>${n ? `<em class="new">NEW</em>` : ""}</p></div>`; }).join(""));
+
+/* the hero numbers cast the same shadow the phone does: the same list is valid as a text-shadow */
+$$(".hero .n").forEach(el => el.style.textShadow = castShadow(+el.dataset.reach, .34));
+
+/* nw-phone carries its own soft drop shadow; here the cast shadow is the only one. Keeps the band rings. */
+customElements.whenDefined("nw-phone").then(() => $$("nw-phone").forEach(p => {
+  const st = document.createElement("style");
+  st.textContent = ".body{box-shadow:inset 0 0 0 calc(100cqw * 2.2 / 430) #6E7076,inset 0 0 0 calc(100cqw * 3.4 / 430) #2A2B2E!important}";
+  p.shadowRoot.append(st);
+}));
+
+const params = new URLSearchParams(location.search);
+/* Stills: every card holds still. */
+const PLAY = new Proxy({
+  /* 09: the mosaic held on a lit frame (a fixed level, then the kit's clock is let go so the still can't catch a dim beat) */
+  async thanks(card) { const fs = $("nw-futureself", card); await sleep(1200); fs._visible(false); await sleep(6000); },
+}, { get: (o, k) => o[k] ?? (async () => { await sleep(6000); }) });
+
+const track = $("#track"), slots = $$(".slot"), cards = $$(".card"), dots = $("#dots"), list = $$("#list button");
+slots.forEach((_, i) => { const b = document.createElement("button"); b.setAttribute("aria-label", `Card ${i + 1}`); b.onclick = () => go(i); dots.append(b); });
+let idx = 0, gen = 0;
+function go(i) {
+  idx = (i + slots.length) % slots.length;
+  track.style.transform = `translateX(${-idx * 100}%)`;
+  $$("button", dots).forEach((b, j) => b.setAttribute("aria-current", j === idx));
+  list.forEach((b, j) => b.setAttribute("aria-current", j === idx));
+  run(cards[idx]);
+}
+async function run(card) {
+  const g = ++gen, alive = () => g === gen;
+  await Promise.all([customElements.whenDefined("nw-futureself"), customElements.whenDefined("nw-shadow"), document.fonts.ready]);
+  await sleep(350);
+  document.documentElement.dataset.scene = card.dataset.k;   // record.mjs --wait-for
+  do { await PLAY[card.dataset.k](card, alive); } while (alive() && !RM);
+}
+$("#prev").onclick = () => go(idx - 1);
+$("#next").onclick = () => go(idx + 1);
+$("#replay").onclick = () => go(idx);
+list.forEach(b => b.onclick = () => go(+b.dataset.go));
+addEventListener("keydown", e => { if (e.key === "ArrowRight") go(idx + 1); if (e.key === "ArrowLeft") go(idx - 1); });
+let x0 = null;
+vp.addEventListener("pointerdown", e => x0 = e.clientX);
+vp.addEventListener("pointerup", e => { if (x0 == null) return; const d = e.clientX - x0; x0 = null; if (Math.abs(d) > 40) go(idx + (d < 0 ? 1 : -1)); });
+const solo = +(params.get("solo") || 0);
+if (solo) document.documentElement.classList.add("solo");
+const m = solo ? [0, solo] : /^#card(\d)$/.exec(location.hash);
+go(m ? +m[1] - 1 : 0);
+if (params.get("anim")) {
+  document.documentElement.classList.add("anim");
+  document.querySelectorAll(".week div, .langs div, .feats div").forEach(el => el.style.setProperty("--n", [...el.parentNode.children].indexOf(el)));
+  document.fonts.ready.then(() => { document.documentElement.dataset.ready = "1"; setTimeout(() => document.documentElement.classList.add("go"), 400); });
+}
+</script>

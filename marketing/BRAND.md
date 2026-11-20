@@ -47,18 +47,24 @@ Details and limits: `CLAUDE.md`. If a feature isn't there, it doesn't exist.
 - **Light theme.** Card ground #F7F8FA with the faint 54px grid; ink #0D1117; the one accent
   is the app's blue **#0A5CF5**. Other colours only where the app uses them (green check,
   orange score, red record).
-- **Type:** display = pixel (Geist Pixel, Galmuri14 for Hangul) for titles and numbers;
-  body = system sans. Don't mix in other faces.
+- **Type: NO PIXEL FONT, anywhere in marketing** (founder, 2026-11-13, after asking more
+  than once: "Please stop using this pixel font… I'm begging you"). Geist Pixel and Galmuri
+  are banned on carousels, posters, reels, thumbnails and community images: titles,
+  numbers, wordmark, URL, labels. Everything is the system sans (SF Pro / Apple SD Gothic
+  Neo); titles and hero numbers in a heavy weight (700–800) with tight letter-spacing. The
+  only pixel type allowed is what the APP itself draws inside a kit phone screen.
 - **The app is shown as it is.** Phone screens come from `web/kit` (real app, measured from
   simulator captures). Never draw an app screen, invent a button, or show a feature state
   the app doesn't have. A new screen = capture + fidelity pass (`marketing/FIDELITY.md`).
 - **The device** is the kit's `nw-phone` (iPhone 17 Pro proportions, island, status bar).
 - **Futureself mosaic** appears only clipped inside a shape (the pill, a circle), light
   palette, never as a background texture.
-- **Carousel layout** (4:5, 1080×1350): fixed text block on top (series eyebrow + n/total,
-  pixel title, 2-line description), the live screen below; cover card first; outro last
-  (wordmark · “유창한 나에게 언어를 배우세요.” · “첫 20분은 무료예요” · nawana.app).
-  Keep the text layout; vary the screen and the motion.
+- **Carousel layout** (4:5, 1080×1350, founder 2026-11-09): centred text block on top (series
+  label left + n/total right on one line, heavy sans title, 2-line description), ONE whole phone
+  below on a long 45° cast shadow, never cropped; each card can move in on the screen (text
+  fades, phone grows). A title fits ~10 Hangul on one line, ~12 per line on two. Cover card
+  first; outro last (wordmark · “유창한 나에게 언어를 배우세요.” · “첫 20분은 무료예요” ·
+  nawana.app). Keep the text layout; vary the screen and the motion.
 - **Stickers** (small real UI pieces around a phone) are allowed: correction card, a line,
   the pill, a word card, a score — all from the kit.
 - Design choices (palette, a new layout, a new motif) are the founder's: show it, don't

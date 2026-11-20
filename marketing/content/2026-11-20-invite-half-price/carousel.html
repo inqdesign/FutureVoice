@@ -1,0 +1,123 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>친구 초대 · 다음 달 반값</title>
+<style>
+/* One 1080×1350 card, from marketing/templates/carousel.html: same ground, top row, title slot and foot.
+   The phone's place is taken by the app's own InviteArt drawing on its cream paper, "50%" written on the
+   boards at the rects InviteEventViews.swift uses. ?solo=1 = the card alone; ?lang=en = the English card. */
+:root{
+  color-scheme:light;
+  --page:#E9ECF1; --card:#F7F8FA; --grid:rgba(10,40,90,.045);
+  --ink:#0D1117; --sub:#5A6170; --label:#767D8A; --body:#434A57; --blue:#0A5CF5; --paper:#FCF9F0;
+  --display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif; /* NO pixel font (founder 2026-11-13) */
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);font-family:var(--sans);color:var(--ink)}
+.vp{position:relative;width:540px;height:675px;margin:28px auto;border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(13,17,23,.08),0 18px 50px rgba(13,17,23,.10)}
+html.solo,html.solo body{background:var(--card);overflow:hidden}
+html.solo .vp{width:1080px;height:1350px;margin:0;border-radius:0;box-shadow:none}
+
+.card{position:absolute;left:0;top:0;width:1080px;height:1350px;transform-origin:0 0;transform:scale(var(--s,.5));background:var(--card);overflow:hidden;
+  background-image:linear-gradient(var(--grid) 2px,transparent 2px),linear-gradient(90deg,var(--grid) 2px,transparent 2px);background-size:54px 54px;background-position:-1px -1px}
+html.solo .card{--s:1}
+
+.cap{position:absolute;left:83px;right:83px;top:56px;height:52px;display:flex;justify-content:space-between;align-items:center;font-size:30px;letter-spacing:-.2px;color:var(--label)}
+
+/* two-line title slot of the template: 76 px on y 226; fitted down if a line is wider than the column */
+.ttl{position:absolute;left:83px;right:83px;top:214px;transform:translateY(-50%);margin:0;text-align:center;white-space:nowrap;
+  font-family:var(--display);font-weight:800;font-size:76px;line-height:86px;letter-spacing:-1.2px;color:var(--ink)}
+.ttl em{font-style:normal;color:var(--blue)}
+.tag{display:inline-flex;align-items:center;height:52px;padding:0 24px;border-radius:26px;background:var(--blue);color:#fff;font-family:var(--display);font-weight:800;font-size:28px;letter-spacing:-.3px}
+
+/* the drawing on its paper */
+.paper{position:absolute;left:83px;right:83px;top:330px;height:516px}
+.art{position:absolute;left:50%;top:20px;width:564px;height:446px;transform:translateX(-50%)}
+.art img{display:block;width:100%;height:100%}
+.board{position:absolute;display:flex;align-items:center;justify-content:center;color:#fff;
+  font-family:var(--display);font-weight:800;font-size:60px;letter-spacing:-1px;line-height:1;white-space:nowrap}
+.who{position:absolute;top:472px;transform:translateX(-50%);font-size:30px;font-weight:600;color:var(--body)}
+
+/* three steps from the in-app sheet */
+.steps{position:absolute;left:50%;transform:translateX(-50%);width:max-content;max-width:914px;top:884px;margin:0;padding:0;list-style:none;counter-reset:s}
+.steps li{counter-increment:s;display:flex;align-items:center;gap:26px;height:62px;margin-bottom:12px;
+  font-size:36px;font-weight:600;letter-spacing:-.4px;color:var(--ink);white-space:nowrap}
+.steps li::before{content:counter(s);flex:0 0 52px;height:52px;border-radius:50%;background:var(--blue);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:800;font-size:28px}
+.fine{position:absolute;left:83px;right:83px;top:1150px;text-align:center;font-size:27px;color:var(--sub);letter-spacing:-.2px;white-space:nowrap}
+.foot{position:absolute;left:83px;right:83px;bottom:44px;display:flex;justify-content:space-between;align-items:baseline;font-size:30px;color:var(--label)}
+.foot b{font-family:var(--display);font-weight:800;color:var(--blue)}
+.foot .where{color:var(--ink);font-weight:600}
+</style>
+
+<div class="vp"><section class="card" id="card">
+  <header class="cap"><span class="tag" data-t="series"></span><span>nawana</span></header>
+  <h2 class="ttl" data-t="title"></h2>
+  <div class="paper">
+    <div class="art" id="art">
+      <img src="invite-art.png" alt="">
+    </div>
+    <span class="who" id="me" data-t="me"></span>
+    <span class="who" id="friend" data-t="friend"></span>
+  </div>
+  <ol class="steps"><li data-t="s1"></li><li data-t="s2"></li><li data-t="s3"></li></ol>
+  <p class="fine" data-t="fine"></p>
+  <div class="foot"><span class="where" data-t="where"></span><b>nawana.app</b></div>
+</section></div>
+
+<script>
+/* Strings: copy.md, final (review FIX 1: "월간 구독" / "Monthly plans" on the small print). */
+const T = {
+  ko: {
+    series: "나와나 구독자 이벤트",
+    title: "친구가 구독하면<br>둘 다 다음 달 <em>반값</em>",
+    me: "나", friend: "친구",
+    s1: "초대 코드를 보내요",
+    s2: "친구가 코드를 넣고 구독을 시작해요",
+    s3: "둘 다 다음 달이 반값이에요",
+    fine: "구독 중일 때 초대할 수 있어요 · 친구 한 명마다 한 달씩 · 월간 구독",
+    where: "설정 → 친구 초대",
+  },
+  en: {
+    series: "nawana subscriber event",
+    title: "When a friend subscribes,<br>you both get next month <em>half price</em>",
+    me: "You", friend: "Friend",
+    s1: "Send your invite code",
+    s2: "Your friend enters it and subscribes",
+    s3: "Next month is half price for both of you",
+    fine: "You can invite while subscribed · One month per friend · Monthly plans",
+    where: "Settings → Invite a friend",
+  },
+};
+const params = new URLSearchParams(location.search);
+const lang = params.get("lang") === "en" ? "en" : "ko";
+document.documentElement.lang = lang;
+if (params.get("solo")) document.documentElement.classList.add("solo");
+document.querySelectorAll("[data-t]").forEach(el => el.innerHTML = T[lang][el.dataset.t]);
+
+/* The boards, as fractions of the picture (InviteArt.boards); text at half the board's height, like the app. */
+const art = document.getElementById("art"), W = 564, H = 446;
+[[0.024, 0.079, 0.256, 0.252], [0.721, 0.079, 0.258, 0.252]].forEach(([x, y, w, h]) => {
+  const b = document.createElement("span");
+  b.className = "board"; b.textContent = "50%";
+  Object.assign(b.style, { left: x * W + "px", top: y * H + "px", width: w * W + "px", height: h * H + "px", fontSize: h * H * .5 + "px" });
+  art.append(b);
+});
+/* Labels under the two people (man ≈ 0.37, woman ≈ 0.645 of the picture's width). */
+const paperW = 914, artLeft = (paperW - W) / 2;
+document.getElementById("me").style.left = artLeft + 0.37 * W + "px";
+document.getElementById("friend").style.left = artLeft + 0.645 * W + "px";
+
+/* Fit: any single-line text wider than its column shrinks until it fits. */
+function fit(el, max, min = 20) {
+  let fs = parseFloat(getComputedStyle(el).fontSize);
+  const lh = parseFloat(getComputedStyle(el).lineHeight) / fs;
+  while (el.scrollWidth > max && fs > min) { fs -= 1; el.style.fontSize = fs + "px"; el.style.lineHeight = fs * lh + "px"; }
+}
+document.fonts.ready.then(() => {
+  fit(document.querySelector(".ttl"), 914);
+  document.querySelectorAll(".steps li").forEach(li => fit(li, 840));
+  fit(document.querySelector(".fine"), 914, 24); /* one line, never below 24px */
+  document.documentElement.dataset.scene = "ready";
+});
+</script>
