@@ -55,11 +55,12 @@ fun FuriganaText(
 ) {
     val context = LocalContext.current
     val plain = text.text
-    if (Furigana.enabled(context) && LanguageScope.active(context) == "ja" && Furigana.hasRuby(plain)) {
+    val language = LanguageScope.active(context)
+    if (Furigana.enabled(context) && Furigana.supports(language) && Furigana.hasRuby(plain, language)) {
         val base = if (fontWeight != null) style.copy(fontWeight = fontWeight) else style
         val baseColor = base.color.takeIf { it.isSpecified } ?: LocalContentColor.current
         RubyFlow(alignment, modifier = modifier.clearAndSetSemantics { contentDescription = plain }) {
-            for (unit in units(plain)) {
+            for (unit in units(plain, language)) {
                 RubyUnit(unit.reading, rubyStyle, baseColor.copy(alpha = baseColor.alpha * RUBY_ALPHA)) {
                     Text(text.subSequence(unit.start, unit.end), style = base, color = baseColor,
                         maxLines = 1, softWrap = false)
@@ -98,7 +99,7 @@ private val OPENING = setOf('「', '『', '（', '(')
  * character, except inside a run of Latin letters or digits, and never
  * before closing punctuation or after an opening bracket.
  */
-private fun units(plain: String): List<RubySpan> {
+private fun units(plain: String, language: String): List<RubySpan> {
     val out = ArrayList<RubySpan>()
     var openPending: Int? = null
     fun push(start: Int, end: Int, reading: String?) {
@@ -106,7 +107,7 @@ private fun units(plain: String): List<RubySpan> {
         openPending = null
         out.add(RubySpan(s, end, reading))
     }
-    for (run in Furigana.runs(plain)) {
+    for (run in Furigana.runs(plain, language)) {
         if (run.reading != null) { push(run.start, run.end, run.reading); continue }
         var i = run.start
         while (i < run.end) {
@@ -187,15 +188,19 @@ private fun RubyFlow(
  */
 @Composable
 private fun RubyUnit(reading: String?, rubyStyle: TextStyle, rubyColor: Color, base: @Composable () -> Unit) {
+    val widens = LanguageScope.active(LocalContext.current) == "zh"
     Layout({
         Text(reading ?: " ", style = rubyStyle, color = rubyColor, maxLines = 1, softWrap = false)
         base()
     }) { measurables, _ ->
         val ruby = measurables[0].measure(Constraints())
         val b = measurables[1].measure(Constraints())
-        layout(b.width, ruby.height + b.height) {
-            if (reading != null) ruby.place((b.width - ruby.width) / 2, 0)
-            b.place(0, ruby.height)
+        // Pinyin is wider than its character: the unit takes the wider of
+        // the two, both centred, as a textbook prints it (iOS `RubyUnit`).
+        val width = if (widens && reading != null) maxOf(b.width, ruby.width + 2) else b.width
+        layout(width, ruby.height + b.height) {
+            if (reading != null) ruby.place((width - ruby.width) / 2, 0)
+            b.place((width - b.width) / 2, ruby.height)
         }
     }
 }

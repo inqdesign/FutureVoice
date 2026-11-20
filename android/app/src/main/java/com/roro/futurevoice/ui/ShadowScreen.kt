@@ -1293,9 +1293,10 @@ private fun TargetLineSection(
             // Readings over the kanji, cut from the whole line (`FuriganaWord`).
             val context = androidx.compose.ui.platform.LocalContext.current
             val rubyLine = timings.joinToString("") { it.word }
-            val rubyRuns = if (com.roro.futurevoice.data.Furigana.enabled(context) && targetLanguage == "ja" &&
-                com.roro.futurevoice.data.Furigana.hasRuby(rubyLine))
-                com.roro.futurevoice.data.Furigana.runs(rubyLine) else emptyList()
+            val rubyRuns = if (com.roro.futurevoice.data.Furigana.enabled(context) &&
+                com.roro.futurevoice.data.Furigana.supports(targetLanguage) &&
+                com.roro.futurevoice.data.Furigana.hasRuby(rubyLine, targetLanguage))
+                com.roro.futurevoice.data.Furigana.runs(rubyLine, targetLanguage) else emptyList()
             val starts = timings.runningFold(0) { at, wt -> at + wt.word.length }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(if (spaced) 1.dp else 0.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)) {

@@ -136,9 +136,12 @@ fun CallSettingsSheet(
                 }
                 // Readings over the kanji (`Furigana`), on every surface that
                 // hands the learner a Japanese line to say.
-                if (com.roro.futurevoice.data.LanguageScope.active(context) == "ja") {
+                val rubyLanguage = com.roro.futurevoice.data.LanguageScope.active(context)
+                if (com.roro.futurevoice.data.Furigana.supports(rubyLanguage)) {
                     GroupedRowDivider()
-                    ToggleRow(Icons.Outlined.FontDownload, stringResource(R.string.furigana),
+                    // Chinese: the same switch, pinyin over every character.
+                    ToggleRow(Icons.Outlined.FontDownload,
+                        stringResource(if (rubyLanguage == "zh") R.string.pinyin else R.string.furigana),
                         com.roro.futurevoice.data.Furigana.enabled(context)) {
                         com.roro.futurevoice.data.Furigana.setEnabled(context, it)
                     }

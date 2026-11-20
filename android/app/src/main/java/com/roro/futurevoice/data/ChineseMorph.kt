@@ -344,5 +344,8 @@ object ChineseMorph {
 
     private val neutralDe = setOf("的", "得", "地")
 
+    /** One character read on its own, for `ChinesePinyin`'s syllable cut. */
+    fun pinyinOfCharacter(s: String): String = platform.pinyin(s).filterNot { it.isWhitespace() }
+
     private fun isHan(c: Char): Boolean = c.code in 0x4E00..0x9FFF || c.code in 0x3400..0x4DBF
 }

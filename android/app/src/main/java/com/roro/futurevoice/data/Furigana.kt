@@ -51,9 +51,14 @@ object Furigana {
         state(context).value = value
     }
 
-    /** On for a Japanese target unless the learner turned it off. */
+    /** On for a Japanese or Chinese target unless the learner turned it off.
+     *  For Chinese the readings are pinyin over every character
+     *  ([ChinesePinyin], 2026-11-20); the setting is the same switch. */
     fun isOn(context: Context): Boolean =
-        LanguageScope.active(context) == "ja" && enabled(context)
+        supports(LanguageScope.active(context)) && enabled(context)
+
+    /** A target language whose lines get readings drawn over them. */
+    fun supports(language: String): Boolean = language == "ja" || language == "zh"
 
     /** A stretch of the line: [reading] set only over kanji. The runs cover
      *  the text end to end, in order. Offsets are UTF-16 indices. */
@@ -78,7 +83,19 @@ object Furigana {
 
     /** [text] cut into runs. Memoized: the call screen recomposes every line
      *  on each mic tick. */
-    fun runs(text: String): List<Run> {
+    fun runs(text: String, language: String = "ja"): List<Run> {
+        if (language == "zh") {
+            val key = "zh|$text"
+            synchronized(memo) { memo[key]?.let { return it } }
+            val out = if (text.none(ChinesePinyin::isHan)) {
+                if (text.isEmpty()) emptyList() else listOf(Run(0, text.length, null))
+            } else ChinesePinyin.runs(text)
+            synchronized(memo) {
+                if (memo.size > 400) memo.clear()
+                memo[key] = out
+            }
+            return out
+        }
         synchronized(memo) { memo[text]?.let { return it } }
         if (text.none(::isKanji)) return if (text.isEmpty()) emptyList() else listOf(Run(0, text.length, null))
         val toks = tokens(text) ?: return listOf(Run(0, text.length, null))
@@ -90,7 +107,7 @@ object Furigana {
         return out
     }
 
-    fun hasRuby(text: String): Boolean = runs(text).any { it.reading != null }
+    fun hasRuby(text: String, language: String = "ja"): Boolean = runs(text, language).any { it.reading != null }
 
     private val memo = HashMap<String, List<Run>>()
 
