@@ -40,6 +40,13 @@ export class TalkBilling {
    *  the last batch (up to a flush interval) was never sent (2026-10-21). */
   private stopped = false
   private lastSendOk = true
+  /** The verified caller, once the gateway knows it. From then on a tick is
+   *  sent as the SERVER (service role + this id) and no longer rides on the
+   *  learner's access token, which lives an hour: a call that outlived it,
+   *  or one opened on a token about to expire, answered 401 on every later
+   *  tick and ran unbilled to the session ceiling (2026-11-20). */
+  private userId: string | null = null
+  setUser(id: string): void { this.userId = id }
 
   /** ~voiceGraceSeconds on the client: how recently the learner must have
    *  been heard for a second to count as theirs. */
@@ -145,15 +152,16 @@ export class TalkBilling {
                      call: number | null = null): Promise<WallCode | null> {
     this.tickN += 1
     try {
-      const r = await fetch(`${this.env.SUPABASE_URL}/functions/v1/talk-tick`, {
+      const post = (asServer: boolean) => fetch(`${this.env.SUPABASE_URL}/functions/v1/talk-tick`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${this.token}`,
+          Authorization: `Bearer ${asServer ? this.env.SUPABASE_SERVICE_ROLE_KEY : this.token}`,
           apikey: this.env.SUPABASE_ANON_KEY,
           "Content-Type": "application/json",
           "X-Idempotency-Key": `gw:${this.sessionKey}:${this.tickN}`,
         },
         body: JSON.stringify({
+          ...(asServer ? { user_id: this.userId } : {}),
           seconds,
           session_id: this.sessionKey,
           language: this.language,
@@ -165,6 +173,11 @@ export class TalkBilling {
           ...(call !== null && call !== seconds ? { call_seconds: call } : {}),
         }),
       })
+      // As the server once the caller is verified. A talk-tick from before
+      // it knew the server answers 401 (nothing written, the key unspent):
+      // the learner's own token then, as before.
+      let r = await post(this.userId !== null)
+      if (r.status === 401 && this.userId !== null) r = await post(false)
       if (r.status === 402) {
         const body = (await r.json().catch(() => ({}))) as { error?: string }
         return body.error === "daily_cap_reached"

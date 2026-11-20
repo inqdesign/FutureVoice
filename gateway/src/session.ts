@@ -639,6 +639,18 @@ export class CallSession implements DurableObject {
     return !/[.?!。？！]$/u.test(t)
   }
 
+  /** How long an accepted socket may stay silent before its `start`. */
+  private static readonly startDeadlineMs = 20_000
+  /** Ceilings on what a client may put in front of the reply model. Far
+   *  above anything the apps send (a prompt is ~25k characters, a line a
+   *  few hundred); they exist so a hand-built client can't have every reply
+   *  resend a context-sized prompt for a few billed seconds. */
+  private static readonly maxSystemChars = 120_000
+  private static readonly maxHistoryLines = 400
+  private static readonly maxHistoryLineChars = 4_000
+  private static readonly maxSayChars = 2_000
+  private starting = false
+
   constructor(private state: DurableObjectState, private env: Env) {}
 
   async fetch(request: Request): Promise<Response> {
@@ -657,6 +669,15 @@ export class CallSession implements DurableObject {
     })
     ours.addEventListener("close", () => this.teardown())
     ours.addEventListener("error", () => this.teardown())
+
+    // A socket that never says `start` is not a call. Without this an open
+    // socket held its Durable Object for as long as the client liked, with
+    // no token ever shown (the idle clocks are armed only after `start`).
+    setTimeout(() => {
+      if (!this.starting && !this.started && !this.ended) {
+        this.fail("unauthorized", "no start")
+      }
+    }, CallSession.startDeadlineMs)
 
     return new Response(null, { status: 101, webSocket: toClient })
   }
@@ -707,7 +728,7 @@ export class CallSession implements DurableObject {
       return
     }
     if (msg.type === "say") {
-      const text = (msg.text ?? "").trim()
+      const text = (msg.text ?? "").trim().slice(0, CallSession.maxSayChars)
       if (this.ended || text.length === 0) return
       // It can arrive BEFORE the session has finished starting — that is the
       // whole point of overlapping the two, and on 2026-09-13 the app wrote
@@ -748,8 +769,9 @@ export class CallSession implements DurableObject {
         if (this.replyEngine) this.replyEngine.steer = steer
       }
       if (typeof msg.system === "string" && msg.system.trim()) {
-        if (this.replyEngine) this.replyEngine.setSystem(msg.system)
-        else this.pendingSystem = msg.system
+        const system = msg.system.slice(0, CallSession.maxSystemChars)
+        if (this.replyEngine) this.replyEngine.setSystem(system)
+        else this.pendingSystem = system
       }
       if (typeof msg.holdReplies === "boolean") {
         this.holdReplies = msg.holdReplies
@@ -803,7 +825,10 @@ export class CallSession implements DurableObject {
       console.log("discard: turn cleared")
       return
     }
-    if (msg.type !== "start" || this.started) return
+    // One `start` per socket: each one pays the whole gate (a token check
+    // and a talk-tick preflight), and a burst of them ran it N times.
+    if (msg.type !== "start" || this.started || this.starting) return
+    this.starting = true
 
     // --- Session-start gate: the ONE place auth and ownership are paid. ---
     const startAt = Date.now()
@@ -858,6 +883,7 @@ export class CallSession implements DurableObject {
         void preflight.catch(() => null)
         return this.fail("unauthorized", "invalid session token")
       }
+      this.billing.setUser(userId)
       const [owns, wall, speakAs] = await Promise.all([
         ownsVoice(this.env, userId, msg.voiceId)
           .then((r) => { console.log(`start: ownsVoice ${Date.now() - gateAt}ms`); return r }),
@@ -886,7 +912,12 @@ export class CallSession implements DurableObject {
       this.billing.start()
     }
 
-    this.history = msg.history ? [...msg.history] : []
+    // Bounded, newest kept: every reply resends all of it on our bill.
+    this.history = Array.isArray(msg.history)
+      ? msg.history.slice(-CallSession.maxHistoryLines)
+          .filter((h) => h && typeof h.text === "string" && (h.role === "user" || h.role === "model"))
+          .map((h) => ({ role: h.role, text: h.text.slice(0, CallSession.maxHistoryLineChars) }))
+      : []
     this.language = msg.language || "en"
     this.manualTurns = msg.manualTurns === true
     this.repeatAfterMe = msg.repeatAfterMe === true
@@ -909,7 +940,7 @@ export class CallSession implements DurableObject {
       // Hedge target when the primary stalls or errors (reply.ts). Set the
       // var to the primary's own name to turn the hedge off.
       fallbackModel: this.env.GEMINI_REPLY_FALLBACK_MODEL ?? DEFAULT_REPLY_FALLBACK_MODEL,
-      system: this.pendingSystem ?? msg.system,
+      system: this.pendingSystem ?? String(msg.system ?? "").slice(0, CallSession.maxSystemChars),
       language: this.language,
       claudeThinking: this.env.CLAUDE_REPLY_THINKING,
       // Low by default (2026-10-27): the model default (medium) put the

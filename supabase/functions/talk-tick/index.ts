@@ -20,7 +20,7 @@
 // makes under-reporting call time pointless.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
-import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
+import { requireUser, handlePreflight, errorResponse, cors, timingSafeEqual } from "../_shared/auth.ts"
 import { insufficientCreditsResponse, dailyCapResponse, fairUseLimitResponse, notifyOwner, billingClient } from "../_shared/credits.ts"
 
 const SOURCE_FN = "talk-tick"
@@ -30,16 +30,33 @@ Deno.serve(async (req) => {
   if (pre) return pre
   if (req.method !== "POST") return errorResponse(405, "method not allowed")
 
-  const authed = await requireUser(req)
-  if (authed instanceof Response) return authed
-  const { user, supabase } = authed
+  let body: { seconds?: number; session_id?: string; language?: string; preflight?: boolean
+              learner_seconds?: number; mode?: string; call_seconds?: number; user_id?: string }
+  try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
+
+  // The gateway bills as the SERVER once it has verified the caller
+  // (2026-11-20): the service-role key as the bearer and the user id in the
+  // body. A call's ticks used to ride on the learner's own access token,
+  // which lives an hour, so a call that outlived it (or one opened on a
+  // token about to expire, on purpose) answered 401 on every later tick and
+  // ran unbilled to the gateway's ceiling. Anyone else is a learner's token.
+  const bearer = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "")
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+  let user: { id: string }
+  if (serviceKey && timingSafeEqual(bearer, serviceKey)) {
+    const id = body.user_id ?? ""
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      return errorResponse(400, "user_id required")
+    }
+    user = { id }
+  } else {
+    const authed = await requireUser(req)
+    if (authed instanceof Response) return authed
+    user = authed.user
+  }
 
   const idemKey = req.headers.get("X-Idempotency-Key")
   if (!idemKey) return errorResponse(400, "missing X-Idempotency-Key header")
-
-  let body: { seconds?: number; session_id?: string; language?: string; preflight?: boolean
-              learner_seconds?: number; mode?: string; call_seconds?: number }
-  try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
   const seconds = body.seconds
   if (typeof seconds !== "number" || !Number.isInteger(seconds) ||
       seconds < 1 || seconds > 600) {
