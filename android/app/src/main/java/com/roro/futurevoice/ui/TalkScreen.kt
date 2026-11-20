@@ -1060,10 +1060,14 @@ fun TalkScreen(
                                 // Dimmed from the BUBBLE's text colour (iOS): a
                                 // fixed onSurfaceVariant all but vanished into
                                 // mono's solid ink bubble.
+                                // No dictation in the pronunciation call (iOS,
+                                // founder 2026-11-20): the recognizer spells the
+                                // word it guesses was meant.
+                                val shown = if (state.pronOn) "" else state.partial
                                 Text(
-                                    state.partial.ifBlank { stringResource(R.string.listening) },
+                                    shown.ifBlank { stringResource(R.string.listening) },
                                     color = androidx.compose.material3.LocalContentColor.current.copy(alpha = 0.6f),
-                                    fontStyle = if (state.partial.isBlank()) FontStyle.Italic else FontStyle.Normal,
+                                    fontStyle = if (shown.isBlank()) FontStyle.Italic else FontStyle.Normal,
                                 )
                             }
                         }
