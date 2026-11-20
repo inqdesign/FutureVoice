@@ -68,7 +68,15 @@ object ChinesePinyin {
             val tok = token.pinyin.lowercase()
             return alts.firstOrNull { it.lowercase() == tok } ?: alts[0]
         }
-        return token.pinyin
+        return erhua(key, token.pinyin)
+    }
+
+    /** 儿 closing a word off the list is the r on the syllable before it
+     *  (点儿 diǎnr); listed words keep the list's reading (女儿 nǚ'ér). */
+    fun erhua(key: String, pinyin: String): String {
+        if (key.length < 2 || !key.endsWith("儿")) return pinyin
+        for (tail in listOf("ér", "er")) if (pinyin.endsWith(tail)) return pinyin.dropLast(tail.length) + "r"
+        return pinyin
     }
 
     // ── One syllable per character ──
