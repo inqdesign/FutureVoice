@@ -163,7 +163,7 @@ object QuickQuizStock {
         }
     }
 
-    private fun normalizedKey(text: String) = text.trim().lowercase()
+    fun normalizedKey(text: String) = text.trim().lowercase()
 
     /** Still quiz material: never said, never marked known, never put off. */
     suspend fun isOpen(context: Context, phrase: String, language: String): Boolean =

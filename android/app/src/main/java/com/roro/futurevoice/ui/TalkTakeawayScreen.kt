@@ -55,6 +55,11 @@ import com.roro.futurevoice.R
 import com.roro.futurevoice.audio.Mp3Player
 import com.roro.futurevoice.core.Analytics
 import com.roro.futurevoice.data.AuthRepository
+import com.roro.futurevoice.data.CefrLevel
+import com.roro.futurevoice.data.CoreVocabulary
+import com.roro.futurevoice.data.QuickQuizStock
+import com.roro.futurevoice.data.VocabLemmas
+import com.roro.futurevoice.talk.CarryoverDetector
 import com.roro.futurevoice.data.TalkCurriculum
 import com.roro.futurevoice.data.WeeklyTestEngine
 import com.roro.futurevoice.net.WordLore
@@ -92,9 +97,18 @@ data class TalkTakeaway(
         fix?.let { "fix" }, line?.let { "line" }).joinToString(",")
 
     companion object {
-        /** The curriculum lists are already in teaching order, so the first
-         *  unmastered item is the one; a fully mastered list gives its first. */
-        fun make(session: Session, curriculum: TalkCurriculum.Snapshot, fix: Fix?): TalkTakeaway {
+        /**
+         * The picks, chosen for THIS learner's level (iOS 2026-11-20). Word: a
+         * graded word at the level or one band above, the one the fluent
+         * self came back to in the most turns (ties: the higher band); then
+         * any graded word at or above the level; then an ungraded word the
+         * call kept returning to. Expression: one the fluent self OFFERED,
+         * rated at or above the level by the quick quiz's cached rating; an
+         * unrated one only when no rated one qualifies.
+         */
+        fun make(session: Session, curriculum: TalkCurriculum.Snapshot, fix: Fix?,
+                 level: CefrLevel, language: String,
+                 expressionLevels: Map<String, String>): TalkTakeaway {
             val fluentText = session.turns.filter { it.role == TurnRole.FLUENT_SELF }.map { it.transcript }
             fun firstOpen(items: List<ScenarioCurriculum.Item>) =
                 items.firstOrNull { it.masteredAt == null } ?: items.firstOrNull()
@@ -106,13 +120,39 @@ data class TalkTakeaway(
                 return null
             }
             return TalkTakeaway(
-                word = firstOpen(curriculum.words)?.let { Entry(it.text, example(it.text)) },
-                expression = firstOpen(curriculum.expressions)?.let {
+                word = pickWord(curriculum.words, fluentText, level, language)?.let { Entry(it.text, example(it.text)) },
+                expression = pickExpression(curriculum.expressions, session.summary?.expressionsOffered.orEmpty(),
+                    expressionLevels, level)?.let {
                     Entry(it.text.replaceFirstChar { c -> c.uppercase() }, example(it.text))
                 },
                 fix = fix,
                 line = firstOpen(curriculum.shadowLines)?.let { Line(it.id, it.text) },
             )
+        }
+
+        fun pickWord(items: List<ScenarioCurriculum.Item>, fluentTurns: List<String>,
+                     level: CefrLevel, language: String): ScenarioCurriculum.Item? {
+            val open = items.filter { it.masteredAt == null }
+            if (open.isEmpty()) return null
+            val base = CoreVocabulary.levelRank(level)
+            val turnLemmas = fluentTurns.map { VocabLemmas.lemmas(listOf(it), language) }
+            fun turns(w: String) = turnLemmas.count { w.lowercase() in it }
+            fun rank(w: String) = CoreVocabulary.level(w, language)?.let(CoreVocabulary::levelRank)
+            fun best(pool: List<ScenarioCurriculum.Item>) =
+                pool.maxWithOrNull(compareBy<ScenarioCurriculum.Item>({ turns(it.text) }, { rank(it.text) ?: 0 }))
+            val graded = open.filter { (rank(it.text) ?: -1) >= base }
+            return best(graded.filter { rank(it.text)!! <= base + 1 })
+                ?: best(graded)
+                ?: best(open.filter { rank(it.text) == null && turns(it.text) > 1 })
+        }
+
+        fun pickExpression(items: List<ScenarioCurriculum.Item>, offered: List<String>,
+                           levels: Map<String, String>, level: CefrLevel): ScenarioCurriculum.Item? {
+            val offeredKeys = offered.map { CarryoverDetector.normalized(it) }.toSet()
+            val open = items.filter { it.masteredAt == null && CarryoverDetector.normalized(it.text) in offeredKeys }
+            val rated = open.map { it to levels[QuickQuizStock.normalizedKey(it.text)] }
+            return rated.firstOrNull { QuickQuizStock.atLevel(it.second, level) }?.first
+                ?: rated.firstOrNull { it.second == null }?.first
         }
     }
 }

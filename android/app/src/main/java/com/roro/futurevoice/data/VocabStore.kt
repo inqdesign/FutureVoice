@@ -762,8 +762,14 @@ class VocabStore private constructor(context: Context) {
         // them by it, often at the head of a sentence where the capital-letter
         // name rule can't see it — "toi" was kept as a word to study.
         val excludingLemmas = excludingLemmas + learnerNameTokens()
+        // Function words the list grades high (`that` B2, auxiliary `will`
+        // as the noun) are not words to pick up (iOS 2026-11-20: "that" on
+        // the Before-you-go screen). The vocabulary level's stop words; iOS
+        // also reads the word class in context, which Android has no tagger
+        // for.
+        val stop = LevelBands.VocabShare.profiles[language]?.stopWords.orEmpty()
         return orderPickups(
-            lemmas = VocabLemmas.lemmas(fluentTexts, language),
+            lemmas = VocabLemmas.lemmas(fluentTexts, language) - stop,
             offList = offListContentWords(fluentTexts, language),
             minRank = minRank,
             excluded = excludingLemmas,

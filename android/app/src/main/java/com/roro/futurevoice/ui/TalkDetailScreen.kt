@@ -69,6 +69,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.async
 import androidx.compose.material.icons.filled.StopCircle
 import androidx.compose.material.icons.filled.PlayCircleOutline
 import com.roro.futurevoice.talk.Turn
@@ -250,7 +251,18 @@ private fun TalkDetailPage(
         val fixItem = curriculum.corrections.firstOrNull { it.masteredAt == null && !originalOf(it).isNullOrBlank() }
             ?: curriculum.corrections.firstOrNull()
         val fix = fixItem?.let { TalkTakeaway.Fix(originalOf(it), it.text, it.note) }
-        val t = TalkTakeaway.make(s, curriculum, fix)
+        // The expression is picked by its level, so the talk's offered
+        // phrases are rated first (the quick quiz's cache), waited for at
+        // most 4 s; a late rating still lands in the cache (iOS
+        // `takeawayRateWait`).
+        val offered = sm.expressionsOffered
+        val rating = scope.async {
+            com.roro.futurevoice.data.QuickQuizStock.rateMissing(
+                context, offered, com.roro.futurevoice.data.LanguageCatalog.englishName(language))
+        }
+        kotlinx.coroutines.withTimeoutOrNull(4_000) { rating.await() }
+        val t = TalkTakeaway.make(s, curriculum, fix, level, language,
+            com.roro.futurevoice.data.QuickQuizStock.levels(context))
         if (t.isEmpty) return@LaunchedEffect
         com.roro.futurevoice.core.Analytics.capture("talk_takeaway_shown", mapOf("parts" to t.parts))
         takeaway = t
