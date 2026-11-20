@@ -1385,19 +1385,19 @@ private struct TalkHeroSection: View {
                     .mask(Circle())
                     .allowsHitTesting(false)
                 TabView(selection: $mode) {
-                    ForEach(TalkRingMode.offered(for: ringTarget), id: \.self) { m in
+                    ForEach(TalkRingMode.allCases, id: \.self) { m in
                         Button {
                             // The gate lives in RootTabView's `startFreeTalk`,
                             // which is where BOTH paths into a free talk meet
                             // (this ring and the widget's deep link).
-                            guard m.isAvailable else { return }
+                            guard m.isAvailable(for: ringTarget) else { return }
                             onTap(ringFrame)
                         } label: {
                             VStack(spacing: 6) {
                                 Text(m.title)
                                     .geistPixel(20)
-                                    .foregroundStyle(m.isAvailable ? .primary : .secondary)
-                                Text(m.isAvailable ? (m == .pronunciation ? pronunciationHeadline : headline)
+                                    .foregroundStyle(m.isAvailable(for: ringTarget) ? .primary : .secondary)
+                                Text(m.isAvailable(for: ringTarget) ? (m == .pronunciation ? pronunciationHeadline : headline)
                                                    : explain("Coming soon"))
                                     .font(.footnote.weight(.medium))
                                     .monospacedDigit()
@@ -1430,7 +1430,7 @@ private struct TalkHeroSection: View {
         // hero's centring maths (ring centre 160 pt above its bottom) holds.
         .overlay(alignment: .bottom) {
             HStack(spacing: 8) {
-                ForEach(TalkRingMode.offered(for: ringTarget), id: \.self) { m in
+                ForEach(TalkRingMode.allCases, id: \.self) { m in
                     Circle()
                         .fill(m == mode ? Color.primary : Color.primary.opacity(0.2))
                         .frame(width: 6, height: 6)
@@ -1445,7 +1445,7 @@ private struct TalkHeroSection: View {
             // Call settings toggle writes. The pronunciation page is its own
             // key and leaves tutor mode as it was: it is a different call,
             // not a setting of the talk.
-            pronunciationOn = m == .pronunciation
+            pronunciationOn = m == .pronunciation && m.isAvailable(for: ringTarget)
             switch m {
             case .freeTalk: tutorModeOn = false
             case .tutor: tutorModeOn = true
@@ -1453,11 +1453,10 @@ private struct TalkHeroSection: View {
             }
             HapticEngine.selection()
         }
-        // The language switched to one with no pronunciation page.
+        // The language switched: the pronunciation page stays (as "Coming
+        // soon" where there is no call) and its key follows the language.
         .onChange(of: ringTarget) { _, target in
-            if mode == .pronunciation, !PronunciationCall.isOffered(for: target) {
-                mode = tutorModeOn ? .tutor : .freeTalk
-            }
+            if mode == .pronunciation { pronunciationOn = mode.isAvailable(for: target) }
         }
         // Flipped from Call settings: the ring follows.
         .onChange(of: tutorModeOn) { _, on in
@@ -1480,12 +1479,11 @@ enum TalkRingMode: Int, CaseIterable {
         }
     }
 
-    var isAvailable: Bool { true }
-
-    /// The pages the ring has for a target language: pronunciation is
-    /// English only (`PronunciationCall.isOffered`).
-    static func offered(for language: String) -> [TalkRingMode] {
-        allCases.filter { $0 != .pronunciation || PronunciationCall.isOffered(for: language) }
+    /// Every page is on the ring in every language; pronunciation has a
+    /// call in English only (`PronunciationCall.isOffered`) and reads
+    /// "Coming soon" elsewhere, with nothing to tap (2026-11-20, founder).
+    func isAvailable(for language: String) -> Bool {
+        self != .pronunciation || PronunciationCall.isOffered(for: language)
     }
 
     /// What the ring shows on launch — the last mode the learner swiped to.

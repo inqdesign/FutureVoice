@@ -43,10 +43,12 @@ enum PronunciationCall {
     /// drilled on a word he said right, and two German learners never passed
     /// a take. A language comes back once native recordings pass in it.
     ///
-    /// Korean is back the same day, judged another way: by comparison
-    /// (`PronunciationContrast`), on the sounds measured that way.
+    /// Korean and four more came back the same day, judged by comparison
+    /// (`PronunciationContrast`), and were taken back on 2026-11-20
+    /// (founder): every other language shows the page as "Coming soon" and
+    /// cannot start a call. The comparison code stays for when they return.
     static func isOffered(for language: String) -> Bool {
-        LanguageCatalog.base(language) == "en" || PronunciationContrast.isOffered(language: language)
+        LanguageCatalog.base(language) == "en"
     }
 
     /// The ring's page is showing AND the language being learned has one: a
