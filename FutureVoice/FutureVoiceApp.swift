@@ -130,15 +130,10 @@ struct FutureVoiceApp: App {
 
     var body: some Scene {
         WindowGroup {
-            #if PROMO_TEST
-            // A one-off sandbox build (never a shipping one): the offer test alone.
-            NavigationStack { PromoOfferSandboxTest() }
-            #else
             #if DEBUG
             if InviteEventDemo.isRequested { InviteEventDemo() } else { rootContent }
             #else
             rootContent
-            #endif
             #endif
         }
         #if targetEnvironment(macCatalyst)

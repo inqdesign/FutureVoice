@@ -429,3 +429,49 @@ $$;
 
 revoke all on function public.invite_reward_claimed(uuid, text) from public, anon;
 grant execute on function public.invite_reward_claimed(uuid, text) to authenticated;
+
+-- Nothing is left to the first try (2026-11-20). `invite_reward_notify` is
+-- fire-and-forget (pg_net), and `invite-reward` leaves `notified_at` empty
+-- when Stripe refuses the coupon or the call never arrives, so a reward
+-- that can be given now and was never handed out is sent again every hour.
+-- The function is idempotent per reward (the coupon is added once, the push
+-- is keyed on the reward), so a second call for one that did land costs
+-- nothing. Five minutes' grace keeps it off a call still in flight.
+create or replace function public.invite_reward_resend()
+returns int
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_users uuid[];
+begin
+  if not coalesce((select enabled from invite_event where id = 1), false) then
+    return 0;
+  end if;
+  select array_agg(r.user_id) into v_users
+    from (select r.user_id
+            from invite_rewards r
+           where r.status = 'ready'
+             and r.notified_at is null
+             and r.created_at < now() - interval '5 minutes'
+             and r.id = public.invite_claimable(r.user_id)
+           group by r.user_id
+           limit 20) r;
+  if v_users is null then return 0; end if;
+  perform public.invite_reward_notify(v_users);
+  return cardinality(v_users);
+end;
+$$;
+
+revoke all on function public.invite_reward_resend() from public, anon, authenticated;
+
+do $$
+begin
+  if exists (select 1 from pg_extension where extname = 'pg_cron') then
+    perform cron.schedule('invite_reward_resend', '20 * * * *',
+                          $cron$select public.invite_reward_resend();$cron$);
+  end if;
+exception when others then
+  raise notice 'pg_cron scheduling skipped: %', sqlerrm;
+end $$;

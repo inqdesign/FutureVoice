@@ -451,13 +451,6 @@ struct MeTab: View {
                             title: "Preview invite event",
                             subtitle: "Pick a state; the banner appears under Subscription")
                     }
-                    NavigationLink {
-                        PromoOfferSandboxTest()
-                    } label: {
-                        row(icon: "tag",
-                            title: "Sandbox: half-price offer",
-                            subtitle: "Does a promotional offer start at the next renewal?")
-                    }
                     Button {
                         Task { await WeeklyTestReminder.fireTest() }
                     } label: {
