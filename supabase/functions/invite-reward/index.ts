@@ -21,6 +21,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
 import { cors, errorResponse, handlePreflight, timingSafeEqual } from "../_shared/auth.ts"
+import { addStripeCoupon } from "../_shared/stripe-discount.ts"
 
 interface Reward { id: string; user_id: string; status: string; claimed_at: string | null; notified_at: string | null }
 
@@ -77,13 +78,9 @@ async function tell(db: SupabaseClient, base: string, userIds: string[]) {
 
     let bodyKey = "push_claim_body"
     if (sub.source === "stripe" && sub.stripe_subscription_id && event.stripe_coupon_id && stripeKey) {
-      const res = await fetch(`https://api.stripe.com/v1/subscriptions/${sub.stripe_subscription_id}`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${stripeKey}`, "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ "discounts[0][coupon]": event.stripe_coupon_id }),
-      })
-      if (!res.ok) {
-        console.error("invite-reward: stripe", res.status, await res.text())
+      const failed = await addStripeCoupon(stripeKey, sub.stripe_subscription_id, event.stripe_coupon_id)
+      if (failed) {
+        console.error("invite-reward: stripe", failed)
         results[userId] = "stripe failed"
         continue
       }
