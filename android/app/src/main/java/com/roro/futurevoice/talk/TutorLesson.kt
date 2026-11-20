@@ -417,7 +417,8 @@ object TutorFinalCheck {
 object TutorPrompt {
     fun block(targetLanguage: String, languageName: String, lesson: TutorLesson?,
               justTicked: Boolean, lastFixes: List<String>, planning: Boolean = false,
-              selfJudges: Boolean = false, realGoal: String? = null): String {
+              selfJudges: Boolean = false, realGoal: String? = null,
+              takeBack: String? = null): String {
         val now = lesson?.current
         val lessonPart = when {
             planning && lesson != null -> ConversationPrompt.tutorLessonPlanning(
@@ -434,7 +435,8 @@ object TutorPrompt {
                     "  [$mark] ${i + 1}. ${c.task} — e.g. \"${c.example}\""
                 }
                 ConversationPrompt.tutorLessonSelf(lesson.titleTarget, rows, now,
-                    realGoal?.let { ConversationPrompt.tutorWeakRule(it) } ?: "")
+                    realGoal?.let { ConversationPrompt.tutorWeakRule(it) } ?: "") +
+                    (takeBack?.let { ConversationPrompt.tutorTakeBack(it, now) } ?: "")
             }
             lesson != null && now != null -> {
                 val rows = lesson.challenges.withIndex().joinToString("\n") { (i, c) ->

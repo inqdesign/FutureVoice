@@ -87,6 +87,8 @@ object ConversationEngine {
         tutorSelfJudges: Boolean = false,
         /** A goal's real situation, for its lesson's bar (iOS `tutorRealGoal:`). */
         tutorRealGoal: String? = null,
+        /** A take-back held for the learner's next turn (iOS `tutorTakeBack:`). */
+        tutorTakeBack: String? = null,
         /** What the island calls Free talk (iOS `freeMode:`): facts only. */
         freeMode: Boolean = false,
         /** The index of earlier talks, and the ones looked up ([TalkRecall]). */
@@ -184,7 +186,8 @@ object ConversationEngine {
             newsBlock = newsBlock, briefBlock = briefBlock,
             targetLanguage = targetLanguage, tutor = tutor,
             tutorBlock = if (tutor) TutorPrompt.block(targetLanguage, languageName, tutorLesson,
-                tutorJustTicked, tutorLastFixes, tutorPlanning, tutorSelfJudges, tutorRealGoal) else "",
+                tutorJustTicked, tutorLastFixes, tutorPlanning, tutorSelfJudges, tutorRealGoal,
+                if (tutorSelfJudges) tutorTakeBack else null) else "",
             futureBlock = futureBlock,
             // iOS `counterpart == nil && topic.isEmpty` (5a462332): the
             // Spanish gender line and the Japanese self-address line.

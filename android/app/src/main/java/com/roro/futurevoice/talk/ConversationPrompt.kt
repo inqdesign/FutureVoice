@@ -220,6 +220,14 @@ object ConversationPrompt {
             weakRule +
             "\n- A clean try right after you asked them to fix it → in at most 8   words: that was right, once more so it sticks.\n- A clean try otherwise → a short, real \"you got it\", then move on   to the next challenge: a natural question that asks for it, and   how they could say it (its example, fitted to them). After the   last one, start the FINAL CHECK: ask them to say it all in their   own words, in one go — no example, no list of the parts, no hints.\n- Not a try (they're talking with you, asking something, asking   for help, or said it in their own language) → answer it as their   conversation partner and help. No verdict.\nJudge only what you can hear (see NEVER TEACH WHAT THE TRANSCRIBER DID below); when you're not sure it's a slip, it isn't. The app checks every try a moment after you answer and keeps the checklist: when it found something you didn't, a note in square brackets tells you — take it back in a few words in your next line."
 
+    /** iOS `tutorBlock`'s take-back line: what the app's check found on a
+     *  try the tutor moved on from, held for the learner's next turn because
+     *  they had already started it (iOS 2026-11-20). */
+    fun tutorTakeBack(what: String, now: Int): String =
+        "\n\nON THEIR TRY BEFORE THIS ONE the app found what you missed: " + what +
+            ". In your next line, before anything else, take it back in a few words (\"One thing from before: …\"), name only that, and ask them to say that line once more. The lesson stays on challenge " +
+            (now + 1) + "."
+
     /** iOS `tutorBlock`'s rule for a goal's lesson: the real situation's bar. */
     fun tutorWeakRule(goal: String): String =
         "\n- A clean try that the person on the other side of the real   situation (" +

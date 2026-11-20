@@ -337,6 +337,10 @@ class TalkViewModel(context: Context) : ViewModel() {
     /** A challenge was ticked since the prompt was last sent — the block
      *  tells the tutor to move on (iOS `tutorJustTicked`). */
     private var tutorJustTicked = false
+    /** What the app's check of a self-judged try found that the tutor
+     *  missed, held for the learner's NEXT turn because they had already
+     *  started it (iOS `tutorPendingTakeBack`). */
+    private var tutorPendingTakeBack: String? = null
     /** What the correction found on the learner's last try, for the block. */
     private var tutorLastFixes: List<String> = emptyList()
     /** The learner's last try on the current challenge (iOS `tutorLastTry`). */
@@ -613,6 +617,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                         tutorLastFixes = tutorLastFixes,
                         tutorPlanning = _state.value.tutorPlanning,
                         tutorSelfJudges = tutorSelfJudges,
+                        tutorTakeBack = tutorPendingTakeBack,
                         tutorRealGoal = _state.value.tutorLesson?.let { realGoalLine(it) },
                     ) + ConversationEngine.turnOutputInstruction(config.targetLanguage, config.nativeLanguage,
                         counterpart = config.cast?.person, inScene = config.scenarioId != null, level = config.level)
@@ -955,6 +960,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                         tutorLastFixes = tutorLastFixes,
                         tutorPlanning = _state.value.tutorPlanning,
                         tutorSelfJudges = tutorSelfJudges,
+                        tutorTakeBack = tutorPendingTakeBack,
                         tutorRealGoal = _state.value.tutorLesson?.let { realGoalLine(it) },
                         freeMode = isFreeMode(config, tutor),
                         // Like the clock, the index joins after the hello: a
@@ -2973,6 +2979,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             _state.update { it.copy(tutorLesson = lesson) }
             tutorJustTicked = false
             tutorLastFixes = emptyList()
+            tutorPendingTakeBack = null
             resetTutorTries()
             log("tutor_lesson_started", mapOf("challenges" to lesson.challenges.size.toString(),
                 "picked" to if (picked) "1" else "0"))
@@ -3011,6 +3018,18 @@ class TalkViewModel(context: Context) : ViewModel() {
         // The tutor already answered this try itself (not held); the app
         // checks behind it and never speaks first ([tutorReconcile]).
         val selfJudged = tutorSelfJudges
+        // A take-back held for this turn went out in the prompt its reply is
+        // being written from; once that reply has been said, it's spent.
+        val held = tutorPendingTakeBack
+        if (selfJudged && held != null) {
+            viewModelScope.launch {
+                tutorReply(after = turnId)
+                if (tutorPendingTakeBack == held) {
+                    tutorPendingTakeBack = null
+                    sendTutorSystem()
+                }
+            }
+        }
         if (selfJudged && tutorWaitTurnAt != null) {
             tutorWaitNoteAt = System.currentTimeMillis()
             tutorWaitKind = "self"
@@ -3182,8 +3201,29 @@ class TalkViewModel(context: Context) : ViewModel() {
             slips.isNotEmpty() -> "slips: ${slips.joinToString("; ")}"
             else -> "it doesn't do challenge ${i + 1} yet (\"${challenge.task}\")${verdict.missingNote?.let { ": $it" } ?: ""}"
         }
+        // The check lands a second or more after the tutor's line, which
+        // asked them something: by then they are often answering it, and a
+        // note now starts "Wait, one thing" over their sentence (iOS
+        // 2026-11-20). Then it rides on their next turn's reply instead.
+        if (learnerStartedNextTurn(after = turnId)) {
+            tutorPendingTakeBack = what
+            sendTutorSystem()
+            log("tutor_takeback", mapOf("when" to "next_turn"))
+            return
+        }
+        log("tutor_takeback", mapOf("when" to "now"))
         tutorNudge("You moved on, but the app's check of their last try found what you missed: $what. In at most 15 words take it back (\"Wait, one thing: …\"), name only that, and ask them to say that line once more. The lesson stays on challenge ${i + 1}.",
             waitKind = "self_takeback")
+    }
+
+    /** The learner is already on their next line: words on the mic (or
+     *  held for Send), or a later turn of theirs on file. */
+    private fun learnerStartedNextTurn(after: String): Boolean {
+        val st = _state.value
+        if (st.partial.isNotEmpty() || st.sendPending) return true
+        val idx = st.turns.indexOfFirst { it.id == after }
+        if (idx < 0) return false
+        return st.turns.drop(idx + 1).any { it.role == TurnRole.USER }
     }
 
     /** The tutor's line that answered [turnId], once it has finished. */
