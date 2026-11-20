@@ -122,6 +122,11 @@ Deno.serve(async (req) => {
   if (!stripeKey) return json({ error: "server missing STRIPE_SECRET_KEY" }, 500)
   const stripe = new Stripe(stripeKey, { httpClient: Stripe.createFetchHttpClient() })
   const site = Deno.env.get("SITE_URL") ?? "https://nawana.app"
+  // An applicant from the English page (/en/creators) gets the checkout's words and pages in English.
+  // Read on its own: a database without the column (before 20261112220000) costs
+  // the English wording, never the upgrade itself.
+  const { data: langRow } = await db.from("creator_applications").select("page_lang").eq("id", app.id).maybeSingle()
+  const en = langRow?.page_lang === "en"
   const meta = { project: "futurevoice", kind: "challenge_upgrade", user_id: app.user_id, application_id: app.id, plan_id: TIER[to], from_plan: TIER[from] }
   try {
     const session = await stripe.checkout.sessions.create({
@@ -130,11 +135,13 @@ Deno.serve(async (req) => {
         quantity: 1,
         price_data: {
           currency: cur, unit_amount: unit, tax_behavior: "inclusive",
-          product_data: { name: `nawana 100일 챌린지 · ${SIZE[from]}에서 ${SIZE[to]}로 (${months}개월)` },
+          product_data: { name: en
+            ? `nawana 100-day challenge · ${SIZE[from]} to ${SIZE[to]} (${months} ${months === 1 ? "month" : "months"})`
+            : `nawana 100일 챌린지 · ${SIZE[from]}에서 ${SIZE[to]}로 (${months}개월)` },
         },
       }],
-      success_url: `${site}/pay?checkout=upgraded`,
-      cancel_url: `${site}/creators`,
+      success_url: `${site}/pay?checkout=upgraded${en ? "&lang=en" : ""}`,
+      cancel_url: `${site}${en ? "/en/creators" : "/creators"}`,
       client_reference_id: app.user_id,
       metadata: meta,
       payment_intent_data: { metadata: meta },

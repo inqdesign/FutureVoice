@@ -131,6 +131,21 @@ Deno.serve(async (req) => {
     // trial is metered at the DAILY allowance exactly as on Apple.
     const isTrial = Boolean(line?.offerDetails?.offerId)
 
+    // A purchase that is not live may only end the row it is ON (the rule
+    // stripe-webhook got on 2026-11-12, when a failed checkout's expiry
+    // replaced the paid subscription made two minutes after it). Here it is an
+    // old token ending after a plan change made a new one, or after the
+    // learner moved to another store.
+    if (status === "expired") {
+      const { data: held, error: heldErr } = await db.from("user_subscriptions")
+        .select("google_purchase_token").eq("user_id", userId).maybeSingle()
+      if (heldErr) throw new Error(`user_subscriptions read: ${heldErr.message}`)
+      if (held?.google_purchase_token !== sub.purchaseToken) {
+        console.log("not live and not the purchase on the row, skipping")
+        return json(200, { received: true })
+      }
+    }
+
     const { error } = await db.from("user_subscriptions").upsert({
       user_id: userId,
       plan_id: plan.id,

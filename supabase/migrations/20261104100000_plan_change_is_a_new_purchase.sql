@@ -59,3 +59,23 @@ create trigger user_subscriptions_clear_stamp_on_plan_change
   before update of plan_id on public.user_subscriptions
   for each row
   execute function public.clear_stamp_on_plan_change();
+
+-- ---------------------------------------------------------------------------
+-- 2026-11-04: this file was written as 20261012140000, the SAME version as
+-- 20261012140000_people_have_their_own_voices, and only that one was ever
+-- recorded in schema_migrations — so the trigger above never existed in
+-- production and `db push` thought it was done. Renamed to its own version.
+--
+-- The one row that changed plan while the trigger was missing: b989b404 went
+-- plus_monthly → light_annual at the 2026-11-02 renewal and kept the Plus
+-- stamp from 20261027120000 (36000 s + 30 scenes), so Usage read 600 min on a
+-- Light plan. It follows light_annual from here (150 min + 10 scenes a month;
+-- ~13 min spent this period, so nothing they have done is refused).
+-- ---------------------------------------------------------------------------
+
+update public.user_subscriptions
+   set monthly_seconds = null,
+       monthly_scenes  = null,
+       talk_unlimited  = null
+ where user_id = 'b989b404-4d76-4176-82e1-6d7b2ce84eb6'
+   and plan_id = 'light_annual';

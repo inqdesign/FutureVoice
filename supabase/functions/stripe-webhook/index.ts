@@ -137,13 +137,30 @@ async function upsertSubscription(
     else console.warn("no plan for stripe price", priceId, "— falling back to metadata", planId)
   }
   const period = periodOf(sub)
+  const status = forceStatus ?? mapStatus(sub.status)
+  // A subscription that is not live may only end the row it is ON. A checkout
+  // opened and never paid makes an `incomplete` subscription that Stripe
+  // expires 23 hours later, and that event used to overwrite whatever the
+  // account held: on 2026-11-12 a learner whose card was refused, and who
+  // paid on a second checkout two minutes later, had the paid Plus replaced
+  // by the first one's "expired". (apple-claim's rule: a dead transaction
+  // never downgrades a live row.)
+  if (!["active", "trialing", "grace"].includes(status)) {
+    const { data: held, error: heldErr } = await db.from("user_subscriptions")
+      .select("stripe_subscription_id").eq("user_id", userId).maybeSingle()
+    if (heldErr) throw new Error(`user_subscriptions read: ${heldErr.message}`)
+    if (held?.stripe_subscription_id !== sub.id) {
+      console.log("not live and not the subscription on the row, skipping", sub.id, sub.status)
+      return null
+    }
+  }
   const { error } = await db.from("user_subscriptions").upsert({
     user_id: userId,
     plan_id: planId ?? null,
     source: "stripe",
     stripe_customer_id: typeof sub.customer === "string" ? sub.customer : sub.customer?.id,
     stripe_subscription_id: sub.id,
-    status: forceStatus ?? mapStatus(sub.status),
+    status,
     current_period_start: period.start,
     current_period_end: period.end,
     trial_ends_at: sub.trial_end ? iso(sub.trial_end) : null,
