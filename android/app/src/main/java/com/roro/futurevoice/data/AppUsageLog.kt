@@ -53,8 +53,8 @@ object AppUsageLog {
 
     /** This install's name in the device map: ANDROID_ID, which differs per
      *  device and is never restored onto a new phone with the app's backup
-     *  (a stored id in prefs would be). */
-    private fun device(context: Context): String =
+     *  (a stored id in prefs would be). [PracticeLog] uses the same name. */
+    fun device(context: Context): String =
         android.provider.Settings.Secure.getString(context.contentResolver,
             android.provider.Settings.Secure.ANDROID_ID)?.takeIf { it.isNotBlank() } ?: "android"
 

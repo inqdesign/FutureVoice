@@ -89,6 +89,9 @@ class SyncKindRegistry(private val context: Context) : SyncRegistry {
         DictKind(SyncKind.PRACTICE_DAY, "practice-log.json", paths, { l, r ->
             SyncMerge.union(l, r, SyncMerge.typed { a, b -> maxFields(a as JsonObject, b as JsonObject) })
         }, ::touched),
+        DictKind(SyncKind.PRACTICE_DEVICE, com.roro.futurevoice.data.PracticeLog.DEVICE_FILE, paths, { l, r ->
+            SyncMerge.union(l, r, SyncMerge.typed { a, b -> maxFields(a as JsonObject, b as JsonObject) })
+        }, ::touched),
         PrefsCountKind(SyncKind.TALK_DAY, { packed("futurevoice.talkSecondsByDay") },
             { putPacked("futurevoice.talkSecondsByDay", it); StoreEvents.bump(fromSync = true) }),
         PrefsCountKind(SyncKind.USAGE_DAY, { packed("futurevoice.appSecondsByDay") },

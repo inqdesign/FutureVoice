@@ -38,6 +38,8 @@ enum class SyncKind(val raw: String, val isLanguageScoped: Boolean, val isBlob: 
     SPEECH_SCRIPT("speechScript", true),
     SPEECH_TAKE("speechTake", true),
     PRACTICE_DAY("practiceDay", false),
+    /** Practice reps per day per device (`PracticeLog.DEVICE_FILE`), iOS `practiceDevice`. */
+    PRACTICE_DEVICE("practiceDevice", false),
     TALK_DAY("talkDay", false),
     USAGE_DAY("usageDay", false),
     /** App time per day per device (`AppUsageLog.DEVICE_KEY`), iOS `usageDevice`. */
