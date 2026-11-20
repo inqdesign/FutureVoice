@@ -204,6 +204,10 @@ enum ChineseMorph {
         return guess.isEmpty || guess == key ? nil : guess
     }
 
+    /// The list's pinyin for a headword as written there (two readings
+    /// joined by ・), nil off the list. For `ChinesePinyin`.
+    static func listedReading(_ key: String) -> String? { bundledReadings[key] }
+
     // MARK: - Bundled data
 
     /// headword → pinyin, the third column of `cefr_words_zh.tsv`.

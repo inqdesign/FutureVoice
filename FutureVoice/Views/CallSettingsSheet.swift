@@ -115,6 +115,11 @@ struct CallSettingsSheet: View {
                         Toggle(isOn: $furigana) {
                             Label("Furigana", systemImage: "character.textbox")
                         }
+                    } else if LanguageScope.active == "zh" {
+                        // Same switch: pinyin over every character (`ChinesePinyin`).
+                        Toggle(isOn: $furigana) {
+                            Label("Pinyin", systemImage: "character.textbox")
+                        }
                     }
                     // A toggle that does nothing is worse than no toggle, so
                     // with the transcript off this row is replaced by the

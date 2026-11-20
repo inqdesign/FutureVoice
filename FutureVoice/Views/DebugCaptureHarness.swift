@@ -2266,6 +2266,18 @@ enum DebugCapture {
                                durationMs: 4200, timestamp: Date(), suggestion: nil),
                     targetLanguage: "ja")
             })
+        case "shadow-zh":
+            // A Chinese line with pinyin over every character (`ChinesePinyin`).
+            // Launch with `-futurevoice.targetLanguage zh`.
+            once("shadow-zh") { captureShadow = true }
+            return AnyView(NavigationStack {
+                ShadowDrillView(
+                    turn: Turn(id: UUID(uuidString: "00000000-0000-0000-0000-0000000000B4")!,
+                               role: .fluentSelf, audioURL: nil,
+                               transcript: "我觉得这个方案不错，你还没去银行吗？一起去吧！",
+                               durationMs: 4200, timestamp: Date(), suggestion: nil),
+                    targetLanguage: "zh")
+            })
         case "shadow-library":
             // Review → Shadowing tile: every fluent-self line, under the
             // "To study" / "Practiced" picker a learner names in support mail.

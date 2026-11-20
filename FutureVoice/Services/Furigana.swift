@@ -14,10 +14,19 @@ enum Furigana {
 
     static let key = "futurevoice.furigana"
 
-    /// On for a Japanese target unless the learner turned it off.
+    /// On for a Japanese or Chinese target unless the learner turned it off.
+    /// For Chinese the readings are pinyin over every character
+    /// (`ChinesePinyin`, 2026-11-20); the setting is the same switch.
     static func isOn(defaults: UserDefaults = .standard) -> Bool {
-        LanguageScope.active == "ja" && (defaults.object(forKey: key) as? Bool ?? true)
+        supports(LanguageScope.active) && (defaults.object(forKey: key) as? Bool ?? true)
     }
+
+    /// A target language whose lines get readings drawn over them.
+    static func supports(_ language: String) -> Bool { language == "ja" || language == "zh" }
+
+    /// Chinese ruby is pinyin, wider than the character under it, so a unit
+    /// takes the reading's width instead of overhanging its neighbours.
+    static var readingSetsWidth: Bool { LanguageScope.active == "zh" }
 
     /// A stretch of the line: `reading` set only over kanji. The runs cover
     /// the text end to end, in order. Offsets are Character offsets.
@@ -29,13 +38,15 @@ enum Furigana {
     /// `text` cut into runs. Memoized: the call screen re-renders every
     /// line on each mic tick.
     static func runs(in text: String) -> [Run] {
+        let chinese = LanguageScope.active == "zh"
+        let memoKey = (chinese ? "zh|" : "ja|") + text
         lock.lock()
-        if let hit = memo[text] { lock.unlock(); return hit }
+        if let hit = memo[memoKey] { lock.unlock(); return hit }
         lock.unlock()
-        let out = compute(text)
+        let out = chinese ? ChinesePinyin.runs(in: text) : compute(text)
         lock.lock()
         if memo.count > 400 { memo.removeAll(keepingCapacity: true) }
-        memo[text] = out
+        memo[memoKey] = out
         lock.unlock()
         return out
     }

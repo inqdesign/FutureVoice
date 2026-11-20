@@ -295,7 +295,7 @@ struct ShadowDrillView: View {
         let spaced = LanguageCatalog.writesSpaces(targetLanguage)
         // Readings over the kanji, cut from the whole line (`FuriganaWord`).
         let line = timings.map(\.word).joined()
-        let rubyRuns = furiganaOn && targetLanguage == "ja" && Furigana.hasRuby(line)
+        let rubyRuns = furiganaOn && Furigana.supports(targetLanguage) && Furigana.hasRuby(line)
             ? Furigana.runs(in: line) : []
         var starts: [Int] = []
         var at = 0

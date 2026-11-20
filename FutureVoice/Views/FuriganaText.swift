@@ -34,7 +34,7 @@ struct FuriganaText<Fallback: View>: View {
 
     var body: some View {
         let plain = String(text.characters)
-        if enabled, LanguageScope.active == "ja", Furigana.hasRuby(plain) {
+        if enabled, Furigana.supports(LanguageScope.active), Furigana.hasRuby(plain) {
             RubyFlow(alignment: alignment) {
                 ForEach(Array(units(plain).enumerated()), id: \.offset) { _, unit in
                     RubyUnit(reading: unit.reading, rubyFont: rubyFont) {
@@ -96,8 +96,8 @@ struct FuriganaText<Fallback: View>: View {
         return out
     }
 
-    private static var closing: Set<Character> { ["、", "。", "，", "．", "！", "？", "!", "?", ",", ".", "」", "』", "）", ")", "ー", "っ", "ゃ", "ゅ", "ょ", "ぁ", "ぃ", "ぅ", "ぇ", "ぉ", "ッ", "ャ", "ュ", "ョ", "…", "〜", "～"] }
-    private static var opening: Set<Character> { ["「", "『", "（", "("] }
+    private static var closing: Set<Character> { ["、", "。", "，", "．", "！", "？", "!", "?", ",", ".", "」", "』", "）", ")", "；", "：", "”", "’", "》", "ー", "っ", "ゃ", "ゅ", "ょ", "ぁ", "ぃ", "ぅ", "ぇ", "ぉ", "ッ", "ャ", "ュ", "ョ", "…", "〜", "～"] }
+    private static var opening: Set<Character> { ["「", "『", "（", "(", "“", "‘", "《"] }
 
     private func slice(_ r: Range<Int>) -> AttributedString {
         let chars = text.characters
@@ -217,6 +217,25 @@ private struct RubyUnit<Base: View>: View {
     @ViewBuilder var base: () -> Base
 
     var body: some View {
+        if Furigana.readingSetsWidth {
+            // Pinyin is wider than its character: the unit is as wide as the
+            // wider of the two, both centred, as a textbook prints it.
+            VStack(spacing: 0) {
+                Text(verbatim: reading ?? " ")
+                    .font(rubyFont)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .fixedSize()
+                    .opacity(reading == nil ? 0 : 1)
+                base().fixedSize()
+            }
+            .padding(.horizontal, reading == nil ? 0 : 1)
+        } else {
+            overhanging
+        }
+    }
+
+    private var overhanging: some View {
         VStack(spacing: 0) {
             Text(verbatim: " ").font(rubyFont).hidden()
             base().fixedSize()
